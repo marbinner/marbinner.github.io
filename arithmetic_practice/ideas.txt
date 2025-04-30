@@ -1,0 +1,9 @@
+have *-/+ instead of words for top left settings
+have a symbol or the sound button instead
+have a custom input box for the time and have the default be 60s
+have the time sound options be next to each other horizontally
+have the top right history of cpm have no surrounding white box like it have now and have a tight layout with nor margin between the rows showing history
+
+converting from probability to odds and vice versa
+doing bayes updates using odds form
+doing kelly calculations

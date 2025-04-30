@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Practice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+            margin: 0;
+            overflow: hidden;
+        }
+        #controls, #info {
+            position: absolute;
+            top: 20px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            font-size: 16px;
+        }
+        #controls {
+            left: 20px;
+        }
+        #info {
+            right: 20px;
+            text-align: right;
+            width: 200px;
+        }
+        #controls label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        #controls input, #controls select {
+            width: 60px;
+            padding: 5px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            display: inline-block;
+        }
+        #controls input[type=checkbox], #controls input[type=button] {
+            width: auto;
+        }
+        #progress-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 600px;
+            height: 30px;
+            background-color: #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 100%;
+            background-color: #4caf50;
+            border-radius: 15px;
+            transition: width 1s linear;
+        }
+        #cpm-display {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        #question-area {
+            text-align: center;
+            font-size: 48px;
+            color: #333;
+            transition: background-color 0.2s;
+            background-color: #ddd;
+            padding: 20px;
+            border-radius: 10px;
+            width: 600px;
+            font-family: 'Courier New', monospace;
+        }
+        #question-area.started {
+            background-color: transparent;
+        }
+        #answer {
+            font-size: 48px;
+            width: 200px;
+            text-align: center;
+            border: none;
+            border-bottom: 2px solid #333;
+            background: transparent;
+            outline: none;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+        }
+        #answer::-webkit-outer-spin-button, #answer::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        #answer[type=number] {
+            -moz-appearance: textfield;
+        }
+        .question {
+            white-space: pre;
+            letter-spacing: -5px;
+        }
+        .upcoming-question {
+            opacity: 0.6;
+            transition: opacity 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+        .upcoming-question:nth-child(2) {
+            opacity: 0.4;
+        }
+        .upcoming-question:nth-child(3) {
+            opacity: 0.2;
+        }
+        .history-row:nth-child(odd) {
+            background-color: #f4f4f4;
+        }
+        .history-row:nth-child(even) {
+            background-color: #e0e0e0;
+        }
+        .history-row {
+            padding: 5px;
+            text-align: center;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <label>Time:
+            <select id="timeSelect">
+                <option value="60">60s</option>
+                <option value="120">120s</option>
+                <option value="unlimited">Unlimited</option>
+            </select>
+        </label>
+        <label>
+            <input type="checkbox" id="addition" checked>Addition
+            <input type="number" id="addMin1" value="2" placeholder="Min 1">
+            <input type="number" id="addMax1" value="9" placeholder="Max 1">
+            <input type="number" id="addMin2" value="2" placeholder="Min 2">
+            <input type="number" id="addMax2" value="9" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="subtraction">Subtraction
+            <input type="number" id="subMin1" value="2" placeholder="Min 1">
+            <input type="number" id="subMax1" value="9" placeholder="Max 1">
+            <input type="number" id="subMin2" value="2" placeholder="Min 2">
+            <input type="number" id="subMax2" value="9" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="multiplication" checked>Multiplication
+            <input type="number" id="mulMin1" value="2" placeholder="Min 1">
+            <input type="number" id="mulMax1" value="9" placeholder="Max 1">
+            <input type="number" id="mulMin2" value="2" placeholder="Min 2">
+            <input type="number" id="mulMax2" value="9" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="division">Division
+            <input type="number" id="divMin1" value="2" placeholder="Min 1">
+            <input type="number" id="divMax1" value="9" placeholder="Max 1">
+            <input type="number" id="divMin2" value="2" placeholder="Min 2">
+            <input type="number" id="divMax2" value="9" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="squares">Squares
+            <input type="number" id="squaresMin" value="2" placeholder="Min">
+            <input type="number" id="squaresMax" value="9" placeholder="Max">
+        </label>
+        <label>
+            <input type="button" id="toggleSound" value="Sound: Off" onclick="toggleSound()">
+        </label>
+    </div>
+    <div id="info">
+        <div id="cpm-history"></div>
+    </div>
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <div id="cpm-display">CPM: 0</div>
+    <div id="question-area">
+        <input type="number" id="answer" onkeydown="restartOnEnter(event)" oninput="checkAnswer()">
+        <div id="question" class="question"></div>
+        <div id="upcoming-questions"></div>
+    </div>
+    <audio id="click-sound" src="res/sound.wav"></audio>
+    <script>
+        let correctAnswer, score = 0, total = 0, timer, timerStarted = false, soundEnabled = false;
+        const upcomingQuestions = [], cpmHistory = [];
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generateQuestion() {
+            const operations = [];
+            if (document.getElementById('addition').checked) operations.push('+');
+            if (document.getElementById('subtraction').checked) operations.push('-');
+            if (document.getElementById('multiplication').checked) operations.push('*');
+            if (document.getElementById('division').checked) operations.push('/');
+            if (document.getElementById('squares').checked) operations.push('^2');
+            const operation = operations[Math.floor(Math.random() * operations.length)];
+
+            const generateValues = (id1, id2) => [getRandomInt(parseInt(document.getElementById(id1).value) || 2, parseInt(document.getElementById(id2).value) || 9)];
+            const [a, b] = generateValues('addMin1', 'addMax1').concat(generateValues('addMin2', 'addMax2'));
+            
+            switch (operation) {
+                case '+': return { question: `${a} + ${b}`, answer: a + b };
+                case '-': return { question: `${a} - ${b}`, answer: a - b };
+                case '*': return { question: `${a} * ${b}`, answer: a * b };
+                case '/': return { question: `${a * b} / ${b}`, answer: a };
+                case '^2': return { question: `${a}^2`, answer: a * a };
+            }
+        }
+
+        function updateUpcomingQuestions() {
+            document.getElementById('upcoming-questions').innerHTML = upcomingQuestions.slice(1).map(q => `<div class="upcoming-question question">${q.question}</div>`).join('');
+        }
+
+        function checkAnswer() {
+            if (parseInt(document.getElementById('answer').value) === correctAnswer) {
+                if (soundEnabled) playClickSound();
+                score++; total++;
+                upcomingQuestions.shift();
+                upcomingQuestions.push(generateQuestion());
+                correctAnswer = upcomingQuestions[0].answer;
+                document.getElementById('question').innerText = upcomingQuestions[0].question;
+                document.getElementById('answer').value = '';
+                updateUpcomingQuestions();
+                if (!timerStarted) startTimer();
+            }
+        }
+
+        function playClickSound() {
+            const clickSound = document.getElementById('click-sound');
+            clickSound.currentTime = 0;
+            clickSound.play();
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('toggleSound').value = soundEnabled ? 'Sound: On' : 'Sound: Off';
+        }
+
+        function startTimer() {
+            timerStarted = true;
+            score = 0; total = 0;
+            const timeLimit = document.getElementById('timeSelect').value;
+            document.getElementById('cpm-display').innerText = `CPM: 0`;
+            document.getElementById('question-area').classList.add('started');
+            document.getElementById('progress-bar').style.width = '100%';
+
+            if (timeLimit === 'unlimited') return;
+
+            const interval = timeLimit * 1000, decrement = 100 / timeLimit;
+            timer = setInterval(() => {
+                const currentTime = parseInt(document.querySelector('#progress-bar').style.width.replace('%', ''));
+                if (currentTime > 0) {
+                    document.getElementById('progress-bar').style.width = `${currentTime - decrement}%`;
+                    let cpm = Math.floor((score / (timeLimit - (currentTime / decrement))) * 60);
+                    document.getElementById('cpm-display').innerText = `CPM: ${isNaN(cpm) || !isFinite(cpm) ? 0 : cpm}`;
+                } else {
+                    clearInterval(timer);
+                    const cpm = Math.floor((score / timeLimit) * 60);
+                    cpmHistory.push(isNaN(cpm) || !isFinite(cpm) ? 0 : cpm);
+                    updateCpmHistory();
+                    setTimeout(initializePractice, 500);
+                }
+            }, 1000);
+        }
+
+        function updateCpmHistory() {
+            document.getElementById('cpm-history').innerHTML = cpmHistory.map(cpm => `<div class="history-row">${cpm}</div>`).join('');
+        }
+
+        function restartOnEnter(event) {
+            if (event.key === "Enter") initializePractice();
+        }
+
+        function initializePractice() {
+            clearInterval(timer);
+            timerStarted = false;
+            document.getElementById('question-area').classList.remove('started');
+            document.getElementById('answer').value = '';
+            document.getElementById('cpm-display').innerText = `CPM: 0`;
+            upcomingQuestions.length = 0;
+            document.getElementById('progress-bar').style.width = '100%';
+            for (let i = 0; i < 4; i++) upcomingQuestions.push(generateQuestion());
+            correctAnswer = upcomingQuestions[0].answer;
+            document.getElementById('question').innerText = upcomingQuestions[0].question;
+            updateUpcomingQuestions();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializePractice);
+    </script>
+</body>
+</html>
+

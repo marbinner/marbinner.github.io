@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Practice</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; margin: 20px; }
+        #question { font-size: 24px; margin: 20px; }
+        #answer { font-size: 24px; }
+        #controls { margin: 20px; }
+        #score { margin: 20px; }
+        #timer { margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Math Practice</h1>
+    <div>
+        <label>Range: 
+            <input type="number" id="minRange" placeholder="Min" style="width: 60px;">
+            -
+            <input type="number" id="maxRange" placeholder="Max" style="width: 60px;">
+        </label>
+    </div>
+    <div>
+        <label>Time: 
+            <select id="timeSelect">
+                <option value="60">60s</option>
+                <option value="120">120s</option>
+            </select>
+        </label>
+    </div>
+    <button onclick="startPractice()">Start</button>
+    <div id="question"></div>
+    <input type="number" id="answer" placeholder="Answer" oninput="checkAnswer()">
+    <div id="score"></div>
+    <div id="timer"></div>
+
+    <script>
+        let correctAnswer;
+        let score = 0;
+        let total = 0;
+        let timer;
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generateQuestion() {
+            const minRange = parseInt(document.getElementById('minRange').value) || 1;
+            const maxRange = parseInt(document.getElementById('maxRange').value) || 10;
+            const a = getRandomInt(minRange, maxRange);
+            const b = getRandomInt(minRange, maxRange);
+            const isAddition = Math.random() < 0.5;
+            if (isAddition) {
+                correctAnswer = a + b;
+                document.getElementById('question').innerText = `${a} + ${b}`;
+            } else {
+                correctAnswer = a * b;
+                document.getElementById('question').innerText = `${a} x ${b}`;
+            }
+            document.getElementById('answer').value = '';
+        }
+
+        function checkAnswer() {
+            const answer = parseInt(document.getElementById('answer').value);
+            if (answer === correctAnswer) {
+                score++;
+                total++;
+                generateQuestion();
+            }
+        }
+
+        function startPractice() {
+            score = 0;
+            total = 0;
+            const timeLimit = parseInt(document.getElementById('timeSelect').value);
+            document.getElementById('score').innerText = `Score: ${score}`;
+            document.getElementById('timer').innerText = `Time: ${timeLimit}s`;
+            generateQuestion();
+            timer = setInterval(() => {
+                const currentTime = parseInt(document.getElementById('timer').innerText.split(' ')[1].replace('s', ''));
+                if (currentTime > 0) {
+                    document.getElementById('timer').innerText = `Time: ${currentTime - 1}s`;
+                } else {
+                    clearInterval(timer);
+                    document.getElementById('question').innerText = `Time's up! Your accuracy is ${(score / total) * 100}%`;
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
+

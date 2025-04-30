@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Practice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+            margin: 0;
+            overflow: hidden;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            font-size: 16px;
+        }
+        #controls label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        #controls input, #controls select {
+            width: 80px;
+            padding: 5px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #score, #timer, #cpm-history {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-align: right;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+        #cpm-history {
+            top: 120px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #question-area {
+            text-align: center;
+            font-size: 48px;
+            color: #333;
+        }
+        #answer {
+            font-size: 48px;
+            width: 200px;
+            text-align: center;
+            border: none;
+            border-bottom: 2px solid #333;
+            background: transparent;
+            outline: none;
+            margin-bottom: 20px;
+        }
+        #answer::-webkit-outer-spin-button,
+        #answer::-webkit-inner-spin-button,
+        #minRange::-webkit-outer-spin-button,
+        #minRange::-webkit-inner-spin-button,
+        #maxRange::-webkit-outer-spin-button,
+        #maxRange::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        #answer[type=number], #minRange[type=number], #maxRange[type=number] {
+            -moz-appearance: textfield;
+        }
+        #upcoming-questions {
+            margin-top: 0;
+        }
+        .upcoming-question {
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        .upcoming-question:nth-child(2) {
+            opacity: 0.4;
+        }
+        .upcoming-question:nth-child(3) {
+            opacity: 0.2;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <label>Range:
+            <input type="number" id="minRange" placeholder="Min" value="2">
+            -
+            <input type="number" id="maxRange" placeholder="Max" value="9">
+        </label>
+        <label>Time:
+            <select id="timeSelect">
+                <option value="60">60s</option>
+                <option value="120">120s</option>
+            </select>
+        </label>
+    </div>
+    <div id="score">Score: 0</div>
+    <div id="timer">Time: 60s</div>
+    <div id="cpm">CPM: 0</div>
+    <div id="cpm-history">CPM History:</div>
+    <div id="question-area">
+        <input type="number" id="answer" placeholder="Answer" onfocus="startTimer()" onkeydown="restartOnEnter(event)" oninput="checkAnswer()">
+        <div id="question"></div>
+        <div id="upcoming-questions"></div>
+    </div>
+
+    <script>
+        let correctAnswer;
+        let score = 0;
+        let total = 0;
+        let timer;
+        let timerStarted = false;
+        const upcomingQuestions = [];
+        const cpmHistory = [];
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generateQuestion() {
+            const minRange = parseInt(document.getElementById('minRange').value) || 2;
+            const maxRange = parseInt(document.getElementById('maxRange').value) || 9;
+            const a = getRandomInt(minRange, maxRange);
+            const b = getRandomInt(minRange, maxRange);
+            const isAddition = Math.random() < 0.5;
+            if (isAddition) {
+                return { question: `${a} + ${b}`, answer: a + b };
+            } else {
+                return { question: `${a} x ${b}`, answer: a * b };
+            }
+        }
+
+        function updateUpcomingQuestions() {
+            const upcomingQuestionsDiv = document.getElementById('upcoming-questions');
+            upcomingQuestionsDiv.innerHTML = '';
+            for (let i = 1; i < upcomingQuestions.length; i++) {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'upcoming-question';
+                questionDiv.innerText = upcomingQuestions[i].question;
+                upcomingQuestionsDiv.appendChild(questionDiv);
+            }
+        }
+
+        function checkAnswer() {
+            const answer = parseInt(document.getElementById('answer').value);
+            if (answer === correctAnswer) {
+                score++;
+                total++;
+                upcomingQuestions.shift();
+                const nextQuestion = generateQuestion();
+                upcomingQuestions.push(nextQuestion);
+                correctAnswer = upcomingQuestions[0].answer;
+                document.getElementById('question').innerText = upcomingQuestions[0].question;
+                document.getElementById('answer').value = '';
+                updateUpcomingQuestions();
+                document.getElementById('score').innerText = `Score: ${score}`;
+            }
+        }
+
+        function startTimer() {
+            if (timerStarted) return;
+            timerStarted = true;
+            score = 0;
+            total = 0;
+            const timeLimit = parseInt(document.getElementById('timeSelect').value);
+            document.getElementById('score').innerText = `Score: ${score}`;
+            document.getElementById('timer').innerText = `Time: ${timeLimit}s`;
+            document.getElementById('cpm').innerText = `CPM: 0`;
+            timer = setInterval(() => {
+                const currentTime = parseInt(document.getElementById('timer').innerText.split(' ')[1].replace('s', ''));
+                if (currentTime > 0) {
+                    document.getElementById('timer').innerText = `Time: ${currentTime - 1}s`;
+                    const cpm = (score / (timeLimit - currentTime)) * 60;
+                    document.getElementById('cpm').innerText = `CPM: ${cpm.toFixed(2)}`;
+                } else {
+                    clearInterval(timer);
+                    const cpm = (score / timeLimit) * 60;
+                    cpmHistory.push(cpm.toFixed(2));
+                    updateCpmHistory();
+                    initializePractice();
+                }
+            }, 1000);
+        }
+
+        function updateCpmHistory() {
+            const cpmHistoryDiv = document.getElementById('cpm-history');
+            cpmHistoryDiv.innerHTML = 'CPM History:<br>' + cpmHistory.join('<br>');
+        }
+
+        function restartOnEnter(event) {
+            if (event.key === "Enter") {
+                initializePractice();
+                document.getElementById('answer').focus();
+            }
+        }
+
+        function initializePractice() {
+            clearInterval(timer);
+            timerStarted = false;
+            document.getElementById('answer').value = '';
+            document.getElementById('score').innerText = 'Score: 0';
+            document.getElementById('timer').innerText = `Time: ${document.getElementById('timeSelect').value}s`;
+            document.getElementById('cpm').innerText = `CPM: 0`;
+            upcomingQuestions.length = 0;
+            for (let i = 0; i < 4; i++) {
+                const nextQuestion = generateQuestion();
+                upcomingQuestions.push(nextQuestion);
+            }
+            correctAnswer = upcomingQuestions[0].answer;
+            document.getElementById('question').innerText = upcomingQuestions[0].question;
+            updateUpcomingQuestions();
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            initializePractice();
+        });
+    </script>
+</body>
+</html>
+

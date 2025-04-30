@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arithmetic Practice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input {
+            font-size: 1rem;
+            padding: 0.5rem;
+            margin: 1rem 0;
+        }
+        button {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Arithmetic Practice</h1>
+        <p id="problem"></p>
+        <input type="number" id="answer" placeholder="Your answer">
+        <button onclick="checkAnswer()">Submit</button>
+        <p id="result"></p>
+    </div>
+
+    <script>
+        let num1, num2, correctAnswer;
+
+        function generateProblem() {
+            num1 = Math.floor(Math.random() * 10) + 1;
+            num2 = Math.floor(Math.random() * 10) + 1;
+            correctAnswer = num1 + num2;
+            document.getElementById('problem').textContent = `${num1} + ${num2} = ?`;
+            document.getElementById('answer').value = '';
+            document.getElementById('result').textContent = '';
+        }
+
+        function checkAnswer() {
+            const userAnswer = parseInt(document.getElementById('answer').value);
+            if (userAnswer === correctAnswer) {
+                document.getElementById('result').textContent = 'Correct! Well done!';
+            } else {
+                document.getElementById('result').textContent = `Incorrect. The correct answer is ${correctAnswer}.`;
+            }
+            setTimeout(generateProblem, 2000);
+        }
+
+        generateProblem();
+    </script>
+</body>
+</html>

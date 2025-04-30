@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Practice</title>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div id="controls">
+        <label>Time:
+            <select id="timeSelect">
+                <option value="60">60s</option>
+                <option value="120">120s</option>
+            </select>
+        </label>
+        <label>
+            <input type="checkbox" id="addition" checked>Addition
+            <input type="number" id="addMin1" value="2" placeholder="Min 1">
+            <input type="number" id="addMax1" value="9" placeholder="Max 1">
+            <input type="number" id="addMin2" value="11" placeholder="Min 2">
+            <input type="number" id="addMax2" value="99" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="subtraction">Subtraction
+            <input type="number" id="subMin1" value="2" placeholder="Min 1">
+            <input type="number" id="subMax1" value="9" placeholder="Max 1">
+            <input type="number" id="subMin2" value="11" placeholder="Min 2">
+            <input type="number" id="subMax2" value="99" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="multiplication" checked>Multiplication
+            <input type="number" id="mulMin1" value="2" placeholder="Min 1">
+            <input type="number" id="mulMax1" value="9" placeholder="Max 1">
+            <input type="number" id="mulMin2" value="11" placeholder="Min 2">
+            <input type="number" id="mulMax2" value="99" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="division">Division
+            <input type="number" id="divMin1" value="2" placeholder="Min 1">
+            <input type="number" id="divMax1" value="9" placeholder="Max 1">
+            <input type="number" id="divMin2" value="11" placeholder="Min 2">
+            <input type="number" id="divMax2" value="99" placeholder="Max 2">
+        </label>
+        <label>
+            <input type="checkbox" id="squares">Squares
+            <input type="number" id="squaresMin" value="2" placeholder="Min">
+            <input type="number" id="squaresMax" value="9" placeholder="Max">
+        </label>
+        <label>
+            <input type="button" id="toggleSound" value="Sound: Off" onclick="toggleSound()">
+        </label>
+    </div>
+    <div id="info">
+        <div id="cpm-history"></div>
+    </div>
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <div id="cpm-display">CPM: 0</div>
+    <div id="question-area">
+        <input autocomplete="off" type="number" id="answer" onkeydown="restartOnEnter(event)" oninput="checkAnswer()">
+        <div id="question" class="question"></div>
+        <div id="upcoming-questions"></div>
+    </div>
+
+    <audio id="click-sound" src="res/sound.wav"></audio>
+
+    <script src="main.js"></script>
+</body>
+</html>

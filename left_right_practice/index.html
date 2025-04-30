@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Left-Right-Middle Practice</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            position: relative;
+        }
+        .container {
+            text-align: center;
+        }
+        #direction {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px;
+        }
+        .instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 14px;
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="direction">Press F, J, or Space</h1>
+    </div>
+    <div class="instructions">
+        <p>Press 'F' for Left</p>
+        <p>Press 'J' for Right</p>
+        <p>Press 'Space' for Middle</p>
+        <p>Accuracy is based on the last 50 attempts</p>
+    </div>
+    <div class="score" id="score">
+        <div>Accuracy: 0%</div>
+        <div>Time: 0s</div>
+        <div>Attempts: 0</div>
+    </div>
+
+    <script>
+        const directions = ['left', 'right', 'middle'];
+        let currentDirection = '';
+        let attempts = [];
+        const maxAttempts = 50;
+        let startTime = Date.now();
+        let attemptCount = 0;
+
+        function getRandomDirection() {
+            const randomIndex = Math.floor(Math.random() * directions.length);
+            currentDirection = directions[randomIndex];
+            document.getElementById('direction').textContent = currentDirection;
+            document.getElementById('direction').style.color = 'black';
+        }
+
+        function updateScore(isCorrect) {
+            attempts.push(isCorrect);
+            if (attempts.length > maxAttempts) {
+                attempts.shift();
+            }
+            const correctAttempts = attempts.filter(Boolean).length;
+            const accuracy = (correctAttempts / attempts.length) * 100;
+            document.getElementById('score').children[0].textContent = `Accuracy: ${accuracy.toFixed(2)}%`;
+        }
+
+        function updateTimer() {
+            const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('score').children[1].textContent = `Time: ${elapsedTime}s`;
+        }
+
+        function checkDirection(key) {
+            const isCorrect = 
+                (key === 'f' && currentDirection === 'left') || 
+                (key === 'j' && currentDirection === 'right') || 
+                (key === ' ' && currentDirection === 'middle');
+
+            document.getElementById('direction').style.color = isCorrect ? 'green' : 'red';
+            updateScore(isCorrect);
+
+            attemptCount++;
+            document.getElementById('score').children[2].textContent = `Attempts: ${attemptCount}`;
+
+            setTimeout(getRandomDirection, 350);
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'f' || event.key === 'j' || event.key === ' ') {
+                checkDirection(event.key);
+            }
+        });
+
+        // Initialize with a random direction
+        getRandomDirection();
+        setInterval(updateTimer, 1000);
+    </script>
+</body>
+</html>
