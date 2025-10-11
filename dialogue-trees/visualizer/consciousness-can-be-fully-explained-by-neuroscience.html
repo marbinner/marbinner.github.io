@@ -1,0 +1,2705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consciousness can be fully explained by neuroscience - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Consciousness can be fully explained by neuroscience</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            73 total nodes • Max depth: 4 •
+            Version 5
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/consciousness-can-be-fully-explained-by-neuroscience.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">73</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "4d646328-8d36-471c-b353-fc83e7be4492",
+      "text": "Consciousness and its specific contents are invariably dependent on the functional integrity of the brain; manipulations like general anesthesia reliably abolish conscious experience entirely. The necessity of specific neural processes for consciousness demonstrates that the full explanation must reside within the physical domain of neuroscience.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:54.399772"
+    },
+    {
+      "id": "75fc9a6d-ba84-4892-a9da-ae49cd80776f",
+      "text": "Neuroscience has successfully isolated specific Neural Correlates of Consciousness (NCCs), such as the changes in fMRI activity during binocular rivalry when perception shifts without external stimulus change. This precise empirical mapping links subjective experiences directly to measurable objective brain states, showing mechanistic sufficiency.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:54.400558"
+    },
+    {
+      "id": "0931b974-7d51-4253-afa4-5093a540cb33",
+      "text": "Consciousness is an emergent property arising from the complex, measurable interactions of neurons and glial cells following standard biophysical and chemical laws. Complete understanding of the brain's cellular anatomy, connectivity, and ion channel dynamics constitutes a full physical description from which conscious functions mechanically arise.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:54.401000"
+    },
+    {
+      "id": "95f09d0b-8b99-4338-b336-e88b56921fec",
+      "text": "Targeted interventions, such as Deep Brain Stimulation (DBS) or psychopharmaceutical drugs, reliably and predictably alter specific aspects of subjective experience, including mood, memory, and perception. The successful prediction and control over the contents of consciousness through strictly neural manipulation validates the explanatory sufficiency of neuroscience.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:54.401385"
+    },
+    {
+      "id": "a2f6150e-8fd3-4484-b8c2-1624dade8174",
+      "text": "While neural interventions modify the measurable functions of consciousness (e.g., mood, memory formation), they fail to provide an explanation for the existence of subjective experience itself (qualia), which is necessary for claiming explanatory sufficiency.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "95f09d0b-8b99-4338-b336-e88b56921fec",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:04.510823"
+    },
+    {
+      "id": "eb8a5a1a-dc89-4407-8a8a-d1e304ac7633",
+      "text": "The ability of neuroscience to predict and control changes in subjective experience only demonstrates a reliable causal correlation, not explanatory sufficiency, similar to how knowing which fuse to pull stops a car without explaining the physics of the engine.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "95f09d0b-8b99-4338-b336-e88b56921fec",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:04.511249"
+    },
+    {
+      "id": "02ae569e-9dd4-4021-ac2b-9efebed5eff8",
+      "text": "Identifying a Neural Correlate of Consciousness (NCC) only establishes a necessary condition or a coincidence (correlation), not the mechanistic sufficiency to cause the subjective experience. For instance, brain activity might be an effect or a prerequisite for consciousness, rather than the state that fundamentally generates the subjective experience.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "75fc9a6d-ba84-4892-a9da-ae49cd80776f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:04.511518"
+    },
+    {
+      "id": "a30ea49a-2111-4bd4-99ac-f93914d20dda",
+      "text": "The brain's necessity for conscious manifestation only confirms that it is an instrument or correlate; this fails to explain *why* specific neural activity should generate subjective, qualitative experience (qualia), which is not addressed by physical description alone.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4d646328-8d36-471c-b353-fc83e7be4492",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:04.581227"
+    },
+    {
+      "id": "d5f3435f-34b3-4547-a953-339d17121b9e",
+      "text": "A complete physical description of neural anatomy and ion channel dynamics accounts solely for brain function, failing to bridge the explanatory gap to subjective, qualitative experience.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0931b974-7d51-4253-afa4-5093a540cb33",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:06.739340"
+    },
+    {
+      "id": "448870a5-15c1-42ea-8cf0-bbba38a2d84d",
+      "text": "Labeling consciousness as an \"emergent property\" only describes its appearance, failing to specify the precise, demonstrated physical mechanism or organizational threshold required for it to mechanically arise from standard biophysical laws.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0931b974-7d51-4253-afa4-5093a540cb33",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:06.740233"
+    },
+    {
+      "id": "d50fdb31-30dc-450a-a427-f4e39fcc8a8b",
+      "text": "The term \"emergent property\" is a useful scientific classification that defines the necessary scope of the problem by grouping phenomena like superconductivity or cellular life that arise from system interactions. Demanding that a classification simultaneously provide the full mechanistic explanation imposes an impossibly high standard contrary to the staged nature of scientific discovery.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "448870a5-15c1-42ea-8cf0-bbba38a2d84d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:20.300860"
+    },
+    {
+      "id": "e723d895-b6a6-4af0-bcf6-4601c6d00e65",
+      "text": "If consciousness is identical to a physical process, then the brain must be necessary for its manifestation, making necessity a requirement of identity rather than proof of mere correlation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a30ea49a-2111-4bd4-99ac-f93914d20dda",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:21.186249"
+    },
+    {
+      "id": "c7134982-2ff7-44aa-b343-a2b0afef40b4",
+      "text": "Physicalist frameworks like Integrated Information Theory (IIT) define qualitative experience (qualia) purely in terms of calculable physical properties, such as the mathematical structure of a system's causal power (Phi).",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a30ea49a-2111-4bd4-99ac-f93914d20dda",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:21.186719"
+    },
+    {
+      "id": "27ff5fcf-04e5-4e42-9a66-ff1fbe73563a",
+      "text": "Explanatory sufficiency is achieved when controlled manipulation of physical mechanisms like specific neural circuits reliably produces or suppresses subjective outcomes, which current neuroscience achieves (e.g., using TMS to induce or suppress visual awareness).",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eb8a5a1a-dc89-4407-8a8a-d1e304ac7633",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:23.068287"
+    },
+    {
+      "id": "9bec566c-73c3-4d1b-bf63-d970041afc6c",
+      "text": "Neuroscience actively investigates the core neural \"engine\" via detailed circuit analysis and precise causal methods like optogenetics and single-unit recordings, which is analogous to explaining the physics of the car engine, not merely identifying an external fuse box component.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eb8a5a1a-dc89-4407-8a8a-d1e304ac7633",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:23.068735"
+    },
+    {
+      "id": "e25b28ee-33ab-4c15-a06f-ca4f9f0877d7",
+      "text": "Explanatory sufficiency in biological science is achieved by identifying mechanisms that reliably predict and control phenomena, such as successfully modifying memory formation via optogenetics, regardless of whether the ultimate nature of subjective feeling is resolved.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a2f6150e-8fd3-4484-b8c2-1624dade8174",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:23.238170"
+    },
+    {
+      "id": "c4d36534-f644-4dae-8653-a605b31a915f",
+      "text": "Modifying measurable functions of consciousness, like altering emotional valence or regulating sleep cycles through neural interventions, constitutes a sufficient physical explanation by demonstrating a direct causal link between brain processes and conscious experience.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a2f6150e-8fd3-4484-b8c2-1624dade8174",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:23.238859"
+    },
+    {
+      "id": "5042f848-83c9-4242-8685-76dc95c9ee0a",
+      "text": "Neuroscience can establish the neural correlates of consciousness (NCCs), such as the visual cortex activity associated with color perception. Yet, this objective data cannot explain the subjective, qualitative nature of experiencing \"redness\" (qualia), which is inherently inaccessible by third-person observation.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:31.900115"
+    },
+    {
+      "id": "a953ae82-3f72-44d5-81d9-9fd4b9210018",
+      "text": "The methodology of neuroscience is restricted to empirically measurable, functional processes, addressing the \"easy problems\" of consciousness like attention and reportability. However, the physical measurement tools (e.g., fMRI, EEG) cannot conceptually bridge the gap to the fundamentally non-physical, subjective experience itself.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:31.900953"
+    },
+    {
+      "id": "b02bab94-f34c-4124-89f4-99285ad296d8",
+      "text": "The brain processes sensory information across multiple specialized, distributed regions (e.g., the occipital and temporal lobes). Neuroscience currently lacks a verified mechanism that coherently explains how these segregated activities integrate into a single, unified stream of subjective experience.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:31.901436"
+    },
+    {
+      "id": "b3f582bd-8b0c-4fe9-8144-5fe122058a6b",
+      "text": "The strict adherence of neuroscience to physicalism risks rendering consciousness epiphenomenal\u2014a byproduct with no causal role\u2014since physical events are argued to be fully determined by physical laws. Explaining the true causal efficacy of subjective awareness over material actions remains unsolved within this framework.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:31.901852"
+    },
+    {
+      "id": "053d5f25-85a6-4e3a-b8de-bb9740d9357c",
+      "text": "Standard physicalist solutions, such as Identity Theory or Functionalism, avoid epiphenomenalism by positing that conscious states are identical to or realized by physical brain states, ensuring they possess the same causal efficacy as any other physical event.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b3f582bd-8b0c-4fe9-8144-5fe122058a6b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:42.752499"
+    },
+    {
+      "id": "4f8572ef-0e22-4742-afc3-cae25c28c839",
+      "text": "Physicalist theories assert that the subjective experience of \"redness\" is strictly identical to the functional activity of the specific neural correlates in the visual cortex; therefore, a complete objective description of the NCCs constitutes the full explanation of the qualia.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5042f848-83c9-4242-8685-76dc95c9ee0a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:46.649121"
+    },
+    {
+      "id": "8f25216b-10bc-44de-a6de-106e768b2dcc",
+      "text": "Neuroscience defines subjective experience as the functional output of specific, measurable Neural Correlates of Consciousness (NCCs), meaning the experience is intrinsically physical. Since physical measurement tools track these exact cerebral processes, the methodological gap between physical tools and subjective experience is bridged by definition.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a953ae82-3f72-44d5-81d9-9fd4b9210018",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:49.599181"
+    },
+    {
+      "id": "79f0ff44-7e15-4098-99c8-4e42887838ad",
+      "text": "When a physical brain mechanism is causally sufficient to produce a behavior, the co-occurring purely subjective experience provides no additional causal power, making consciousness explanatorily redundant.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "053d5f25-85a6-4e3a-b8de-bb9740d9357c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:19:52.713410"
+    },
+    {
+      "id": "137ff69a-3748-4d80-b707-e5bd90caa72e",
+      "text": "Neural Correlates of Consciousness (NCCs) only establish correlation, not the identity between physical processes and subjective quality (qualia), which remains the core of the Hard Problem. The ability of physical tools to capture *what it is like* to be conscious is thus assumed, not demonstrated by NCC findings.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8f25216b-10bc-44de-a6de-106e768b2dcc",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:01.240715"
+    },
+    {
+      "id": "2e5e41a8-cf4e-4783-96f3-caf5a0acad07",
+      "text": "Even a complete, objective catalog of all neural activity and electrochemical states (NCCs) related to seeing red does not logically or practically convey the subjective, phenomenal character of the color experience itself.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4f8572ef-0e22-4742-afc3-cae25c28c839",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:01.837560"
+    },
+    {
+      "id": "7566ed09-4756-43a7-889b-82c4fdad27a6",
+      "text": "Correlation is exceeded by direct causal intervention, which proves sufficiency. Stimulating or inhibiting specific Neural Correlates of Consciousness (NCC) using methods like TMS immediately and predictably alters or eliminates phenomenal experience, demonstrating that the neural activity is mechanistically sufficient, not just a coincidence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "02ae569e-9dd4-4021-ac2b-9efebed5eff8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:26.845771+00:00"
+    },
+    {
+      "id": "4ed05e1a-c905-467b-8e5f-598ef7686e7d",
+      "text": "Brain activity linked to consciousness is not merely a prerequisite or effect because the specific content of the subjective experience (e.g., the color seen or the emotion felt) can be systematically decoded or predicted directly from the high-resolution pattern and intensity of the NCC. A simple prerequisite would not possess this detailed informational specificity matching the phenomenal quality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "02ae569e-9dd4-4021-ac2b-9efebed5eff8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:26.845794+00:00"
+    },
+    {
+      "id": "44e7e10a-8f29-4867-bc2e-ffb145b097c3",
+      "text": "Philosopher Daniel Dennett argues explicitly in Consciousness Explained (1991) that qualia, defined as intrinsic and ineffable subjective properties, are conceptual artifacts rather than actual features of experience, dissolving the supposed \"hard problem.\" The subjective feeling of red is merely a complex informational processing structure that we incorrectly introspect as a non-physical residue.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d5f3435f-34b3-4547-a953-339d17121b9e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:43.230633+00:00"
+    },
+    {
+      "id": "9d96a2bd-e97d-4ae4-9ed0-52bffdc17077",
+      "text": "Advances in neuroscience and optogenetics demonstrate that targeting specific neural circuits in mammals, such as the prefrontal cortex, can directly turn subjective feelings and motivations (like fear or reward) on and off. This provides direct empirical evidence that qualitative experience is mechanistically identical to functional neural states.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d5f3435f-34b3-4547-a953-339d17121b9e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:43.230674+00:00"
+    },
+    {
+      "id": "8b1d9009-462e-4d2f-bc07-a63e477641e0",
+      "text": "Neural synchrony theory posits that temporally correlated firing, specifically 40-Hz gamma oscillations, coordinates activity across segregated brain regions into a functional unit. Experimental data from visual perception studies in primates demonstrates that neurons responding to features of a single perceived object synchronize their oscillations, providing a proposed mechanism for the unified subjective experience.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b02bab94-f34c-4124-89f4-99285ad296d8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:55.114360+00:00"
+    },
+    {
+      "id": "7fa8f2d0-4967-4fdc-9199-7050d1eb39f5",
+      "text": "The assumption of a necessary \"single, unified stream\" is contradicted by clinical evidence from split-brain patients studied by Gazzaniga and Sperry. These patients exhibit two demonstrably independent streams of consciousness, showing that the unity of experience is an emergent feature rather than an irreducible baseline.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b02bab94-f34c-4124-89f4-99285ad296d8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:55.114392+00:00"
+    },
+    {
+      "id": "a9dc54fa-99aa-481f-bdee-e6021e36bfdc",
+      "text": "Phenomena like superconductivity are cases of weak emergence, where the macro-behavior can be mathematically derived from micro-laws once the interaction rules are understood. Subjective experience, or qualia, resists this physical reduction and is specifically categorized as the 'Hard Problem of Consciousness' (Chalmers, 1996), suggesting the blanket classification of 'emergent property' fails to capture the unique, insurmountable challenge.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d50fdb31-30dc-450a-a427-f4e39fcc8a8b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:16:14.565289+00:00"
+    },
+    {
+      "id": "0a157fa1-970b-4736-a900-c5647340c33d",
+      "text": "The \"Hard Problem\" is a statement about current explanatory gaps, not a demonstration of logical impossibility; historical examples like the reduction of life (vitalism) to biochemistry show that previously \"insurmountable\" phenomena can become fully physical explanations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a9dc54fa-99aa-481f-bdee-e6021e36bfdc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:16:26.746877+00:00"
+    },
+    {
+      "id": "25671b32-a669-446b-86b5-c80df16915e1",
+      "text": "Weak emergence specifically contrasts with strong emergence, a standard category used for phenomena (like qualia) that resist reduction from micro-laws; therefore, the classification system already handles the unique challenge presented.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a9dc54fa-99aa-481f-bdee-e6021e36bfdc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:16:26.746904+00:00"
+    },
+    {
+      "id": "1d965741-c1c1-4130-b00b-96e15d6d8dc6",
+      "text": "The multiple realization argument, developed by philosophers like Hilary Putnam, suggests that consciousness could be instantiated in non-biological systems, such as a silicon-based AI. This demonstrates that while the brain is necessary for human consciousness, this necessity is contingent upon biology, not a universal requirement of consciousness itself, thus severing the logical link between necessity and identity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e723d895-b6a6-4af0-bcf6-4601c6d00e65",
+      "children_count": 1,
+      "references": [
+        "Putnam, H. (1967). Psychological Predicates. In Capitan, W. V., & Merrill, D. D. (Eds.), Art, Mind, and Religion. University of Pittsburgh Press."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:16:49.149510+00:00"
+    },
+    {
+      "id": "65416789-3d0f-41f7-b702-29e5f6aa30af",
+      "text": "The Chinese Room thought experiment, proposed by John Searle in 1980, demonstrates that an entity purely manipulating symbols according to rules (syntax) lacks genuine understanding (semantics), directly challenging the functionalist basis that consciousness is substrate-independent and multiply realizable in silicon. If structural equivalence is required for causal powers, only the specific biological organization of the brain can produce consciousness, making the necessity of biology universal, not contingent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "1d965741-c1c1-4130-b00b-96e15d6d8dc6",
+      "children_count": 0,
+      "references": [
+        "Searle, J. R. (1980). Minds, brains, and programs. Behavioral and Brain Sciences, 3(3), 417-457."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:17:19.872364+00:00"
+    },
+    {
+      "id": "64903e00-be14-4101-a4b2-e92631978396",
+      "text": "IIT provides a mathematical measure (\u03a6) for the complexity and quantity of consciousness, but this measure does not specify or explain the actual qualitative content of experience, leaving the explanatory gap between physical structure and phenomenal feel unresolved.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c7134982-2ff7-44aa-b343-a2b0afef40b4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:17:33.414889+00:00"
+    },
+    {
+      "id": "0c5f7fc0-31c1-49e5-8107-2b9813eadaf5",
+      "text": "The theory is not purely physicalist since its core assertion\u2014that integrated information intrinsically IS consciousness\u2014is a fundamental, non-calculable axiom rather than a conclusion derived from purely physical properties.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c7134982-2ff7-44aa-b343-a2b0afef40b4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:17:33.415570+00:00"
+    },
+    {
+      "id": "1aa4a757-c3d9-4a0c-a281-a13a1b8b5064",
+      "text": "Computational neuroscience suggests that phenomenal feel emerges entirely from the specific, complex functional relations and self-referential monitoring processes within the neural network, dissolving the gap by redefining qualia as structural dynamics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "64903e00-be14-4101-a4b2-e92631978396",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:17:45.600274+00:00"
+    },
+    {
+      "id": "ce7be6b1-db95-43a9-b50c-d6834e0fd15d",
+      "text": "The theory\u2019s central measure, Phi ($\\Phi$), is calculated entirely from the physical causal properties of a neural system, such as data from a human thalamocortical network. Identity theories of mind, defended by physicalists like U.T. Place (1956), axiomatically assert that mental states are identical to physical states without requiring a non-axiomatic derivation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "0c5f7fc0-31c1-49e5-8107-2b9813eadaf5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:18:25.331175+00:00"
+    },
+    {
+      "id": "2bf2d364-59c4-4cc3-a28f-1f07fa4b4039",
+      "text": "Reliably correlating neural activity with the presence or absence of visual awareness does not explain the qualitative nature (qualia) of the experience itself, only identifying a necessary physical correlate, which fundamentally bypasses the Hard Problem of consciousness.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "27ff5fcf-04e5-4e42-9a66-ff1fbe73563a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:18:37.432891+00:00"
+    },
+    {
+      "id": "abdba080-3eae-4ec6-b32a-d41cc4281040",
+      "text": "Current techniques like TMS only reliably control simple, low-level subjective states such as the onset of visual awareness, not the vast complexity and specific content of rich, high-level subjective experiences like specific memories or complex emotional states.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "27ff5fcf-04e5-4e42-9a66-ff1fbe73563a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:18:37.433331+00:00"
+    },
+    {
+      "id": "6253d915-7a6d-47c1-a18a-5dfcdf28549b",
+      "text": "Deep Brain Stimulation (DBS) is routinely used to treat severe, specific emotional and compulsive disorders like refractory depression and Obsessive-Compulsive Disorder by altering activity in the ventral capsule/ventral striatum. This clinical application demonstrates that neuroscientific techniques can reliably control specific, complex emotional and cognitive states, not just the onset of simple visual awareness.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "abdba080-3eae-4ec6-b32a-d41cc4281040",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:18:53.494827+00:00"
+    },
+    {
+      "id": "94f33aea-ace6-445a-97ec-a7794e4b74b6",
+      "text": "The explanatory gap relies on the assumption that a philosophical zombie, a physical duplicate lacking qualia, is logically possible. Philosopher Daniel Dennett argues that a truly comprehensive physical account of the brain\u2019s functional organization eliminates the logical possibility of the P-Zombie, demonstrating the gap is based on an incomplete physical understanding.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "2bf2d364-59c4-4cc3-a28f-1f07fa4b4039",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:18:57.487148+00:00"
+    },
+    {
+      "id": "db33bca8-1a25-4055-9f01-6c676f85160b",
+      "text": "Detailed neural circuit investigation addresses only the easy problems of consciousness; David Chalmers\u2019 \"Hard Problem\" specifies that understanding the exact neural correlates (NCCs) does not explain subjective qualia, such as the qualitative redness of an apple.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9bec566c-73c3-4d1b-bf63-d970041afc6c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:19:15.114519+00:00"
+    },
+    {
+      "id": "29790415-35d4-44ce-9238-bde06fff0e95",
+      "text": "The integrated nature of consciousness, as quantified by Giulio Tononi's Integrated Information Theory (IIT), relies on system-level properties like Phi which cannot be captured by localized methods like single-unit recordings and discrete circuit analysis.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9bec566c-73c3-4d1b-bf63-d970041afc6c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:19:15.114960+00:00"
+    },
+    {
+      "id": "d031ec40-0ab3-4b94-ac68-e351a475ba40",
+      "text": "IIT is theoretically flawed because it assigns high $\\Phi$ to intuitively unconscious systems, such as a simple grid of perfectly coupled switches, failing to distinguish complex non-conscious integration from true qualitative experience.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "29790415-35d4-44ce-9238-bde06fff0e95",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:19:26.598142+00:00"
+    },
+    {
+      "id": "97ba6300-767b-4bcc-a9e0-ce4d982660d8",
+      "text": "Philosopher Daniel Dennett claims irreducible qualia are based on flawed introspection, asserting that a complete neuroscientific explanation of the informational structure and function of neural circuits (NCCs) fundamentally dissolves the \"Hard Problem\" itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "db33bca8-1a25-4055-9f01-6c676f85160b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:19:32.550126+00:00"
+    },
+    {
+      "id": "078597a1-c7e5-476b-a007-1beddb4040ac",
+      "text": "The ability to map functional mechanisms, such as locating the neural correlates of pain, does not explain the qualitative feeling of pain itself, a conceptual gap David Chalmers defined as the Hard Problem of Consciousness.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e25b28ee-33ab-4c15-a06f-ca4f9f0877d7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:19:55.177224+00:00"
+    },
+    {
+      "id": "f8f4dfce-2ac3-4b21-9ce0-20b7722ffd6f",
+      "text": "Mechanistic control (like optogenetics) is not theoretical explanation, analogous to how surgeons effectively used anesthetic agents like ether for decades before their fundamental molecular mechanism on consciousness was understood.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e25b28ee-33ab-4c15-a06f-ca4f9f0877d7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:19:55.177639+00:00"
+    },
+    {
+      "id": "72ba941c-39eb-4f01-873a-125ad8d11245",
+      "text": "The analogy fails because modern mechanistic control, such as using optogenetics to manipulate specific VTA dopamine neurons, is successful precisely because it targets known, genetically-defined circuits, functionally confirming the theoretical circuit explanation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "f8f4dfce-2ac3-4b21-9ce0-20b7722ffd6f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:20:05.106721+00:00"
+    },
+    {
+      "id": "ef610262-791e-4e06-8400-470ad77e191d",
+      "text": "J.J.C. Smart's Identity Theory (1959) posits that the report \"I am feeling pain\" is strictly identical to the description of C-fiber stimulation, making the functional mechanism the feeling itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "078597a1-c7e5-476b-a007-1beddb4040ac",
+      "children_count": 0,
+      "references": [
+        "J. J. C. Smart, \"Sensations and Brain Processes\" (1959)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:20:20.013068+00:00"
+    },
+    {
+      "id": "8b30ddc0-3d15-451b-89dd-877b32502292",
+      "text": "Opioid introduction alters the precise qualitative experience of pain by modulating specific neural pathways, demonstrating that the subjective feeling is mechanistically dependent on physical function.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "078597a1-c7e5-476b-a007-1beddb4040ac",
+      "children_count": 0,
+      "references": [
+        "Pharmacology of Opioids and Pain Relief"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:20:20.013094+00:00"
+    },
+    {
+      "id": "aecc2dbe-6744-4d23-8476-9dec0dfc9ef3",
+      "text": "The ability to manipulate neural correlates (e.g., controlling mood via Deep Brain Stimulation) demonstrates functional causation, but it does not explain the qualitative nature of the feeling or what it is like to have that experience (qualia).",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c4d36534-f644-4dae-8653-a605b31a915f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:20:31.390524+00:00"
+    },
+    {
+      "id": "e6273690-98ca-44b4-8a5d-5762aff2218c",
+      "text": "Causal control over measurable functions remains an explanation of the physical substrate and its outputs, but is systematically insufficient to explain the subjective, first-person perspective that defines consciousness.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c4d36534-f644-4dae-8653-a605b31a915f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:20:31.391085+00:00"
+    },
+    {
+      "id": "d6b42135-728d-40c1-ba9a-96aadb691bcf",
+      "text": "Philosopher Daniel Dennett argues that the properties ascribed to qualia\u2014such as being ineffable and intrinsic\u2014are systematically refuted by experiments showing subjective experiences, like color perception, are functionally modifiable and dependent on neural reporting mechanisms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "aecc2dbe-6744-4d23-8476-9dec0dfc9ef3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:20:48.982093+00:00"
+    },
+    {
+      "id": "81b063ad-bf28-4ae5-be72-5ec335e21de8",
+      "text": "General anesthesia reliably and reversibly abolishes all subjective experience by measurably inhibiting communication in the thalamocortical loop, demonstrating that even radical subjectivity is causally dependent on physical function.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "e6273690-98ca-44b4-8a5d-5762aff2218c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:21:00.282782+00:00"
+    },
+    {
+      "id": "d86189e1-6dd8-4ec0-b0cf-c5b0d0848e0a",
+      "text": "Identifying the dendritic computational mechanisms that encode visual perception demonstrates that the physical substrate possesses the necessary complexity to generate and integrate the functions required for subjective representation, as proposed by Nobel Laureate Gerald Edelman's Reentry theory.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "e6273690-98ca-44b4-8a5d-5762aff2218c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:21:00.282820+00:00"
+    },
+    {
+      "id": "868be162-39ef-4ce8-bb76-5f817f6e2837",
+      "text": "Donald Davidson's Anomalous Monism (1970) suggests that mental events are token-identical to physical events yet rejects the anti-overdetermination premise, allowing mental properties non-reducible participation in causal explanation despite physical closure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "79f0ff44-7e15-4098-99c8-4e42887838ad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:21:17.744564+00:00"
+    },
+    {
+      "id": "00e48d7f-debe-4785-8b14-2d532a81242d",
+      "text": "Functionalist accounts of mental states, such as those inspired by Hilary Putnam (1967), posit that causal efficacy resides in the functional role of the mental property itself, which organizes and constrains lower-level physical mechanisms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "79f0ff44-7e15-4098-99c8-4e42887838ad",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:21:17.745082+00:00"
+    },
+    {
+      "id": "75f3714a-a507-4516-b724-a29906be01d6",
+      "text": "Jaegwon Kim established that Anomalous Monism, operating under the principle of the physical closure of the causal realm, fundamentally adheres to the Exclusion Principle, meaning mental causation is always an instance of physical causation.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "868be162-39ef-4ce8-bb76-5f817f6e2837",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:21:40.511670+00:00"
+    },
+    {
+      "id": "753544e2-1496-4fd5-a366-f1e4519cdd31",
+      "text": "Davidson's requirement that mental properties be anomalous (lacking strict laws) leads to their epiphenomenal status; Fodor argued that all genuine causal relations must be captured by strict physical laws, eliminating non-reducible mental influence.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "868be162-39ef-4ce8-bb76-5f817f6e2837",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:21:40.511705+00:00"
+    },
+    {
+      "id": "5cb499a7-909f-4f9a-950f-03abc87980e2",
+      "text": "The Chinese Room thought experiment demonstrates that a system can perfectly implement the causal-functional role of understanding language without possessing any genuine consciousness or semantic content. This lack of understanding in the individual operating the room, despite perfect function, suggests that causal efficacy requires specific, internal, non-functional physical properties, not just the abstract role.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "00e48d7f-debe-4785-8b14-2d532a81242d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:21:52.390156+00:00"
+    },
+    {
+      "id": "dfeaba66-5a7a-492b-8d95-843528d8fb6b",
+      "text": "The scientific reduction of the subjective experience of \"heat\" to the measurable property of mean molecular kinetic energy establishes precedence where observed correlation becomes accepted identity, undermining the necessity of a qualitative gap between NCCs and qualia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "137ff69a-3748-4d80-b707-e5bd90caa72e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:22:09.286529+00:00"
+    },
+    {
+      "id": "edf18acd-5eb8-4599-996b-43474a3c7316",
+      "text": "Frank Jackson's thought experiment of Mary the color scientist (1982) demonstrates that upon seeing red for the first time, Mary gains new, non-physical knowledge even after knowing every physical fact about color, confirming the qualitative gap remains for subjective experience.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "dfeaba66-5a7a-492b-8d95-843528d8fb6b",
+      "children_count": 0,
+      "references": [
+        "Jackson, F. (1982). Epiphenomenal Qualia. Philosophical Quarterly 32: 127\u2013136."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:22:38.368470+00:00"
+    },
+    {
+      "id": "2d1adb74-f134-4284-adae-54f7e4b9c656",
+      "text": "Although temperature reduces to molecular energy, the subjective experience of \"heat\" is not identical to that metric, demonstrated by the fact that feeling wood and metal at the same temperature evokes dramatically different sensations of warmth based on the rate of heat transfer.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "dfeaba66-5a7a-492b-8d95-843528d8fb6b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:22:38.368497+00:00"
+    },
+    {
+      "id": "5a85d30d-abee-4549-992b-d5a1e8499827",
+      "text": "J.J.C. Smart's Identity Theory (1959) maintains that the sensation of seeing red is numerically identical to the configuration of neural states; therefore, a complete catalog of the NCC is a complete description of the subjective phenomenal character.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2e5e41a8-cf4e-4783-96f3-caf5a0acad07",
+      "children_count": 2,
+      "references": [
+        "J.J.C. Smart, \"Sensations and Brain Processes\" (1959)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:06.405095+00:00"
+    },
+    {
+      "id": "78e90faa-bd11-44ed-8772-aef663681b5f",
+      "text": "The practical inability to intuit the experience from the data is an epistemic constraint on human understanding, not a metaphysical barrier; the difficulty of precisely calculating the location of an electron does not falsify the sufficiency of Quantum Mechanics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2e5e41a8-cf4e-4783-96f3-caf5a0acad07",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:06.405519+00:00"
+    },
+    {
+      "id": "6f519ac7-9e30-4680-8566-a7a21c8c9893",
+      "text": "Frank Jackson's \"Mary's Room\" thought experiment shows that acquiring all physical facts about color vision does not entail the subjective experience (qualia) of seeing red. Unlike the uncertainty in Quantum Mechanics, which is included in the physics, the qualitative nature of consciousness remains fundamentally unpredicted by current neuroscientific data.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "78e90faa-bd11-44ed-8772-aef663681b5f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:32.643417+00:00"
+    },
+    {
+      "id": "58a14cf3-d661-46f5-abbf-2173c6fd4f28",
+      "text": "Frank Jackson's thought experiment (1982), featuring Mary the neuroscientist who knows all physical facts about color but has never seen color, demonstrates that a complete physical description of the neural states does not impart knowledge of the conscious experience (qualia).",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "5a85d30d-abee-4549-992b-d5a1e8499827",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:37.045200+00:00"
+    },
+    {
+      "id": "720219e0-022f-4448-9e4e-d0e0657df4b2",
+      "text": "David Chalmers (1996) argued for the conceivability of a philosophical zombie, a being physically and neurally identical to a human but lacking subjective experience; this possibility shows that the neural configuration can exist without the phenomenal character.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "5a85d30d-abee-4549-992b-d5a1e8499827",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:37.045251+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:18:54.399686"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:18:54.399686"
+    }
+  ],
+  "links": [
+    {
+      "source": "95f09d0b-8b99-4338-b336-e88b56921fec",
+      "target": "a2f6150e-8fd3-4484-b8c2-1624dade8174",
+      "type": "objection"
+    },
+    {
+      "source": "95f09d0b-8b99-4338-b336-e88b56921fec",
+      "target": "eb8a5a1a-dc89-4407-8a8a-d1e304ac7633",
+      "type": "objection"
+    },
+    {
+      "source": "75fc9a6d-ba84-4892-a9da-ae49cd80776f",
+      "target": "02ae569e-9dd4-4021-ac2b-9efebed5eff8",
+      "type": "objection"
+    },
+    {
+      "source": "4d646328-8d36-471c-b353-fc83e7be4492",
+      "target": "a30ea49a-2111-4bd4-99ac-f93914d20dda",
+      "type": "objection"
+    },
+    {
+      "source": "0931b974-7d51-4253-afa4-5093a540cb33",
+      "target": "d5f3435f-34b3-4547-a953-339d17121b9e",
+      "type": "objection"
+    },
+    {
+      "source": "0931b974-7d51-4253-afa4-5093a540cb33",
+      "target": "448870a5-15c1-42ea-8cf0-bbba38a2d84d",
+      "type": "objection"
+    },
+    {
+      "source": "448870a5-15c1-42ea-8cf0-bbba38a2d84d",
+      "target": "d50fdb31-30dc-450a-a427-f4e39fcc8a8b",
+      "type": "response"
+    },
+    {
+      "source": "a30ea49a-2111-4bd4-99ac-f93914d20dda",
+      "target": "e723d895-b6a6-4af0-bcf6-4601c6d00e65",
+      "type": "response"
+    },
+    {
+      "source": "a30ea49a-2111-4bd4-99ac-f93914d20dda",
+      "target": "c7134982-2ff7-44aa-b343-a2b0afef40b4",
+      "type": "response"
+    },
+    {
+      "source": "eb8a5a1a-dc89-4407-8a8a-d1e304ac7633",
+      "target": "27ff5fcf-04e5-4e42-9a66-ff1fbe73563a",
+      "type": "response"
+    },
+    {
+      "source": "eb8a5a1a-dc89-4407-8a8a-d1e304ac7633",
+      "target": "9bec566c-73c3-4d1b-bf63-d970041afc6c",
+      "type": "response"
+    },
+    {
+      "source": "a2f6150e-8fd3-4484-b8c2-1624dade8174",
+      "target": "e25b28ee-33ab-4c15-a06f-ca4f9f0877d7",
+      "type": "response"
+    },
+    {
+      "source": "a2f6150e-8fd3-4484-b8c2-1624dade8174",
+      "target": "c4d36534-f644-4dae-8653-a605b31a915f",
+      "type": "response"
+    },
+    {
+      "source": "b3f582bd-8b0c-4fe9-8144-5fe122058a6b",
+      "target": "053d5f25-85a6-4e3a-b8de-bb9740d9357c",
+      "type": "objection"
+    },
+    {
+      "source": "5042f848-83c9-4242-8685-76dc95c9ee0a",
+      "target": "4f8572ef-0e22-4742-afc3-cae25c28c839",
+      "type": "objection"
+    },
+    {
+      "source": "a953ae82-3f72-44d5-81d9-9fd4b9210018",
+      "target": "8f25216b-10bc-44de-a6de-106e768b2dcc",
+      "type": "objection"
+    },
+    {
+      "source": "053d5f25-85a6-4e3a-b8de-bb9740d9357c",
+      "target": "79f0ff44-7e15-4098-99c8-4e42887838ad",
+      "type": "response"
+    },
+    {
+      "source": "8f25216b-10bc-44de-a6de-106e768b2dcc",
+      "target": "137ff69a-3748-4d80-b707-e5bd90caa72e",
+      "type": "response"
+    },
+    {
+      "source": "4f8572ef-0e22-4742-afc3-cae25c28c839",
+      "target": "2e5e41a8-cf4e-4783-96f3-caf5a0acad07",
+      "type": "response"
+    },
+    {
+      "source": "02ae569e-9dd4-4021-ac2b-9efebed5eff8",
+      "target": "7566ed09-4756-43a7-889b-82c4fdad27a6",
+      "type": "response"
+    },
+    {
+      "source": "02ae569e-9dd4-4021-ac2b-9efebed5eff8",
+      "target": "4ed05e1a-c905-467b-8e5f-598ef7686e7d",
+      "type": "response"
+    },
+    {
+      "source": "d5f3435f-34b3-4547-a953-339d17121b9e",
+      "target": "44e7e10a-8f29-4867-bc2e-ffb145b097c3",
+      "type": "response"
+    },
+    {
+      "source": "d5f3435f-34b3-4547-a953-339d17121b9e",
+      "target": "9d96a2bd-e97d-4ae4-9ed0-52bffdc17077",
+      "type": "response"
+    },
+    {
+      "source": "b02bab94-f34c-4124-89f4-99285ad296d8",
+      "target": "8b1d9009-462e-4d2f-bc07-a63e477641e0",
+      "type": "response"
+    },
+    {
+      "source": "b02bab94-f34c-4124-89f4-99285ad296d8",
+      "target": "7fa8f2d0-4967-4fdc-9199-7050d1eb39f5",
+      "type": "response"
+    },
+    {
+      "source": "d50fdb31-30dc-450a-a427-f4e39fcc8a8b",
+      "target": "a9dc54fa-99aa-481f-bdee-e6021e36bfdc",
+      "type": "response"
+    },
+    {
+      "source": "a9dc54fa-99aa-481f-bdee-e6021e36bfdc",
+      "target": "0a157fa1-970b-4736-a900-c5647340c33d",
+      "type": "response"
+    },
+    {
+      "source": "a9dc54fa-99aa-481f-bdee-e6021e36bfdc",
+      "target": "25671b32-a669-446b-86b5-c80df16915e1",
+      "type": "response"
+    },
+    {
+      "source": "e723d895-b6a6-4af0-bcf6-4601c6d00e65",
+      "target": "1d965741-c1c1-4130-b00b-96e15d6d8dc6",
+      "type": "response"
+    },
+    {
+      "source": "1d965741-c1c1-4130-b00b-96e15d6d8dc6",
+      "target": "65416789-3d0f-41f7-b702-29e5f6aa30af",
+      "type": "response"
+    },
+    {
+      "source": "c7134982-2ff7-44aa-b343-a2b0afef40b4",
+      "target": "64903e00-be14-4101-a4b2-e92631978396",
+      "type": "response"
+    },
+    {
+      "source": "c7134982-2ff7-44aa-b343-a2b0afef40b4",
+      "target": "0c5f7fc0-31c1-49e5-8107-2b9813eadaf5",
+      "type": "response"
+    },
+    {
+      "source": "64903e00-be14-4101-a4b2-e92631978396",
+      "target": "1aa4a757-c3d9-4a0c-a281-a13a1b8b5064",
+      "type": "response"
+    },
+    {
+      "source": "0c5f7fc0-31c1-49e5-8107-2b9813eadaf5",
+      "target": "ce7be6b1-db95-43a9-b50c-d6834e0fd15d",
+      "type": "response"
+    },
+    {
+      "source": "27ff5fcf-04e5-4e42-9a66-ff1fbe73563a",
+      "target": "2bf2d364-59c4-4cc3-a28f-1f07fa4b4039",
+      "type": "response"
+    },
+    {
+      "source": "27ff5fcf-04e5-4e42-9a66-ff1fbe73563a",
+      "target": "abdba080-3eae-4ec6-b32a-d41cc4281040",
+      "type": "response"
+    },
+    {
+      "source": "abdba080-3eae-4ec6-b32a-d41cc4281040",
+      "target": "6253d915-7a6d-47c1-a18a-5dfcdf28549b",
+      "type": "response"
+    },
+    {
+      "source": "2bf2d364-59c4-4cc3-a28f-1f07fa4b4039",
+      "target": "94f33aea-ace6-445a-97ec-a7794e4b74b6",
+      "type": "response"
+    },
+    {
+      "source": "9bec566c-73c3-4d1b-bf63-d970041afc6c",
+      "target": "db33bca8-1a25-4055-9f01-6c676f85160b",
+      "type": "response"
+    },
+    {
+      "source": "9bec566c-73c3-4d1b-bf63-d970041afc6c",
+      "target": "29790415-35d4-44ce-9238-bde06fff0e95",
+      "type": "response"
+    },
+    {
+      "source": "29790415-35d4-44ce-9238-bde06fff0e95",
+      "target": "d031ec40-0ab3-4b94-ac68-e351a475ba40",
+      "type": "response"
+    },
+    {
+      "source": "db33bca8-1a25-4055-9f01-6c676f85160b",
+      "target": "97ba6300-767b-4bcc-a9e0-ce4d982660d8",
+      "type": "response"
+    },
+    {
+      "source": "e25b28ee-33ab-4c15-a06f-ca4f9f0877d7",
+      "target": "078597a1-c7e5-476b-a007-1beddb4040ac",
+      "type": "response"
+    },
+    {
+      "source": "e25b28ee-33ab-4c15-a06f-ca4f9f0877d7",
+      "target": "f8f4dfce-2ac3-4b21-9ce0-20b7722ffd6f",
+      "type": "response"
+    },
+    {
+      "source": "f8f4dfce-2ac3-4b21-9ce0-20b7722ffd6f",
+      "target": "72ba941c-39eb-4f01-873a-125ad8d11245",
+      "type": "response"
+    },
+    {
+      "source": "078597a1-c7e5-476b-a007-1beddb4040ac",
+      "target": "ef610262-791e-4e06-8400-470ad77e191d",
+      "type": "response"
+    },
+    {
+      "source": "078597a1-c7e5-476b-a007-1beddb4040ac",
+      "target": "8b30ddc0-3d15-451b-89dd-877b32502292",
+      "type": "response"
+    },
+    {
+      "source": "c4d36534-f644-4dae-8653-a605b31a915f",
+      "target": "aecc2dbe-6744-4d23-8476-9dec0dfc9ef3",
+      "type": "response"
+    },
+    {
+      "source": "c4d36534-f644-4dae-8653-a605b31a915f",
+      "target": "e6273690-98ca-44b4-8a5d-5762aff2218c",
+      "type": "response"
+    },
+    {
+      "source": "aecc2dbe-6744-4d23-8476-9dec0dfc9ef3",
+      "target": "d6b42135-728d-40c1-ba9a-96aadb691bcf",
+      "type": "response"
+    },
+    {
+      "source": "e6273690-98ca-44b4-8a5d-5762aff2218c",
+      "target": "81b063ad-bf28-4ae5-be72-5ec335e21de8",
+      "type": "response"
+    },
+    {
+      "source": "e6273690-98ca-44b4-8a5d-5762aff2218c",
+      "target": "d86189e1-6dd8-4ec0-b0cf-c5b0d0848e0a",
+      "type": "response"
+    },
+    {
+      "source": "79f0ff44-7e15-4098-99c8-4e42887838ad",
+      "target": "868be162-39ef-4ce8-bb76-5f817f6e2837",
+      "type": "response"
+    },
+    {
+      "source": "79f0ff44-7e15-4098-99c8-4e42887838ad",
+      "target": "00e48d7f-debe-4785-8b14-2d532a81242d",
+      "type": "response"
+    },
+    {
+      "source": "868be162-39ef-4ce8-bb76-5f817f6e2837",
+      "target": "75f3714a-a507-4516-b724-a29906be01d6",
+      "type": "response"
+    },
+    {
+      "source": "868be162-39ef-4ce8-bb76-5f817f6e2837",
+      "target": "753544e2-1496-4fd5-a366-f1e4519cdd31",
+      "type": "response"
+    },
+    {
+      "source": "00e48d7f-debe-4785-8b14-2d532a81242d",
+      "target": "5cb499a7-909f-4f9a-950f-03abc87980e2",
+      "type": "response"
+    },
+    {
+      "source": "137ff69a-3748-4d80-b707-e5bd90caa72e",
+      "target": "dfeaba66-5a7a-492b-8d95-843528d8fb6b",
+      "type": "response"
+    },
+    {
+      "source": "dfeaba66-5a7a-492b-8d95-843528d8fb6b",
+      "target": "edf18acd-5eb8-4599-996b-43474a3c7316",
+      "type": "response"
+    },
+    {
+      "source": "dfeaba66-5a7a-492b-8d95-843528d8fb6b",
+      "target": "2d1adb74-f134-4284-adae-54f7e4b9c656",
+      "type": "response"
+    },
+    {
+      "source": "2e5e41a8-cf4e-4783-96f3-caf5a0acad07",
+      "target": "5a85d30d-abee-4549-992b-d5a1e8499827",
+      "type": "response"
+    },
+    {
+      "source": "2e5e41a8-cf4e-4783-96f3-caf5a0acad07",
+      "target": "78e90faa-bd11-44ed-8772-aef663681b5f",
+      "type": "response"
+    },
+    {
+      "source": "78e90faa-bd11-44ed-8772-aef663681b5f",
+      "target": "6f519ac7-9e30-4680-8566-a7a21c8c9893",
+      "type": "response"
+    },
+    {
+      "source": "5a85d30d-abee-4549-992b-d5a1e8499827",
+      "target": "58a14cf3-d661-46f5-abbf-2173c6fd4f28",
+      "type": "response"
+    },
+    {
+      "source": "5a85d30d-abee-4549-992b-d5a1e8499827",
+      "target": "720219e0-022f-4448-9e4e-d0e0657df4b2",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "4d646328-8d36-471c-b353-fc83e7be4492",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "75fc9a6d-ba84-4892-a9da-ae49cd80776f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "0931b974-7d51-4253-afa4-5093a540cb33",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "95f09d0b-8b99-4338-b336-e88b56921fec",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5042f848-83c9-4242-8685-76dc95c9ee0a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a953ae82-3f72-44d5-81d9-9fd4b9210018",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b02bab94-f34c-4124-89f4-99285ad296d8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b3f582bd-8b0c-4fe9-8144-5fe122058a6b",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

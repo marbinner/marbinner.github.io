@@ -1,0 +1,3562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animals have moral rights - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Animals have moral rights</h1>
+        <div class="meta">
+            6 arguments for • 5 arguments against •
+            123 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/animals-have-moral-rights.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">123</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">5</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "text": "Sentience is the only non-arbitrary criterion for moral considerability, meaning the capacity to suffer grants all sentient individuals, from invertebrates to great apes, the fundamental right to not be subjected to unnecessary pain or exploitation. This deontological perspective asserts that the moral status of an entity should be based solely on its capacity for experience, regardless of its species or utility to humans.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:46.444692+00:00"
+    },
+    {
+      "id": "b3beccdb-41d7-48cc-a577-edce6db7e281",
+      "text": "The 2012 Cambridge Declaration on Consciousness confirms that many non-human animals, including all mammals, birds, and even octopuses, possess the neurological substrates of consciousness. This scientific evidence validates that these species experience awareness and suffering using physiological mechanisms analogous to humans, demanding moral consideration.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Cambridge Declaration on Consciousness"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:46.445300+00:00"
+    },
+    {
+      "id": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "text": "Many higher animals, such as elephants and certain marine mammals, display psychological continuity, memory, an interest in continued existence, and complex social bonds. This qualifies them as \"subjects-of-a-life\" whose inherent moral value is independent of human convenience and sufficient to ground corresponding rights.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:46.445627+00:00"
+    },
+    {
+      "id": "58e458d4-5e43-42e2-b6e5-98a8ccf2c15d",
+      "text": "Historically, moral and legal progress has involved the continuous expansion of rights by rejecting arbitrary classifications like race (as seen in the US Civil Rights Movement) and sex. Speciesism, which denies rights based solely on species membership, represents the next logically indefensible boundary that moral consistency requires us to overcome.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "US Civil Rights Movement"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:46.445916+00:00"
+    },
+    {
+      "id": "9047bcb9-3bba-4a7e-b199-e909129cbbe2",
+      "text": "Granting basic rights to marginal human cases (e.g., infants or the severely incapacitated) based on sentience or inherent value demonstrates an ethical mandate for protection. To deny equivalent basic rights to mature animals like chimpanzees, which possess equivalent or greater levels of cognitive function and sentience, reveals an unjustifiable inconsistency.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:46.446329+00:00"
+    },
+    {
+      "id": "cc6fe4f2-c52d-41ea-ad28-b6f5aabce57d",
+      "text": "Specific high-intelligence species, including dolphins, great apes, and elephants, exhibit complex cognitive abilities such as mirror self-recognition, problem-solving, and social culture. These traits meet the traditional criteria used to establish high levels of sentience and moral consideration for human beings.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:46.446620+00:00"
+    },
+    {
+      "id": "f87674e3-ed7d-43b5-8cdf-cb11ae866fb5",
+      "text": "Human legal and moral systems establish a non-arbitrary distinction based on the capacity for moral agency and reciprocity, holding sane adults responsible for contract law or criminal intent. Non-human animals lack this capacity for mutual moral obligation, unlike the groups involved in the Civil Rights Movement.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "58e458d4-5e43-42e2-b6e5-98a8ccf2c15d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:02.919121+00:00"
+    },
+    {
+      "id": "31da4726-f589-4803-9220-aceb2c54b467",
+      "text": "The demand for consistency requires defining the scope of expanded rights; for instance, granting the right to liberty (freedom from confinement) to billions of domesticated livestock would necessitate the immediate abolition of the global agricultural industry.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "58e458d4-5e43-42e2-b6e5-98a8ccf2c15d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:02.919848+00:00"
+    },
+    {
+      "id": "6b055b78-b057-446d-9aa2-2cbb64e86b83",
+      "text": "Octopuses, lacking a neocortex, cannot experience the complex, self-reflective suffering of primates and humans; sharing neurological substrates does not equate to analogous subjective awareness across diverse species.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b3beccdb-41d7-48cc-a577-edce6db7e281",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:03.628675+00:00"
+    },
+    {
+      "id": "57e2dc97-c14e-40d6-839f-40e47021f542",
+      "text": "Moral consideration is an ethical prescription, not a scientific conclusion; Kantian ethics reserves moral status only for autonomous rational actors, meaning biological awareness alone does not mandate moral duties.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b3beccdb-41d7-48cc-a577-edce6db7e281",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:03.629450+00:00"
+    },
+    {
+      "id": "8a604bf0-c6a3-4caa-8d25-e9e3137a3b71",
+      "text": "Immanuel Kant's ethical system in the Groundwork grants full moral status only to rational agents capable of autonomy and self-legislation, establishing personhood as an alternative, non-arbitrary criterion.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:04.516098+00:00"
+    },
+    {
+      "id": "976a52b0-002e-4094-8fa7-4fff0f54d076",
+      "text": "The empirical observation that an entity has the capacity to suffer does not logically entail a \"fundamental right\" to non-exploitation; David Hume established this \"is-ought\" gap between descriptive facts and prescriptive moral requirements.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:04.517013+00:00"
+    },
+    {
+      "id": "ca78cf42-b7b5-4f37-8d1d-6ee83ff4634a",
+      "text": "Neurobiological consensus excludes many invertebrates, such as sponges, jellyfish, and simple nematodes, which lack centralized nervous systems, from possessing the sentience required for a capacity to suffer.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:04.517534+00:00"
+    },
+    {
+      "id": "a66ded78-6811-4e75-b7b3-0875405a8806",
+      "text": "Historically, cultures used observable psychological differences, such as perceived intellectual inferiority, to deny moral standing and rights to certain human groups, leading to practices like slavery in the Antebellum South. Psychological complexity alone does not logically prove that moral rights exist or apply to a species.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:04.936038+00:00"
+    },
+    {
+      "id": "d6bf9df9-345e-4464-a1ea-48bbc8c67532",
+      "text": "The central ethical status, \"subject-of-a-life,\" was introduced by philosopher Tom Regan; his moral theory requires accepting a foundational principle of inherent value, which is a moral postulate rather than an observable feature like memory or social bonds. The binding moral conclusion is therefore dependent on accepting a specific ethical framework, not just the descriptive facts.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:04.936765+00:00"
+    },
+    {
+      "id": "95972d97-00c2-4107-a60b-3190896bc0f9",
+      "text": "Determining a non-linguistic species\u2019 explicit \"interest in continued existence\" requires assuming complex future and self-concepts, which is a significant anthropomorphic projection. Neuroscientific research on non-human cognition, such as primate studies by Michael Tomasello, typically focuses on instrumental actions related to immediate resource acquisition and social challenges.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:04.937241+00:00"
+    },
+    {
+      "id": "6b3678ae-4ee9-4991-ba1c-3696c9cbc5d8",
+      "text": "Legal personhood in many jurisdictions, including EU and US law, is granted based on membership in the species *Homo sapiens* from birth, regardless of cognitive capacity. This species-based criterion is distinct from merely sentience, refuting the necessary philosophical consistency implied by cross-species comparison.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9047bcb9-3bba-4a7e-b199-e909129cbbe2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:05.057929+00:00"
+    },
+    {
+      "id": "dbf53e29-1fdd-4628-a4e8-92cc463c6b19",
+      "text": "The rights system afforded to marginal human cases includes legal protections like the right to inherit property and the right to due process. Chimpanzees lack the social capacity for reciprocal legal obligations and cannot meaningfully exercise or benefit from these specific equivalent civic and political rights.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9047bcb9-3bba-4a7e-b199-e909129cbbe2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:05.058460+00:00"
+    },
+    {
+      "id": "0521680d-ed56-48eb-8206-9a86a4dee563",
+      "text": "Immanuel Kant\u2019s traditional ethical framework establishes full moral personhood based on the rational capacity for moral agency and autonomy, which is observably absent in species like dolphins and elephants.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cc6fe4f2-c52d-41ea-ad28-b6f5aabce57d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:08.859806+00:00"
+    },
+    {
+      "id": "f680f5d3-fd6a-4825-aefc-0fe940ac41a6",
+      "text": "Human problem-solving and social culture are qualitatively different, enabling complex abstract systems like differential calculus, legal codes, and the Apollo space program, vastly exceeding the scope of observed animal cognition.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cc6fe4f2-c52d-41ea-ad28-b6f5aabce57d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:08.860305+00:00"
+    },
+    {
+      "id": "550a980f-b8f3-42c5-a43c-9fa03795eb8d",
+      "text": "Legal systems grant fundamental rights, such as protection against wrongful death and battery, to human infants and individuals in a persistent vegetative state who lack the capacity for moral agency or reciprocity. This demonstrates that moral obligation is not the sole, non-arbitrary basis for legal status.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f87674e3-ed7d-43b5-8cdf-cb11ae866fb5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:19.634508+00:00"
+    },
+    {
+      "id": "7c1f5770-182a-421c-a588-3895769b345a",
+      "text": "Laws and moral systems recognize non-human animals as patients deserving of protection based on their capacity for suffering (sentience), illustrated by the US Animal Welfare Act which regulates the care and treatment of animals used in research. The capacity to be wronged is distinct from the capacity to do wrong.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f87674e3-ed7d-43b5-8cdf-cb11ae866fb5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:19.635341+00:00"
+    },
+    {
+      "id": "dbc25d63-c916-4fb3-8f6c-3604ac3eb2c4",
+      "text": "Human infants in all jurisdictions are granted fundamental rights like due process and protection from confinement starting at birth, despite lacking any capacity for reciprocal legal obligations or contractual agreements.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dbf53e29-1fdd-4628-a4e8-92cc463c6b19",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:20.985544+00:00"
+    },
+    {
+      "id": "e064e5a8-922d-4a20-91cc-ff1b437fea26",
+      "text": "Chimpanzees seeking legal protections against confinement, like those petitions filed in New York state, do not need the capacity to inherit property, as fundamental rights can be exercised on their behalf by human legal guardians.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dbf53e29-1fdd-4628-a4e8-92cc463c6b19",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:20.986018+00:00"
+    },
+    {
+      "id": "d4d3f320-5851-4f12-8f9c-dd8c0cbf0dad",
+      "text": "The octopus possesses a highly decentralized nervous system using half a billion neurons, which enables advanced behaviors like unscrewing jar lids and complex communication via dynamic skin coloration, demonstrating non-cortical cognitive complexity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6b055b78-b057-446d-9aa2-2cbb64e86b83",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:22.121395+00:00"
+    },
+    {
+      "id": "69039121-9bca-44b0-a587-7a744499f2d5",
+      "text": "Research octopuses maintained in stressful captive environments often exhibit self-mutilation (autophagy), suggesting a profound negative subjective experience highly analogous to complex suffering in primates.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6b055b78-b057-446d-9aa2-2cbb64e86b83",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:22.122138+00:00"
+    },
+    {
+      "id": "40cefad5-da0f-4fd8-be5c-d6e79ab37b4c",
+      "text": "Western scrub jays demonstrate future planning by caching specific food types only when they anticipate needing them later, and captive great apes select and transport tools for use in future locations up to 14 hours away. These behaviors directly demonstrate non-immediate motivation and future-oriented concepts without complex human language.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "95972d97-00c2-4107-a60b-3190896bc0f9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:24.446101+00:00"
+    },
+    {
+      "id": "c751c9c4-1607-425d-a904-10add06cbd62",
+      "text": "The universal neurobiological drive to avoid pain, as seen when laboratory mice instantly withdraw a paw from heat or electric shock, constitutes an implicit, non-linguistic interest in physical well-being and continuation. This immediate survival mechanism is independent of complex future self-concepts, yet clearly expresses value for continued existence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "95972d97-00c2-4107-a60b-3190896bc0f9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:24.446574+00:00"
+    },
+    {
+      "id": "2c46bc18-8745-4bf4-bf61-6e5c03d3a354",
+      "text": "Bottlenose dolphins and Asian elephants demonstrate self-recognition in the mirror test, and elephants engage in complex behaviors like comforting distressed individuals, which suggest self-awareness and capacities beyond mere instinct.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0521680d-ed56-48eb-8206-9a86a4dee563",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:24.969647+00:00"
+    },
+    {
+      "id": "21b4183e-436f-4a8b-8055-61061f9779f5",
+      "text": "Human infants and individuals with severe cognitive disabilities lack the capacity for fully developed rational autonomy, yet ethical and legal systems universally grant them full moral personhood and protection, challenging the necessity of the strict Kantian requirement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0521680d-ed56-48eb-8206-9a86a4dee563",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:24.970381+00:00"
+    },
+    {
+      "id": "2e07f0d0-6b21-44b1-8476-2cea1cf1dcfd",
+      "text": "The Animal Welfare Act (1966) extends legal rights to animals based on demonstrated sentience, a widely accepted psychological metric, while intentionally excluding plants and inanimate objects. This demonstrates that psychological capacity functions as a practical basis for graded moral consideration in law, regardless of historical misuse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a66ded78-6811-4e75-b7b3-0875405a8806",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:30.800846+00:00"
+    },
+    {
+      "id": "83e03d34-5c0c-4156-bc27-3c13c8b0ae95",
+      "text": "Jeremy Bentham\u2019s founding principle of utilitarianism established that moral standing rests entirely on the capacity of a being to suffer or experience pleasure, defining duties based on this psychological state. This framework does not rely on a metaphysical or deductive logical proof of inherent rights, only on the existence of the psychological capacity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a66ded78-6811-4e75-b7b3-0875405a8806",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:30.801681+00:00"
+    },
+    {
+      "id": "88839898-2555-499d-9d55-d072c331f3fb",
+      "text": "Rights granted to vulnerable humans like infants and PVS patients are justified by a moral obligation based on intrinsic human dignity and vulnerability, demonstrating that their legal status is fundamentally moral, not non-arbitrary legal precedent.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "550a980f-b8f3-42c5-a43c-9fa03795eb8d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:31.179942+00:00"
+    },
+    {
+      "id": "7e502aaa-490d-471f-b85d-2f5c3b3b7113",
+      "text": "Peter Singer, following Bentham's utilitarianism, argues that the capacity for suffering defines moral standing, not rationality. This is an explicit ethical prescription that mandates duties toward biologically aware, non-rational beings like sentient animals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "57e2dc97-c14e-40d6-839f-40e47021f542",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:31.829671+00:00"
+    },
+    {
+      "id": "a6cdb36f-d538-4fca-8b75-1096c342cff0",
+      "text": "Moral duties are universally prescribed toward human beings lacking rational autonomy, such as infants and adults with profound cognitive disabilities. This standard moral practice contradicts the Kantian requirement that moral status only belongs to autonomously rational actors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "57e2dc97-c14e-40d6-839f-40e47021f542",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:31.830278+00:00"
+    },
+    {
+      "id": "087097a3-f297-449d-b5fd-dc0a724df764",
+      "text": "Legal systems are frequently reformed to align with moral consistency; the US Constitution's 13th Amendment redefined the legal status of an entire class of humans (slaves) despite previous legal systems, showing current law does not preclude philosophical change.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6b3678ae-4ee9-4991-ba1c-3696c9cbc5d8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:36.332105+00:00"
+    },
+    {
+      "id": "e78c215a-2e20-4cfd-ac18-25490ff7a34b",
+      "text": "Legal status is not strictly limited to the species *Homo sapiens* or guaranteed from birth; the Whanganui River in New Zealand holds legal personhood status, and judicial systems often treat fetuses differently from born persons in the US, showing legal criteria are malleable.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6b3678ae-4ee9-4991-ba1c-3696c9cbc5d8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:36.332568+00:00"
+    },
+    {
+      "id": "0c2954fb-a969-469e-8370-24caa041bb53",
+      "text": "Despite the principle of sentience, the US Animal Welfare Act specifically exempts billions of sentient animals, including all laboratory-used rats, mice, and birds, proving that legal protection is currently based on species classification rather than the consistent capacity for suffering.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7c1f5770-182a-421c-a588-3895769b345a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:36.403075+00:00"
+    },
+    {
+      "id": "e8290654-c1b9-46ba-80d4-3942b3d4272f",
+      "text": "The legal status of infants confined in unofficial prisons in failed states like Libya or within refugee camps administered by non-state actors demonstrates that foundational rights protection is not universal \"in all jurisdictions.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dbc25d63-c916-4fb3-8f6c-3604ac3eb2c4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:36.616812+00:00"
+    },
+    {
+      "id": "d049aeb5-b8c4-402e-b18d-6ef68d6d5428",
+      "text": "The protection afforded to human infants is typically based on their potential capacity for future rational agency, while the disabled are protected by the concept of inherent human dignity. This species-specific basis for protection maintains a critical moral distinction that avoids the strict reliance on immediately realized autonomy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "21b4183e-436f-4a8b-8055-61061f9779f5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:37.108722+00:00"
+    },
+    {
+      "id": "cee06a46-1b76-4bb0-9b89-bf47dfef6978",
+      "text": "New Caledonian crows spontaneously manufacture novel, multi-part tools from materials like pandanus leaves to solve complex foraging tasks, demonstrating foresight and recursive problem-solving, which indicates a quantitative, not qualitative, difference in cognition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f680f5d3-fd6a-4825-aefc-0fe940ac41a6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:37.472835+00:00"
+    },
+    {
+      "id": "3b4eeaf9-158e-476b-97ad-27bcf6941cd3",
+      "text": "The social culture of chimpanzees involves sophisticated political coalitions, long-term reciprocity, and punishment of norm violations, representing complex abstract systems that share foundational mechanisms with basic human legal codes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f680f5d3-fd6a-4825-aefc-0fe940ac41a6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:37.473572+00:00"
+    },
+    {
+      "id": "3aacd291-4890-4da2-a694-05a26edea4b1",
+      "text": "The moral basis for granting rights is the capacity for sentience and the experience of suffering, a criterion widely applied in policy, such as the European Union having legally recognized animals as sentient beings in the Treaty on the Functioning of the European Union.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "40cefad5-da0f-4fd8-be5c-d6e79ab37b4c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:39.387789+00:00"
+    },
+    {
+      "id": "6ccbe5c7-7ff7-45ee-a9f6-106a340cb8f7",
+      "text": "The European Union's 2022 animal welfare laws classify decapods like crabs and lobsters as sentient, demanding humane slaughter methods. This legislative focus on the capacity to suffer, rather than advanced cognitive feats like unscrewing jars, establishes a minimum requirement for moral rights that bypasses the octopus' complexity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d4d3f320-5851-4f12-8f9c-dd8c0cbf0dad",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:41.331201+00:00"
+    },
+    {
+      "id": "82fb90cf-c457-4c9f-a625-32ff56be3410",
+      "text": "The European red wood ant (Formica rufa) displays complex social cooperation, including caste specialization, kin selection, and \"farming\" aphids for sustenance. This intricate social organization is universally categorized as instinctual and driven by evolutionary fitness, demonstrating that sophisticated actions do not necessarily equate to advanced individual self-awareness or moral status.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2c46bc18-8745-4bf4-bf61-6e5c03d3a354",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:42.229219+00:00"
+    },
+    {
+      "id": "34b554cb-0b45-456b-9c33-f092aba06858",
+      "text": "The highly decentralized nervous system of the octopus, where two-thirds of neurons reside in the arms, differs fundamentally from the centralized primate brain topology necessary for suffering highly analogous complex psychological experiences.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "69039121-9bca-44b0-a587-7a744499f2d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:43.445827+00:00"
+    },
+    {
+      "id": "371d625f-d8ea-4c52-8cc5-658e3b66f2ec",
+      "text": "Self-mutilation in female octopuses is often triggered physically by the optic gland following reproduction, indicating a time-limited mechanism of programmed senescence rather than purely chronic psychological distress.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "69039121-9bca-44b0-a587-7a744499f2d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:43.445858+00:00"
+    },
+    {
+      "id": "9bf04cff-1d00-417a-84c0-2277e2947d44",
+      "text": "The moral protection afforded to marginal human cases, such as infants, is derived from their membership in the human community and their potential for rationality, not from their current lack of autonomy. This social contract-based protection gives them a special status, meaning their existence does not logically compel granting moral standing to non-rational, non-human animals.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a6cdb36f-d538-4fca-8b75-1096c342cff0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:44.486303+00:00"
+    },
+    {
+      "id": "ddb04752-9c14-45cb-add7-855a5e857e69",
+      "text": "The patellar reflex is an immediate, involuntary neurobiological withdrawal from a tendon tap, yet this simple action is not considered evidence of a conscious or implicit interest in continued bodily functions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c751c9c4-1607-425d-a904-10add06cbd62",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:44.513949+00:00"
+    },
+    {
+      "id": "688a4766-b8d6-48a3-930e-a4ee77998f28",
+      "text": "Human behavior involving deliberate self-harm or rationalized suicidal action shows that conscious will can override any supposed universal neurobiological drive to avoid pain or pursue individual continuation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c751c9c4-1607-425d-a904-10add06cbd62",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:44.513999+00:00"
+    },
+    {
+      "id": "fb7433a2-9234-4025-8a83-414f76572c85",
+      "text": "The Animal Welfare Act primarily establishes minimum *welfare standards* for property use, failing to grant animals legal personhood or remove their status as *chattel* under broader commercial and tort law.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2e07f0d0-6b21-44b1-8476-2cea1cf1dcfd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:45.624984+00:00"
+    },
+    {
+      "id": "8c5bb53f-9e94-46e5-8ba1-da6cf60e952c",
+      "text": "The AWA specifically excludes farm animals intended for *food and fiber* from many regulations, demonstrating that *economic utility*, not consistent sentience, dictates the legal scope of protection.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2e07f0d0-6b21-44b1-8476-2cea1cf1dcfd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:45.625023+00:00"
+    },
+    {
+      "id": "bf16c94b-1fc5-48cc-9682-2881329235e8",
+      "text": "The Whanganui River\u2019s legal personhood in New Zealand is a unique legal mechanism stemming from indigenous T\u016bhoe worldview and environmental stewardship, not an assessment of the entity's sentience, which is the necessary criterion for animal moral rights. This shows that legal malleability does not imply applicability across disparate ethical frameworks.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e78c215a-2e20-4cfd-ac18-25490ff7a34b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:46.043801+00:00"
+    },
+    {
+      "id": "e1f426fe-73ed-4cb0-983f-093f7b610ae7",
+      "text": "Immanuel Kant\u2019s philosophy, articulated in his Groundwork (1785), dictates that moral standing is derived from rational autonomy, establishing non-consequentialist moral duties independent of psychological states like suffering or pleasure.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "83e03d34-5c0c-4156-bc27-3c13c8b0ae95",
+      "children_count": 0,
+      "references": [
+        "Immanuel Kant"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:46.532127+00:00"
+    },
+    {
+      "id": "550d6a68-40de-4027-9066-593de706c68f",
+      "text": "Basic human legal codes rely on symbolic language to establish universally applied, codified principles, evidenced by historical examples like the Code of Hammurabi, a level of abstract, institutional structure entirely absent from chimpanzee social behaviors.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3b4eeaf9-158e-476b-97ad-27bcf6941cd3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:49.342656+00:00"
+    },
+    {
+      "id": "54bada8e-c5df-47fe-b06c-31a45901b58f",
+      "text": "Fundamental rights cannot be effectively exercised through guardianship if the chimpanzee remains legally defined as property, because property status grants the owner absolute control. Historically, the US Supreme Court decision Dred Scott v. Sandford established that an entity legally defined as property lacked the standing necessary to enforce foundational rights like freedom.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e064e5a8-922d-4a20-91cc-ff1b437fea26",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:50.292208+00:00"
+    },
+    {
+      "id": "319e11b0-fb56-48bd-aa95-18d5dbbb712b",
+      "text": "Major moral-legal redefinitions are historical rarities, not frequent occurrences through standard legal processes. The US 19th Amendment granting women's suffrage required over 70 years of continuous political pressure (1848 to 1920), illustrating fundamental changes are extremely slow and difficult achievements, not common adjustments.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "087097a3-f297-449d-b5fd-dc0a724df764",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:51.944633+00:00"
+    },
+    {
+      "id": "56a552c8-a7d8-49d6-9851-c80ca6716b19",
+      "text": "Immanuel Kant (1785) argued that direct moral duties are owed only to autonomous rational beings who possess inherent dignity, meaning duties toward non-rational animals are merely indirect duties toward humanity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7e502aaa-490d-471f-b85d-2f5c3b3b7113",
+      "children_count": 0,
+      "references": [
+        "Immanuel Kant"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:32:58.822311+00:00"
+    },
+    {
+      "id": "8b82a94f-6f93-4d9f-8f12-d54ee4d3d16f",
+      "text": "No non-human animal demonstrates the qualitative cognitive capacity for recursive linguistic thought necessary to formulate or debate abstract moral concepts, a unique distinction highlighted by Chomsky\u2019s work on human syntax.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "cee06a46-1b76-4bb0-9b89-bf47dfef6978",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:12.402247+00:00"
+    },
+    {
+      "id": "c44179b1-d185-423d-81c1-80655f6ea1c9",
+      "text": "Moral rights are inherently linked to autonomous moral agency, including the cognitive ability to understand and adhere to societal rules and contractual obligations. As non-human animals are not held legally or ethically accountable for actions like predation or destruction of property, they functionally lack the necessary capacity for moral reciprocity required for such rights.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:12.402375+00:00"
+    },
+    {
+      "id": "3a83af96-af06-4f32-a95a-ceba3d9bf00d",
+      "text": "Extending human-comparable rights to animals would render staple societal practices morally prohibitive, fundamentally threatening global human welfare and stability. Prohibiting the use of animals in research would halt the development of life-saving medicines and vaccines, directly contradicting public health measures advocated by institutions like the World Health Organization.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "World Health Organization"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:12.402818+00:00"
+    },
+    {
+      "id": "38813dd0-3c63-48b4-8a28-2f7a475423de",
+      "text": "The immense human benefit and suffering reduction derived from the instrumental use of animals (e.g., life-saving research, food security) represents a greater net positive utility than the prevention of non-human suffering. Global food security and nutritional stability for billions, especially in developing nations, are demonstrably reliant on livestock production and are priorities tracked by World Bank development indicators.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "World Bank"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:12.403091+00:00"
+    },
+    {
+      "id": "12b677e9-08f2-4ffe-ad48-42272239cf38",
+      "text": "Moral obligations operate within a necessary hierarchy where duties to one's own kin, community, and species take irreducible precedence over obligations to non-reciprocating beings. This hierarchy is demonstrated by the global prioritization of human lives and resources during crises like the 2004 Indian Ocean Tsunami or the 2020 pandemic.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:12.403324+00:00"
+    },
+    {
+      "id": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "text": "Observable biological and neurological differences demonstrate that non-human animals lack the intricate cognitive architecture and psychological capacities needed for human-level moral status. Specifically, capacities like profound temporal self-awareness, linguistic reasoning, and forming complex moral contracts appear primarily restricted to Homo sapiens, justifying a categorical distinction in rights.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:12.403584+00:00"
+    },
+    {
+      "id": "f6f95511-8b20-4d2e-850e-44ea84a152af",
+      "text": "Societies successfully outlawed practices long considered staples, like slavery and child labor, without global collapse; therefore, challenging current practices constitutes moral progress, not a fundamental threat to stability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3a83af96-af06-4f32-a95a-ceba3d9bf00d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:23.494327+00:00"
+    },
+    {
+      "id": "39867ef0-815d-496a-81d4-18e8d0be1599",
+      "text": "Advanced non-animal testing methods, such as 'organ-on-a-chip' technology and *in silico* modeling, are increasingly viable and often offer more accurate predictive data for humans than traditional animal models, meaning development would continue, not halt.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3a83af96-af06-4f32-a95a-ceba3d9bf00d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:23.495060+00:00"
+    },
+    {
+      "id": "cefb4f6c-50b4-483a-9b81-de45a099aab4",
+      "text": "Human infants and individuals with severe cognitive disabilities are universally granted fundamental rights like the right to life and protection, despite lacking the cognitive capacity for contractual obligations or legal accountability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c44179b1-d185-423d-81c1-80655f6ea1c9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:28.896992+00:00"
+    },
+    {
+      "id": "f2bfed4b-f40a-4091-b31e-c01c7049354e",
+      "text": "The widely recognized ethical criterion for moral inclusion is sentience\u2014the capacity to experience suffering\u2014as argued by thinkers like Jeremy Bentham, a criterion entirely separate from the cognitive ability required for moral reciprocity.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c44179b1-d185-423d-81c1-80655f6ea1c9",
+      "children_count": 2,
+      "references": [
+        "EU laws recognizing animals as sentient beings"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:28.897514+00:00"
+    },
+    {
+      "id": "fbbf9dd9-6df7-4483-a79a-6a625e4951db",
+      "text": "Sentience, the capacity to suffer, is the core established necessary condition for moral status, as encapsulated by Jeremy Bentham's dictum \"Can they suffer?\" Neuroscientific evidence confirms that species like mammals, birds, and cephalopods possess the requisite neurological structures for experiencing pain and well-being.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:30.289291+00:00"
+    },
+    {
+      "id": "04946c62-03f5-486b-925b-466f3bbadf0d",
+      "text": "If moral status requires profound temporal self-awareness and complex linguistic reasoning, human patients in a persistent vegetative state or human neonates do not qualify for full rights and protections. Yet, standard ethical frameworks, like the Hippocratic Oath, mandate maximum moral consideration and rights for these cognitively marginal humans.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:30.290026+00:00"
+    },
+    {
+      "id": "c124b35f-e06b-4a34-a52a-e1edb66e38fa",
+      "text": "Complex conceptual abilities are not exclusively restricted to Homo sapiens, empirically weakening the categorical distinction. Studies show Western scrub-jays plan for diversified future needs, and chimpanzees engage in political alliance formation, demonstrating temporal foresight and a capacity for complex, non-linguistic social negotiation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:30.290488+00:00"
+    },
+    {
+      "id": "efa20c6b-c21d-46c2-b80d-2c8fc146adec",
+      "text": "Utilitarian ethics, as advanced by thinkers like Peter Singer, rejects the moral relevance of species alone, meaning the unnecessary suffering of animals is not automatically outweighed by marginal human convenience. The European Union demonstrated this calculation by successfully outlawing the worst battery cages in 2012, prioritizing suffering reduction despite small cost increases.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "38813dd0-3c63-48b4-8a28-2f7a475423de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:33.134497+00:00"
+    },
+    {
+      "id": "c285bfba-f50f-43eb-a92a-2a357cd77b89",
+      "text": "Industrial livestock production is an inefficient method for achieving global nutritional stability, as roughly a third of the world's crops are fed to animals rather than humans. According to FAO and World Bank analyses, livestock contributes 14.5% of global human-caused greenhouse gases, making current reliance a major threat to long-term food security in vulnerable developing regions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "38813dd0-3c63-48b4-8a28-2f7a475423de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:33.135306+00:00"
+    },
+    {
+      "id": "d2da1d7e-1ce9-4b42-b858-93d3c9d68c04",
+      "text": "Current non-animal methods cannot yet model complex, chronic, or multi-organ toxicological interactions, meaning systemic physiological research necessary for complex endpoints like carcinogenicity or reproductive health still requires integrated in vivo testing.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "39867ef0-815d-496a-81d4-18e8d0be1599",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:33.805538+00:00"
+    },
+    {
+      "id": "41be75f7-acdc-4f92-9a7c-ff1c637e3d5a",
+      "text": "Global regulatory bodies, such as the US FDA and EU EMA, require extensive, multi-year validation and standardization studies before formally accepting new methods to replace mandatory animal testing, creating a significant logistical bottleneck regardless of technological accuracy.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "39867ef0-815d-496a-81d4-18e8d0be1599",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:33.806024+00:00"
+    },
+    {
+      "id": "1ce4d37a-1fe9-49f6-8195-658d6a3b55b2",
+      "text": "Sweeping challenges against necessary current practices, such as the abrupt implementation of Mao's Great Leap Forward or radical collectivization in the Soviet Union, resulted in widespread famine and societal collapse rather than guaranteed moral progress.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f6f95511-8b20-4d2e-850e-44ea84a152af",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:34.458277+00:00"
+    },
+    {
+      "id": "2b51fcef-8186-475e-8177-974f7d7bc193",
+      "text": "The abolition of slavery directly triggered the highly destructive US Civil War, confirming that challenging major social and economic staples frequently causes massive societal upheaval and loss of life, rather than ensuring stability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f6f95511-8b20-4d2e-850e-44ea84a152af",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:34.458744+00:00"
+    },
+    {
+      "id": "2f638452-6382-4263-9ff7-a9f380fd545b",
+      "text": "Moral progress, such as the 19th-century abolition of slavery across the British Empire, mandated prioritizing the rights of distant, non-reciprocating strangers over the economic interests of the local community.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "12b677e9-08f2-4ffe-ad48-42272239cf38",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:37.277141+00:00"
+    },
+    {
+      "id": "3a15a35a-9755-434a-9e74-b41692abdd4d",
+      "text": "The global response to both the 2004 Tsunami and the 2020 pandemic involved wealthy nations dedicating enormous resources and aid to distant foreign populations, prioritizing species-level duties over the needs of every local community.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "12b677e9-08f2-4ffe-ad48-42272239cf38",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:37.277925+00:00"
+    },
+    {
+      "id": "9e8284cc-c011-45a1-b09d-bdc1b41a3335",
+      "text": "Moral frameworks like Kantianism and contractualism explicitly reject sentience as the primary criterion, instead basing high moral status on cognitive abilities like rationality, autonomy, and the capacity for moral choice.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f2bfed4b-f40a-4091-b31e-c01c7049354e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:40.163920+00:00"
+    },
+    {
+      "id": "ecfbf979-831e-4eb8-88b4-217b27339eac",
+      "text": "While sentience grants moral consideration against suffering, it is insufficient for granting full moral personhood or legal rights, which hinge on the cognitive ability for moral agency and reciprocity required by most legal systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f2bfed4b-f40a-4091-b31e-c01c7049354e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:40.164865+00:00"
+    },
+    {
+      "id": "1cd51b9c-e7e9-452b-b964-dc51ad14511f",
+      "text": "While impressive, the exemplified animal behaviors remain tethered to immediate ecological or social goals and lack the capacity for fully generalized, symbolic, and recursive thought characteristic of human language and mathematics.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c124b35f-e06b-4a34-a52a-e1edb66e38fa",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:42.595114+00:00"
+    },
+    {
+      "id": "2a11ad26-2f95-4026-a1ea-a828add67f5f",
+      "text": "Human complex conceptual ability manifests in generalized cumulative culture, enabling the systematic development of tools like calculus or constitutional law, a capacity absent in the cited animal examples.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c124b35f-e06b-4a34-a52a-e1edb66e38fa",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:42.595918+00:00"
+    },
+    {
+      "id": "c03e2e62-fe8c-4add-bf4e-fa4e8f448f51",
+      "text": "The true bottleneck is a lack of political and moral urgency, not bureaucratic sloth; the European Union fully banned cosmetic animal testing in 2013, effectively forcing the acceptance of alternatives for all new products regardless of slow global validation studies. This prioritizes the moral imperative over regulatory timelines.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "41be75f7-acdc-4f92-9a7c-ff1c637e3d5a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:43.576763+00:00"
+    },
+    {
+      "id": "f62db836-bf84-47ec-a25f-52f88a1380d4",
+      "text": "Immanuel Kant's deontology, articulated in his *Groundwork of the Metaphysics of Morals*, assigns moral status solely to autonomous, rational beings (persons) because they can act under universal law, regardless of the capacity to feel pain.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fbbf9dd9-6df7-4483-a79a-6a625e4951db",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:47.025419+00:00"
+    },
+    {
+      "id": "abad2adb-88a4-4205-9b8c-a6d93a7c6cc0",
+      "text": "Major ethical systems, such as traditional Catholic moral theology, base unique moral status exclusively on the sanctity of human life and the possession of an immaterial soul, criteria entirely independent of neurological capacity for suffering.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fbbf9dd9-6df7-4483-a79a-6a625e4951db",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:47.026462+00:00"
+    },
+    {
+      "id": "6a389643-823d-48c7-9450-dfa6bf29775c",
+      "text": "Full legal personhood and extensive rights are granted to human infants, comatose patients, and the severely cognitively impaired, none of whom possess moral agency or reciprocity. This demonstrates that legal systems do not require these cognitive abilities as a functional prerequisite for defining full legal standing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ecfbf979-831e-4eb8-88b4-217b27339eac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:49.392750+00:00"
+    },
+    {
+      "id": "4978b456-3f6d-4328-908e-0b16abdb38a3",
+      "text": "Ruminants convert crop residues and grasses, which constitute over 85% of global livestock feed, into essential micronutrients like Vitamin B12 and highly bioavailable iron. This system produces high-quality protein and micronutrients from biomass humans cannot digest, rather than reducing nutritional stability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c285bfba-f50f-43eb-a92a-2a357cd77b89",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:49.866857+00:00"
+    },
+    {
+      "id": "4d335e49-404d-4331-894d-58fd48a29adc",
+      "text": "The 14.5% GHG figure includes extensive grazing systems and subsistence farms which utilize non-arable land that cannot grow crops. Industrial feedlots, the argument's specific target, are only one component of this total, blurring the distinction between land use efficiency and emissions for different global systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c285bfba-f50f-43eb-a92a-2a357cd77b89",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:49.867512+00:00"
+    },
+    {
+      "id": "e14045d8-aaa7-446f-8ace-5b8d4f08e5d3",
+      "text": "If full moral status requires rationality and autonomy, then human infants and individuals with severe cognitive disabilities are excluded, violating the universally accepted principle of human dignity and full legal protection granted to all humans.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9e8284cc-c011-45a1-b09d-bdc1b41a3335",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:50.353784+00:00"
+    },
+    {
+      "id": "46bf826d-b394-4385-aa28-4ae3594f0f03",
+      "text": "The EU policy is equally consistent with the rights-based ethical framework articulated by Tom Regan, which posits that animals possess inherent moral worth independent of any calculation of utility or cost.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "efa20c6b-c21d-46c2-b80d-2c8fc146adec",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:51.265643+00:00"
+    },
+    {
+      "id": "11d3701a-5d53-4fab-9559-90adae141972",
+      "text": "The 2012 battery cage ban was also a measure for regulatory harmonization across the EU Single Market, ensuring standardized production methods and fair competition between Member States rather than relying solely on abstract ethical calculations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "efa20c6b-c21d-46c2-b80d-2c8fc146adec",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:51.266444+00:00"
+    },
+    {
+      "id": "1a74c273-8383-472a-afbd-9f4dba452138",
+      "text": "The US FDA Modernization Act 2.0 (2022) allows the substitution of non-animal methods, like organ-on-a-chip technology, for animal tests in drug development, demonstrating that integrated in vivo testing is no longer mandated for all complex endpoints.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d2da1d7e-1ce9-4b42-b858-93d3c9d68c04",
+      "children_count": 0,
+      "references": [
+        "US Food and Drug Administration (FDA) Modernization Act 2.0"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:51.623134+00:00"
+    },
+    {
+      "id": "a09dc767-a133-40e8-9a78-bf0c56e9f585",
+      "text": "The 1833 Slavery Abolition Act ensured the economic interests of slave owners were prioritized through compensation, as the British government paid \u00a320 million (40% of the Treasury's annual budget) to owners, not the enslaved people.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2f638452-6382-4263-9ff7-a9f380fd545b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:52.257897+00:00"
+    },
+    {
+      "id": "8caa84aa-56bd-4eb0-962a-c56a836b2156",
+      "text": "Moral progress frequently involves extending rights to marginalized local populations rather than distant strangers; for example, the US Civil Rights Act of 1964 focused on citizens already within the American community.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2f638452-6382-4263-9ff7-a9f380fd545b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:52.258439+00:00"
+    },
+    {
+      "id": "98b6be33-f04f-4c3d-8147-949ec43af6af",
+      "text": "Wealthy nations spent far more on domestic relief and vaccine hoarding during the 2020 pandemic than on global aid, as demonstrated by the $2.2 trillion US CARES Act, prioritizing national needs.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3a15a35a-9755-434a-9e74-b41692abdd4d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:54.667582+00:00"
+    },
+    {
+      "id": "76cbdd1b-d18c-49cc-a1aa-e81e9c6a8b29",
+      "text": "Post-disaster international aid often utilizes specialized non-fungible resources, such as US Navy hospital ships or M\u00e9decins Sans Fronti\u00e8res, which do not subtract from local community operational budgets.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3a15a35a-9755-434a-9e74-b41692abdd4d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:54.668297+00:00"
+    },
+    {
+      "id": "71fd6560-f192-49d0-93c2-c5f1af6d2c37",
+      "text": "Sweeping moral challenges have historically resulted in progress, such as the 19th-century abolition of slavery across the British Empire and the United States, which fundamentally changed a violent, 'necessary' economic practice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1ce4d37a-1fe9-49f6-8195-658d6a3b55b2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:56.363008+00:00"
+    },
+    {
+      "id": "41afe8d3-bfbb-407a-a771-7cd5115da918",
+      "text": "Current animal exploitation is not a necessary practice for human well-being, as demonstrated by the economic growth and nutritional viability of the multi-billion dollar global plant-based protein and cultivated meat markets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1ce4d37a-1fe9-49f6-8195-658d6a3b55b2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:56.363064+00:00"
+    },
+    {
+      "id": "1abe62ce-71fc-4eb7-9e55-e3e19ecd45c3",
+      "text": "The massive upheaval was not universally necessary for abolition; the British Parliament legislated the immediate abolition of slavery across the entire British Empire in 1833, avoiding war and systemic collapse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2b51fcef-8186-475e-8177-974f7d7bc193",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:58.416383+00:00"
+    },
+    {
+      "id": "2c7994af-42bd-47d2-84c2-122f21c6eb1d",
+      "text": "Challenging major economic staples often stabilizes countries: post-WWII land reform programs in Japan and Taiwan, which dismantled entrenched feudal land ownership patterns, resulted in decades of sustained economic growth and social stability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2b51fcef-8186-475e-8177-974f7d7bc193",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:58.416447+00:00"
+    },
+    {
+      "id": "d7c85cd6-a729-4ae2-a745-bb8e7ccb0e25",
+      "text": "Moral consideration is fundamentally tied to the capacity for sentience and suffering, which is widely recognized in numerous species, including chimpanzees and cetaceans, as argued by Peter Singer in Animal Liberation. This core ethical criterion operates independently of an organism's ability to develop abstract conceptual tools like constitutional law.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2a11ad26-2f95-4026-a1ea-a828add67f5f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:58.575871+00:00"
+    },
+    {
+      "id": "af92da29-6f51-43ce-84cb-d570e79fed7d",
+      "text": "Western Scrub-Jays cache specific food and Great Apes select and transport tools for future use in different locations, demonstrating complex planning that exceeds immediate ecological goals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1cd51b9c-e7e9-452b-b964-dc51ad14511f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:58.911639+00:00"
+    },
+    {
+      "id": "71273b3e-66ef-4f79-9dcd-72e8a685ec92",
+      "text": "Kanzi the Bonobo uses hundreds of symbolic lexigrams to construct novel requests and comprehend novel English sentences, showing a functional symbolic capacity that is not strictly tethered to immediate objectives.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1cd51b9c-e7e9-452b-b964-dc51ad14511f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:58.911719+00:00"
+    },
+    {
+      "id": "03684208-4cba-437e-ad33-50fd1c6c9512",
+      "text": "The ability of neonates to experience pain meets the sentience criterion established by philosophers like Peter Singer, making them morally considerable regardless of linguistic reasoning. The legal concept of personhood in U.S. jurisprudence often grants full rights based solely on membership in the species Homo sapiens, extending to all but the brain-dead.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "04946c62-03f5-486b-925b-466f3bbadf0d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:59.417501+00:00"
+    },
+    {
+      "id": "1a244d9d-f04e-4e4a-8c33-709f8cfeb75f",
+      "text": "The original Hippocratic Oath, written 2,500 years ago, provided no mandate regarding modern categories like Persistent Vegetative State (PVS), a diagnosis established in 1972. Modern bioethics frameworks based on autonomy allow clinicians to responsibly withdraw life support from PVS patients in hospitals across the US and Europe.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "04946c62-03f5-486b-925b-466f3bbadf0d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:33:59.418651+00:00"
+    },
+    {
+      "id": "28dd4b62-63e1-4cc5-a1da-d69763b715d8",
+      "text": "Peter Singer's utilitarian proposal assigns moral status based on sentience, arguing that 'The question is not, Can they reason? nor, Can they talk? but, Can they suffer?' The European Union's Treaty of Lisbon (Article 13 TFEU) legally recognizes animals as sentient beings, making the capacity for suffering, not rationality, the legally codified basis for moral obligation in major governing bodies.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f62db836-bf84-47ec-a25f-52f88a1380d4",
+      "children_count": 0,
+      "references": [
+        "Peter Singer (Animal Liberation)",
+        "European Union Treaty of Lisbon (Article 13 TFEU)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:00.735687+00:00"
+    },
+    {
+      "id": "59bda26e-a59c-4f02-83c2-d746e58efa95",
+      "text": "The political consensus that enacted the 2012 ban originated from decades of widespread moral rights activism across Europe, demonstrating that \"abstract ethical calculations\" were the essential political foundation, with harmonization serving as the implementation mechanism.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "11d3701a-5d53-4fab-9559-90adae141972",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:03.367925+00:00"
+    },
+    {
+      "id": "31940779-3562-4dda-b0ed-180b7108c206",
+      "text": "EU Directive 2010/63/EU explicitly requires a utility balancing test for animal experiments, allowing suffering if the potential scientific benefit is great, fundamentally contradicting Regan's non-utilitarian abolitionist framework.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "46bf826d-b394-4385-aa28-4ae3594f0f03",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:03.518636+00:00"
+    },
+    {
+      "id": "bb984938-dc30-4a1a-b356-e28e2194eaf8",
+      "text": "The EU policy uses agricultural subsidies to sustain intensive factory farming methods, demonstrating that policy decisions worldwide prioritize economic utility and cost-benefit analysis over the inherent, uncalculatable worth Regan demands.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "46bf826d-b394-4385-aa28-4ae3594f0f03",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:03.518673+00:00"
+    },
+    {
+      "id": "e4aee235-d933-4acc-ad6b-72e5af834d5c",
+      "text": "Utilitarianism, advanced by major figures like Jeremy Bentham, bases moral status purely on neurological capacity, explicitly arguing that the capacity to suffer is the only relevant criterion for inclusion in the moral sphere. Therefore, this moral framework, which governs much of modern policy, fundamentally rejects the soul-based premises of the parent argument.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "abad2adb-88a4-4205-9b8c-a6d93a7c6cc0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:03.792890+00:00"
+    },
+    {
+      "id": "1ece8c7b-e444-4ac1-b601-ce870a84d815",
+      "text": "Animals possess demonstrable sentience and complex cognitive abilities, as evidenced by self-recognition in great apes and problem-solving in cetaceans, thereby granting them interests worthy of moral consideration. Legal frameworks in countries like New Zealand and Spain have already acknowledged this by shifting animals' status from mere property to sentient beings, establishing a basis for rights.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "98b6be33-f04f-4c3d-8147-949ec43af6af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:05.515297+00:00"
+    },
+    {
+      "id": "370de055-5659-458c-a545-698c68eec142",
+      "text": "The compensation, while vast, was a political necessity for the government to avoid massive economic and political destabilization and overcome entrenched opposition, suggesting the priority was securing an orderly, legal cessation of slavery, not purely maximizing owner wealth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a09dc767-a133-40e8-9a78-bf0c56e9f585",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:05.582786+00:00"
+    },
+    {
+      "id": "c4b8e8c4-79f0-4185-abb7-6e3b8cc76764",
+      "text": "Moral status derives from sentience and capacity to suffer, holding that the unnecessary pain inflicted on animals constitutes a moral wrong regardless of farming system efficiency. Peter Singer's principle of equal consideration of interests dictates that the suffering of cattle in extensive grazing or industrial feedlots is equally morally relevant, independent of GHG emissions or land type.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4d335e49-404d-4331-894d-58fd48a29adc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:06.220810+00:00"
+    },
+    {
+      "id": "dcb26eae-9929-4565-9982-5a3cb0b87f3f",
+      "text": "International aid arrival mandates substantial fungible local resource diversion, requiring police security, health ministry staff time for coordination, and logistics support that must be diverted from existing operational budgets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "76cbdd1b-d18c-49cc-a1aa-e81e9c6a8b29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:07.824685+00:00"
+    },
+    {
+      "id": "955136de-fbae-48f8-b84c-ff64701e9909",
+      "text": "The mobilization of specialized aid often requires the host nation to rapidly commit unbudgeted local funds for infrastructure support, such as clearing ports, repairing key access routes, and providing fuel and water services.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "76cbdd1b-d18c-49cc-a1aa-e81e9c6a8b29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:07.824759+00:00"
+    },
+    {
+      "id": "1d5d46e7-68ff-4401-9c8a-c1f297eeb548",
+      "text": "Industrialized livestock operations in the United States and Europe rely on human-edible crops like corn and soy, consuming approximately one-third of the world's total grain production and directly competing for global food security.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4978b456-3f6d-4328-908e-0b16abdb38a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:08.696626+00:00"
+    },
+    {
+      "id": "aaa37e20-1e94-4589-ba0e-0efcf6fcee63",
+      "text": "Ruminant enteric fermentation produces significant methane, a potent greenhouse gas responsible for destabilizing global food systems through accelerated climate change, as seen in recent severe droughts across the US corn belt.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4978b456-3f6d-4328-908e-0b16abdb38a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:08.696660+00:00"
+    },
+    {
+      "id": "681c1dd5-e820-483d-9b6c-53c5a0577df9",
+      "text": "The 1948 Universal Declaration of Human Rights established fundamental rights for all global individuals, regardless of political citizenship or nationality, demonstrating that major moral progress prioritizes distant strangers as well as local populations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8caa84aa-56bd-4eb0-962a-c56a836b2156",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:09.495865+00:00"
+    },
+    {
+      "id": "46399f36-7f08-4833-8dda-0c6eeae33f1e",
+      "text": "The Convention on International Trade in Endangered Species (CITES) involves 184 nations enforcing protections for animal populations worldwide, confirming that significant moral and legal initiatives concern physically and politically distant non-local entities.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8caa84aa-56bd-4eb0-962a-c56a836b2156",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:09.495926+00:00"
+    },
+    {
+      "id": "0d8ccdbb-07e9-49b3-b4d9-d42ba3c303f2",
+      "text": "The Oath\u2019s central, perennial principles prohibiting \"deadly drugs\" and commanding to \"do no harm\" are fundamentally challenged by the active withdrawal of life support, regardless of the diagnosis date of Persistent Vegetative State (PVS). The general principle of non-maleficence does not become obsolete simply because medical technology has advanced.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1a244d9d-f04e-4e4a-8c33-709f8cfeb75f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:15.229387+00:00"
+    },
+    {
+      "id": "c731a131-bab1-4a31-9540-8164fcb9982c",
+      "text": "Legal personhood is a construct distinct from sentience, as corporate entities possess extensive legal rights and responsibilities in the U.S. without any capacity for pain perception. This demonstrates that legal consideration is granted based on attributes like contractual capacity and economic function, not merely the philosophical criterion of suffering.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "03684208-4cba-437e-ad33-50fd1c6c9512",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:23.074522+00:00"
+    },
+    {
+      "id": "5e47ee32-cfe5-44dc-b639-3fb5b8829e2a",
+      "text": "U.S. law does not grant personhood solely on species membership, as the Supreme Court ruled in Roe v. Wade (1973) that states cannot override a woman's decision until fetal viability. The legal system thus applies criteria related to developmental stage and social recognition, contradicting a simple species classification rule.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "03684208-4cba-437e-ad33-50fd1c6c9512",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:23.074577+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:31:46.444614+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 5,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:31:46.444614+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "58e458d4-5e43-42e2-b6e5-98a8ccf2c15d",
+      "target": "f87674e3-ed7d-43b5-8cdf-cb11ae866fb5",
+      "type": "objection"
+    },
+    {
+      "source": "58e458d4-5e43-42e2-b6e5-98a8ccf2c15d",
+      "target": "31da4726-f589-4803-9220-aceb2c54b467",
+      "type": "objection"
+    },
+    {
+      "source": "b3beccdb-41d7-48cc-a577-edce6db7e281",
+      "target": "6b055b78-b057-446d-9aa2-2cbb64e86b83",
+      "type": "objection"
+    },
+    {
+      "source": "b3beccdb-41d7-48cc-a577-edce6db7e281",
+      "target": "57e2dc97-c14e-40d6-839f-40e47021f542",
+      "type": "objection"
+    },
+    {
+      "source": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "target": "8a604bf0-c6a3-4caa-8d25-e9e3137a3b71",
+      "type": "objection"
+    },
+    {
+      "source": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "target": "976a52b0-002e-4094-8fa7-4fff0f54d076",
+      "type": "objection"
+    },
+    {
+      "source": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "target": "ca78cf42-b7b5-4f37-8d1d-6ee83ff4634a",
+      "type": "objection"
+    },
+    {
+      "source": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "target": "a66ded78-6811-4e75-b7b3-0875405a8806",
+      "type": "objection"
+    },
+    {
+      "source": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "target": "d6bf9df9-345e-4464-a1ea-48bbc8c67532",
+      "type": "objection"
+    },
+    {
+      "source": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "target": "95972d97-00c2-4107-a60b-3190896bc0f9",
+      "type": "objection"
+    },
+    {
+      "source": "9047bcb9-3bba-4a7e-b199-e909129cbbe2",
+      "target": "6b3678ae-4ee9-4991-ba1c-3696c9cbc5d8",
+      "type": "objection"
+    },
+    {
+      "source": "9047bcb9-3bba-4a7e-b199-e909129cbbe2",
+      "target": "dbf53e29-1fdd-4628-a4e8-92cc463c6b19",
+      "type": "objection"
+    },
+    {
+      "source": "cc6fe4f2-c52d-41ea-ad28-b6f5aabce57d",
+      "target": "0521680d-ed56-48eb-8206-9a86a4dee563",
+      "type": "objection"
+    },
+    {
+      "source": "cc6fe4f2-c52d-41ea-ad28-b6f5aabce57d",
+      "target": "f680f5d3-fd6a-4825-aefc-0fe940ac41a6",
+      "type": "objection"
+    },
+    {
+      "source": "f87674e3-ed7d-43b5-8cdf-cb11ae866fb5",
+      "target": "550a980f-b8f3-42c5-a43c-9fa03795eb8d",
+      "type": "response"
+    },
+    {
+      "source": "f87674e3-ed7d-43b5-8cdf-cb11ae866fb5",
+      "target": "7c1f5770-182a-421c-a588-3895769b345a",
+      "type": "response"
+    },
+    {
+      "source": "dbf53e29-1fdd-4628-a4e8-92cc463c6b19",
+      "target": "dbc25d63-c916-4fb3-8f6c-3604ac3eb2c4",
+      "type": "response"
+    },
+    {
+      "source": "dbf53e29-1fdd-4628-a4e8-92cc463c6b19",
+      "target": "e064e5a8-922d-4a20-91cc-ff1b437fea26",
+      "type": "response"
+    },
+    {
+      "source": "6b055b78-b057-446d-9aa2-2cbb64e86b83",
+      "target": "d4d3f320-5851-4f12-8f9c-dd8c0cbf0dad",
+      "type": "response"
+    },
+    {
+      "source": "6b055b78-b057-446d-9aa2-2cbb64e86b83",
+      "target": "69039121-9bca-44b0-a587-7a744499f2d5",
+      "type": "response"
+    },
+    {
+      "source": "95972d97-00c2-4107-a60b-3190896bc0f9",
+      "target": "40cefad5-da0f-4fd8-be5c-d6e79ab37b4c",
+      "type": "response"
+    },
+    {
+      "source": "95972d97-00c2-4107-a60b-3190896bc0f9",
+      "target": "c751c9c4-1607-425d-a904-10add06cbd62",
+      "type": "response"
+    },
+    {
+      "source": "0521680d-ed56-48eb-8206-9a86a4dee563",
+      "target": "2c46bc18-8745-4bf4-bf61-6e5c03d3a354",
+      "type": "response"
+    },
+    {
+      "source": "0521680d-ed56-48eb-8206-9a86a4dee563",
+      "target": "21b4183e-436f-4a8b-8055-61061f9779f5",
+      "type": "response"
+    },
+    {
+      "source": "a66ded78-6811-4e75-b7b3-0875405a8806",
+      "target": "2e07f0d0-6b21-44b1-8476-2cea1cf1dcfd",
+      "type": "response"
+    },
+    {
+      "source": "a66ded78-6811-4e75-b7b3-0875405a8806",
+      "target": "83e03d34-5c0c-4156-bc27-3c13c8b0ae95",
+      "type": "response"
+    },
+    {
+      "source": "550a980f-b8f3-42c5-a43c-9fa03795eb8d",
+      "target": "88839898-2555-499d-9d55-d072c331f3fb",
+      "type": "response"
+    },
+    {
+      "source": "57e2dc97-c14e-40d6-839f-40e47021f542",
+      "target": "7e502aaa-490d-471f-b85d-2f5c3b3b7113",
+      "type": "response"
+    },
+    {
+      "source": "57e2dc97-c14e-40d6-839f-40e47021f542",
+      "target": "a6cdb36f-d538-4fca-8b75-1096c342cff0",
+      "type": "response"
+    },
+    {
+      "source": "6b3678ae-4ee9-4991-ba1c-3696c9cbc5d8",
+      "target": "087097a3-f297-449d-b5fd-dc0a724df764",
+      "type": "response"
+    },
+    {
+      "source": "6b3678ae-4ee9-4991-ba1c-3696c9cbc5d8",
+      "target": "e78c215a-2e20-4cfd-ac18-25490ff7a34b",
+      "type": "response"
+    },
+    {
+      "source": "7c1f5770-182a-421c-a588-3895769b345a",
+      "target": "0c2954fb-a969-469e-8370-24caa041bb53",
+      "type": "response"
+    },
+    {
+      "source": "dbc25d63-c916-4fb3-8f6c-3604ac3eb2c4",
+      "target": "e8290654-c1b9-46ba-80d4-3942b3d4272f",
+      "type": "response"
+    },
+    {
+      "source": "21b4183e-436f-4a8b-8055-61061f9779f5",
+      "target": "d049aeb5-b8c4-402e-b18d-6ef68d6d5428",
+      "type": "response"
+    },
+    {
+      "source": "f680f5d3-fd6a-4825-aefc-0fe940ac41a6",
+      "target": "cee06a46-1b76-4bb0-9b89-bf47dfef6978",
+      "type": "response"
+    },
+    {
+      "source": "f680f5d3-fd6a-4825-aefc-0fe940ac41a6",
+      "target": "3b4eeaf9-158e-476b-97ad-27bcf6941cd3",
+      "type": "response"
+    },
+    {
+      "source": "40cefad5-da0f-4fd8-be5c-d6e79ab37b4c",
+      "target": "3aacd291-4890-4da2-a694-05a26edea4b1",
+      "type": "response"
+    },
+    {
+      "source": "d4d3f320-5851-4f12-8f9c-dd8c0cbf0dad",
+      "target": "6ccbe5c7-7ff7-45ee-a9f6-106a340cb8f7",
+      "type": "response"
+    },
+    {
+      "source": "2c46bc18-8745-4bf4-bf61-6e5c03d3a354",
+      "target": "82fb90cf-c457-4c9f-a625-32ff56be3410",
+      "type": "response"
+    },
+    {
+      "source": "69039121-9bca-44b0-a587-7a744499f2d5",
+      "target": "34b554cb-0b45-456b-9c33-f092aba06858",
+      "type": "response"
+    },
+    {
+      "source": "69039121-9bca-44b0-a587-7a744499f2d5",
+      "target": "371d625f-d8ea-4c52-8cc5-658e3b66f2ec",
+      "type": "response"
+    },
+    {
+      "source": "a6cdb36f-d538-4fca-8b75-1096c342cff0",
+      "target": "9bf04cff-1d00-417a-84c0-2277e2947d44",
+      "type": "response"
+    },
+    {
+      "source": "c751c9c4-1607-425d-a904-10add06cbd62",
+      "target": "ddb04752-9c14-45cb-add7-855a5e857e69",
+      "type": "response"
+    },
+    {
+      "source": "c751c9c4-1607-425d-a904-10add06cbd62",
+      "target": "688a4766-b8d6-48a3-930e-a4ee77998f28",
+      "type": "response"
+    },
+    {
+      "source": "2e07f0d0-6b21-44b1-8476-2cea1cf1dcfd",
+      "target": "fb7433a2-9234-4025-8a83-414f76572c85",
+      "type": "response"
+    },
+    {
+      "source": "2e07f0d0-6b21-44b1-8476-2cea1cf1dcfd",
+      "target": "8c5bb53f-9e94-46e5-8ba1-da6cf60e952c",
+      "type": "response"
+    },
+    {
+      "source": "e78c215a-2e20-4cfd-ac18-25490ff7a34b",
+      "target": "bf16c94b-1fc5-48cc-9682-2881329235e8",
+      "type": "response"
+    },
+    {
+      "source": "83e03d34-5c0c-4156-bc27-3c13c8b0ae95",
+      "target": "e1f426fe-73ed-4cb0-983f-093f7b610ae7",
+      "type": "response"
+    },
+    {
+      "source": "3b4eeaf9-158e-476b-97ad-27bcf6941cd3",
+      "target": "550d6a68-40de-4027-9066-593de706c68f",
+      "type": "response"
+    },
+    {
+      "source": "e064e5a8-922d-4a20-91cc-ff1b437fea26",
+      "target": "54bada8e-c5df-47fe-b06c-31a45901b58f",
+      "type": "response"
+    },
+    {
+      "source": "087097a3-f297-449d-b5fd-dc0a724df764",
+      "target": "319e11b0-fb56-48bd-aa95-18d5dbbb712b",
+      "type": "response"
+    },
+    {
+      "source": "7e502aaa-490d-471f-b85d-2f5c3b3b7113",
+      "target": "56a552c8-a7d8-49d6-9851-c80ca6716b19",
+      "type": "response"
+    },
+    {
+      "source": "cee06a46-1b76-4bb0-9b89-bf47dfef6978",
+      "target": "8b82a94f-6f93-4d9f-8f12-d54ee4d3d16f",
+      "type": "response"
+    },
+    {
+      "source": "3a83af96-af06-4f32-a95a-ceba3d9bf00d",
+      "target": "f6f95511-8b20-4d2e-850e-44ea84a152af",
+      "type": "objection"
+    },
+    {
+      "source": "3a83af96-af06-4f32-a95a-ceba3d9bf00d",
+      "target": "39867ef0-815d-496a-81d4-18e8d0be1599",
+      "type": "objection"
+    },
+    {
+      "source": "c44179b1-d185-423d-81c1-80655f6ea1c9",
+      "target": "cefb4f6c-50b4-483a-9b81-de45a099aab4",
+      "type": "objection"
+    },
+    {
+      "source": "c44179b1-d185-423d-81c1-80655f6ea1c9",
+      "target": "f2bfed4b-f40a-4091-b31e-c01c7049354e",
+      "type": "objection"
+    },
+    {
+      "source": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "target": "fbbf9dd9-6df7-4483-a79a-6a625e4951db",
+      "type": "objection"
+    },
+    {
+      "source": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "target": "04946c62-03f5-486b-925b-466f3bbadf0d",
+      "type": "objection"
+    },
+    {
+      "source": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "target": "c124b35f-e06b-4a34-a52a-e1edb66e38fa",
+      "type": "objection"
+    },
+    {
+      "source": "38813dd0-3c63-48b4-8a28-2f7a475423de",
+      "target": "efa20c6b-c21d-46c2-b80d-2c8fc146adec",
+      "type": "objection"
+    },
+    {
+      "source": "38813dd0-3c63-48b4-8a28-2f7a475423de",
+      "target": "c285bfba-f50f-43eb-a92a-2a357cd77b89",
+      "type": "objection"
+    },
+    {
+      "source": "39867ef0-815d-496a-81d4-18e8d0be1599",
+      "target": "d2da1d7e-1ce9-4b42-b858-93d3c9d68c04",
+      "type": "response"
+    },
+    {
+      "source": "39867ef0-815d-496a-81d4-18e8d0be1599",
+      "target": "41be75f7-acdc-4f92-9a7c-ff1c637e3d5a",
+      "type": "response"
+    },
+    {
+      "source": "f6f95511-8b20-4d2e-850e-44ea84a152af",
+      "target": "1ce4d37a-1fe9-49f6-8195-658d6a3b55b2",
+      "type": "response"
+    },
+    {
+      "source": "f6f95511-8b20-4d2e-850e-44ea84a152af",
+      "target": "2b51fcef-8186-475e-8177-974f7d7bc193",
+      "type": "response"
+    },
+    {
+      "source": "12b677e9-08f2-4ffe-ad48-42272239cf38",
+      "target": "2f638452-6382-4263-9ff7-a9f380fd545b",
+      "type": "objection"
+    },
+    {
+      "source": "12b677e9-08f2-4ffe-ad48-42272239cf38",
+      "target": "3a15a35a-9755-434a-9e74-b41692abdd4d",
+      "type": "objection"
+    },
+    {
+      "source": "f2bfed4b-f40a-4091-b31e-c01c7049354e",
+      "target": "9e8284cc-c011-45a1-b09d-bdc1b41a3335",
+      "type": "response"
+    },
+    {
+      "source": "f2bfed4b-f40a-4091-b31e-c01c7049354e",
+      "target": "ecfbf979-831e-4eb8-88b4-217b27339eac",
+      "type": "response"
+    },
+    {
+      "source": "c124b35f-e06b-4a34-a52a-e1edb66e38fa",
+      "target": "1cd51b9c-e7e9-452b-b964-dc51ad14511f",
+      "type": "response"
+    },
+    {
+      "source": "c124b35f-e06b-4a34-a52a-e1edb66e38fa",
+      "target": "2a11ad26-2f95-4026-a1ea-a828add67f5f",
+      "type": "response"
+    },
+    {
+      "source": "41be75f7-acdc-4f92-9a7c-ff1c637e3d5a",
+      "target": "c03e2e62-fe8c-4add-bf4e-fa4e8f448f51",
+      "type": "response"
+    },
+    {
+      "source": "fbbf9dd9-6df7-4483-a79a-6a625e4951db",
+      "target": "f62db836-bf84-47ec-a25f-52f88a1380d4",
+      "type": "response"
+    },
+    {
+      "source": "fbbf9dd9-6df7-4483-a79a-6a625e4951db",
+      "target": "abad2adb-88a4-4205-9b8c-a6d93a7c6cc0",
+      "type": "response"
+    },
+    {
+      "source": "ecfbf979-831e-4eb8-88b4-217b27339eac",
+      "target": "6a389643-823d-48c7-9450-dfa6bf29775c",
+      "type": "response"
+    },
+    {
+      "source": "c285bfba-f50f-43eb-a92a-2a357cd77b89",
+      "target": "4978b456-3f6d-4328-908e-0b16abdb38a3",
+      "type": "response"
+    },
+    {
+      "source": "c285bfba-f50f-43eb-a92a-2a357cd77b89",
+      "target": "4d335e49-404d-4331-894d-58fd48a29adc",
+      "type": "response"
+    },
+    {
+      "source": "9e8284cc-c011-45a1-b09d-bdc1b41a3335",
+      "target": "e14045d8-aaa7-446f-8ace-5b8d4f08e5d3",
+      "type": "response"
+    },
+    {
+      "source": "efa20c6b-c21d-46c2-b80d-2c8fc146adec",
+      "target": "46bf826d-b394-4385-aa28-4ae3594f0f03",
+      "type": "response"
+    },
+    {
+      "source": "efa20c6b-c21d-46c2-b80d-2c8fc146adec",
+      "target": "11d3701a-5d53-4fab-9559-90adae141972",
+      "type": "response"
+    },
+    {
+      "source": "d2da1d7e-1ce9-4b42-b858-93d3c9d68c04",
+      "target": "1a74c273-8383-472a-afbd-9f4dba452138",
+      "type": "response"
+    },
+    {
+      "source": "2f638452-6382-4263-9ff7-a9f380fd545b",
+      "target": "a09dc767-a133-40e8-9a78-bf0c56e9f585",
+      "type": "response"
+    },
+    {
+      "source": "2f638452-6382-4263-9ff7-a9f380fd545b",
+      "target": "8caa84aa-56bd-4eb0-962a-c56a836b2156",
+      "type": "response"
+    },
+    {
+      "source": "3a15a35a-9755-434a-9e74-b41692abdd4d",
+      "target": "98b6be33-f04f-4c3d-8147-949ec43af6af",
+      "type": "response"
+    },
+    {
+      "source": "3a15a35a-9755-434a-9e74-b41692abdd4d",
+      "target": "76cbdd1b-d18c-49cc-a1aa-e81e9c6a8b29",
+      "type": "response"
+    },
+    {
+      "source": "1ce4d37a-1fe9-49f6-8195-658d6a3b55b2",
+      "target": "71fd6560-f192-49d0-93c2-c5f1af6d2c37",
+      "type": "response"
+    },
+    {
+      "source": "1ce4d37a-1fe9-49f6-8195-658d6a3b55b2",
+      "target": "41afe8d3-bfbb-407a-a771-7cd5115da918",
+      "type": "response"
+    },
+    {
+      "source": "2b51fcef-8186-475e-8177-974f7d7bc193",
+      "target": "1abe62ce-71fc-4eb7-9e55-e3e19ecd45c3",
+      "type": "response"
+    },
+    {
+      "source": "2b51fcef-8186-475e-8177-974f7d7bc193",
+      "target": "2c7994af-42bd-47d2-84c2-122f21c6eb1d",
+      "type": "response"
+    },
+    {
+      "source": "2a11ad26-2f95-4026-a1ea-a828add67f5f",
+      "target": "d7c85cd6-a729-4ae2-a745-bb8e7ccb0e25",
+      "type": "response"
+    },
+    {
+      "source": "1cd51b9c-e7e9-452b-b964-dc51ad14511f",
+      "target": "af92da29-6f51-43ce-84cb-d570e79fed7d",
+      "type": "response"
+    },
+    {
+      "source": "1cd51b9c-e7e9-452b-b964-dc51ad14511f",
+      "target": "71273b3e-66ef-4f79-9dcd-72e8a685ec92",
+      "type": "response"
+    },
+    {
+      "source": "04946c62-03f5-486b-925b-466f3bbadf0d",
+      "target": "03684208-4cba-437e-ad33-50fd1c6c9512",
+      "type": "response"
+    },
+    {
+      "source": "04946c62-03f5-486b-925b-466f3bbadf0d",
+      "target": "1a244d9d-f04e-4e4a-8c33-709f8cfeb75f",
+      "type": "response"
+    },
+    {
+      "source": "f62db836-bf84-47ec-a25f-52f88a1380d4",
+      "target": "28dd4b62-63e1-4cc5-a1da-d69763b715d8",
+      "type": "response"
+    },
+    {
+      "source": "11d3701a-5d53-4fab-9559-90adae141972",
+      "target": "59bda26e-a59c-4f02-83c2-d746e58efa95",
+      "type": "response"
+    },
+    {
+      "source": "46bf826d-b394-4385-aa28-4ae3594f0f03",
+      "target": "31940779-3562-4dda-b0ed-180b7108c206",
+      "type": "response"
+    },
+    {
+      "source": "46bf826d-b394-4385-aa28-4ae3594f0f03",
+      "target": "bb984938-dc30-4a1a-b356-e28e2194eaf8",
+      "type": "response"
+    },
+    {
+      "source": "abad2adb-88a4-4205-9b8c-a6d93a7c6cc0",
+      "target": "e4aee235-d933-4acc-ad6b-72e5af834d5c",
+      "type": "response"
+    },
+    {
+      "source": "98b6be33-f04f-4c3d-8147-949ec43af6af",
+      "target": "1ece8c7b-e444-4ac1-b601-ce870a84d815",
+      "type": "response"
+    },
+    {
+      "source": "a09dc767-a133-40e8-9a78-bf0c56e9f585",
+      "target": "370de055-5659-458c-a545-698c68eec142",
+      "type": "response"
+    },
+    {
+      "source": "4d335e49-404d-4331-894d-58fd48a29adc",
+      "target": "c4b8e8c4-79f0-4185-abb7-6e3b8cc76764",
+      "type": "response"
+    },
+    {
+      "source": "76cbdd1b-d18c-49cc-a1aa-e81e9c6a8b29",
+      "target": "dcb26eae-9929-4565-9982-5a3cb0b87f3f",
+      "type": "response"
+    },
+    {
+      "source": "76cbdd1b-d18c-49cc-a1aa-e81e9c6a8b29",
+      "target": "955136de-fbae-48f8-b84c-ff64701e9909",
+      "type": "response"
+    },
+    {
+      "source": "4978b456-3f6d-4328-908e-0b16abdb38a3",
+      "target": "1d5d46e7-68ff-4401-9c8a-c1f297eeb548",
+      "type": "response"
+    },
+    {
+      "source": "4978b456-3f6d-4328-908e-0b16abdb38a3",
+      "target": "aaa37e20-1e94-4589-ba0e-0efcf6fcee63",
+      "type": "response"
+    },
+    {
+      "source": "8caa84aa-56bd-4eb0-962a-c56a836b2156",
+      "target": "681c1dd5-e820-483d-9b6c-53c5a0577df9",
+      "type": "response"
+    },
+    {
+      "source": "8caa84aa-56bd-4eb0-962a-c56a836b2156",
+      "target": "46399f36-7f08-4833-8dda-0c6eeae33f1e",
+      "type": "response"
+    },
+    {
+      "source": "1a244d9d-f04e-4e4a-8c33-709f8cfeb75f",
+      "target": "0d8ccdbb-07e9-49b3-b4d9-d42ba3c303f2",
+      "type": "response"
+    },
+    {
+      "source": "03684208-4cba-437e-ad33-50fd1c6c9512",
+      "target": "c731a131-bab1-4a31-9540-8164fcb9982c",
+      "type": "response"
+    },
+    {
+      "source": "03684208-4cba-437e-ad33-50fd1c6c9512",
+      "target": "5e47ee32-cfe5-44dc-b639-3fb5b8829e2a",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "2e60f720-8864-4214-86bf-dd6439e8944f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b3beccdb-41d7-48cc-a577-edce6db7e281",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ea85a750-db63-48ec-acfd-1facdef5c41b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "58e458d4-5e43-42e2-b6e5-98a8ccf2c15d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9047bcb9-3bba-4a7e-b199-e909129cbbe2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "cc6fe4f2-c52d-41ea-ad28-b6f5aabce57d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "c44179b1-d185-423d-81c1-80655f6ea1c9",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "3a83af96-af06-4f32-a95a-ceba3d9bf00d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "38813dd0-3c63-48b4-8a28-2f7a475423de",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "12b677e9-08f2-4ffe-ad48-42272239cf38",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "9d31fe3b-3a81-4966-b3a4-ffb20ae9785d",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

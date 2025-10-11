@@ -1,0 +1,3853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuclear energy is necessary for combating climate change - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Nuclear energy is necessary for combating climate change</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            141 total nodes • Max depth: 3 •
+            Version 5
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/nuclear-energy-is-necessary-for-combating-climate-change.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">141</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "d73d3d1e-e49d-45f6-a1ba-56f919bc7fb4",
+      "text": "Achieving rapid, large-scale decarbonization requires reliable, dispatchable, 24/7 power generation, a necessity poorly met by intermittent renewables. Only nuclear energy provides the high-density, continuous low-carbon power required to meet aggressive climate timelines effectively.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:24.713219+00:00"
+    },
+    {
+      "id": "b1882192-b70d-4acb-b1df-06786f22861d",
+      "text": "Nuclear power provides essential grid stability services, including dependable synchronous inertia and voltage support, necessary for the safe integration of large quantities of intermittent renewables. Its continuous baseload capacity is crucial for maintaining the resilience and functional operation of modern electricity grids.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:24.713810+00:00"
+    },
+    {
+      "id": "ef72c0f9-acf9-443c-bb34-120fc80a7709",
+      "text": "Nuclear energy's vastly superior power density minimizes land requirements compared to diffuse renewable sources like solar or wind for equivalent electricity production. This high density also reduces the vast scale of critical raw material extraction and associated environmental impacts necessary for large low-carbon infrastructure projects.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:24.714184+00:00"
+    },
+    {
+      "id": "9815b504-cb19-4def-9a31-15af66a63215",
+      "text": "Historical case studies, such as France's rapid transition to over 70% low-carbon electricity, empirically prove that focused, centralized nuclear buildouts are the most reliable method for achieving rapid, comprehensive decarbonization of nation-sized grids.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:24.714553+00:00"
+    },
+    {
+      "id": "d4beb10b-6b99-4dee-889a-626a735078d5",
+      "text": "Advanced nuclear reactors are uniquely capable of providing the high-temperature process heat necessary for decarbonizing hard-to-abate industrial sectors like steel, cement production, and large-scale hydrogen generation. These industries are generally poorly served by low-grade heat from electrification alone.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:24.714937+00:00"
+    },
+    {
+      "id": "4e62171f-afaa-48fc-adb8-851589341019",
+      "text": "The catastrophic potential of unmitigated climate change mandates a utilitarian approach to mitigation that maximizes the probability of success. Responsible decision-making requires including every proven, reliable low-carbon technology, making the exclusion of nuclear energy an unacceptable ethical risk.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:24.715291+00:00"
+    },
+    {
+      "id": "7911f32e-932e-4c50-b07f-f87ab8bf1d52",
+      "text": "Nuclear facilities require far greater material intensity (tonnes of concrete and steel per MW) than solar or wind due to complex shielding and regulatory requirements, meaning high power density does not inherently correlate with minimized raw material extraction for construction.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ef72c0f9-acf9-443c-bb34-120fc80a7709",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:36.236458+00:00"
+    },
+    {
+      "id": "28c1f65c-5bef-4b83-9240-18ed6e5b33cc",
+      "text": "Comparing material extraction must include the nuclear fuel cycle, which requires significant energy and material inputs for uranium mining, enrichment, and the construction of permanent, material-intensive repositories for spent fuel that must securely last for millennia.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ef72c0f9-acf9-443c-bb34-120fc80a7709",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:36.236959+00:00"
+    },
+    {
+      "id": "9ccd8c5e-511a-4a15-b08a-fc8ff6dc3163",
+      "text": "Decentralized renewable strategies in countries like Denmark and Portugal achieved over 50% grid decarbonization faster and cheaper than the timelines and costs associated with centralized nuclear construction.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9815b504-cb19-4def-9a31-15af66a63215",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:37.040058+00:00"
+    },
+    {
+      "id": "2546c46f-7334-4343-acc7-fb83c45a53d7",
+      "text": "The French program relied on a centralized state monopoly and a single standardized design in the 1970s. Modern projects like Vogtle 3&4 in the US and Olkiluoto 3 in Finland demonstrate that modern regulatory complexity and non-standardization prevent the \"rapid\" and \"reliable\" execution claimed, often resulting in years of delay and billions in cost overruns.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9815b504-cb19-4def-9a31-15af66a63215",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:37.040397+00:00"
+    },
+    {
+      "id": "059c185a-960f-4e5e-998a-88458609c95a",
+      "text": "Modern grids provide essential stability using non-generation technologies such as synchronous condensers and grid-forming inverters, which can supply inertia and voltage support independently of continuous nuclear baseload operation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b1882192-b70d-4acb-b1df-06786f22861d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:38.025450+00:00"
+    },
+    {
+      "id": "841962ac-2b47-41b8-9fed-2b94e127b233",
+      "text": "Modern grid resilience is achieved through flexibility provided by utility-scale battery storage and fast-dispatchable peaker plants, not sole reliance on continuous baseload capacity. Grids like South Australia demonstrate that storage and rapid response systems effectively maintain stability and voltage support.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b1882192-b70d-4acb-b1df-06786f22861d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:38.026838+00:00"
+    },
+    {
+      "id": "e288d0e1-c3d0-4cb6-b22d-f6b72734264b",
+      "text": "Geothermal and hydropower are fully dispatchable, low-carbon technologies that provide 24/7 power, demonstrated by countries like Iceland which sources nearly 100% of its electricity from these alternatives, proving nuclear is not the sole viable option.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d73d3d1e-e49d-45f6-a1ba-56f919bc7fb4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:39.222749+00:00"
+    },
+    {
+      "id": "64894e73-555d-47fb-8446-3c1ea1fab6f7",
+      "text": "New nuclear construction is inherently slow, often taking 10 to 15 years to commission, demonstrated by the Vogtle 3&4 project taking 14 years and incurring massive overruns, making it unsuitable for immediate, rapid decarbonization targets.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d73d3d1e-e49d-45f6-a1ba-56f919bc7fb4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:39.223484+00:00"
+    },
+    {
+      "id": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "text": "Solar and wind capacity can be deployed in 4-5 years with a levelized cost of energy (LCOE) far below $40/MWh, whereas nuclear plants require 10-20 years for construction and LCOE exceeding $150/MWh, making massive resource commitment to nuclear a net detriment to rapid decarbonization success.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4e62171f-afaa-48fc-adb8-851589341019",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:41.867712+00:00"
+    },
+    {
+      "id": "b89c533e-aa6f-4f3d-adfb-0bfa6edbf36d",
+      "text": "Nuclear reactors produce high-level radioactive waste that remains radiologically hazardous for over 100,000 years (e.g., Iodine-129, Neptunium-237), representing a perpetual, multi-generational negative externality and security liability that must significantly discount the \"probability of success\" in a true utilitarian calculation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4e62171f-afaa-48fc-adb8-851589341019",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:41.868438+00:00"
+    },
+    {
+      "id": "d5bc0ac1-28df-483c-b1fd-10548cf119af",
+      "text": "Concentrated Solar Thermal (CST) facilities already deliver process heat above 1,000\u00b0C, a temperature sufficient for cement clinker and some steel production, demonstrating a non-nuclear option for high-grade thermal supply.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d4beb10b-6b99-4dee-889a-626a735078d5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:42.396170+00:00"
+    },
+    {
+      "id": "5e1cd171-f13b-41c8-afb2-eb6a7367936b",
+      "text": "High-temperature electrical methods, such as plasma torches and induction heating powered by renewables, reach temperatures of 3,000\u00b0C, directly competing with nuclear heat for the highest-temperature industrial applications like smelting and specialized chemical cracking.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d4beb10b-6b99-4dee-889a-626a735078d5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:42.396578+00:00"
+    },
+    {
+      "id": "4ad990e3-4792-4c27-ab60-a73442bc79f1",
+      "text": "Iceland is an exception due to its unique combination of abundant volcanic heat fields and reliable, glacially-fed rivers, resources unavailable to the vast majority of nations, rendering the comparative proof geographically irrelevant.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e288d0e1-c3d0-4cb6-b22d-f6b72734264b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:49.200202+00:00"
+    },
+    {
+      "id": "47208245-eac1-4901-852e-fc2ad9041c42",
+      "text": "Hydropower is not environmentally neutral; large-scale projects necessitate damming, which severely alters river ecosystems, causes habitat loss, and releases significant methane from reservoir decomposition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e288d0e1-c3d0-4cb6-b22d-f6b72734264b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:49.200889+00:00"
+    },
+    {
+      "id": "dea54977-cf8c-43a4-9262-9231fd1b008c",
+      "text": "Fast-dispatchable peaker plants and current battery storage systems (e.g., Hornsdale's 185 MW/MWh capacity) only provide capacity for minutes or hours; they cannot supply the terawatt-hours of sustained, long-duration energy required to substitute for baseload during multi-day grid stress.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "841962ac-2b47-41b8-9fed-2b94e127b233",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:50.223764+00:00"
+    },
+    {
+      "id": "b940f2e5-4fe7-4c27-9640-3a6df8357751",
+      "text": "The Hornsdale Power Reserve, while highly flexible, is not economically or materially scalable to replace the sustained, gigawatt-level output of regional baseload plants, demonstrating current limitations in storage technology, not its sufficiency.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "841962ac-2b47-41b8-9fed-2b94e127b233",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:50.224986+00:00"
+    },
+    {
+      "id": "5abc0c94-a61e-4de0-86ee-e9b04b07c6e6",
+      "text": "Comparing the cost and speed of deploying standardized, modular renewable components (wind/solar) to the cost and schedule overruns typical of massive, first-of-a-kind national nuclear projects (e.g., Vogtle) is inherently an apples-to-oranges metric.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9ccd8c5e-511a-4a15-b08a-fc8ff6dc3163",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:50.870802+00:00"
+    },
+    {
+      "id": "2c9fe53c-0b55-4927-889a-1517b7abb1f9",
+      "text": "Achieving 50%+ decarbonization with intermittent sources avoids the critical, expensive reliability challenges (storage, dispatchable backup) required for a superior system capable of near-100% clean power, which is the standard nuclear proponents often target.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9ccd8c5e-511a-4a15-b08a-fc8ff6dc3163",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:50.871482+00:00"
+    },
+    {
+      "id": "1a7f17a7-d21c-4516-a81d-3672b1e11390",
+      "text": "Measuring intensity per MW capacity is misleading; per MWh (energy output) is the correct metric. Due to capacity factors over 90% and 60-year lifespans, nuclear requires significantly less raw material (steel, concrete) per unit of energy generated than solar or wind.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7911f32e-932e-4c50-b07f-f87ab8bf1d52",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:50.886565+00:00"
+    },
+    {
+      "id": "5f9e3835-632c-41d2-a0a6-1120d33e4c94",
+      "text": "The argument's scope is too narrow, focusing only on concrete and steel. Solar and wind rely heavily on highly resource-intensive and environmentally damaging supply chains for rare earth metals (Neodymium) and specialized semiconductors (Cadmium Telluride) not required for conventional nuclear plants.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7911f32e-932e-4c50-b07f-f87ab8bf1d52",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:50.886974+00:00"
+    },
+    {
+      "id": "f7985f72-defa-48f6-b712-820012cdb714",
+      "text": "This generalizes from a poorly managed US project (Vogtle). Countries successfully utilizing standardization, such as South Korea, have routinely completed similar-sized reactors in under six years, demonstrating that the construction timeline is management, not technology, dependent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "64894e73-555d-47fb-8446-3c1ea1fab6f7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:51.328798+00:00"
+    },
+    {
+      "id": "2aa3301e-cc18-42fc-8d3a-56a4d6bb4d7c",
+      "text": "Decarbonization targets typically span 30-40 years (e.g., net-zero by 2050 or 2060). Nuclear plants commissioned in 10-15 years can then provide 60-80 years of essential, zero-carbon firm power, making them highly valuable assets for achieving the ultimate long-term climate goal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "64894e73-555d-47fb-8446-3c1ea1fab6f7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:51.329230+00:00"
+    },
+    {
+      "id": "bc401691-77ac-4457-be03-d915cce7e9ef",
+      "text": "The Vogtle and Olkiluoto overruns resulted significantly from contractor management issues, novel first-of-a-kind technical designs (AP1000/EPR), and inadequate construction quality control, demonstrating that factors besides regulation heavily dictated project success.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2546c46f-7334-4343-acc7-fb83c45a53d7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:53.258822+00:00"
+    },
+    {
+      "id": "d0bb01d9-a978-4d7b-9291-ff493a3bb2f6",
+      "text": "Both Vogtle 3&4 (AP1000) and Olkiluoto 3 (EPR) utilized supposedly standardized Generation III+ reactor designs, demonstrating that standardization alone does not guarantee cost control or timely execution under modern constraints.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2546c46f-7334-4343-acc7-fb83c45a53d7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:53.259991+00:00"
+    },
+    {
+      "id": "58dea29e-e3b1-4e48-bd56-faa5de0f3c0b",
+      "text": "The trillion-dollar global economic loss projected from accelerating climate change provides a greater and more imminent negative externality than the highly contained and financially managed long-term liability of nuclear waste storage.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b89c533e-aa6f-4f3d-adfb-0bfa6edbf36d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:54.411012+00:00"
+    },
+    {
+      "id": "2d8141ec-dde3-4f7b-8dec-5a05d77f83f3",
+      "text": "Equating a disposal cost realized in 100,000 years with immediate, existential benefits (like stabilizing current power grids) ignores standard economic and ethical time discounting principles, which render such extremely distant costs effectively zero in present value terms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b89c533e-aa6f-4f3d-adfb-0bfa6edbf36d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:54.411895+00:00"
+    },
+    {
+      "id": "be8fc1e0-cd8a-4ed2-91bf-bff0a75c24bc",
+      "text": "Cement clinker production requires temperatures exceeding 1,400\u00b0C for full calcination, rendering the 1,000\u00b0C maximum provided by current CST facilities insufficient to fully displace fossil fuels in this key industrial application.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d5bc0ac1-28df-483c-b1fd-10548cf119af",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:54.662173+00:00"
+    },
+    {
+      "id": "3e097eba-04aa-4da4-9a68-f4a604ad5c4d",
+      "text": "Primary steel production utilizes processes like the Basic Oxygen Furnace operating at temperatures near or above 1,500\u00b0C, meaning 1,000\u00b0C of solar thermal energy is inadequate for decarbonizing the bulk of global, high-volume steel manufacturing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d5bc0ac1-28df-483c-b1fd-10548cf119af",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:54.662958+00:00"
+    },
+    {
+      "id": "214aff01-026f-4659-8dbe-d4e4e2ce32f0",
+      "text": "The LCOE comparison is flawed because it ignores the massive system-wide costs of storage, transmission upgrades, and curtailment needed to make intermittent solar and wind reliable 24/7. Achieving high-penetration (e.g., 80%+) renewable grids requires long-duration storage solutions that dramatically increase the effective system cost, often well above current nuclear generation costs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:54.966672+00:00"
+    },
+    {
+      "id": "adf2905a-36eb-498a-bc82-e774ed511ede",
+      "text": "The nuclear construction times and costs are derived from outlier projects in Western nations; countries like South Korea, China, and the UAE consistently complete large-scale nuclear plants in 5-7 years. Furthermore, advanced Small Modular Reactors (SMRs) are projected to achieve rapid, standardized deployment and significantly lower levelized costs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:54.967100+00:00"
+    },
+    {
+      "id": "fb09698a-77bf-4def-8d9c-20d616f0b4ef",
+      "text": "Nuclear energy is dispatchable, high-capacity-factor firm power that directly solves the long-duration and seasonal storage gap that intermittent renewables cannot reliably fill. This makes nuclear a necessary complement to renewables for achieving full grid decarbonization, not a \"net detriment.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:54.967366+00:00"
+    },
+    {
+      "id": "454b7522-e94b-41e4-8ac3-43cb4987296f",
+      "text": "Producing GigaWatt-scale industrial heat for baseload applications using electric methods requires significantly greater total installed renewable capacity due to system conversion losses, resulting in a higher levelized cost of heat (LCOH) compared to directly delivering nuclear thermal energy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5e1cd171-f13b-41c8-afb2-eb6a7367936b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:59.387818+00:00"
+    },
+    {
+      "id": "03ba9a62-5813-4384-a156-3f6f3f240f43",
+      "text": "Key high-temperature industrial processes, such as continuous steel smelting and ammonia cracking, require heat delivery with 95%+ capacity factors; intermittent renewable electricity lacks the necessary dispatchability without massive, currently uneconomical utility-scale energy storage solutions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5e1cd171-f13b-41c8-afb2-eb6a7367936b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:59.388223+00:00"
+    },
+    {
+      "id": "10990330-041c-420e-a73d-1c47e61521a6",
+      "text": "While run-of-river and small hydro systems mitigate dam and methane issues, their highly localized nature and limited capacity prevent them from providing the consistent, large-scale power necessary to replace fossil fuels entirely, unlike nuclear energy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "47208245-eac1-4901-852e-fc2ad9041c42",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:57:59.427084+00:00"
+    },
+    {
+      "id": "d6fd58b6-1824-4e32-aa53-fbf91885a1d8",
+      "text": "The relevance of Iceland's success lies not in replicating its specific resources, but in demonstrating the successful scaling and governance of *any* highly abundant, geographically-unique renewable resource. Regions lacking geothermal and hydro often possess others, such as extreme solar resources (e.g., Chile's Atacama Desert) or persistent high winds (e.g., North Sea), which can be scaled with similar high capacity factors.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4ad990e3-4792-4c27-ab60-a73442bc79f1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:01.970311+00:00"
+    },
+    {
+      "id": "c63b8b75-c43a-43cc-b347-c53506bdaca1",
+      "text": "While capacity factors are high, nuclear requires significantly more steel and concrete for massive radioactive shielding and containment structures per installed MW. This initial material burden often results in a higher overall material intensity per MWh than is required for simpler solar or wind farms, even when amortized over the 60-year lifespan.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1a7f17a7-d21c-4516-a81d-3672b1e11390",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:02.105176+00:00"
+    },
+    {
+      "id": "89f4f442-e8e4-4c63-8933-f7c0b6ecc7aa",
+      "text": "The raw material comparison is incomplete, omitting specialized, supply-constrained materials like uranium, zirconium, and nickel alloys essential for the nuclear fuel cycle and reactor operations. Comprehensive Life Cycle Assessments (LCA) show that the mining, milling, and enrichment of these materials contribute significantly to the overall material footprint per MWh.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1a7f17a7-d21c-4516-a81d-3672b1e11390",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:02.105203+00:00"
+    },
+    {
+      "id": "990c2180-d534-4014-be66-d1297e3dbed1",
+      "text": "The generalization fails because emerging long-duration storage technologies, such as utility-scale hydrogen storage and compressed air energy storage (CAES), are specifically designed and being deployed to fill the multi-day, terawatt-hour stress gaps that current Li-ion batteries cannot address.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dea54977-cf8c-43a4-9262-9231fd1b008c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:02.860172+00:00"
+    },
+    {
+      "id": "77895821-b46d-4af8-9f05-eb35b796d423",
+      "text": "Peaker plants, typically fueled by natural gas, are operationally capable of running for multiple days non-stop during grid stress incidents, as their duration limit is fuel delivery and maintenance, not inherent technical duration capacity like a battery.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dea54977-cf8c-43a4-9262-9231fd1b008c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:02.860214+00:00"
+    },
+    {
+      "id": "7aaf732b-acd3-4e48-937e-0e64fb174927",
+      "text": "South Korea's construction success relied highly on repeating established, standardized reactor designs (ROAK), whereas Vogtle utilized a first-of-a-kind (FOAK) AP1000 design, which fundamentally introduces novel technological risks and costly regulatory delays that cannot be eliminated by management alone.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f7985f72-defa-48f6-b712-820012cdb714",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:03.387663+00:00"
+    },
+    {
+      "id": "bec6af44-5027-44b2-b376-83f936d6ee47",
+      "text": "The South Korean success model is dependent on its highly integrated, state-owned nuclear ecosystem (KHNP) that maintains a stable pipeline and specialized workforce; this structure, which streamlines permitting and capital deployment, is fundamentally different from the fragmented, private-sector/regulated utility model in the US.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f7985f72-defa-48f6-b712-820012cdb714",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:03.387699+00:00"
+    },
+    {
+      "id": "fdacb8a1-7500-4646-ba0a-c056e6f85bfe",
+      "text": "Decarbonization targets require massive emissions reductions within the next 10-15 years (e.g., 50% by 2030) to meet critical climate security goals. Nuclear plants commissioned after 2035-2040 arrive too late to significantly aid the crucial near-term emission cuts necessary to avoid the 1.5\u00b0C threshold.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2aa3301e-cc18-42fc-8d3a-56a4d6bb4d7c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:04.552425+00:00"
+    },
+    {
+      "id": "2c2a988e-a38e-4e8d-9b63-94cdc5758167",
+      "text": "Nuclear projects like Vogtle (USA) or Olkiluoto 3 (Finland) demonstrate massive capital cost overruns and severe delays (often >10 years late and billions over budget), making them a high financial risk. This cost and deployment speed severely limits their competitive \"value\" compared to rapidly deployable alternative firm power and storage solutions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2aa3301e-cc18-42fc-8d3a-56a4d6bb4d7c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:04.552472+00:00"
+    },
+    {
+      "id": "c4c07f2d-9c14-403b-99a8-5cd5d8d000a1",
+      "text": "Both Vogtle 3&4 and Olkiluoto 3 were \"first-of-a-kind\" (FOAK) builds in their respective countries, suffering from the high costs of rebuilding supply chains and regulatory expertise, which are separate issues from standardization. Successful standardization, like the French P-4 and N4 series, requires repeated deployment of identical units to realize learning curve benefits.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d0bb01d9-a978-4d7b-9291-ff493a3bb2f6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:05.143302+00:00"
+    },
+    {
+      "id": "808f2e4a-754b-4b51-bf1d-327890ff4ddb",
+      "text": "Utilitarian calculus requires discounting future benefits; because mitigating trillions in climate damage is a long-term benefit realized over decades, discounting significantly reduces the net present value of those avoided costs. This contradicts the framing of \"immediate harms avoided.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "58dea29e-e3b1-4e48-bd56-faa5de0f3c0b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:05.356975+00:00"
+    },
+    {
+      "id": "0e928885-8ef5-4929-bf79-5d560ebb7a84",
+      "text": "France's P4 and N4 reactor series achieved rapid, standardized fleet deployment of 58 identical units after the 1970s, proving that nuclear power possesses a standardization potential comparable to renewable component manufacturing.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5abc0c94-a61e-4de0-86ee-e9b04b07c6e6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:06.914939+00:00"
+    },
+    {
+      "id": "a6aeaa34-2b9c-4826-9fa9-e4e974b0fb8f",
+      "text": "Many high-renewable grids achieve full decarbonization reliance using dispatchable long-duration renewable resources like large-scale hydro and deep geothermal, proving nuclear is an option, not a necessity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "fb09698a-77bf-4def-8d9c-20d616f0b4ef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.036755+00:00"
+    },
+    {
+      "id": "3f0f4adb-7988-4f89-afde-10de3b72b949",
+      "text": "Traditional baseload nuclear plants are optimized for constant output and cannot economically or technically perform the frequent ramping and load-following required to dynamically bridge the seasonal storage gaps in a high-intermittent renewable grid.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "fb09698a-77bf-4def-8d9c-20d616f0b4ef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.036781+00:00"
+    },
+    {
+      "id": "c35d1225-4004-42e1-9304-d646cf728736",
+      "text": "The primary low-carbon steel production roadmap focuses on Hydrogen Direct Reduced Iron (H-DRI), which operates effectively at process temperatures between $800^{\\circ} \\mathrm{C}$ and $1,000^{\\circ} \\mathrm{C}$, making solar thermal energy adequate for this major transition.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3e097eba-04aa-4da4-9a68-f4a604ad5c4d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.181259+00:00"
+    },
+    {
+      "id": "7613ef06-a7d7-4d71-a8fc-0c2e6b1e7060",
+      "text": "Concentrated Solar Thermal (CST) systems utilize advanced thermal energy storage (TES) components that allow accumulated heat to be boosted well above the operating temperature of the receiver, contradicting the limit of $1,000^{\\circ} \\mathrm{C}$ for the final industrial process.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3e097eba-04aa-4da4-9a68-f4a604ad5c4d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.181300+00:00"
+    },
+    {
+      "id": "283d4271-4809-4e79-927e-2e467f89edbc",
+      "text": "Construction speed claims ignore fundamental systemic differences, as state-controlled programs in South Korea and China achieve speed via streamlined regulatory regimes and centralized financing largely impossible in complex Western democracies like the US, where Vogtle C-3/4 faced decade-long delays and multibillion-dollar overruns.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "adf2905a-36eb-498a-bc82-e774ed511ede",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.227196+00:00"
+    },
+    {
+      "id": "7c8fa383-2fd6-4d22-88cc-3938c759e3fe",
+      "text": "Advanced SMR standardization and low-cost projections are highly speculative; no current SMR technology has achieved commercial deployment at the projected scale, and the flagship NuScale project was cancelled after projected costs escalated dramatically.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "adf2905a-36eb-498a-bc82-e774ed511ede",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.227220+00:00"
+    },
+    {
+      "id": "bf1dc67c-c30c-46b0-90c6-848063c2c255",
+      "text": "Regions with high intermittent penetration already face major reliability and integration costs well before 50% decarbonization. For instance, South Australia and the Texas ERCOT grid require rapid, expensive transmission upgrades and high curtailment management (already at 30-40% penetration) to maintain stability, demonstrating that critical challenges are not avoided.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2c9fe53c-0b55-4927-889a-1517b7abb1f9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.264260+00:00"
+    },
+    {
+      "id": "e996aa32-57a1-421e-810a-e8a003268f2b",
+      "text": "The 1000\u00b0C heat provided by current CST is sufficient for the pre-calcination stage of cement production, which operates around 850\u00b0C and accounts for a significant portion of thermal energy needs, enabling substantial partial displacement of fossil fuels.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "be8fc1e0-cd8a-4ed2-91bf-bff0a75c24bc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.319006+00:00"
+    },
+    {
+      "id": "cd38d8e8-b7a5-44d7-bb23-ba27bdf87893",
+      "text": "Pumped Hydro Energy Storage (PHES) already provides over 150 GW of flexible, sustained baseload backup worldwide, demonstrating proven dispatchable gigawatt-scale storage technology distinct from lithium-ion.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b940f2e5-4fe7-4c27-9640-3a6df8357751",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.575222+00:00"
+    },
+    {
+      "id": "e057e299-a3f6-48cd-be15-db2cc4284ca1",
+      "text": "The Department of Energy projects the \"Long-Duration Storage Shot\" will reduce costs by 90% by 2030, paralleling the 85% drop in lithium-ion costs achieved between 2013 and 2021, rendering present-day economic constraints invalid for future scalability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b940f2e5-4fe7-4c27-9640-3a6df8357751",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:07.575249+00:00"
+    },
+    {
+      "id": "baaacbb1-f67f-47ea-9f58-885289cc95e8",
+      "text": "Conventional nuclear energy necessitates massive mining that generates millions of tons of acidic uranium mill tailings globally, producing a unique toxic burden. Furthermore, it requires permanent geological repositories for high-level radioactive waste that must be secured for over 10,000 years, a severe and unique environmental liability ignored by the comparison.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5f9e3835-632c-41d2-a0a6-1120d33e4c94",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:08.617178+00:00"
+    },
+    {
+      "id": "748897c8-344c-438d-83f6-d29673c135a3",
+      "text": "Standard economic discounting is deemed inappropriate for intergenerational risks because ethical frameworks, such as those used in the UK Stern Review on climate change, mandate near-zero or declining (hyperbolic) discount rates to avoid valuing the safety of future generations across 100,000 years at zero.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2d8141ec-dde3-4f7b-8dec-5a05d77f83f3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:08.717957+00:00"
+    },
+    {
+      "id": "a24ddad6-6189-47bf-bacd-916e23c47c61",
+      "text": "Industrial continuity requirements can be met by using intermittent renewable electricity to generate and store chemical energy carriers, such as green hydrogen or ammonia, which are highly dispatchable for constant high-temperature heat without relying on massive, uneconomical utility-scale electrical storage.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "03ba9a62-5813-4384-a156-3f6f3f240f43",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:11.247500+00:00"
+    },
+    {
+      "id": "a239f750-ba35-44e2-9301-a2162ec157b2",
+      "text": "New nuclear power projects in Western countries, such as the Vogtle plant in the US, have faced massive capital cost overruns, reaching final costs of over $35 billion for two reactors, a level often significantly higher than projected system costs for fully integrated renewable grids.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "214aff01-026f-4659-8dbe-d4e4e2ce32f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:12.988609+00:00"
+    },
+    {
+      "id": "46b03f92-ae8b-4ffa-83c3-73accd7227c8",
+      "text": "The US Nuclear Regulatory Commission requires years of design certification, licensing amendments, and site-specific reviews for novel designs like the AP1000 reactor. These mandatory regulatory phases significantly lock in cost and schedule overruns, co-dictating project success alongside management failures.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bc401691-77ac-4457-be03-d915cce7e9ef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:14.151499+00:00"
+    },
+    {
+      "id": "fb05fe32-8341-4127-8036-2acd67c7916c",
+      "text": "Successful nuclear projects, such as the Korean APR-1400 design deployed in the UAE (Barakah), achieved efficient construction because they utilized standardized designs under a stable, predictable, and rapidly implemented regulatory framework.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bc401691-77ac-4457-be03-d915cce7e9ef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:14.151541+00:00"
+    },
+    {
+      "id": "c4c2c667-97a7-452a-9725-3f15eeaa64e1",
+      "text": "The capital cost (CAPEX) for new large-scale nuclear projects, such as Hinkley Point C, often exceeds $10,000 per kW, while utility-scale solar and wind CAPEX has fallen below $1,500 per kW, meaning the higher installed capacity requirement for renewables is largely offset by a nearly tenfold difference in upfront costs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "454b7522-e94b-41e4-8ac3-43cb4987296f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.747629+00:00"
+    },
+    {
+      "id": "e87e5f01-f1a1-42d1-9fed-873bfd571e43",
+      "text": "Providing GigaWatt-scale industrial baseload heat requires renewable systems to incorporate substantial, expensive thermal energy storage (TES) or costly hydrogen peaking generators, which drastically increases the final Levelized Cost of Heat (LCOH), a significant factor not addressed by focusing only on conversion losses.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "454b7522-e94b-41e4-8ac3-43cb4987296f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.747741+00:00"
+    },
+    {
+      "id": "4a0374c8-48ce-4e0f-92b9-dd72202d4d10",
+      "text": "Nuclear plant construction suffers from prohibitive costs and protracted delays, exemplified by projects like Vogtle and Hinkley Point C. These factors divert crucial financial and logistical resources needed for the immediate and rapid scaling of existing, cost-effective renewable energy systems.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.747890+00:00"
+    },
+    {
+      "id": "26cce4a7-07ae-4892-96d7-857a012d21af",
+      "text": "The exponential decline in the Levelized Cost of Energy (LCOE) for solar, wind, and storage demonstrates functional sufficiency in non-nuclear alternatives. Grid decarbonization goals can therefore be met more efficiently using operationally existing renewables without requiring new, complex reactor deployment.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.748359+00:00"
+    },
+    {
+      "id": "ba68152b-32df-4d61-b4e3-fdcd1cb679b6",
+      "text": "Climate change increases the frequency of severe weather events, such as floods and prolonged heatwaves, which stress centralized infrastructure. This makes reliance on massive nuclear facilities an unacceptable single point of failure that reduces overall grid resilience during climate-related disasters.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.748614+00:00"
+    },
+    {
+      "id": "15ff64bb-d77e-414e-a818-df9f22ab7324",
+      "text": "Current interim storage solutions last decades, but spent nuclear fuel remains hazardous for over 100,000 years, an unprecedented trans-millennial liability for which no permanent, scientifically proven repository exists.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.748858+00:00"
+    },
+    {
+      "id": "795ad21b-f382-4fee-b0d9-827019133a04",
+      "text": "Historical events like the Chernobyl and Fukushima meltdowns prove that the scale of nuclear disaster renders vast regions uninhabitable and necessitates multi-decade cleanups. This potential for unacceptable high-impact, high-cost catastrophes disqualifies nuclear power as a \"necessary\" climate solution.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.749085+00:00"
+    },
+    {
+      "id": "e5164ffd-0208-4932-a191-ff56eb24418f",
+      "text": "The indispensable security protocols, complex licensing, and highly specialized training for nuclear energy create inherent regulatory hurdles. These requirements fundamentally obstruct rapid deployment and prevent the technology from achieving the necessary scale and speed required to meet urgent climate mitigation deadlines.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:19.749311+00:00"
+    },
+    {
+      "id": "efab8679-3b7c-4dbc-a362-1b815e0f1eea",
+      "text": "The risk of a \"single point of failure\" is true for all large, centralized power generation, including coal, major gas plants, and large hydro dams, meaning this vulnerability is not unique to nuclear facilities.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ba68152b-32df-4d61-b4e3-fdcd1cb679b6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:30.192190+00:00"
+    },
+    {
+      "id": "62ecf9a8-117e-48b1-8cbe-29d1877029c0",
+      "text": "Nuclear facilities reliably maintain power during severe weather (with a 92.5% US capacity factor in 2022) and often enhance overall grid resilience by providing stable baseload when weather incapacitates intermittent sources.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ba68152b-32df-4d61-b4e3-fdcd1cb679b6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:30.192968+00:00"
+    },
+    {
+      "id": "4b9e7da7-3d8f-4368-aab1-0aeb3cd4296e",
+      "text": "Low LCOE for renewables excludes the steep fixed costs of massive transmission infrastructure and long-duration storage needed to reliably match 24/7 grid demand with intermittent power.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "26cce4a7-07ae-4892-96d7-857a012d21af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:30.542906+00:00"
+    },
+    {
+      "id": "12139935-ffe7-45d7-99a5-b024089a0d95",
+      "text": "Achieving deep grid decarbonization (80%-100%) requires extensive long-duration storage, leading to diminishing returns where the total system cost of 100% renewables often exceeds that of a mixed system incorporating high-capacity factor nuclear power.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "26cce4a7-07ae-4892-96d7-857a012d21af",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:30.543312+00:00"
+    },
+    {
+      "id": "82056848-699f-4ea8-9ecb-ecfc8910e614",
+      "text": "Preventing catastrophic climate change, which poses a diffuse and immediate existential threat, is a higher ethical duty because it avoids an unmanageable intergenerational burden (e.g., mass migration, resource scarcity) that is more certain and severe than the localized, controllable risk of spent nuclear fuel.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "15ff64bb-d77e-414e-a818-df9f22ab7324",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:33.730394+00:00"
+    },
+    {
+      "id": "bac52605-a97b-4ed4-b56a-89090264b94d",
+      "text": "The \u201cunresolved problem\u201d is one of political deployment, not technical feasibility; deep geological repositories like Finland\u2019s Onkalo are proven solutions that isolate high-level waste effectively, limiting the hazard\u2019s scope and duration to manageable proportions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "15ff64bb-d77e-414e-a818-df9f22ab7324",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:33.731102+00:00"
+    },
+    {
+      "id": "03672509-4ccf-4990-97cf-d9196d40ea93",
+      "text": "Public and private capital for large-scale infrastructure like nuclear power is often distinct from the investment pools allocated to distributed renewable energy systems, meaning resources are not perfectly fungible and one investment does not automatically \\u0022divert\\u0022 from the other.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4a0374c8-48ce-4e0f-92b9-dd72202d4d10",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:34.019780+00:00"
+    },
+    {
+      "id": "00540ff9-eae5-4b77-bda6-3554ce43c616",
+      "text": "Standardized nuclear construction, like that demonstrated in South Korea and Russia, avoids the cost overruns seen at Vogtle, and the economies of series production for Small Modular Reactors (SMRs) further minimizes capital risk.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4a0374c8-48ce-4e0f-92b9-dd72202d4d10",
+      "children_count": 2,
+      "references": [
+        "South Korea's nuclear program"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:34.020222+00:00"
+    },
+    {
+      "id": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "text": "The World Health Organization estimates that air pollution from fossil fuels causes 7 million premature deaths annually, dwarfing the statistical risk posed by modern nuclear facilities and making their zero-carbon status a necessity compared to current alternatives.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "795ad21b-f382-4fee-b0d9-827019133a04",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:37.036276+00:00"
+    },
+    {
+      "id": "948ba3a0-c70c-4c28-968c-8249e1aca2b7",
+      "text": "Modern intermittent sources like solar and wind have capacity factors averaging 25-45%; conversely, stable, zero-carbon nuclear energy consistently achieves factors above 90%, demonstrating its necessity for grid reliability during rapid decarbonization.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "795ad21b-f382-4fee-b0d9-827019133a04",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:37.036703+00:00"
+    },
+    {
+      "id": "c0fc916b-8661-4941-a125-e1af26512812",
+      "text": "Several nations, including the USA and Canada, are actively reviewing and implementing fast-track licensing pathways (e.g., streamlined Generic Design Assessments) specifically for Small Modular Reactors (SMRs), demonstrating that complex regulatory hurdles are procedural and modifiable, not intrinsic technical limitations.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e5164ffd-0208-4932-a191-ff56eb24418f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:37.216967+00:00"
+    },
+    {
+      "id": "70e784bc-7023-4e40-8202-5c9372bc9719",
+      "text": "Small Modular Reactors (SMRs) utilize standardized, factory-based manufacturing, allowing for mass production and rapid deployment that bypasses the slow, site-specific construction delays characteristic of traditional large-scale nuclear projects.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e5164ffd-0208-4932-a191-ff56eb24418f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:37.217596+00:00"
+    },
+    {
+      "id": "e6668839-1f80-4de2-9cb2-bc721976a7db",
+      "text": "The high annual capacity factor masks specific vulnerabilities during severe weather; for instance, US nuclear plants failed due to extreme cold during Winter Storm Uri in 2021, and flooding was the root cause of the Fukushima Daiichi failure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "62ecf9a8-117e-48b1-8cbe-29d1877029c0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:41.041186+00:00"
+    },
+    {
+      "id": "3eb13a15-cfe0-43cf-8934-fdb8b5ae6426",
+      "text": "Nuclear plants require significant auxiliary infrastructure, such as offsite power and external cooling water sources, which are often compromised during severe weather events (like flooding or transmission line damage), undermining their stable baseload contribution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "62ecf9a8-117e-48b1-8cbe-29d1877029c0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:41.041902+00:00"
+    },
+    {
+      "id": "17f6f624-83c1-423c-8fa3-ab98bedc493a",
+      "text": "Successful reactor construction in South Korea and Russia relies on state-owned utilities, dedicated national vendors, and streamlined, state-controlled regulatory processes, which is not comparable to the competitive, private, and heavily scrutinized regulatory environments of Vogtle or Hinkley Point C.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "00540ff9-eae5-4b77-bda6-3554ce43c616",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:45.151752+00:00"
+    },
+    {
+      "id": "0e2496c2-cc52-4f0c-8e8a-5530da6dd125",
+      "text": "Standardized SMRs remain unproven large-scale commercial technologies; relying on their *potential* future cost-reduction to counter current documented failures (like Vogtle's $30 billion overrun) speculates on technology readiness that does not yet exist.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "00540ff9-eae5-4b77-bda6-3554ce43c616",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:45.152223+00:00"
+    },
+    {
+      "id": "80a82de7-fa73-4647-88c4-a0941a048894",
+      "text": "Investment in large-scale projects like nuclear competes heavily for scarce non-financial resources such as specialized labor (e.g., nuclear engineers) and limited regulatory review bandwidth from government agencies, functionally diverting them from the renewable sector regardless of capital source.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "03672509-4ccf-4990-97cf-d9196d40ea93",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:46.360209+00:00"
+    },
+    {
+      "id": "2bf0cfad-e7f1-498f-9b0e-282a510c4cc7",
+      "text": "Public financing, such as government loan guarantees or direct grants, draws from a single sovereign budget, making the capital fiscally fungible; allocating funds to one energy source constitutes a direct opportunity cost against investments in grid modernization for distributed generation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "03672509-4ccf-4990-97cf-d9196d40ea93",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:46.360650+00:00"
+    },
+    {
+      "id": "0329d384-dcd8-4cfa-9f73-962ec6cffa6c",
+      "text": "The economic savings from SMR mass production are currently negated by high costs: the flagship NuScale project was canceled after projected costs rose by 75%, demonstrating that standardization has not eliminated financial risk or delays.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "70e784bc-7023-4e40-8202-5c9372bc9719",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:48.160491+00:00"
+    },
+    {
+      "id": "e0c56372-c3bd-4c3b-83ea-9efbf5f80bbb",
+      "text": "Standardized factory assembly does not bypass site-specific delays like complex licensing, environmental impact assessments, and public intervention processes, which must still be completed individually for every deployment location.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "70e784bc-7023-4e40-8202-5c9372bc9719",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:48.161145+00:00"
+    },
+    {
+      "id": "49c44546-9aba-4fb3-a9cc-f3e3c38b2c50",
+      "text": "The Intergovernmental Panel on Climate Change (IPCC) projects existential threats primarily materialize across the next 50 to 100 years, characterizing the danger as a severe, long-term catastrophe, not an immediate one.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "82056848-699f-4ea8-9ecb-ecfc8910e614",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:48.548429+00:00"
+    },
+    {
+      "id": "924bf587-f958-4a0a-bf41-3d8a6a456b7f",
+      "text": "Spent nuclear fuel contains isotopes like Plutonium-239 requiring continuous, proven containment for over 240,000 years (ten half-lives), a duration exceeding all recorded human political stability and engineering reliability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "82056848-699f-4ea8-9ecb-ecfc8910e614",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:48.548868+00:00"
+    },
+    {
+      "id": "e91ec771-3b53-4616-984c-23ba04daf23e",
+      "text": "Streamlined regulatory paths, such as the U.S. NRC's two-step licensing, only standardize review *procedures* for safety; they do not eliminate the intrinsic technical hurdle of proving the reliability of novel passive safety systems over a 60-year lifespan.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c0fc916b-8661-4941-a125-e1af26512812",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:48.893598+00:00"
+    },
+    {
+      "id": "dbd28e8e-c607-4658-90c9-a56449a21da2",
+      "text": "Regulatory complexity is fundamentally technical because advanced SMRs use novel fuel types (e.g., HALEU) and alternative coolants, requiring years of new data and testing\u2014work that regulatory bodies cannot simply fast-track without violating existing, non-negotiable safety standards.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c0fc916b-8661-4941-a125-e1af26512812",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:48.894495+00:00"
+    },
+    {
+      "id": "009b6241-271d-498c-af76-b10706b354b0",
+      "text": "New Generation III+ nuclear projects, like the Vogtle plant in the US, face massive cost overruns exceeding $30 billion and multi-year delays, proving the proposed high-capacity factor baseload is often economically unstable and cannot reliably undercut renewable costs.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "12139935-ffe7-45d7-99a5-b024089a0d95",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:49.590710+00:00"
+    },
+    {
+      "id": "e7836505-4e89-4f45-9d2e-5493b323fc8d",
+      "text": "Continental-scale grid modeling demonstrates that integrating vast geographic diversity and robust HVDC transmission lines significantly minimizes the capacity factor gap, reducing the required capital investment in costly long-duration storage for 100% renewable grids.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "12139935-ffe7-45d7-99a5-b024089a0d95",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:49.591407+00:00"
+    },
+    {
+      "id": "a42271d7-b0e4-4b0b-bd33-f51d089595b7",
+      "text": "Grid stability does not necessitate high-CF baseload generation, as reliable systems are achievable by combining lower-CF sources with dispatchable storage (like batteries or pumped hydro) and inter-regional transmission, creating sufficient functional capacity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "948ba3a0-c70c-4c28-968c-8249e1aca2b7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:50.492789+00:00"
+    },
+    {
+      "id": "10acd012-fe5d-41cc-aaee-eac62b176055",
+      "text": "Grid reliability in renewable-heavy systems increasingly depends on fast ramping and dispatchability to manage short-term fluctuations, capabilities where nuclear reactors are often technically and economically limited compared to flexible gas turbines, hydro, or battery storage.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "948ba3a0-c70c-4c28-968c-8249e1aca2b7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:50.493252+00:00"
+    },
+    {
+      "id": "08a4ba4a-70ae-4e9c-8fa0-36189014f9ca",
+      "text": "Predicting containment stability over the required 100,000-year timescale involves complex modeling of hydrogeology, seismicity, and climate impacts, introducing technical uncertainties far exceeding political deployment challenges.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bac52605-a97b-4ed4-b56a-89090264b94d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:51.293689+00:00"
+    },
+    {
+      "id": "2faf1a24-6849-4ad2-b477-27679c24c04c",
+      "text": "Deep geological repositories, including Finland\u2019s Onkalo, have zero operational history at the required 100,000-year timescale, meaning their classification as \"proven solutions\" relies solely on unverified long-term performance models.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bac52605-a97b-4ed4-b56a-89090264b94d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:51.294426+00:00"
+    },
+    {
+      "id": "0e741e33-da33-453f-b455-8202edc35d81",
+      "text": "Renewable energy sources like solar and wind capacity are scalable and rapidly deployable, with global costs for solar falling by nearly 90% since 2010, demonstrating readily available zero-carbon alternatives that are not fossil fuels or nuclear.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:53.815674+00:00"
+    },
+    {
+      "id": "cdda0a95-d0f9-47ed-a13c-b09449add956",
+      "text": "The high capital costs and long construction timelines (often exceeding 10 years for modern reactors) of nuclear power delay rapid decarbonization compared to rapidly deployable, modular renewable technologies necessary to meet urgent climate goals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:53.816381+00:00"
+    },
+    {
+      "id": "fc8cbe4f-f59e-417d-be64-7a22c0ff2014",
+      "text": "Full life-cycle analyses show nuclear power generation involves carbon emissions (ranging from 5-12g CO2eq/kWh), primarily due to energy-intensive uranium mining and specialized concrete construction, meaning nuclear does not possess true zero-carbon status.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:53.816934+00:00"
+    },
+    {
+      "id": "064fb6e3-44e7-429f-9a1c-64f72b23b326",
+      "text": "Mandatory regulatory changes and industry hardening, spurred by events like Fukushima and Winter Storm Uri, have specifically addressed and significantly mitigated these severe weather risks by requiring flood walls, elevated safety equipment, and improved extreme cold weatherization for the current nuclear fleet.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e6668839-1f80-4de2-9cb2-bc721976a7db",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:53.872808+00:00"
+    },
+    {
+      "id": "69364cff-d6aa-414f-88b3-4ce091014157",
+      "text": "Nuclear regulatory standards (e.g., US NRC, IAEA) mandate sophisticated redundancy, including self-contained emergency power systems and protected cooling backups, which are designed to keep the plant stable or safely shut down for days despite the sustained failure of offsite transmission or external water sources.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3eb13a15-cfe0-43cf-8934-fdb8b5ae6426",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:54.564675+00:00"
+    },
+    {
+      "id": "f5ccd8f6-c097-4c3d-b8fd-60eabd458796",
+      "text": "The supply of specialized resources is not fixed; governments can expand labor through targeted academic programs and regulatory capacity through direct agency funding, as demonstrated by the rapid expansion of skilled nuclear personnel in China and Russia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "80a82de7-fa73-4647-88c4-a0941a048894",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:56.608421+00:00"
+    },
+    {
+      "id": "64394f89-356f-429b-81c9-57c421776475",
+      "text": "The specialized regulatory and engineering expertise required for nuclear safety and reactor design is largely non-fungible with the skill sets needed for mass deployment of solar, wind, and battery storage.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "80a82de7-fa73-4647-88c4-a0941a048894",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:56.608448+00:00"
+    },
+    {
+      "id": "366b335d-9829-4a53-8b9c-aabbc3323f08",
+      "text": "Many public funds, like those established under the US Inflation Reduction Act's tax credits or Germany's Energiewende subsidies, are legally siloed or dedicated to specific energy projects, meaning they are not fiscally fungible and cannot be freely reallocated to general grid modernization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2bf0cfad-e7f1-498f-9b0e-282a510c4cc7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:57.408324+00:00"
+    },
+    {
+      "id": "4ba50048-9316-4767-804b-8c145f641bd4",
+      "text": "A governmental loan guarantee is a contingent liability requiring minimal immediate capital outlay, limiting its opportunity cost compared to the 100% upfront commitment of a direct cash grant. Conflating these two distinct financial instruments misrepresents the actual opportunity cost.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2bf0cfad-e7f1-498f-9b0e-282a510c4cc7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:57.408371+00:00"
+    },
+    {
+      "id": "6dec6d6e-2e7f-4620-965e-e92bfda4e971",
+      "text": "Standardized designs like SMRs enable generic design certification by regulatory bodies such as the US NRC, which eliminates the need to repeat complex technological and safety reviews for every new location, thereby bypassing the most time-consuming part of the overall licensing process.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e0c56372-c3bd-4c3b-83ea-9efbf5f80bbb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:58.324838+00:00"
+    },
+    {
+      "id": "d354d278-68e7-4511-bfb1-c50141f17748",
+      "text": "The Design Certification phase of the two-step process explicitly requires extensive physical prototype testing and component longevity data, meaning the streamlined regulatory path is intrinsically linked to overcoming the technical reliability hurdle, not merely standardizing paperwork.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e91ec771-3b53-4616-984c-23ba04daf23e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:58.393623+00:00"
+    },
+    {
+      "id": "1effe174-ac3a-49dd-b550-faea455e5f88",
+      "text": "The cited NuScale project was a First-Of-A-Kind (FOAK) design, whose failure does not negate the principle of mass-produced Nth-Of-A-Kind (NOAK) units. Standard manufacturing learning curves, observed in complex projects like naval nuclear submarine programs or semiconductor fabrication, predict steep cost reductions only after initial standardization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0329d384-dcd8-4cfa-9f73-962ec6cffa6c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:59.461259+00:00"
+    },
+    {
+      "id": "40af703f-0a70-4b80-a417-3e97f65344d2",
+      "text": "The necessity of standardized designs (like the APR-1400 or VVER models) for rapid, climate-scale reactor deployment makes the industrial practices and project management lessons from South Korea and Russia perfectly comparable, despite differences in government financing structures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "17f6f624-83c1-423c-8fa3-ab98bedc493a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:59.982262+00:00"
+    },
+    {
+      "id": "a63cd0ad-436a-4121-8705-50a32c067253",
+      "text": "The measure of \"successful\" applied to state projects often misrepresents the holistic cost by frequently relying on heavy state subsidies, favorable liability caps, and delayed internalization of long-term waste management, which is economically unsustainable for mass climate deployment in competitive markets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "17f6f624-83c1-423c-8fa3-ab98bedc493a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:58:59.982307+00:00"
+    },
+    {
+      "id": "f2abacb2-926a-4f12-8192-8405a86e3a9a",
+      "text": "Deep geologic repositories (DGRs), such as Finland's Onkalo, utilize stable natural rock formations to provide passive containment, meaning containment reliability is independent of continuous human political stability or active engineering.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "924bf587-f958-4a0a-bf41-3d8a6a456b7f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:01.212433+00:00"
+    },
+    {
+      "id": "95d45215-b8d3-4cd7-9d16-44c14785071b",
+      "text": "Focusing on 10 half-lives of Plutonium-239 (240,000 years) exaggerates the necessary duration; regulatory safety requirements often use a shorter 10,000 to 100,000-year compliance period designed to reduce total radiotoxicity to that of natural uranium ore.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "924bf587-f958-4a0a-bf41-3d8a6a456b7f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:01.212482+00:00"
+    },
+    {
+      "id": "6dbfaea5-f702-433e-905a-e5941510a35b",
+      "text": "Safety assessments for deep geological repositories are validated using geological analogues, such as the Oklo natural nuclear reactor, which demonstrate the effective immobilization of fission products over two billion years, thus contradicting the reliance solely on unverified models.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2faf1a24-6849-4ad2-b477-27679c24c04c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:02.039708+00:00"
+    },
+    {
+      "id": "bc9dba81-0602-4023-9072-6a6deb107fe6",
+      "text": "The models for long-term performance are empirically verified by decades of accelerated material science testing on engineered barrier systems, simulating 100,000 years of canister corrosion and bentonite stability to verify key safety components.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2faf1a24-6849-4ad2-b477-27679c24c04c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:02.039737+00:00"
+    },
+    {
+      "id": "34b10ae0-6f9c-4c4f-ac67-ce7e77a90fd9",
+      "text": "The Vogtle cost failures resulted from non-standardized, custom construction and regulatory delays; SMR designs, like NuScale and TerraPower, rely on factory fabrication and standardized licensing to fundamentally bypass these established causes of large-scale nuclear cost overruns.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0e2496c2-cc52-4f0c-8e8a-5530da6dd125",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:02.568508+00:00"
+    },
+    {
+      "id": "ba0ce078-425e-4a27-91f8-c9fb4fbf4d25",
+      "text": "The required capital investment for continental-scale HVDC transmission, often estimated in the trillions of dollars, frequently exceeds the cost savings from reduced long-duration storage, making 100% renewable grids economically infeasible compared to dispatchable nuclear capacity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e7836505-4e89-4f45-9d2e-5493b323fc8d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:02.701853+00:00"
+    },
+    {
+      "id": "e8b7a27c-33e1-46f5-8cb5-6387acdd534c",
+      "text": "\"Readily available\" zero-carbon alternatives must provide dispatchable power; the high capacity installation factors of solar and wind only translate into reliable baseload power when paired with vast, currently non-existent, grid-scale storage solutions or reliable dispatchable sources like nuclear.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0e741e33-da33-453f-b455-8202edc35d81",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:03.225248+00:00"
+    },
+    {
+      "id": "48d55f92-4027-44a6-a0f3-1ab5c494070e",
+      "text": "Relying on current dispatchable storage like lithium-ion batteries is inadequate because they only store energy for hours; they fail to provide the massive, multi-day or weekly reserves necessary to maintain stability during widespread, continental-scale periods of low wind and solar (Dunkelflaute).",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a42271d7-b0e4-4b0b-bd33-f51d089595b7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:03.506493+00:00"
+    },
+    {
+      "id": "df89ffee-6a45-4863-8f52-38a3912d82fe",
+      "text": "Political challenges, such as the failure of the US Yucca Mountain project due to shifts in legislative and public opinion over decades, demonstrate concrete deployment stops that outweigh abstract technical modeling hurdles.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "08a4ba4a-70ae-4e9c-8fa0-36189014f9ca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:03.513542+00:00"
+    },
+    {
+      "id": "e284b853-4a78-4277-bb76-9cf17c6962d0",
+      "text": "Historical records show that political states and written languages generally degrade or disappear within a few thousand years, making the 100,000-year requirement for institutional control and human intrusion prevention arguably the greatest inherent uncertainty.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "08a4ba4a-70ae-4e9c-8fa0-36189014f9ca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:03.513561+00:00"
+    },
+    {
+      "id": "7de05a55-a551-4096-aae0-307aa940b775",
+      "text": "Nuclear power provides stable, 24/7 baseload electricity necessary to replace high-emitting fossil fuels and stabilize the grid against intermittent renewables, a function that rapidly deployable solar or wind cannot fulfill, thereby enabling rather than delaying comprehensive decarbonization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cdda0a95-d0f9-47ed-a13c-b09449add956",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:04.807415+00:00"
+    },
+    {
+      "id": "1a857b50-b2b6-46e6-868c-26dfbab5760f",
+      "text": "Investments in nuclear capacity do not necessarily divert capital from renewables, as demonstrated by countries like France and South Korea who pursue parallel energy strategies; nuclear is indispensable for retiring high-capacity, dispatchable fossil-fuel plants (e.g., coal), a critical step that cannot be achieved solely by intermittent sources.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cdda0a95-d0f9-47ed-a13c-b09449add956",
+      "children_count": 0,
+      "references": [
+        "France, Sweden, UK, South Korea energy policy"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:04.807445+00:00"
+    },
+    {
+      "id": "ade7578e-3a95-45ec-9c41-77f77198c515",
+      "text": "The actual life-cycle emissions (5-12 g CO2eq/kWh) are orders of magnitude lower than fossil fuels (e.g., natural gas at 490 g CO2eq/kWh) and comparable to or lower than wind and solar, meaning this technically non-zero status does not practically undermine nuclear's crucial role in achieving climate targets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fc8cbe4f-f59e-417d-be64-7a22c0ff2014",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:06.335181+00:00"
+    },
+    {
+      "id": "a83847bc-c642-4935-865c-95d41ceeb068",
+      "text": "Regulatory complexity is often driven by prescriptive, multi-stage review processes that demand redundant documentation and public litigation, demonstrated by decade-long US NRC reviews even for established reactor types.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dbd28e8e-c607-4658-90c9-a56449a21da2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:06.578486+00:00"
+    },
+    {
+      "id": "8e8d714e-4f69-49c1-84c4-f1490c5df463",
+      "text": "Streamlining is achieved when regulators adopt risk-informed, performance-based frameworks, as seen in the UK and Canada, allowing novel SMRs to demonstrate required safety outcomes rather than rigidly conforming to decades-old, prescriptive rules.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dbd28e8e-c607-4658-90c9-a56449a21da2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:06.578512+00:00"
+    },
+    {
+      "id": "363f48ad-8872-460b-891b-0b9d22f25985",
+      "text": "The UAE's Barakah Nuclear Energy Plant completed four Gen III+ reactors (APR-1400) on schedule and significantly within budget, demonstrating that efficient deployment is possible under effective management and stable regulatory structures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "009b6241-271d-498c-af76-b10706b354b0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:07.064199+00:00"
+    },
+    {
+      "id": "467f6e97-8bff-4195-9340-b62b0f313c36",
+      "text": "Once operational, nuclear facilities achieve capacity factors above 90% and possess low, highly stable fuel costs, ensuring competitive operational electricity prices regardless of initial construction delays.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "009b6241-271d-498c-af76-b10706b354b0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:07.064246+00:00"
+    },
+    {
+      "id": "b2fba8b1-31cb-4234-9bc1-86c1412460c7",
+      "text": "Comparing nuclear costs only to the price of renewable generation is misleading, as the comparison fails to include the massive cost of transmission and long-duration storage required to provide nuclear-equivalent baseload reliability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "009b6241-271d-498c-af76-b10706b354b0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:07.064269+00:00"
+    },
+    {
+      "id": "f73f3faf-7920-4394-b9c0-d491f47c3c74",
+      "text": "Grid reliability is primarily threatened by long-duration seasonal or multi-day wind and solar deficits (dunkelflaute), which must be covered by large-scale, firm power. Nuclear provides essential non-weather-dependent capacity that counters these long-term threats, a service where fast ramping capability is irrelevant.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "10acd012-fe5d-41cc-aaee-eac62b176055",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:07.466389+00:00"
+    },
+    {
+      "id": "600f3828-ba40-4046-9395-2016e4b80601",
+      "text": "The IPCC AR6 states that climate change has already caused dangerous and widespread disruption, evidenced by mass coral reef mortality events and increased frequency of extreme heat waves currently affecting Europe and Asia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "49c44546-9aba-4fb3-a9cc-f3e3c38b2c50",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:08.030862+00:00"
+    },
+    {
+      "id": "27fcab0d-23d6-47a1-b4bf-71faee4d6b23",
+      "text": "Avoiding the worst long-term catastrophes requires global emissions to peak before 2025 and be nearly halved by 2030, establishing an immediate and critical window for action.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "49c44546-9aba-4fb3-a9cc-f3e3c38b2c50",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:59:08.030888+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T23:57:24.713139+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T23:57:24.713139+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "ef72c0f9-acf9-443c-bb34-120fc80a7709",
+      "target": "7911f32e-932e-4c50-b07f-f87ab8bf1d52",
+      "type": "objection"
+    },
+    {
+      "source": "ef72c0f9-acf9-443c-bb34-120fc80a7709",
+      "target": "28c1f65c-5bef-4b83-9240-18ed6e5b33cc",
+      "type": "objection"
+    },
+    {
+      "source": "9815b504-cb19-4def-9a31-15af66a63215",
+      "target": "9ccd8c5e-511a-4a15-b08a-fc8ff6dc3163",
+      "type": "objection"
+    },
+    {
+      "source": "9815b504-cb19-4def-9a31-15af66a63215",
+      "target": "2546c46f-7334-4343-acc7-fb83c45a53d7",
+      "type": "objection"
+    },
+    {
+      "source": "b1882192-b70d-4acb-b1df-06786f22861d",
+      "target": "059c185a-960f-4e5e-998a-88458609c95a",
+      "type": "objection"
+    },
+    {
+      "source": "b1882192-b70d-4acb-b1df-06786f22861d",
+      "target": "841962ac-2b47-41b8-9fed-2b94e127b233",
+      "type": "objection"
+    },
+    {
+      "source": "d73d3d1e-e49d-45f6-a1ba-56f919bc7fb4",
+      "target": "e288d0e1-c3d0-4cb6-b22d-f6b72734264b",
+      "type": "objection"
+    },
+    {
+      "source": "d73d3d1e-e49d-45f6-a1ba-56f919bc7fb4",
+      "target": "64894e73-555d-47fb-8446-3c1ea1fab6f7",
+      "type": "objection"
+    },
+    {
+      "source": "4e62171f-afaa-48fc-adb8-851589341019",
+      "target": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "type": "objection"
+    },
+    {
+      "source": "4e62171f-afaa-48fc-adb8-851589341019",
+      "target": "b89c533e-aa6f-4f3d-adfb-0bfa6edbf36d",
+      "type": "objection"
+    },
+    {
+      "source": "d4beb10b-6b99-4dee-889a-626a735078d5",
+      "target": "d5bc0ac1-28df-483c-b1fd-10548cf119af",
+      "type": "objection"
+    },
+    {
+      "source": "d4beb10b-6b99-4dee-889a-626a735078d5",
+      "target": "5e1cd171-f13b-41c8-afb2-eb6a7367936b",
+      "type": "objection"
+    },
+    {
+      "source": "e288d0e1-c3d0-4cb6-b22d-f6b72734264b",
+      "target": "4ad990e3-4792-4c27-ab60-a73442bc79f1",
+      "type": "response"
+    },
+    {
+      "source": "e288d0e1-c3d0-4cb6-b22d-f6b72734264b",
+      "target": "47208245-eac1-4901-852e-fc2ad9041c42",
+      "type": "response"
+    },
+    {
+      "source": "841962ac-2b47-41b8-9fed-2b94e127b233",
+      "target": "dea54977-cf8c-43a4-9262-9231fd1b008c",
+      "type": "response"
+    },
+    {
+      "source": "841962ac-2b47-41b8-9fed-2b94e127b233",
+      "target": "b940f2e5-4fe7-4c27-9640-3a6df8357751",
+      "type": "response"
+    },
+    {
+      "source": "9ccd8c5e-511a-4a15-b08a-fc8ff6dc3163",
+      "target": "5abc0c94-a61e-4de0-86ee-e9b04b07c6e6",
+      "type": "response"
+    },
+    {
+      "source": "9ccd8c5e-511a-4a15-b08a-fc8ff6dc3163",
+      "target": "2c9fe53c-0b55-4927-889a-1517b7abb1f9",
+      "type": "response"
+    },
+    {
+      "source": "7911f32e-932e-4c50-b07f-f87ab8bf1d52",
+      "target": "1a7f17a7-d21c-4516-a81d-3672b1e11390",
+      "type": "response"
+    },
+    {
+      "source": "7911f32e-932e-4c50-b07f-f87ab8bf1d52",
+      "target": "5f9e3835-632c-41d2-a0a6-1120d33e4c94",
+      "type": "response"
+    },
+    {
+      "source": "64894e73-555d-47fb-8446-3c1ea1fab6f7",
+      "target": "f7985f72-defa-48f6-b712-820012cdb714",
+      "type": "response"
+    },
+    {
+      "source": "64894e73-555d-47fb-8446-3c1ea1fab6f7",
+      "target": "2aa3301e-cc18-42fc-8d3a-56a4d6bb4d7c",
+      "type": "response"
+    },
+    {
+      "source": "2546c46f-7334-4343-acc7-fb83c45a53d7",
+      "target": "bc401691-77ac-4457-be03-d915cce7e9ef",
+      "type": "response"
+    },
+    {
+      "source": "2546c46f-7334-4343-acc7-fb83c45a53d7",
+      "target": "d0bb01d9-a978-4d7b-9291-ff493a3bb2f6",
+      "type": "response"
+    },
+    {
+      "source": "b89c533e-aa6f-4f3d-adfb-0bfa6edbf36d",
+      "target": "58dea29e-e3b1-4e48-bd56-faa5de0f3c0b",
+      "type": "response"
+    },
+    {
+      "source": "b89c533e-aa6f-4f3d-adfb-0bfa6edbf36d",
+      "target": "2d8141ec-dde3-4f7b-8dec-5a05d77f83f3",
+      "type": "response"
+    },
+    {
+      "source": "d5bc0ac1-28df-483c-b1fd-10548cf119af",
+      "target": "be8fc1e0-cd8a-4ed2-91bf-bff0a75c24bc",
+      "type": "response"
+    },
+    {
+      "source": "d5bc0ac1-28df-483c-b1fd-10548cf119af",
+      "target": "3e097eba-04aa-4da4-9a68-f4a604ad5c4d",
+      "type": "response"
+    },
+    {
+      "source": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "target": "214aff01-026f-4659-8dbe-d4e4e2ce32f0",
+      "type": "response"
+    },
+    {
+      "source": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "target": "adf2905a-36eb-498a-bc82-e774ed511ede",
+      "type": "response"
+    },
+    {
+      "source": "45531075-9c9e-4093-8500-6a07f5872e8d",
+      "target": "fb09698a-77bf-4def-8d9c-20d616f0b4ef",
+      "type": "response"
+    },
+    {
+      "source": "5e1cd171-f13b-41c8-afb2-eb6a7367936b",
+      "target": "454b7522-e94b-41e4-8ac3-43cb4987296f",
+      "type": "response"
+    },
+    {
+      "source": "5e1cd171-f13b-41c8-afb2-eb6a7367936b",
+      "target": "03ba9a62-5813-4384-a156-3f6f3f240f43",
+      "type": "response"
+    },
+    {
+      "source": "47208245-eac1-4901-852e-fc2ad9041c42",
+      "target": "10990330-041c-420e-a73d-1c47e61521a6",
+      "type": "response"
+    },
+    {
+      "source": "4ad990e3-4792-4c27-ab60-a73442bc79f1",
+      "target": "d6fd58b6-1824-4e32-aa53-fbf91885a1d8",
+      "type": "response"
+    },
+    {
+      "source": "1a7f17a7-d21c-4516-a81d-3672b1e11390",
+      "target": "c63b8b75-c43a-43cc-b347-c53506bdaca1",
+      "type": "response"
+    },
+    {
+      "source": "1a7f17a7-d21c-4516-a81d-3672b1e11390",
+      "target": "89f4f442-e8e4-4c63-8933-f7c0b6ecc7aa",
+      "type": "response"
+    },
+    {
+      "source": "dea54977-cf8c-43a4-9262-9231fd1b008c",
+      "target": "990c2180-d534-4014-be66-d1297e3dbed1",
+      "type": "response"
+    },
+    {
+      "source": "dea54977-cf8c-43a4-9262-9231fd1b008c",
+      "target": "77895821-b46d-4af8-9f05-eb35b796d423",
+      "type": "response"
+    },
+    {
+      "source": "f7985f72-defa-48f6-b712-820012cdb714",
+      "target": "7aaf732b-acd3-4e48-937e-0e64fb174927",
+      "type": "response"
+    },
+    {
+      "source": "f7985f72-defa-48f6-b712-820012cdb714",
+      "target": "bec6af44-5027-44b2-b376-83f936d6ee47",
+      "type": "response"
+    },
+    {
+      "source": "2aa3301e-cc18-42fc-8d3a-56a4d6bb4d7c",
+      "target": "fdacb8a1-7500-4646-ba0a-c056e6f85bfe",
+      "type": "response"
+    },
+    {
+      "source": "2aa3301e-cc18-42fc-8d3a-56a4d6bb4d7c",
+      "target": "2c2a988e-a38e-4e8d-9b63-94cdc5758167",
+      "type": "response"
+    },
+    {
+      "source": "d0bb01d9-a978-4d7b-9291-ff493a3bb2f6",
+      "target": "c4c07f2d-9c14-403b-99a8-5cd5d8d000a1",
+      "type": "response"
+    },
+    {
+      "source": "58dea29e-e3b1-4e48-bd56-faa5de0f3c0b",
+      "target": "808f2e4a-754b-4b51-bf1d-327890ff4ddb",
+      "type": "response"
+    },
+    {
+      "source": "5abc0c94-a61e-4de0-86ee-e9b04b07c6e6",
+      "target": "0e928885-8ef5-4929-bf79-5d560ebb7a84",
+      "type": "response"
+    },
+    {
+      "source": "fb09698a-77bf-4def-8d9c-20d616f0b4ef",
+      "target": "a6aeaa34-2b9c-4826-9fa9-e4e974b0fb8f",
+      "type": "response"
+    },
+    {
+      "source": "fb09698a-77bf-4def-8d9c-20d616f0b4ef",
+      "target": "3f0f4adb-7988-4f89-afde-10de3b72b949",
+      "type": "response"
+    },
+    {
+      "source": "3e097eba-04aa-4da4-9a68-f4a604ad5c4d",
+      "target": "c35d1225-4004-42e1-9304-d646cf728736",
+      "type": "response"
+    },
+    {
+      "source": "3e097eba-04aa-4da4-9a68-f4a604ad5c4d",
+      "target": "7613ef06-a7d7-4d71-a8fc-0c2e6b1e7060",
+      "type": "response"
+    },
+    {
+      "source": "adf2905a-36eb-498a-bc82-e774ed511ede",
+      "target": "283d4271-4809-4e79-927e-2e467f89edbc",
+      "type": "response"
+    },
+    {
+      "source": "adf2905a-36eb-498a-bc82-e774ed511ede",
+      "target": "7c8fa383-2fd6-4d22-88cc-3938c759e3fe",
+      "type": "response"
+    },
+    {
+      "source": "2c9fe53c-0b55-4927-889a-1517b7abb1f9",
+      "target": "bf1dc67c-c30c-46b0-90c6-848063c2c255",
+      "type": "response"
+    },
+    {
+      "source": "be8fc1e0-cd8a-4ed2-91bf-bff0a75c24bc",
+      "target": "e996aa32-57a1-421e-810a-e8a003268f2b",
+      "type": "response"
+    },
+    {
+      "source": "b940f2e5-4fe7-4c27-9640-3a6df8357751",
+      "target": "cd38d8e8-b7a5-44d7-bb23-ba27bdf87893",
+      "type": "response"
+    },
+    {
+      "source": "b940f2e5-4fe7-4c27-9640-3a6df8357751",
+      "target": "e057e299-a3f6-48cd-be15-db2cc4284ca1",
+      "type": "response"
+    },
+    {
+      "source": "5f9e3835-632c-41d2-a0a6-1120d33e4c94",
+      "target": "baaacbb1-f67f-47ea-9f58-885289cc95e8",
+      "type": "response"
+    },
+    {
+      "source": "2d8141ec-dde3-4f7b-8dec-5a05d77f83f3",
+      "target": "748897c8-344c-438d-83f6-d29673c135a3",
+      "type": "response"
+    },
+    {
+      "source": "03ba9a62-5813-4384-a156-3f6f3f240f43",
+      "target": "a24ddad6-6189-47bf-bacd-916e23c47c61",
+      "type": "response"
+    },
+    {
+      "source": "214aff01-026f-4659-8dbe-d4e4e2ce32f0",
+      "target": "a239f750-ba35-44e2-9301-a2162ec157b2",
+      "type": "response"
+    },
+    {
+      "source": "bc401691-77ac-4457-be03-d915cce7e9ef",
+      "target": "46b03f92-ae8b-4ffa-83c3-73accd7227c8",
+      "type": "response"
+    },
+    {
+      "source": "bc401691-77ac-4457-be03-d915cce7e9ef",
+      "target": "fb05fe32-8341-4127-8036-2acd67c7916c",
+      "type": "response"
+    },
+    {
+      "source": "454b7522-e94b-41e4-8ac3-43cb4987296f",
+      "target": "c4c2c667-97a7-452a-9725-3f15eeaa64e1",
+      "type": "response"
+    },
+    {
+      "source": "454b7522-e94b-41e4-8ac3-43cb4987296f",
+      "target": "e87e5f01-f1a1-42d1-9fed-873bfd571e43",
+      "type": "response"
+    },
+    {
+      "source": "ba68152b-32df-4d61-b4e3-fdcd1cb679b6",
+      "target": "efab8679-3b7c-4dbc-a362-1b815e0f1eea",
+      "type": "objection"
+    },
+    {
+      "source": "ba68152b-32df-4d61-b4e3-fdcd1cb679b6",
+      "target": "62ecf9a8-117e-48b1-8cbe-29d1877029c0",
+      "type": "objection"
+    },
+    {
+      "source": "26cce4a7-07ae-4892-96d7-857a012d21af",
+      "target": "4b9e7da7-3d8f-4368-aab1-0aeb3cd4296e",
+      "type": "objection"
+    },
+    {
+      "source": "26cce4a7-07ae-4892-96d7-857a012d21af",
+      "target": "12139935-ffe7-45d7-99a5-b024089a0d95",
+      "type": "objection"
+    },
+    {
+      "source": "15ff64bb-d77e-414e-a818-df9f22ab7324",
+      "target": "82056848-699f-4ea8-9ecb-ecfc8910e614",
+      "type": "objection"
+    },
+    {
+      "source": "15ff64bb-d77e-414e-a818-df9f22ab7324",
+      "target": "bac52605-a97b-4ed4-b56a-89090264b94d",
+      "type": "objection"
+    },
+    {
+      "source": "4a0374c8-48ce-4e0f-92b9-dd72202d4d10",
+      "target": "03672509-4ccf-4990-97cf-d9196d40ea93",
+      "type": "objection"
+    },
+    {
+      "source": "4a0374c8-48ce-4e0f-92b9-dd72202d4d10",
+      "target": "00540ff9-eae5-4b77-bda6-3554ce43c616",
+      "type": "objection"
+    },
+    {
+      "source": "795ad21b-f382-4fee-b0d9-827019133a04",
+      "target": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "type": "objection"
+    },
+    {
+      "source": "795ad21b-f382-4fee-b0d9-827019133a04",
+      "target": "948ba3a0-c70c-4c28-968c-8249e1aca2b7",
+      "type": "objection"
+    },
+    {
+      "source": "e5164ffd-0208-4932-a191-ff56eb24418f",
+      "target": "c0fc916b-8661-4941-a125-e1af26512812",
+      "type": "objection"
+    },
+    {
+      "source": "e5164ffd-0208-4932-a191-ff56eb24418f",
+      "target": "70e784bc-7023-4e40-8202-5c9372bc9719",
+      "type": "objection"
+    },
+    {
+      "source": "62ecf9a8-117e-48b1-8cbe-29d1877029c0",
+      "target": "e6668839-1f80-4de2-9cb2-bc721976a7db",
+      "type": "response"
+    },
+    {
+      "source": "62ecf9a8-117e-48b1-8cbe-29d1877029c0",
+      "target": "3eb13a15-cfe0-43cf-8934-fdb8b5ae6426",
+      "type": "response"
+    },
+    {
+      "source": "00540ff9-eae5-4b77-bda6-3554ce43c616",
+      "target": "17f6f624-83c1-423c-8fa3-ab98bedc493a",
+      "type": "response"
+    },
+    {
+      "source": "00540ff9-eae5-4b77-bda6-3554ce43c616",
+      "target": "0e2496c2-cc52-4f0c-8e8a-5530da6dd125",
+      "type": "response"
+    },
+    {
+      "source": "03672509-4ccf-4990-97cf-d9196d40ea93",
+      "target": "80a82de7-fa73-4647-88c4-a0941a048894",
+      "type": "response"
+    },
+    {
+      "source": "03672509-4ccf-4990-97cf-d9196d40ea93",
+      "target": "2bf0cfad-e7f1-498f-9b0e-282a510c4cc7",
+      "type": "response"
+    },
+    {
+      "source": "70e784bc-7023-4e40-8202-5c9372bc9719",
+      "target": "0329d384-dcd8-4cfa-9f73-962ec6cffa6c",
+      "type": "response"
+    },
+    {
+      "source": "70e784bc-7023-4e40-8202-5c9372bc9719",
+      "target": "e0c56372-c3bd-4c3b-83ea-9efbf5f80bbb",
+      "type": "response"
+    },
+    {
+      "source": "82056848-699f-4ea8-9ecb-ecfc8910e614",
+      "target": "49c44546-9aba-4fb3-a9cc-f3e3c38b2c50",
+      "type": "response"
+    },
+    {
+      "source": "82056848-699f-4ea8-9ecb-ecfc8910e614",
+      "target": "924bf587-f958-4a0a-bf41-3d8a6a456b7f",
+      "type": "response"
+    },
+    {
+      "source": "c0fc916b-8661-4941-a125-e1af26512812",
+      "target": "e91ec771-3b53-4616-984c-23ba04daf23e",
+      "type": "response"
+    },
+    {
+      "source": "c0fc916b-8661-4941-a125-e1af26512812",
+      "target": "dbd28e8e-c607-4658-90c9-a56449a21da2",
+      "type": "response"
+    },
+    {
+      "source": "12139935-ffe7-45d7-99a5-b024089a0d95",
+      "target": "009b6241-271d-498c-af76-b10706b354b0",
+      "type": "response"
+    },
+    {
+      "source": "12139935-ffe7-45d7-99a5-b024089a0d95",
+      "target": "e7836505-4e89-4f45-9d2e-5493b323fc8d",
+      "type": "response"
+    },
+    {
+      "source": "948ba3a0-c70c-4c28-968c-8249e1aca2b7",
+      "target": "a42271d7-b0e4-4b0b-bd33-f51d089595b7",
+      "type": "response"
+    },
+    {
+      "source": "948ba3a0-c70c-4c28-968c-8249e1aca2b7",
+      "target": "10acd012-fe5d-41cc-aaee-eac62b176055",
+      "type": "response"
+    },
+    {
+      "source": "bac52605-a97b-4ed4-b56a-89090264b94d",
+      "target": "08a4ba4a-70ae-4e9c-8fa0-36189014f9ca",
+      "type": "response"
+    },
+    {
+      "source": "bac52605-a97b-4ed4-b56a-89090264b94d",
+      "target": "2faf1a24-6849-4ad2-b477-27679c24c04c",
+      "type": "response"
+    },
+    {
+      "source": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "target": "0e741e33-da33-453f-b455-8202edc35d81",
+      "type": "response"
+    },
+    {
+      "source": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "target": "cdda0a95-d0f9-47ed-a13c-b09449add956",
+      "type": "response"
+    },
+    {
+      "source": "8108c417-d328-44c1-a1f6-164ecc43d5d0",
+      "target": "fc8cbe4f-f59e-417d-be64-7a22c0ff2014",
+      "type": "response"
+    },
+    {
+      "source": "e6668839-1f80-4de2-9cb2-bc721976a7db",
+      "target": "064fb6e3-44e7-429f-9a1c-64f72b23b326",
+      "type": "response"
+    },
+    {
+      "source": "3eb13a15-cfe0-43cf-8934-fdb8b5ae6426",
+      "target": "69364cff-d6aa-414f-88b3-4ce091014157",
+      "type": "response"
+    },
+    {
+      "source": "80a82de7-fa73-4647-88c4-a0941a048894",
+      "target": "f5ccd8f6-c097-4c3d-b8fd-60eabd458796",
+      "type": "response"
+    },
+    {
+      "source": "80a82de7-fa73-4647-88c4-a0941a048894",
+      "target": "64394f89-356f-429b-81c9-57c421776475",
+      "type": "response"
+    },
+    {
+      "source": "2bf0cfad-e7f1-498f-9b0e-282a510c4cc7",
+      "target": "366b335d-9829-4a53-8b9c-aabbc3323f08",
+      "type": "response"
+    },
+    {
+      "source": "2bf0cfad-e7f1-498f-9b0e-282a510c4cc7",
+      "target": "4ba50048-9316-4767-804b-8c145f641bd4",
+      "type": "response"
+    },
+    {
+      "source": "e0c56372-c3bd-4c3b-83ea-9efbf5f80bbb",
+      "target": "6dec6d6e-2e7f-4620-965e-e92bfda4e971",
+      "type": "response"
+    },
+    {
+      "source": "e91ec771-3b53-4616-984c-23ba04daf23e",
+      "target": "d354d278-68e7-4511-bfb1-c50141f17748",
+      "type": "response"
+    },
+    {
+      "source": "0329d384-dcd8-4cfa-9f73-962ec6cffa6c",
+      "target": "1effe174-ac3a-49dd-b550-faea455e5f88",
+      "type": "response"
+    },
+    {
+      "source": "17f6f624-83c1-423c-8fa3-ab98bedc493a",
+      "target": "40af703f-0a70-4b80-a417-3e97f65344d2",
+      "type": "response"
+    },
+    {
+      "source": "17f6f624-83c1-423c-8fa3-ab98bedc493a",
+      "target": "a63cd0ad-436a-4121-8705-50a32c067253",
+      "type": "response"
+    },
+    {
+      "source": "924bf587-f958-4a0a-bf41-3d8a6a456b7f",
+      "target": "f2abacb2-926a-4f12-8192-8405a86e3a9a",
+      "type": "response"
+    },
+    {
+      "source": "924bf587-f958-4a0a-bf41-3d8a6a456b7f",
+      "target": "95d45215-b8d3-4cd7-9d16-44c14785071b",
+      "type": "response"
+    },
+    {
+      "source": "2faf1a24-6849-4ad2-b477-27679c24c04c",
+      "target": "6dbfaea5-f702-433e-905a-e5941510a35b",
+      "type": "response"
+    },
+    {
+      "source": "2faf1a24-6849-4ad2-b477-27679c24c04c",
+      "target": "bc9dba81-0602-4023-9072-6a6deb107fe6",
+      "type": "response"
+    },
+    {
+      "source": "0e2496c2-cc52-4f0c-8e8a-5530da6dd125",
+      "target": "34b10ae0-6f9c-4c4f-ac67-ce7e77a90fd9",
+      "type": "response"
+    },
+    {
+      "source": "e7836505-4e89-4f45-9d2e-5493b323fc8d",
+      "target": "ba0ce078-425e-4a27-91f8-c9fb4fbf4d25",
+      "type": "response"
+    },
+    {
+      "source": "0e741e33-da33-453f-b455-8202edc35d81",
+      "target": "e8b7a27c-33e1-46f5-8cb5-6387acdd534c",
+      "type": "response"
+    },
+    {
+      "source": "a42271d7-b0e4-4b0b-bd33-f51d089595b7",
+      "target": "48d55f92-4027-44a6-a0f3-1ab5c494070e",
+      "type": "response"
+    },
+    {
+      "source": "08a4ba4a-70ae-4e9c-8fa0-36189014f9ca",
+      "target": "df89ffee-6a45-4863-8f52-38a3912d82fe",
+      "type": "response"
+    },
+    {
+      "source": "08a4ba4a-70ae-4e9c-8fa0-36189014f9ca",
+      "target": "e284b853-4a78-4277-bb76-9cf17c6962d0",
+      "type": "response"
+    },
+    {
+      "source": "cdda0a95-d0f9-47ed-a13c-b09449add956",
+      "target": "7de05a55-a551-4096-aae0-307aa940b775",
+      "type": "response"
+    },
+    {
+      "source": "cdda0a95-d0f9-47ed-a13c-b09449add956",
+      "target": "1a857b50-b2b6-46e6-868c-26dfbab5760f",
+      "type": "response"
+    },
+    {
+      "source": "fc8cbe4f-f59e-417d-be64-7a22c0ff2014",
+      "target": "ade7578e-3a95-45ec-9c41-77f77198c515",
+      "type": "response"
+    },
+    {
+      "source": "dbd28e8e-c607-4658-90c9-a56449a21da2",
+      "target": "a83847bc-c642-4935-865c-95d41ceeb068",
+      "type": "response"
+    },
+    {
+      "source": "dbd28e8e-c607-4658-90c9-a56449a21da2",
+      "target": "8e8d714e-4f69-49c1-84c4-f1490c5df463",
+      "type": "response"
+    },
+    {
+      "source": "009b6241-271d-498c-af76-b10706b354b0",
+      "target": "363f48ad-8872-460b-891b-0b9d22f25985",
+      "type": "response"
+    },
+    {
+      "source": "009b6241-271d-498c-af76-b10706b354b0",
+      "target": "467f6e97-8bff-4195-9340-b62b0f313c36",
+      "type": "response"
+    },
+    {
+      "source": "009b6241-271d-498c-af76-b10706b354b0",
+      "target": "b2fba8b1-31cb-4234-9bc1-86c1412460c7",
+      "type": "response"
+    },
+    {
+      "source": "10acd012-fe5d-41cc-aaee-eac62b176055",
+      "target": "f73f3faf-7920-4394-b9c0-d491f47c3c74",
+      "type": "response"
+    },
+    {
+      "source": "49c44546-9aba-4fb3-a9cc-f3e3c38b2c50",
+      "target": "600f3828-ba40-4046-9395-2016e4b80601",
+      "type": "response"
+    },
+    {
+      "source": "49c44546-9aba-4fb3-a9cc-f3e3c38b2c50",
+      "target": "27fcab0d-23d6-47a1-b4bf-71faee4d6b23",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d73d3d1e-e49d-45f6-a1ba-56f919bc7fb4",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b1882192-b70d-4acb-b1df-06786f22861d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ef72c0f9-acf9-443c-bb34-120fc80a7709",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9815b504-cb19-4def-9a31-15af66a63215",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d4beb10b-6b99-4dee-889a-626a735078d5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "4e62171f-afaa-48fc-adb8-851589341019",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "4a0374c8-48ce-4e0f-92b9-dd72202d4d10",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "26cce4a7-07ae-4892-96d7-857a012d21af",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ba68152b-32df-4d61-b4e3-fdcd1cb679b6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "15ff64bb-d77e-414e-a818-df9f22ab7324",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "795ad21b-f382-4fee-b0d9-827019133a04",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "e5164ffd-0208-4932-a191-ff56eb24418f",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

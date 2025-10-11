@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuclear energy is the best solution to climate change - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Nuclear energy is the best solution to climate change</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            42 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/nuclear-energy-is-the-best-solution-to-climate-change.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">42</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "b8b0bf51-cdd3-4ae2-aba8-b66491164e59",
+      "text": "Nuclear reactors operate with a capacity factor exceeding 90%, providing stable, non-intermittent, carbon-free baseload power. This inherent reliability ensures the continuous displacement of fossil fuel sources (coal and natural gas) required to maintain a stable electric grid during complete decarbonization.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:58.299019"
+    },
+    {
+      "id": "41003b0b-7da4-4eae-95c1-08341d9b38b8",
+      "text": "Large-scale nuclear deployment has historically proven to be the fastest method for achieving rapid, massive decarbonization of an electrical grid. France rapidly built 56 reactors in 15 years following the 1970s oil crisis, achieving grid decarbonization at a pace unmatched by regional efforts focused primarily on intermittent renewables.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:58.299864"
+    },
+    {
+      "id": "dac4f877-7556-4a0b-a49d-2f352fc7cb60",
+      "text": "Fission energy offers the lowest land-use footprint per terawatt-hour of any major power source, minimizing disruption to habitats and ecosystems. This energy density is crucial for climate solutions as it preserves large areas of land needed for conservation and natural carbon sequestration.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:58.300345"
+    },
+    {
+      "id": "28e6e343-7e5d-4f0a-a066-eed911ab2c2c",
+      "text": "Nuclear power provides superior long-term energy security because its fuel, enriched uranium, is highly energy-dense and can be stored onsite for years. This capability insulates national grids from geopolitical risks and the significant price volatility associated with global natural gas and oil markets.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:58.300822"
+    },
+    {
+      "id": "af608cc0-99d3-4025-a512-59f615af7af7",
+      "text": "The global supply chain for enriched uranium relies on concentrated mining and enrichment services, with Russia controlling around 43% of the world's enrichment capacity, which inherently subjects nuclear facilities to significant upstream geopolitical risks that onsite storage does not eliminate.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "28e6e343-7e5d-4f0a-a066-eed911ab2c2c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:08.883822"
+    },
+    {
+      "id": "a4f6cf7d-11e0-43d4-ba2b-d13e4ff92b10",
+      "text": "High construction costs and prolonged deployment schedules (often exceeding 10 years, e.g., Olkiluoto 3) render nuclear economically uncompetitive, failing to ensure the rapid, continuous displacement of cheaper fossil fuels required for timely decarbonization.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b8b0bf51-cdd3-4ae2-aba8-b66491164e59",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:09.708683"
+    },
+    {
+      "id": "ad199c76-9d26-424e-b396-f5f7ff001e67",
+      "text": "Grid stability does not inherently require nuclear baseload power; modern decarbonization strategies increasingly rely on a mixture of high-capacity intermittent renewables paired with energy storage and flexible transmission to maintain reliability.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b8b0bf51-cdd3-4ae2-aba8-b66491164e59",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:09.709154"
+    },
+    {
+      "id": "cae30920-7e56-41be-9cbe-84876b243d48",
+      "text": "The primary metric for climate solutions is the rate of greenhouse gas reduction, where fission's low land footprint is tertiary. Capital-intensive nuclear projects with long construction times (e.g., Vogtle) slow rapid system decarbonization compared to rapidly scalable, though less dense, alternatives like solar and wind.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "dac4f877-7556-4a0b-a49d-2f352fc7cb60",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:11.507799"
+    },
+    {
+      "id": "0f6336d3-91ca-470b-a028-3bf2dddd1a62",
+      "text": "The supposed low land footprint excludes permanent deep geological repositories for high-level waste, which uniquely condemn substantial tracts of subsurface and surface land for future use for tens of thousands of years.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "dac4f877-7556-4a0b-a49d-2f352fc7cb60",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:11.508233"
+    },
+    {
+      "id": "81d2ef5a-58da-4f75-9b20-6540a4ee3ff7",
+      "text": "Phasing out coal and deploying renewables often yields a faster annual decarbonization rate than historical nuclear buildouts; the UK reduced its grid's CO2 intensity by over 60% in just ten years (2013\u20132023).",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "41003b0b-7da4-4eae-95c1-08341d9b38b8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:13.967142"
+    },
+    {
+      "id": "0519cb0e-c577-42b1-9075-4984dfdadb44",
+      "text": "Existing battery storage solutions are not yet cost-effective or scalable enough to provide the necessary seasonal or multi-day energy reserves required to cover extended periods of low renewable output (dark doldrums), forcing reliance on dispatchable baseload.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ad199c76-9d26-424e-b396-f5f7ff001e67",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:22.105690"
+    },
+    {
+      "id": "eb3ec188-36c3-48c1-8e2b-1cb226e473a8",
+      "text": "Intermittent renewables and battery inverters rely on synthetic inertia, which struggles to fully replicate the instantaneous physical damping (rotational inertia) provided by synchronous baseload generators necessary for stable frequency control during high-impact grid faults.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ad199c76-9d26-424e-b396-f5f7ff001e67",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:22.106132"
+    },
+    {
+      "id": "796aec4a-779b-4032-bd43-6fa8f148e7ef",
+      "text": "After closure, only a small surface infrastructure footprint is excluded from conservation; the vast underground volume does not remove the remaining land above the repository from ecological restoration or limited public use.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0f6336d3-91ca-470b-a028-3bf2dddd1a62",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:23.285215"
+    },
+    {
+      "id": "7d7aee5a-145e-4979-8b9b-9370c30b44d0",
+      "text": "Stating this land use is a significant omission lacks quantitative context; storing all spent nuclear fuel generated in the US requires less than one square kilometer of surface institutional control, which is quantitatively trivial compared to the tens of square kilometers per GW required by solar or wind farms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0f6336d3-91ca-470b-a028-3bf2dddd1a62",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:23.285675"
+    },
+    {
+      "id": "2e654bae-2202-41d6-8c93-4c857ae22180",
+      "text": "The high system value of nuclear's firm, dispatchable power significantly lowers total grid integration and storage costs required to manage intermittent renewables, making it economically competitive despite high initial capital costs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a4f6cf7d-11e0-43d4-ba2b-d13e4ff92b10",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:24.682168"
+    },
+    {
+      "id": "d0e2432d-137d-4d77-8c5a-f114cf899a50",
+      "text": "Generalizing from notoriously mismanaged projects like Olkiluoto 3 ignores successful builds (e.g., South Korea's rapid APR-1400 deployment) and the potential for standardized, shorter construction schedules inherent to Small Modular Reactors (SMRs).",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a4f6cf7d-11e0-43d4-ba2b-d13e4ff92b10",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:24.683237"
+    },
+    {
+      "id": "614dc9ab-5a71-49de-bbff-c19bf2de6ee7",
+      "text": "Standardized Small Modular Reactors (SMRs) are factory-produced, promising construction times as low as 3-4 years and reduced capital intensity compared to the bespoke Vogtle design, accelerating rather than slowing deployment schedules.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cae30920-7e56-41be-9cbe-84876b243d48",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:29.224337"
+    },
+    {
+      "id": "f72af0f0-dd8f-444f-921b-0e8ead3246ff",
+      "text": "High penetration of intermittent renewables necessitates firm, zero-carbon sources like nuclear to maintain grid reliability and prevent costly curtailment, meaning nuclear capacity enables greater system decarbonization rates past initial stages.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cae30920-7e56-41be-9cbe-84876b243d48",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:29.225044"
+    },
+    {
+      "id": "bef6a40a-85d2-4198-9c51-0a78d17de18d",
+      "text": "The UK's 60% reduction began from a CO2 intensity baseline significantly higher than the near-zero intensity France achieved decades ago through its nuclear program, making the percentage rate comparison misleading regarding total decarbonization effort.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "81d2ef5a-58da-4f75-9b20-6540a4ee3ff7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:34.817172"
+    },
+    {
+      "id": "cddb7e94-9364-4289-9e3e-3c82fd89cf45",
+      "text": "France achieved a nearly complete clean electricity supply by deploying 56 nuclear reactors in approximately 15 years (1970s\u20131980s), a massive short-term structural transition that the UK\u2019s recent 10-year reduction in a high-carbon grid has not yet matched in total cumulative scale or final intensity achieved.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "81d2ef5a-58da-4f75-9b20-6540a4ee3ff7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:34.817888"
+    },
+    {
+      "id": "f437a5b8-ec51-44d4-baff-2b5e68d904d3",
+      "text": "The comparison is flawed because it contrasts the land required for nuclear waste storage, a distinct byproduct of the fuel cycle, with the vast land dedicated to renewable energy generation itself.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7d7aee5a-145e-4979-8b9b-9370c30b44d0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:35.675562"
+    },
+    {
+      "id": "25c83777-a0b3-47d3-895f-c78dd68e0461",
+      "text": "The assessment selectively omits the substantial land footprint required for the entire nuclear fuel cycle, including extensive areas disturbed globally by uranium mining and milling and the large exclusion zones surrounding nuclear power plants.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7d7aee5a-145e-4979-8b9b-9370c30b44d0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:35.675601"
+    },
+    {
+      "id": "3499e9cb-ea89-4ea7-9e30-3f6f5cae4fac",
+      "text": "Cost overruns routinely experienced by nuclear projects, such as the multi-billion dollar increases at Vogtle (US) and Olkiluoto 3 (Finland), raise the project LCOE so high that they entirely negate any theoretical savings from improved grid integration.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2e654bae-2202-41d6-8c93-4c857ae22180",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:39.361245"
+    },
+    {
+      "id": "2fc222ad-3897-41ef-b595-9216e1a84502",
+      "text": "Nuclear is not the only source of firm power; alternative technologies like dispatchable geothermal, advanced natural gas reciprocating engines, and long-duration battery storage paired with renewables can provide grid stability at a lower capital and operating cost.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2e654bae-2202-41d6-8c93-4c857ae22180",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:39.361269"
+    },
+    {
+      "id": "66ce0221-2138-4d41-b772-45a1696f317b",
+      "text": "Cost overruns are endemic to first-of-a-kind nuclear projects; for example, the NuScale VOYGR project's projected total cost doubled before cancellation, demonstrating that SMRs may not inherently reduce capital intensity or financial risk.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "614dc9ab-5a71-49de-bbff-c19bf2de6ee7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:41.972808"
+    },
+    {
+      "id": "382a4347-36f7-49e2-aee6-df617be8e847",
+      "text": "SMR deployment is primarily slowed by multi-year regulatory approval for first-of-a-kind designs, complex site licensing, and securing financing, processes that extend deployment timelines regardless of factory production speed.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "614dc9ab-5a71-49de-bbff-c19bf2de6ee7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:41.972854"
+    },
+    {
+      "id": "755472b8-d2f2-4aff-9dc7-f5794288f8ab",
+      "text": "The construction times and massive capital expenditure of nuclear energy preclude the rapid decarbonization required by acute climate deadlines. Projects in developed nations, such as the Vogtle Electric Generating Plant expansion in the United States, have demonstrated multi-billion dollar cost overruns and years of delays.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:43.004879"
+    },
+    {
+      "id": "529ee5d0-ec95-4bb3-a7f6-3da1f8cc2933",
+      "text": "Nuclear power demands significant capital and public guarantees, diverting investment from faster-to-deploy, significantly cheaper energy sources like solar and wind. Data from regions like Australia and Scandinavia confirms the financial superiority and faster scalability of utility-scale renewables over new nuclear construction.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:43.005321"
+    },
+    {
+      "id": "ed1e0af8-fb87-438d-a611-0757ff9539ba",
+      "text": "The unresolved long-term management of high-level radioactive waste poses an indefinite intergenerational environmental and security burden. This complexity is demonstrated by the decades-long political and technical failure to establish permanent repositories, such as the planned Yucca Mountain facility in the United States.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:43.005581"
+    },
+    {
+      "id": "30d3ea7b-6127-4586-8823-43b37064c15f",
+      "text": "Nuclear power plants are highly susceptible to reduced output and forced shutdowns during climate-related events, particularly heatwaves and droughts. European thermal reactors, including those in France, have been forced to temporarily reduce or cease operations due to high water temperatures and low river flows required for essential cooling.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:43.005822"
+    },
+    {
+      "id": "07a83074-83a3-4ce0-b683-565ed2828970",
+      "text": "This vulnerability is limited to specific river-cooled plants. Reactors utilizing oceanic cooling or dry cooling towers, such as Palo Verde in the US, are not subject to reduced output from high water temperatures or drought conditions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "30d3ea7b-6127-4586-8823-43b37064c15f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:53.139769"
+    },
+    {
+      "id": "7bb50c4b-2222-4758-93fb-f274c5968b14",
+      "text": "The financial analysis compares the raw LCOE of intermittent renewables to dispatchable nuclear without factoring in the system integration and long-duration storage costs, which are necessary for renewables to provide the reliable, 24/7 power equivalent to a nuclear facility.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "529ee5d0-ec95-4bb3-a7f6-3da1f8cc2933",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:54.004987"
+    },
+    {
+      "id": "95eec54b-393e-4fb4-8c28-e692a7653902",
+      "text": "Utility-scale nuclear power attracts sovereign, long-term debt tailored for essential national infrastructure, fundamentally separating its specialized financing pool from the short-term, private equity-driven capital used for intermittent renewable expansion.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "529ee5d0-ec95-4bb3-a7f6-3da1f8cc2933",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:54.005692"
+    },
+    {
+      "id": "913b4e74-6180-4ff0-8885-187c886af184",
+      "text": "The rapid and on-budget construction of AP1000 reactors in China (e.g., Sanmen) and South Korea's APR-1400 projects (e.g., Shin Kori) demonstrate that Vogtle\u2019s issues result from US-specific legal, regulatory, and managerial failures, not inherent technological or global construction limitations.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "755472b8-d2f2-4aff-9dc7-f5794288f8ab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:55.181061"
+    },
+    {
+      "id": "feb0a7ae-c6f9-4be9-b1b7-0cdf3a1f7ac4",
+      "text": "The conclusion that nuclear is \"precluded\" by cost and time constraints ignores the systemic costs and required timelines of alternatives; achieving full decarbonization with renewables requires massive, globally unprecedented scaling of long-duration storage and transmission infrastructure, which also constitutes a substantial capital hurdle.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "755472b8-d2f2-4aff-9dc7-f5794288f8ab",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:56:55.181559"
+    },
+    {
+      "id": "282e682a-1af1-4f83-a962-cab52f9c7cb6",
+      "text": "Nuclear plants using oceanic cooling suffer reduced output during marine heatwaves because high intake water temperatures\u2014such as those seen globally in recent years\u2014limit the necessary heat rejection efficiency.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "07a83074-83a3-4ce0-b683-565ed2828970",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:02.496812"
+    },
+    {
+      "id": "aafdb982-9d8f-4ce8-90f3-a4aa7537408f",
+      "text": "Dry cooling towers, including those at Palo Verde, still experience output restrictions because waste heat rejection efficiency drops significantly when ambient air temperatures exceed design parameters during heatwaves and drought periods.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "07a83074-83a3-4ce0-b683-565ed2828970",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:02.497339"
+    },
+    {
+      "id": "34006575-a741-4e5a-ae16-6f8202503944",
+      "text": "Capital is fungible; large nuclear projects consume finite national economic resources, such as specialized engineering talent and project management capacity, regardless of whether capital comes from a private or public nominal source, thus crowding out renewable sector expansion.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "95eec54b-393e-4fb4-8c28-e692a7653902",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:07.174623"
+    },
+    {
+      "id": "3422276a-da99-4dcf-9bd5-d696197d028a",
+      "text": "The need for massive, long-term government support (e.g., loan guarantees or guaranteed price contracts like Hinkley Point C's CfD) imposes significant public liabilities, depleting a government's finite risk capacity needed to subsidize grid modernization and storage necessary for intermittent renewables.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "95eec54b-393e-4fb4-8c28-e692a7653902",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:07.175076"
+    },
+    {
+      "id": "bf398e11-8041-4042-8125-67e21c3d65eb",
+      "text": "The established capital constraint of nuclear power, evidenced by projects like Vogtle 3 & 4 that ran billions over budget and years late, is an immediate financial reality. This is not negated by the potential future systemic scaling costs of renewable alternatives, which are currently technological and deployment challenges.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "feb0a7ae-c6f9-4be9-b1b7-0cdf3a1f7ac4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:08.059202"
+    },
+    {
+      "id": "a02b48a6-e97f-4a97-8116-0bd836b09b69",
+      "text": "The comparison is flawed because Vogtle was a First-of-a-Kind (FOAK) deployment, incurring unique costs for design finalization, licensing, and supply chain setup, which are absent in subsequent, standardized builds in China and South Korea.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "913b4e74-6180-4ff0-8885-187c886af184",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:08.470172"
+    },
+    {
+      "id": "01b9c0c1-d57c-410b-894d-89847bbbe0f9",
+      "text": "Gen III+ designs like the AP1000 inherently demand highly precise manufacturing and specialized global supply chains; this technological complexity contributed directly to Vogtle's failures through faulty components and poor quality control, not just US management failures.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "913b4e74-6180-4ff0-8885-187c886af184",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:08.470860"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:55:58.298930"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:55:58.298930"
+    }
+  ],
+  "links": [
+    {
+      "source": "28e6e343-7e5d-4f0a-a066-eed911ab2c2c",
+      "target": "af608cc0-99d3-4025-a512-59f615af7af7",
+      "type": "objection"
+    },
+    {
+      "source": "b8b0bf51-cdd3-4ae2-aba8-b66491164e59",
+      "target": "a4f6cf7d-11e0-43d4-ba2b-d13e4ff92b10",
+      "type": "objection"
+    },
+    {
+      "source": "b8b0bf51-cdd3-4ae2-aba8-b66491164e59",
+      "target": "ad199c76-9d26-424e-b396-f5f7ff001e67",
+      "type": "objection"
+    },
+    {
+      "source": "dac4f877-7556-4a0b-a49d-2f352fc7cb60",
+      "target": "cae30920-7e56-41be-9cbe-84876b243d48",
+      "type": "objection"
+    },
+    {
+      "source": "dac4f877-7556-4a0b-a49d-2f352fc7cb60",
+      "target": "0f6336d3-91ca-470b-a028-3bf2dddd1a62",
+      "type": "objection"
+    },
+    {
+      "source": "41003b0b-7da4-4eae-95c1-08341d9b38b8",
+      "target": "81d2ef5a-58da-4f75-9b20-6540a4ee3ff7",
+      "type": "objection"
+    },
+    {
+      "source": "ad199c76-9d26-424e-b396-f5f7ff001e67",
+      "target": "0519cb0e-c577-42b1-9075-4984dfdadb44",
+      "type": "response"
+    },
+    {
+      "source": "ad199c76-9d26-424e-b396-f5f7ff001e67",
+      "target": "eb3ec188-36c3-48c1-8e2b-1cb226e473a8",
+      "type": "response"
+    },
+    {
+      "source": "0f6336d3-91ca-470b-a028-3bf2dddd1a62",
+      "target": "796aec4a-779b-4032-bd43-6fa8f148e7ef",
+      "type": "response"
+    },
+    {
+      "source": "0f6336d3-91ca-470b-a028-3bf2dddd1a62",
+      "target": "7d7aee5a-145e-4979-8b9b-9370c30b44d0",
+      "type": "response"
+    },
+    {
+      "source": "a4f6cf7d-11e0-43d4-ba2b-d13e4ff92b10",
+      "target": "2e654bae-2202-41d6-8c93-4c857ae22180",
+      "type": "response"
+    },
+    {
+      "source": "a4f6cf7d-11e0-43d4-ba2b-d13e4ff92b10",
+      "target": "d0e2432d-137d-4d77-8c5a-f114cf899a50",
+      "type": "response"
+    },
+    {
+      "source": "cae30920-7e56-41be-9cbe-84876b243d48",
+      "target": "614dc9ab-5a71-49de-bbff-c19bf2de6ee7",
+      "type": "response"
+    },
+    {
+      "source": "cae30920-7e56-41be-9cbe-84876b243d48",
+      "target": "f72af0f0-dd8f-444f-921b-0e8ead3246ff",
+      "type": "response"
+    },
+    {
+      "source": "81d2ef5a-58da-4f75-9b20-6540a4ee3ff7",
+      "target": "bef6a40a-85d2-4198-9c51-0a78d17de18d",
+      "type": "response"
+    },
+    {
+      "source": "81d2ef5a-58da-4f75-9b20-6540a4ee3ff7",
+      "target": "cddb7e94-9364-4289-9e3e-3c82fd89cf45",
+      "type": "response"
+    },
+    {
+      "source": "7d7aee5a-145e-4979-8b9b-9370c30b44d0",
+      "target": "f437a5b8-ec51-44d4-baff-2b5e68d904d3",
+      "type": "response"
+    },
+    {
+      "source": "7d7aee5a-145e-4979-8b9b-9370c30b44d0",
+      "target": "25c83777-a0b3-47d3-895f-c78dd68e0461",
+      "type": "response"
+    },
+    {
+      "source": "2e654bae-2202-41d6-8c93-4c857ae22180",
+      "target": "3499e9cb-ea89-4ea7-9e30-3f6f5cae4fac",
+      "type": "response"
+    },
+    {
+      "source": "2e654bae-2202-41d6-8c93-4c857ae22180",
+      "target": "2fc222ad-3897-41ef-b595-9216e1a84502",
+      "type": "response"
+    },
+    {
+      "source": "614dc9ab-5a71-49de-bbff-c19bf2de6ee7",
+      "target": "66ce0221-2138-4d41-b772-45a1696f317b",
+      "type": "response"
+    },
+    {
+      "source": "614dc9ab-5a71-49de-bbff-c19bf2de6ee7",
+      "target": "382a4347-36f7-49e2-aee6-df617be8e847",
+      "type": "response"
+    },
+    {
+      "source": "30d3ea7b-6127-4586-8823-43b37064c15f",
+      "target": "07a83074-83a3-4ce0-b683-565ed2828970",
+      "type": "objection"
+    },
+    {
+      "source": "529ee5d0-ec95-4bb3-a7f6-3da1f8cc2933",
+      "target": "7bb50c4b-2222-4758-93fb-f274c5968b14",
+      "type": "objection"
+    },
+    {
+      "source": "529ee5d0-ec95-4bb3-a7f6-3da1f8cc2933",
+      "target": "95eec54b-393e-4fb4-8c28-e692a7653902",
+      "type": "objection"
+    },
+    {
+      "source": "755472b8-d2f2-4aff-9dc7-f5794288f8ab",
+      "target": "913b4e74-6180-4ff0-8885-187c886af184",
+      "type": "objection"
+    },
+    {
+      "source": "755472b8-d2f2-4aff-9dc7-f5794288f8ab",
+      "target": "feb0a7ae-c6f9-4be9-b1b7-0cdf3a1f7ac4",
+      "type": "objection"
+    },
+    {
+      "source": "07a83074-83a3-4ce0-b683-565ed2828970",
+      "target": "282e682a-1af1-4f83-a962-cab52f9c7cb6",
+      "type": "response"
+    },
+    {
+      "source": "07a83074-83a3-4ce0-b683-565ed2828970",
+      "target": "aafdb982-9d8f-4ce8-90f3-a4aa7537408f",
+      "type": "response"
+    },
+    {
+      "source": "95eec54b-393e-4fb4-8c28-e692a7653902",
+      "target": "34006575-a741-4e5a-ae16-6f8202503944",
+      "type": "response"
+    },
+    {
+      "source": "95eec54b-393e-4fb4-8c28-e692a7653902",
+      "target": "3422276a-da99-4dcf-9bd5-d696197d028a",
+      "type": "response"
+    },
+    {
+      "source": "feb0a7ae-c6f9-4be9-b1b7-0cdf3a1f7ac4",
+      "target": "bf398e11-8041-4042-8125-67e21c3d65eb",
+      "type": "response"
+    },
+    {
+      "source": "913b4e74-6180-4ff0-8885-187c886af184",
+      "target": "a02b48a6-e97f-4a97-8116-0bd836b09b69",
+      "type": "response"
+    },
+    {
+      "source": "913b4e74-6180-4ff0-8885-187c886af184",
+      "target": "01b9c0c1-d57c-410b-894d-89847bbbe0f9",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b8b0bf51-cdd3-4ae2-aba8-b66491164e59",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "41003b0b-7da4-4eae-95c1-08341d9b38b8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "dac4f877-7556-4a0b-a49d-2f352fc7cb60",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "28e6e343-7e5d-4f0a-a066-eed911ab2c2c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "755472b8-d2f2-4aff-9dc7-f5794288f8ab",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "529ee5d0-ec95-4bb3-a7f6-3da1f8cc2933",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ed1e0af8-fb87-438d-a611-0757ff9539ba",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "30d3ea7b-6127-4586-8823-43b37064c15f",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

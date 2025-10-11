@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene editing for human enhancement should be permitted - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Gene editing for human enhancement should be permitted</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            40 total nodes • Max depth: 2 •
+            Version 4
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/gene-editing-for-human-enhancement-should-be-permitted.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">40</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "8f186234-d2f7-4878-abd8-9447f8293398",
+      "text": "Permitting gene editing for enhancement is an extension of reproductive freedom, allowing prospective parents to exercise autonomy in making choices that aim to give their children the best possible start in life and maximize their well-being.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:03.856429"
+    },
+    {
+      "id": "84173480-4c2a-4ad8-bb29-f727ac579a96",
+      "text": "The ethical distinction between therapeutic gene editing (treating disease) and enhancement (improving function) is arbitrary, as many enhancements represent a continuum of health optimization and proactive disease prevention.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:03.857291"
+    },
+    {
+      "id": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "text": "Gene editing for enhancement provides a unique means to mitigate the disadvantages imposed by the genetic \"natural lottery,\" offering a pathway toward greater equality of opportunity and compensating for genetic misfortune.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:03.857824"
+    },
+    {
+      "id": "59822867-3ebf-4a7c-883c-a703512edd60",
+      "text": "Allowing human enhancement could yield substantial societal benefits by increasing human cognitive and physical capabilities, thereby accelerating innovation, economic growth, and the ability to solve complex global challenges.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:03.858263"
+    },
+    {
+      "id": "eb599e82-c545-4a58-9e53-c94439a052d1",
+      "text": "Establishing an ethical line on a continuous therapeutic spectrum is not inherently arbitrary; non-arbitrary thresholds are necessary for regulation and clinical decision-making based on risk evaluation and societal values.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "84173480-4c2a-4ad8-bb29-f727ac579a96",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:12.970997"
+    },
+    {
+      "id": "60bc4322-4784-44bd-a2df-03e75da2cce2",
+      "text": "The distinction is substantive because enhancements like radical cognitive augmentation or new sensory organs represent a qualitative leap entirely unrelated to treating disease or health optimization. These enhancements aim to create entirely new human capabilities, not merely restore function or prevent illness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "84173480-4c2a-4ad8-bb29-f727ac579a96",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:12.971635"
+    },
+    {
+      "id": "fd4ad18e-308a-4569-b15d-b11247433ac9",
+      "text": "Increased individual capabilities will not automatically translate to societal benefits if accessibility is unequal, potentially exacerbating existing social and economic polarization and increasing conflict rather than accelerating innovation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "59822867-3ebf-4a7c-883c-a703512edd60",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:13.381775"
+    },
+    {
+      "id": "39c82f89-6ce8-4686-af35-b010db300d7a",
+      "text": "Solving complex global challenges is primarily constrained by systemic political, economic, and institutional barriers, making increased individual human capacity largely irrelevant to overcoming these systemic obstacles.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "59822867-3ebf-4a7c-883c-a703512edd60",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:13.382439"
+    },
+    {
+      "id": "24896941-12a7-4309-a05f-cb546c87ae77",
+      "text": "Existing social and medical accommodations, such as universal healthcare or targeted educational support, already function to mitigate disadvantages arising from the natural lottery, so gene editing is not a unique means.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:15.492352"
+    },
+    {
+      "id": "1b7cdf53-00e8-4d13-8f85-6adb9bbe13a7",
+      "text": "If access to expensive genetic enhancement is determined by wealth or social class, the technology will exacerbate existing socioeconomic inequalities rather than promote greater equality of opportunity.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:15.493390"
+    },
+    {
+      "id": "3e41c2b6-3cf1-46a3-b4db-18844668ecf1",
+      "text": "Reliable germline editing for enhancement is currently biologically impossible because current technologies, like CRISPR, cannot safely eliminate unpredictable off-target mutations or guarantee long-term stability.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:15.494132"
+    },
+    {
+      "id": "25f4d08a-22bf-4348-bc59-8529067b257d",
+      "text": "Reproductive freedom concerns the decision to procreate, not the right to permanently alter the inheritable genetic makeup of a future person who cannot consent, fundamentally changing the nature of the claimed parental right.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8f186234-d2f7-4878-abd8-9447f8293398",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:17.617297"
+    },
+    {
+      "id": "46154482-980f-41f9-bf01-50679f37278b",
+      "text": "Focusing solely on parental intent ignores the immense, irreversible ethical hazards and substantial safety risks inherent in imposing untested, permanent genetic changes on a non-consenting individual.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8f186234-d2f7-4878-abd8-9447f8293398",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:17.617914"
+    },
+    {
+      "id": "a5b65329-61bf-4c7e-b39a-952a659a3a67",
+      "text": "The necessity of establishing a regulatory threshold only proves that a line must exist, but it does not ensure that the precise location chosen on a continuous spectrum is anything other than an arbitrary selection.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eb599e82-c545-4a58-9e53-c94439a052d1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:25.153902"
+    },
+    {
+      "id": "7af86291-f118-426f-9163-cb5fd162968d",
+      "text": "Basing the threshold on inherently variable and subjective \"societal values\" means the resulting ethical line reflects contingent preferences or political compromise rather than an objective, non-arbitrary standard.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eb599e82-c545-4a58-9e53-c94439a052d1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:25.153930"
+    },
+    {
+      "id": "f141b931-467c-4158-ac19-e54e9a484ab4",
+      "text": "Increased polarization and conflict are not inevitable consequences of unequal technological access, as large disparities can also lead to stable hierarchies or non-confrontational stratification rather than an active escalation of societal conflict.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fd4ad18e-308a-4569-b15d-b11247433ac9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:25.814247"
+    },
+    {
+      "id": "b8ce2ac1-9861-4976-bc5b-80b2f612175c",
+      "text": "Accelerated innovation and exacerbated social polarization are not mutually exclusive outcomes, as technological advancement often creates massive, centralized wealth that simultaneously increases inequality and drives further progress.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fd4ad18e-308a-4569-b15d-b11247433ac9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:25.814274"
+    },
+    {
+      "id": "c0aaa864-7c27-49eb-b963-4fe07022428d",
+      "text": "Gene editing is a unique mechanism because it addresses the biological cause of a disadvantage at the source, potentially preventing manifestation, whereas existing accommodations only mitigate the resulting effects or symptoms after they occur.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "24896941-12a7-4309-a05f-cb546c87ae77",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:26.623949"
+    },
+    {
+      "id": "deb2c699-ce92-4b99-a6ab-3547263b4cb7",
+      "text": "Standard procreation inherently involves determining the permanent, inheritable genetic makeup of a non-consenting future person, meaning the criteria used to exclude genetic alteration from reproductive freedom apply equally to all natural births.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "25f4d08a-22bf-4348-bc59-8529067b257d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:29.457395"
+    },
+    {
+      "id": "9c01f8cf-9b34-457a-8a06-919cf2489a33",
+      "text": "Systemic problems are constituted by the aggregated decisions of individuals within institutions, meaning increased individual capacity for critical thinking and ethical governance is prerequisite for effectively challenging or restructuring those systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "39c82f89-6ce8-4686-af35-b010db300d7a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:31.680471"
+    },
+    {
+      "id": "23eddd5e-b31a-4c46-8580-98439016d2c9",
+      "text": "Overcoming systemic constraints does not render individual capacity irrelevant but rather heightens the demand for highly specialized capabilities\u2014such as expertise in policy, organizational design, and technological innovation\u2014to create the necessary systemic changes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "39c82f89-6ce8-4686-af35-b010db300d7a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:31.680496"
+    },
+    {
+      "id": "357e8350-81b6-473d-ab08-632c0a620070",
+      "text": "Permitting germline gene editing introduces heritable, irreversible risks, including unpredictable off-target effects and long-term health consequences for future generations. Since controlled clinical testing of such permanent changes is ethically impossible, the safety threshold for non-medical enhancement cannot be met.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:31.680579"
+    },
+    {
+      "id": "6e9dcea9-b21a-42a8-a027-9ef4f53cd43d",
+      "text": "Enhancement technologies will initially be accessible only to the wealthy, creating a significant \"genetic divide\" that exacerbates existing socioeconomic inequalities. This stratification risks establishing a biologically reinforced caste system where genetic advantages are tied to financial privilege.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:31.681191"
+    },
+    {
+      "id": "bf3d81cb-f224-48c8-bbf0-d9c9967d936c",
+      "text": "The widespread availability of enhancements can create intense societal and competitive pressure, subtly coercing parents to enhance their children simply to avoid systemic disadvantage. This pressure undermines genuine reproductive autonomy and the child's right to an uncoerced \"open future.\"",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:31.681588"
+    },
+    {
+      "id": "b7192ed6-3396-4680-820e-eea01f6f6cef",
+      "text": "Allowing human enhancement risks \"scope creep,\" where the pursuit of non-therapeutic perfection slowly medicalizes natural human variation into correctable defects. This normalization pathologizes inherent human traits, eroding societal acceptance of neurodiversity and physical differences.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:31.681973"
+    },
+    {
+      "id": "0bf84df7-87f7-4b8d-8459-1e380fc4c6e3",
+      "text": "Safety thresholds for enhancement can be met through rigorous non-human primate testing and sophisticated pre-clinical modeling, which confirms high-precision editing tools have reduced off-target mutations to negligible levels.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "357e8350-81b6-473d-ab08-632c0a620070",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:42.155992"
+    },
+    {
+      "id": "ed9faeab-3fe9-4e02-be7f-7098ff296aa4",
+      "text": "The resulting stratification may not constitute a \"genetic divide\" or \"biologically reinforced caste system\" because many powerful enhancements (e.g., neural interfaces, somatic cell therapies) are non-inheritable, creating a performance gap but not permanent hereditary privilege.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6e9dcea9-b21a-42a8-a027-9ef4f53cd43d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:43.724560"
+    },
+    {
+      "id": "0a3808fb-b28f-483f-90fb-c386d882376a",
+      "text": "The progression from non-therapeutic enhancement to pathologizing human variation is not inevitable, as regulatory frameworks and public bioethics can enforce clear legal and social boundaries to limit 'scope creep.'",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b7192ed6-3396-4680-820e-eea01f6f6cef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:44.315985"
+    },
+    {
+      "id": "0cdfc7ec-1e19-4422-a47a-4fab64a462f8",
+      "text": "Offering a correction does not inherently erode acceptance; traits like myopia are widely correctable, yet uncorrected vision differences are not systematically pathologized or subject to mandatory intervention in modern society.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b7192ed6-3396-4680-820e-eea01f6f6cef",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:44.317021"
+    },
+    {
+      "id": "5ce676af-4a5e-4381-85db-24a828e60a8b",
+      "text": "Competitive pressure already mandates parental investment in expensive education and extracurriculars, creating significant economic disparity and advantage without being defined as coercion that negates reproductive autonomy. Gene editing is simply a different technological means of achieving an advantage that parents are already socially compelled to seek.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bf3d81cb-f224-48c8-bbf0-d9c9967d936c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:44.697120"
+    },
+    {
+      "id": "b8a3415b-28e1-44fe-ba08-0267a018bbd0",
+      "text": "Enhancements that improve baseline cognitive or physical capabilities functionally maximize a child's potential, intrinsically expanding the real-world range of future choices and opportunities available to them. Avoiding systemic disadvantage through enhancement fundamentally liberates, rather than restricts, an 'open future.'",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bf3d81cb-f224-48c8-bbf0-d9c9967d936c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:44.698140"
+    },
+    {
+      "id": "509321ff-0de2-4372-86d9-82a10fb6ed34",
+      "text": "Non-human and pre-clinical models often fail to capture complex systemic interactions, long-term effects, and human-specific biology, meaning they cannot reliably establish a sufficient safety threshold without controlled human clinical observation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0bf84df7-87f7-4b8d-8459-1e380fc4c6e3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:53.011709"
+    },
+    {
+      "id": "c118cb67-a426-4077-bb0f-8a92278ca54e",
+      "text": "The threat of a \"genetic divide\" stems from germline editing, which permanently integrates biological enhancements into the human genome, thereby establishing hereditary privilege across all future generations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ed9faeab-3fe9-4e02-be7f-7098ff296aa4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:55.763732"
+    },
+    {
+      "id": "390e3d1e-b809-4372-a2ff-58ffd0d1185b",
+      "text": "The massive wealth and political influence gained from non-inheritable enhancements are socio-economically inherited, creating the same enduring class stratification as direct hereditary genetic privilege. This intergenerational transfer ensures that only the affluent can afford the next generation of therapies.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ed9faeab-3fe9-4e02-be7f-7098ff296aa4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:55.763763"
+    },
+    {
+      "id": "2e1b1899-a6b2-487b-a8fa-0dd68809cfbe",
+      "text": "Many enhancements require significant resource investment or specialization, creating opportunity costs that functionally exclude alternative paths and narrow the child's effective range of available future choices.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b8a3415b-28e1-44fe-ba08-0267a018bbd0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:56.333629"
+    },
+    {
+      "id": "3c2e9f99-cff0-4560-83af-6d7e0711eb99",
+      "text": "The moral concern of the \"open future\" rests on the child's autonomy to choose their path, not the mere quantity of choices provided; parental determination of fundamental traits compromises this autonomy even if capabilities are expanded.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b8a3415b-28e1-44fe-ba08-0267a018bbd0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:56.333685"
+    },
+    {
+      "id": "8b22aac6-6ede-4226-8cda-553de7dc577b",
+      "text": "Competitive pressure applied to investing in an existing child\u2019s opportunities is fundamentally different from pressure applied to decisions that determine a potential child\u2019s existence or fundamental nature, which renders the analogy inaccurate.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5ce676af-4a5e-4381-85db-24a828e60a8b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:57.913998"
+    },
+    {
+      "id": "97e8b9cf-e916-4beb-8d99-e53ac1becd59",
+      "text": "Parental investment in education provides non-heritable, environmental advantages that future generations can reject or offset, while gene editing creates permanent and irreversible biological modifications. This key distinction introduces unique risks and ethical concerns surrounding inheritable changes to the human germline, making the methods incomparable.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5ce676af-4a5e-4381-85db-24a828e60a8b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:57.914022"
+    },
+    {
+      "id": "806e034d-6d00-47a3-ab23-a34619c78c94",
+      "text": "The analogy is weak because correcting a functional impairment like myopia offers universally desired benefits, whereas offering correction for inherently non-impairing traits implicitly labels the natural state as substandard, directly undermining its acceptance.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0cdfc7ec-1e19-4422-a47a-4fab64a462f8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:59.039620"
+    },
+    {
+      "id": "cfed48e3-11d4-45ad-ae20-2197df9d54c6",
+      "text": "Proving an uncorrected trait is merely tolerated (i.e., not subject to mandatory intervention) does not equate to full acceptance. The widespread availability and social expectation of correction still establish the uncorrected state as a defined deviation from the desired norm, causing systemic erosion via social pressure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0cdfc7ec-1e19-4422-a47a-4fab64a462f8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:03:59.039671"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:03:03.856362"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:03:03.856362"
+    }
+  ],
+  "links": [
+    {
+      "source": "84173480-4c2a-4ad8-bb29-f727ac579a96",
+      "target": "eb599e82-c545-4a58-9e53-c94439a052d1",
+      "type": "objection"
+    },
+    {
+      "source": "84173480-4c2a-4ad8-bb29-f727ac579a96",
+      "target": "60bc4322-4784-44bd-a2df-03e75da2cce2",
+      "type": "objection"
+    },
+    {
+      "source": "59822867-3ebf-4a7c-883c-a703512edd60",
+      "target": "fd4ad18e-308a-4569-b15d-b11247433ac9",
+      "type": "objection"
+    },
+    {
+      "source": "59822867-3ebf-4a7c-883c-a703512edd60",
+      "target": "39c82f89-6ce8-4686-af35-b010db300d7a",
+      "type": "objection"
+    },
+    {
+      "source": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "target": "24896941-12a7-4309-a05f-cb546c87ae77",
+      "type": "objection"
+    },
+    {
+      "source": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "target": "1b7cdf53-00e8-4d13-8f85-6adb9bbe13a7",
+      "type": "objection"
+    },
+    {
+      "source": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "target": "3e41c2b6-3cf1-46a3-b4db-18844668ecf1",
+      "type": "objection"
+    },
+    {
+      "source": "8f186234-d2f7-4878-abd8-9447f8293398",
+      "target": "25f4d08a-22bf-4348-bc59-8529067b257d",
+      "type": "objection"
+    },
+    {
+      "source": "8f186234-d2f7-4878-abd8-9447f8293398",
+      "target": "46154482-980f-41f9-bf01-50679f37278b",
+      "type": "objection"
+    },
+    {
+      "source": "eb599e82-c545-4a58-9e53-c94439a052d1",
+      "target": "a5b65329-61bf-4c7e-b39a-952a659a3a67",
+      "type": "response"
+    },
+    {
+      "source": "eb599e82-c545-4a58-9e53-c94439a052d1",
+      "target": "7af86291-f118-426f-9163-cb5fd162968d",
+      "type": "response"
+    },
+    {
+      "source": "fd4ad18e-308a-4569-b15d-b11247433ac9",
+      "target": "f141b931-467c-4158-ac19-e54e9a484ab4",
+      "type": "response"
+    },
+    {
+      "source": "fd4ad18e-308a-4569-b15d-b11247433ac9",
+      "target": "b8ce2ac1-9861-4976-bc5b-80b2f612175c",
+      "type": "response"
+    },
+    {
+      "source": "24896941-12a7-4309-a05f-cb546c87ae77",
+      "target": "c0aaa864-7c27-49eb-b963-4fe07022428d",
+      "type": "response"
+    },
+    {
+      "source": "25f4d08a-22bf-4348-bc59-8529067b257d",
+      "target": "deb2c699-ce92-4b99-a6ab-3547263b4cb7",
+      "type": "response"
+    },
+    {
+      "source": "39c82f89-6ce8-4686-af35-b010db300d7a",
+      "target": "9c01f8cf-9b34-457a-8a06-919cf2489a33",
+      "type": "response"
+    },
+    {
+      "source": "39c82f89-6ce8-4686-af35-b010db300d7a",
+      "target": "23eddd5e-b31a-4c46-8580-98439016d2c9",
+      "type": "response"
+    },
+    {
+      "source": "357e8350-81b6-473d-ab08-632c0a620070",
+      "target": "0bf84df7-87f7-4b8d-8459-1e380fc4c6e3",
+      "type": "objection"
+    },
+    {
+      "source": "6e9dcea9-b21a-42a8-a027-9ef4f53cd43d",
+      "target": "ed9faeab-3fe9-4e02-be7f-7098ff296aa4",
+      "type": "objection"
+    },
+    {
+      "source": "b7192ed6-3396-4680-820e-eea01f6f6cef",
+      "target": "0a3808fb-b28f-483f-90fb-c386d882376a",
+      "type": "objection"
+    },
+    {
+      "source": "b7192ed6-3396-4680-820e-eea01f6f6cef",
+      "target": "0cdfc7ec-1e19-4422-a47a-4fab64a462f8",
+      "type": "objection"
+    },
+    {
+      "source": "bf3d81cb-f224-48c8-bbf0-d9c9967d936c",
+      "target": "5ce676af-4a5e-4381-85db-24a828e60a8b",
+      "type": "objection"
+    },
+    {
+      "source": "bf3d81cb-f224-48c8-bbf0-d9c9967d936c",
+      "target": "b8a3415b-28e1-44fe-ba08-0267a018bbd0",
+      "type": "objection"
+    },
+    {
+      "source": "0bf84df7-87f7-4b8d-8459-1e380fc4c6e3",
+      "target": "509321ff-0de2-4372-86d9-82a10fb6ed34",
+      "type": "response"
+    },
+    {
+      "source": "ed9faeab-3fe9-4e02-be7f-7098ff296aa4",
+      "target": "c118cb67-a426-4077-bb0f-8a92278ca54e",
+      "type": "response"
+    },
+    {
+      "source": "ed9faeab-3fe9-4e02-be7f-7098ff296aa4",
+      "target": "390e3d1e-b809-4372-a2ff-58ffd0d1185b",
+      "type": "response"
+    },
+    {
+      "source": "b8a3415b-28e1-44fe-ba08-0267a018bbd0",
+      "target": "2e1b1899-a6b2-487b-a8fa-0dd68809cfbe",
+      "type": "response"
+    },
+    {
+      "source": "b8a3415b-28e1-44fe-ba08-0267a018bbd0",
+      "target": "3c2e9f99-cff0-4560-83af-6d7e0711eb99",
+      "type": "response"
+    },
+    {
+      "source": "5ce676af-4a5e-4381-85db-24a828e60a8b",
+      "target": "8b22aac6-6ede-4226-8cda-553de7dc577b",
+      "type": "response"
+    },
+    {
+      "source": "5ce676af-4a5e-4381-85db-24a828e60a8b",
+      "target": "97e8b9cf-e916-4beb-8d99-e53ac1becd59",
+      "type": "response"
+    },
+    {
+      "source": "0cdfc7ec-1e19-4422-a47a-4fab64a462f8",
+      "target": "806e034d-6d00-47a3-ab23-a34619c78c94",
+      "type": "response"
+    },
+    {
+      "source": "0cdfc7ec-1e19-4422-a47a-4fab64a462f8",
+      "target": "cfed48e3-11d4-45ad-ae20-2197df9d54c6",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "8f186234-d2f7-4878-abd8-9447f8293398",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "84173480-4c2a-4ad8-bb29-f727ac579a96",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "27f3ef4f-b5df-4a95-89f9-5ca85470bdd2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "59822867-3ebf-4a7c-883c-a703512edd60",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "357e8350-81b6-473d-ab08-632c0a620070",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6e9dcea9-b21a-42a8-a027-9ef4f53cd43d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "bf3d81cb-f224-48c8-bbf0-d9c9967d936c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b7192ed6-3396-4680-820e-eea01f6f6cef",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

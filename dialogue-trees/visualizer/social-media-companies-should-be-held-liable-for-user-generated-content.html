@@ -1,0 +1,2234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social media companies should be held liable for user-generated content - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Social media companies should be held liable for user-generated content</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            46 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/social-media-companies-should-be-held-liable-for-user-generated-content.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">46</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "2ba6e332-f705-490a-8978-002ff7d8b2b3",
+      "text": "Companies are active publishers, not passive platforms, because their proprietary algorithms select, amplify, and promote specific user-generated content for profit. Therefore, they should be liable for the harms caused by the content selection they monetize, similar to traditional media publishers.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:23.679522"
+    },
+    {
+      "id": "45cfa3e4-e7df-4bfc-96d4-1768d09570a9",
+      "text": "Holding companies liable internalizes the negative externalities\u2014such as organized misinformation campaigns and mental health harms\u2014that currently subsidize their engagement-based business models. This liability is a necessary market mechanism to shift corporate prioritization from profit maximization to public safety.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:23.680046"
+    },
+    {
+      "id": "dc2dcbac-c095-4f16-90d3-967b5b8b4f1c",
+      "text": "Jurisdictions such as the European Union (via the Digital Services Act) and Australia have already mandated increased platform responsibility, demonstrating a global regulatory shift away from platforms' historical liability shield. These laws recognize platforms as systemic actors whose operational choices necessitate robust due diligence rules regarding harmful UGC.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:23.680325"
+    },
+    {
+      "id": "a454445a-5a1f-4b74-accb-036ced973b0b",
+      "text": "Only social media companies possess the massive financial resources and technical infrastructure required to implement global moderation addressing high-stakes harms like election interference and organized violence. Liability is necessary to compel adequate investment to prevent real-world atrocities, such as those facilitated by platforms in regions like Myanmar leading to ethnic cleansing.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:23.680576"
+    },
+    {
+      "id": "c2dac5ba-1658-4560-9b4c-067c72271ef7",
+      "text": "The United States, where the majority of major global platforms are headquartered, still maintains the strong federal liability shield of Section 230, demonstrating that regulatory changes in the EU and Australia do not constitute a \"global regulatory shift.\"",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "dc2dcbac-c095-4f16-90d3-967b5b8b4f1c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:33.254189"
+    },
+    {
+      "id": "70a607e4-7285-41d3-862e-b08ea7046109",
+      "text": "Effective moderation requires localized linguistic and regulatory expertise, which international bodies like the EU (via the DSA) and specialized non-profits possess more accurately and comprehensively than global platform resources.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a454445a-5a1f-4b74-accb-036ced973b0b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:36.590079"
+    },
+    {
+      "id": "7ebd34eb-6efe-4577-9840-164a15dad67d",
+      "text": "Increased liability compels spending but does not solve the fundamental problem: AI poorly handles violence in rare languages and low-context environments; therefore, financial investment alone is insufficient to prevent complex, localized atrocities like ethnic cleansing in Myanmar.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a454445a-5a1f-4b74-accb-036ced973b0b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:36.591031"
+    },
+    {
+      "id": "53d37e52-1900-4ffa-afc3-b2ff025288d4",
+      "text": "Strict regulatory frameworks, such as the EU's Digital Services Act, already impose mandatory risk assessments and transparency requirements on large platforms, demonstrating that targeted statutory obligations, rather than retroactive tort liability, can effectively ensure better public safety outcomes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "45cfa3e4-e7df-4bfc-96d4-1768d09570a9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:37.923233"
+    },
+    {
+      "id": "22448801-5dd8-43ea-b999-02fe88ffb912",
+      "text": "Establishing a legally sufficient causal link between a platform's systemic design features, the spread of diffuse misinformation, and population-level mental health decline is factually impossible under current tort law requirements for direct proximate cause. This prevents the internalization of many broad societal costs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "45cfa3e4-e7df-4bfc-96d4-1768d09570a9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:37.923659"
+    },
+    {
+      "id": "5faa11f4-bc71-442c-b46b-c5e6645d187e",
+      "text": "Unlike traditional publishers who exert conscious, human editorial control over a limited number of vetted contributors, major platforms use automated machine learning to personalize the display of billions of unsolicited posts daily, a mechanism fundamentally different from proactive media gatekeeping.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2ba6e332-f705-490a-8978-002ff7d8b2b3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:42.624029"
+    },
+    {
+      "id": "29b021a9-5ba2-4486-95f9-32786eb98067",
+      "text": "Algorithmic amplification for profit establishes a commercial relationship to the content, but it does not satisfy the legal requirement for direct causation of third-party harm, as the platform did not create or legally endorse the user-generated speech.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2ba6e332-f705-490a-8978-002ff7d8b2b3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:42.624459"
+    },
+    {
+      "id": "a33843c9-22a7-4da4-8020-d816ce9b8e6c",
+      "text": "A \"global regulatory shift\" describes a multi-regional trend involving major regions (including the EU, Australia, Canada, and Brazil) and does not require unanimous adoption by every single nation, especially one with unique legal history like the US.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c2dac5ba-1658-4560-9b4c-067c72271ef7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:47.290101"
+    },
+    {
+      "id": "518af789-6d73-425b-b781-6b5f8e9376fc",
+      "text": "Major markets like the EU and Australia regulate international platforms based on the location of users and market size, not corporate headquarters; compliance with the Digital Services Act (DSA) forces worldwide behavioral changes in content moderation, constituting a global shift in practice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c2dac5ba-1658-4560-9b4c-067c72271ef7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:47.290798"
+    },
+    {
+      "id": "44b8d4a1-b20a-4fd8-9d24-5503e5ea4d35",
+      "text": "The Digital Services Act and similar regulatory frameworks (e.g., UK Online Safety Bill) are too recently implemented\u2014late 2023 into 2024\u2014to provide robust longitudinal data demonstrating they have effectively achieved better public safety outcomes than existing liability regimes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "53d37e52-1900-4ffa-afc3-b2ff025288d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:48.870782"
+    },
+    {
+      "id": "d25fd41a-a762-4cb7-876c-934f36eb4a9b",
+      "text": "Statutory obligations (ex-ante) and tort liability (ex-post) are complementary, not alternative, systems; regulations set minimum preventative standards, while liability provides consequential deterrence against platform-specific or novel harms and ensures compensation for victims.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "53d37e52-1900-4ffa-afc3-b2ff025288d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:48.871233"
+    },
+    {
+      "id": "e1bdbcda-9a30-42a5-a2fe-e4f76fa93c33",
+      "text": "Effective moderation is fundamentally a technological challenge requiring proprietary, global-scale AI/ML systems to instantly detect billions of content violations, a high-speed infrastructure that neither governments nor non-profits can replicate.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "70a607e4-7285-41d3-862e-b08ea7046109",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:49.736159"
+    },
+    {
+      "id": "2942d89b-592b-4abf-ba87-ccd36cb83946",
+      "text": "Compelled financial investment directly funds the specialized R&D necessary to train AI models on rare languages and hire the polyglots required to detect low-context violence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7ebd34eb-6efe-4577-9840-164a15dad67d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:52.671414"
+    },
+    {
+      "id": "e2fd7ac2-717a-4ff5-a340-280513a478ae",
+      "text": "The true non-monetary barrier is the logistical time required to build localized trust, acquire niche training data, and integrate human experts into rapid review pipelines, a constraint that huge financial liability mandates but cannot instantly solve.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7ebd34eb-6efe-4577-9840-164a15dad67d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:52.671868"
+    },
+    {
+      "id": "d364d237-3ee9-454e-ba7d-5314f81df528",
+      "text": "Automated recommendation systems constitute proactive media gatekeeping because they systematically select and prioritize content for consumption based on programmed criteria, thereby determining what content reaches the public just as human editors do, distinguishing only the method, not the core function.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5faa11f4-bc71-442c-b46b-c5e6645d187e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:54.147359"
+    },
+    {
+      "id": "5143888b-d20b-472d-9019-83e9a2346d78",
+      "text": "Legal standards for liability, such as proximate cause, hold actors responsible when their active, profit-driven selection and amplification mechanism makes the resulting third-party harm a foreseeable consequence, irrespective of who created the initial speech.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "29b021a9-5ba2-4486-95f9-32786eb98067",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:56.117231"
+    },
+    {
+      "id": "af201721-cdeb-4094-aeb5-881b8c34cf7e",
+      "text": "Active recommendation algorithms convert platforms from neutral conduits into active distributors or editors, an intervening act that establishes liability within certain legal frameworks, despite the platform not being the original speech creator.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "29b021a9-5ba2-4486-95f9-32786eb98067",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:54:56.117907"
+    },
+    {
+      "id": "a04d2dfa-2e64-4110-8117-317d4f874880",
+      "text": "Effective content moderation is achievable through regulatory frameworks emphasizing human-led appeals, transparency, and collaboration with mandated trusted flaggers, as demonstrated by the European Union's Digital Services Act (DSA), bypassing reliance on proprietary platform AI systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e1bdbcda-9a30-42a5-a2fe-e4f76fa93c33",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:01.837709"
+    },
+    {
+      "id": "3710eaf2-7637-42b2-9ffb-82d35d5045ad",
+      "text": "State actors routinely employ AI and high-speed data analysis at massive scale for national security and intelligence operations, demonstrating that governments possess the technical and financial capacity necessary to build or contract highly comparable content analysis infrastructure.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e1bdbcda-9a30-42a5-a2fe-e4f76fa93c33",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:01.837750"
+    },
+    {
+      "id": "bbeafe18-cafb-49ae-9bc8-4a4f21f7132e",
+      "text": "The primary non-monetary barrier is the inherent political difficulty of navigating conflicting international legal definitions of harmful content, such as the stark differences between German hate speech laws and US First Amendment protections, which a generic time-based solution cannot resolve.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e2fd7ac2-717a-4ff5-a340-280513a478ae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:06.809600"
+    },
+    {
+      "id": "72fad9bb-c019-448a-8404-2ab679aa9ce7",
+      "text": "Acquiring niche training data and integrating human experts requires substantial capital expenditure on data labeling, specialized expert salaries, and technical infrastructure build-out, making these requirements predominantly monetary barriers, not merely constraints of logistical time.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e2fd7ac2-717a-4ff5-a340-280513a478ae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:06.809639"
+    },
+    {
+      "id": "e7041061-5c0a-4ddf-af2d-7da769c7ed18",
+      "text": "Holding companies liable is impractical due to the immense scale of user-generated content; platforms like Meta and ByteDance process billions of posts daily, making comprehensive, real-time pre-screening and legal review for every piece of data technically feasible only for a publisher, not an intermediary.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:06.809815"
+    },
+    {
+      "id": "644f90e1-f583-437b-9966-b0fc5ff00213",
+      "text": "Facing massive litigation risk, platforms will aggressively remove ambiguous or controversial legal content, prioritizing corporate risk management over the preservation of diverse political and public interest speech.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:06.810507"
+    },
+    {
+      "id": "5cc896cf-eeeb-47b0-875a-c0cdb7907b08",
+      "text": "Imposing content liability creates unsustainable compliance and legal costs, effectively blocking market entry for smaller innovators and new social media start-ups, thereby consolidating market power among established tech giants.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:06.810964"
+    },
+    {
+      "id": "230176cc-c11c-4ca6-8ef0-125e33545d33",
+      "text": "Social media platforms function as infrastructure for communication, similar to telecommunications providers or email services; the primary legal responsibility for creating unlawful content should remain with the originating user, not the neutral conduit.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:06.811394"
+    },
+    {
+      "id": "5906a0c6-d415-40a4-91ba-86f8b3a530dd",
+      "text": "Modern liability frameworks, such as the EU's Digital Services Act (DSA), condition liability on failure to remove known illegal content (notice-and-takedown), meaning comprehensive real-time pre-screening is not required.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e7041061-5c0a-4ddf-af2d-7da769c7ed18",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:17.398220"
+    },
+    {
+      "id": "70d2069d-68d6-4637-971f-11aa1a427522",
+      "text": "Platform liability is not determined by the sheer volume of content, but by the active editorial choices, such as algorithmic amplification, that negate their status as passive intermediaries.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e7041061-5c0a-4ddf-af2d-7da769c7ed18",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:17.398870"
+    },
+    {
+      "id": "6dc689e4-55b4-43b8-89b1-c5555e06646a",
+      "text": "Much of the legal but controversial content described\u2014such as medical misinformation and organized harassment\u2014actively undermines public trust and rational policy development, making its removal beneficial.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "644f90e1-f583-437b-9966-b0fc5ff00213",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:17.748141"
+    },
+    {
+      "id": "614919a4-5edd-4c29-adfc-dc7aea526ff0",
+      "text": "The core business model requires tolerating controversial content, as high-engagement posts\u2014regardless of their legal ambiguity\u2014are essential for maximizing ad revenue, directly counteracting the incentive for aggressive removals.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "644f90e1-f583-437b-9966-b0fc5ff00213",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:17.748558"
+    },
+    {
+      "id": "72e0a959-6970-4193-bf87-eeb3ad1d30f3",
+      "text": "Legal frameworks for content liability, modeled after the EU's Digital Services Act, explicitly include size-based exemptions and lower compliance thresholds for small platforms.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5cc896cf-eeeb-47b0-875a-c0cdb7907b08",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:17.922538"
+    },
+    {
+      "id": "c1be4daa-0220-4a1b-9acb-3a71ff227feb",
+      "text": "The costs are not universally \"unsustainable,\" as compliance technology is becoming cheaper and more standardized, potentially creating a new market for scalable content moderation tools that smaller firms can access at manageable rates.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5cc896cf-eeeb-47b0-875a-c0cdb7907b08",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:17.923122"
+    },
+    {
+      "id": "dd1bb709-efb1-439c-b42b-a43ababe5b44",
+      "text": "Algorithms prioritize harmful content, such as political disinformation and hate speech, based on engagement metrics to maximize revenue, demonstrating platforms are active publishers and editors, not passive conduits.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "230176cc-c11c-4ca6-8ef0-125e33545d33",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:21.140956"
+    },
+    {
+      "id": "026ae366-5aeb-4882-8953-b4e4cc044c9c",
+      "text": "Legal frameworks such as the EU Digital Services Act mandate platform responsibility for removing illegal content, like terrorist material or child sexual abuse images, once they become aware of it, signifying a shared burden of accountability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "230176cc-c11c-4ca6-8ef0-125e33545d33",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:21.141704"
+    },
+    {
+      "id": "fdcf884e-2b1f-427e-afc2-362d3f82d3cd",
+      "text": "The primary unsustainable costs for smaller platforms are operational\u2014mandated human review staff, legal fees for regulatory compliance (e.g., DSA), and liability risks\u2014which are not significantly reduced by cheaper content moderation software.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c1be4daa-0220-4a1b-9acb-3a71ff227feb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:27.224662"
+    },
+    {
+      "id": "06ece1e6-dedd-4770-a521-400edb6597c5",
+      "text": "The DSA's systemic risk mitigation requirements for Very Large Online Platforms (VLOPs) functionally necessitate comprehensive automated content detection and rapid removal mechanisms, which operate as real-time pre-screening systems on a large scale, regardless of the notice-and-takedown safe harbor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5906a0c6-d415-40a4-91ba-86f8b3a530dd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:28.595850"
+    },
+    {
+      "id": "a7db8bab-b903-48fb-a951-bad8e0b0f8db",
+      "text": "Liability for content that \"undermines public trust\" necessarily grants social media companies the power to silence political dissent, a power historically used to suppress marginalized groups and criticisms of government policy under pressure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6dc689e4-55b4-43b8-89b1-c5555e06646a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:30.048322"
+    },
+    {
+      "id": "3b97a33c-ccfa-4be2-8c7a-89f4acebf863",
+      "text": "The EU Digital Services Act defines a conditional, reactive responsibility, allowing platforms safe harbor immunity from general liability unless they are notified of illegal content. This contradicts the conclusion that the framework establishes a general, shared burden of accountability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "026ae366-5aeb-4882-8953-b4e4cc044c9c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:30.958087"
+    },
+    {
+      "id": "eff21692-adc4-440e-9c39-da15c1d12465",
+      "text": "The legal status of \"publisher\" requires pre-publication editorial review, direct content modification, and assumption of primary liability for the content's veracity; however, algorithmic prioritization is a post-submission function that merely optimizes visibility based on engagement metrics without performing traditional editorial control.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "dd1bb709-efb1-439c-b42b-a43ababe5b44",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:35.165805"
+    },
+    {
+      "id": "2588ecf5-b937-4d0a-9b06-11e723cc68d0",
+      "text": "The DSA mandates \"reasonable and proportionate\" risk mitigation, which can be achieved through non-automated solutions like enhanced human moderator training, better internal audit systems, and algorithm design changes, thus not necessitating comprehensive automated pre-screening.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "06ece1e6-dedd-4770-a521-400edb6597c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:42.323849"
+    },
+    {
+      "id": "533527ec-08ea-479d-a136-7217bb366315",
+      "text": "Rapid removal refers to swift post-publication action following notification, which is fundamentally different from real-time pre-screening, where content is filtered before publication, a mechanism the DSA generally avoids for non-IP content.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "06ece1e6-dedd-4770-a521-400edb6597c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:42.323876"
+    },
+    {
+      "id": "90fe28d4-917a-4e7b-b332-366bec0af090",
+      "text": "Algorithmic prioritization, by choosing which content reaches millions of users and suppressing other content, exercises greater functional editorial control than any traditional human editor, irrespective of the timing of the content submission.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "eff21692-adc4-440e-9c39-da15c1d12465",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:49.493318"
+    },
+    {
+      "id": "b900e82b-9bc6-408a-a51d-50b48114275d",
+      "text": "Liability is a legal consequence of active dissemination; intensive algorithmic selection and distribution establish the functional role of a publisher by mirroring editorial choices, regardless of a platform's content review intent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "eff21692-adc4-440e-9c39-da15c1d12465",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:55:49.493351"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:54:23.679469"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:54:23.679469"
+    }
+  ],
+  "links": [
+    {
+      "source": "dc2dcbac-c095-4f16-90d3-967b5b8b4f1c",
+      "target": "c2dac5ba-1658-4560-9b4c-067c72271ef7",
+      "type": "objection"
+    },
+    {
+      "source": "a454445a-5a1f-4b74-accb-036ced973b0b",
+      "target": "70a607e4-7285-41d3-862e-b08ea7046109",
+      "type": "objection"
+    },
+    {
+      "source": "a454445a-5a1f-4b74-accb-036ced973b0b",
+      "target": "7ebd34eb-6efe-4577-9840-164a15dad67d",
+      "type": "objection"
+    },
+    {
+      "source": "45cfa3e4-e7df-4bfc-96d4-1768d09570a9",
+      "target": "53d37e52-1900-4ffa-afc3-b2ff025288d4",
+      "type": "objection"
+    },
+    {
+      "source": "45cfa3e4-e7df-4bfc-96d4-1768d09570a9",
+      "target": "22448801-5dd8-43ea-b999-02fe88ffb912",
+      "type": "objection"
+    },
+    {
+      "source": "2ba6e332-f705-490a-8978-002ff7d8b2b3",
+      "target": "5faa11f4-bc71-442c-b46b-c5e6645d187e",
+      "type": "objection"
+    },
+    {
+      "source": "2ba6e332-f705-490a-8978-002ff7d8b2b3",
+      "target": "29b021a9-5ba2-4486-95f9-32786eb98067",
+      "type": "objection"
+    },
+    {
+      "source": "c2dac5ba-1658-4560-9b4c-067c72271ef7",
+      "target": "a33843c9-22a7-4da4-8020-d816ce9b8e6c",
+      "type": "response"
+    },
+    {
+      "source": "c2dac5ba-1658-4560-9b4c-067c72271ef7",
+      "target": "518af789-6d73-425b-b781-6b5f8e9376fc",
+      "type": "response"
+    },
+    {
+      "source": "53d37e52-1900-4ffa-afc3-b2ff025288d4",
+      "target": "44b8d4a1-b20a-4fd8-9d24-5503e5ea4d35",
+      "type": "response"
+    },
+    {
+      "source": "53d37e52-1900-4ffa-afc3-b2ff025288d4",
+      "target": "d25fd41a-a762-4cb7-876c-934f36eb4a9b",
+      "type": "response"
+    },
+    {
+      "source": "70a607e4-7285-41d3-862e-b08ea7046109",
+      "target": "e1bdbcda-9a30-42a5-a2fe-e4f76fa93c33",
+      "type": "response"
+    },
+    {
+      "source": "7ebd34eb-6efe-4577-9840-164a15dad67d",
+      "target": "2942d89b-592b-4abf-ba87-ccd36cb83946",
+      "type": "response"
+    },
+    {
+      "source": "7ebd34eb-6efe-4577-9840-164a15dad67d",
+      "target": "e2fd7ac2-717a-4ff5-a340-280513a478ae",
+      "type": "response"
+    },
+    {
+      "source": "5faa11f4-bc71-442c-b46b-c5e6645d187e",
+      "target": "d364d237-3ee9-454e-ba7d-5314f81df528",
+      "type": "response"
+    },
+    {
+      "source": "29b021a9-5ba2-4486-95f9-32786eb98067",
+      "target": "5143888b-d20b-472d-9019-83e9a2346d78",
+      "type": "response"
+    },
+    {
+      "source": "29b021a9-5ba2-4486-95f9-32786eb98067",
+      "target": "af201721-cdeb-4094-aeb5-881b8c34cf7e",
+      "type": "response"
+    },
+    {
+      "source": "e1bdbcda-9a30-42a5-a2fe-e4f76fa93c33",
+      "target": "a04d2dfa-2e64-4110-8117-317d4f874880",
+      "type": "response"
+    },
+    {
+      "source": "e1bdbcda-9a30-42a5-a2fe-e4f76fa93c33",
+      "target": "3710eaf2-7637-42b2-9ffb-82d35d5045ad",
+      "type": "response"
+    },
+    {
+      "source": "e2fd7ac2-717a-4ff5-a340-280513a478ae",
+      "target": "bbeafe18-cafb-49ae-9bc8-4a4f21f7132e",
+      "type": "response"
+    },
+    {
+      "source": "e2fd7ac2-717a-4ff5-a340-280513a478ae",
+      "target": "72fad9bb-c019-448a-8404-2ab679aa9ce7",
+      "type": "response"
+    },
+    {
+      "source": "e7041061-5c0a-4ddf-af2d-7da769c7ed18",
+      "target": "5906a0c6-d415-40a4-91ba-86f8b3a530dd",
+      "type": "objection"
+    },
+    {
+      "source": "e7041061-5c0a-4ddf-af2d-7da769c7ed18",
+      "target": "70d2069d-68d6-4637-971f-11aa1a427522",
+      "type": "objection"
+    },
+    {
+      "source": "644f90e1-f583-437b-9966-b0fc5ff00213",
+      "target": "6dc689e4-55b4-43b8-89b1-c5555e06646a",
+      "type": "objection"
+    },
+    {
+      "source": "644f90e1-f583-437b-9966-b0fc5ff00213",
+      "target": "614919a4-5edd-4c29-adfc-dc7aea526ff0",
+      "type": "objection"
+    },
+    {
+      "source": "5cc896cf-eeeb-47b0-875a-c0cdb7907b08",
+      "target": "72e0a959-6970-4193-bf87-eeb3ad1d30f3",
+      "type": "objection"
+    },
+    {
+      "source": "5cc896cf-eeeb-47b0-875a-c0cdb7907b08",
+      "target": "c1be4daa-0220-4a1b-9acb-3a71ff227feb",
+      "type": "objection"
+    },
+    {
+      "source": "230176cc-c11c-4ca6-8ef0-125e33545d33",
+      "target": "dd1bb709-efb1-439c-b42b-a43ababe5b44",
+      "type": "objection"
+    },
+    {
+      "source": "230176cc-c11c-4ca6-8ef0-125e33545d33",
+      "target": "026ae366-5aeb-4882-8953-b4e4cc044c9c",
+      "type": "objection"
+    },
+    {
+      "source": "c1be4daa-0220-4a1b-9acb-3a71ff227feb",
+      "target": "fdcf884e-2b1f-427e-afc2-362d3f82d3cd",
+      "type": "response"
+    },
+    {
+      "source": "5906a0c6-d415-40a4-91ba-86f8b3a530dd",
+      "target": "06ece1e6-dedd-4770-a521-400edb6597c5",
+      "type": "response"
+    },
+    {
+      "source": "6dc689e4-55b4-43b8-89b1-c5555e06646a",
+      "target": "a7db8bab-b903-48fb-a951-bad8e0b0f8db",
+      "type": "response"
+    },
+    {
+      "source": "026ae366-5aeb-4882-8953-b4e4cc044c9c",
+      "target": "3b97a33c-ccfa-4be2-8c7a-89f4acebf863",
+      "type": "response"
+    },
+    {
+      "source": "dd1bb709-efb1-439c-b42b-a43ababe5b44",
+      "target": "eff21692-adc4-440e-9c39-da15c1d12465",
+      "type": "response"
+    },
+    {
+      "source": "06ece1e6-dedd-4770-a521-400edb6597c5",
+      "target": "2588ecf5-b937-4d0a-9b06-11e723cc68d0",
+      "type": "response"
+    },
+    {
+      "source": "06ece1e6-dedd-4770-a521-400edb6597c5",
+      "target": "533527ec-08ea-479d-a136-7217bb366315",
+      "type": "response"
+    },
+    {
+      "source": "eff21692-adc4-440e-9c39-da15c1d12465",
+      "target": "90fe28d4-917a-4e7b-b332-366bec0af090",
+      "type": "response"
+    },
+    {
+      "source": "eff21692-adc4-440e-9c39-da15c1d12465",
+      "target": "b900e82b-9bc6-408a-a51d-50b48114275d",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "2ba6e332-f705-490a-8978-002ff7d8b2b3",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "45cfa3e4-e7df-4bfc-96d4-1768d09570a9",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "dc2dcbac-c095-4f16-90d3-967b5b8b4f1c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a454445a-5a1f-4b74-accb-036ced973b0b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "e7041061-5c0a-4ddf-af2d-7da769c7ed18",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "644f90e1-f583-437b-9966-b0fc5ff00213",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5cc896cf-eeeb-47b0-875a-c0cdb7907b08",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "230176cc-c11c-4ca6-8ef0-125e33545d33",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

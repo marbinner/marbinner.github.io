@@ -1,0 +1,2404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote work is better than office work - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Remote work is better than office work</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            56 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/remote-work-is-better-than-office-work.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">56</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "faa59853-5d11-4714-9c0b-1bd8e921dc65",
+      "text": "Remote work increases efficiency by eliminating the time, stress, and expense of mandatory daily commutes, allowing employees to dedicate peak mental hours directly to productive tasks. This reclaimed time improves overall output and reduces non-work related exhaustion.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:50.126449"
+    },
+    {
+      "id": "6f347d56-c8d6-4cd4-ba45-4ad81303e488",
+      "text": "Organizations achieve substantial financial savings by eliminating or drastically reducing the need for commercial real estate, utilities, and maintenance overhead. This capital reallocation lowers fixed operating costs and improves the company\u2019s structural profitability.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:50.127186"
+    },
+    {
+      "id": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "text": "The widespread operational continuity demonstrated by organizations during the 2020-2022 global pandemic confirms that robust remote infrastructure provides essential organizational resilience. This setup ensures business functions persist despite localized crises, health mandates, or natural disasters.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:50.127652"
+    },
+    {
+      "id": "66592356-cf9c-4313-8b4f-f537f4122502",
+      "text": "Remote work removes the constraint of physical location, enabling organizations to access a vastly broader and more diverse pool of specialized, global talent. This expanded reach enhances competitive recruitment and addresses critical skill gaps regardless of geography.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:50.128175"
+    },
+    {
+      "id": "454c505d-a755-4367-bfb0-7836b8312cf3",
+      "text": "Flexible scheduling and location choices improve effective work-life integration by granting employees control over their private time and personal duties. This leads directly to increased job satisfaction, higher engagement, and reduced measurable rates of burnout.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:50.128697"
+    },
+    {
+      "id": "ce8b5064-9741-42a5-97fe-69c4d9e56185",
+      "text": "Remote work intrinsically supports principles of worker autonomy by granting employees greater agency and control over their immediate physical environment and daily schedule. This professional self-direction fosters trust and maximizes individual responsibility for desired outcomes.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:50.129184"
+    },
+    {
+      "id": "0627c2b7-a6b8-4978-bcee-da3d37a0fa3d",
+      "text": "Professional self-direction is enabled by existing organizational trust; it does not inherently foster trust, as managers must already trust employees to grant substantial autonomy and relax supervision in the first instance.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ce8b5064-9741-42a5-97fe-69c4d9e56185",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:59.023301"
+    },
+    {
+      "id": "afcb7e28-9664-4d1e-802d-d1117ddb9e25",
+      "text": "Autonomy alone does not maximize individual responsibility; maximized responsibility requires established formal accountability structures and performance metrics, which are separate from granting control over one's immediate work environment.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ce8b5064-9741-42a5-97fe-69c4d9e56185",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:07:59.023794"
+    },
+    {
+      "id": "4c4d758f-762f-4b71-ab76-2845a745f3b9",
+      "text": "Savings on fixed real estate costs are often offset by increased variable expenses, such as enhanced cybersecurity, decentralized IT support, specialized management software, and employee home office stipends, resulting in a marginal or zero net change to structural operating expenses.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6f347d56-c8d6-4cd4-ba45-4ad81303e488",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:00.209855"
+    },
+    {
+      "id": "5150e80e-f35b-4719-acf8-ce80735f6ca2",
+      "text": "Increased control over time does not guarantee positive outcomes if overall workload expectations remain high, as flexible employees may simply use their control to work longer hours across more days, substituting intense burnout for scheduled burnout, according to studies on \"work intensification\" in remote settings.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "454c505d-a755-4367-bfb0-7836b8312cf3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:01.167725"
+    },
+    {
+      "id": "33d466fa-8090-45fc-bc83-020b6b7c9554",
+      "text": "International hiring is complicated by differing labor laws, tax withholding requirements, and regulatory compliance, which often adds substantial administrative cost and risk, practically limiting the accessibility of the \"vastly broader pool.\"",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "66592356-cf9c-4313-8b4f-f537f4122502",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:01.215191"
+    },
+    {
+      "id": "033e0399-e987-4528-91d5-aacf18c50b3c",
+      "text": "The universal adoption of remote work intensifies global competition for specialized domestic and international talent, often neutralizing the advantage of an expanded pool by driving up market salaries and reducing the net competitive gain for a single organization.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "66592356-cf9c-4313-8b4f-f537f4122502",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:01.215992"
+    },
+    {
+      "id": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "text": "Remote work introduces significant new inefficiencies, such as communication friction, delays in decision-making due to asynchronous interaction, and reduced capacity for spontaneous, creative collaboration, which often offsets the gains from eliminating the commute.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "faa59853-5d11-4714-9c0b-1bd8e921dc65",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:01.502290"
+    },
+    {
+      "id": "49146c3d-1e60-40b8-b955-641060e4fe34",
+      "text": "The assumption that saved commute time translates optimally into increased working hours is often false; many employees substitute commuting with non-productive personal tasks and face greater home environment distractions, limiting actual 'peak mental hours' dedicated to work.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "faa59853-5d11-4714-9c0b-1bd8e921dc65",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:01.502750"
+    },
+    {
+      "id": "eb698dbe-0fba-4fcf-b0e2-33ca76cb9435",
+      "text": "The majority of losses occurred in sectors reliant on physical presence (e.g., hospitality, physical retail, live entertainment). This demonstrates that continuity was highly conditional and not a universal assurance of resilience for all organizations.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:02.893114"
+    },
+    {
+      "id": "8f1f213a-ff9e-499a-82fd-5243c751a959",
+      "text": "The continuity observed was often achieved through rapid, ad-hoc implementation of new tools and increased risk tolerance, rather than reliance on pre-existing, truly \"robust\" remote infrastructure.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:02.893894"
+    },
+    {
+      "id": "a527d508-3286-444f-84af-d7481447d0eb",
+      "text": "The operational persistence of many remote-capable businesses was critically supported by massive government intervention (e.g., PPP loans, stimulus checks), meaning continuity was not solely an internal infrastructure achievement.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:02.894248"
+    },
+    {
+      "id": "5b847ade-4a7d-4adb-8514-5863393054e5",
+      "text": "The successful exercise of self-direction acts as a verified demonstration of competence and reliability; this positive outcome validates the manager's initial risk, thereby reinforcing and substantively increasing organizational trust beyond the initial prerequisite level.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0627c2b7-a6b8-4978-bcee-da3d37a0fa3d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:08.781632"
+    },
+    {
+      "id": "f1b414a0-8b75-4de4-98a3-b70c3ca242a3",
+      "text": "Autonomy intrinsically links individual action directly to outcome, creating a sense of psychological ownership and self-imposed accountability, which can be a more enduring and maximized form of responsibility than compliance with externally designed formal metrics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "afcb7e28-9664-4d1e-802d-d1117ddb9e25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:09.271627"
+    },
+    {
+      "id": "4d2186be-7b9d-4aa8-b1e7-988c73e57bdb",
+      "text": "Commercial real estate and infrastructure costs systematically outweigh the marginal salary increases driven by global competition, resulting in a substantial and predictable net cost reduction for the organization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "033e0399-e987-4528-91d5-aacf18c50b3c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:11.261750"
+    },
+    {
+      "id": "d2a376d6-4cb4-4243-9f57-49478ebb6a9e",
+      "text": "Specialized talent provides non-linear competitive advantages, where a 10% increase in salary can yield a 50% or greater increase in productivity, innovation, or revenue generation. Therefore, the value created by securing superior specialized talent far exceeds the increased cost, preventing the competitive gain from being neutralized.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "033e0399-e987-4528-91d5-aacf18c50b3c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:11.261782"
+    },
+    {
+      "id": "d7c6e5d3-e70f-42c6-aca6-6e0961f46da2",
+      "text": "Productivity research by the NBER and Stanford consistently finds that remote work maintains or increases output, disproving that communication inefficiencies are significant enough to offset labor gains.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:12.973934"
+    },
+    {
+      "id": "ee616f02-932b-4467-abc4-360d40d6acee",
+      "text": "The assessment ignores substantial employer benefits, such as significant reductions in real estate overhead and access to a wider, non-geographically constrained talent pool, which often far outweigh minor variations in communication speed.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:12.973978"
+    },
+    {
+      "id": "3d35b8f4-c6ef-4f6d-89a8-feeb47d494e7",
+      "text": "Physical offices are not inherently efficient; open-plan designs encourage continuous interruptions, high noise pollution, and non-work-related desk traffic that actively destroy the deep focus needed for complex decision-making.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:12.973998"
+    },
+    {
+      "id": "32326fd2-1cc9-4a44-9676-d931b52a639f",
+      "text": "Commercial real estate costs in major metro areas often constitute 15-25% of a company's total operating expenses, a magnitude significantly higher than the typical 2-5% increase required for enhanced remote work technology and employee stipends.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4c4d758f-762f-4b71-ab76-2845a745f3b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:17.450799"
+    },
+    {
+      "id": "37378f6a-e2cd-4c55-90b6-f3d8b18f6a79",
+      "text": "The savings generated from eliminating fixed, non-discretionary expenses like long-term leases are permanent structural reductions, whereas costs identified as offsets (stipends, transition software) are discretionary and scalable, often decreasing after the initial remote setup is complete.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4c4d758f-762f-4b71-ab76-2845a745f3b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:17.450842"
+    },
+    {
+      "id": "0e7355bb-e537-430b-afab-f33e448d6079",
+      "text": "Major financial institutions and tech companies had significant pre-existing scalable cloud and VPN infrastructure, allowing immediate continuity based on established disaster recovery protocols, not solely new, ad-hoc tools.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8f1f213a-ff9e-499a-82fd-5243c751a959",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.112983"
+    },
+    {
+      "id": "47048176-3587-485f-9dc3-f2cbcaa0d85d",
+      "text": "Observed continuity resulted from layering new, rapidly deployed collaboration tools (the \"ad-hoc\" part) on top of already provisioned, enterprise-wide secure network foundations (the \"robust infrastructure\" part), making them complementary factors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8f1f213a-ff9e-499a-82fd-5243c751a959",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.113023"
+    },
+    {
+      "id": "d4071bf4-4f2b-41d7-9957-8c965b90b5f6",
+      "text": "Spontaneous, high-bandwidth communication, critical for rapid innovation and complex problem-solving, is significantly diminished in remote settings, leading to slower project execution and requiring cumbersome formal scheduling for quick decisions.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.113168"
+    },
+    {
+      "id": "c201a350-dbb0-4d36-abdc-18421494f0be",
+      "text": "Training junior staff and transferring tacit knowledge requires direct observation and immediate feedback that remote digital interfaces fail to replicate effectively, hindering early professional development and slowing institutional knowledge transfer.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.113882"
+    },
+    {
+      "id": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "text": "Sustaining a unified organizational culture and fostering internal social capital requires informal in-person interaction, which is difficult to replicate digitally, resulting in weaker inter-employee connections and reduced institutional loyalty.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.114337"
+    },
+    {
+      "id": "d8083213-d811-4f2a-89ed-3fe1287c875b",
+      "text": "Remote setups fragment the organizational IT perimeter, introducing substantial cybersecurity risks that require complex enterprise management of unsecured personal networks and hardware, complicating regulatory compliance for sensitive data.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.114762"
+    },
+    {
+      "id": "163a2e1c-2c77-4bdd-8b92-f86a457f975e",
+      "text": "Mandatory remote work creates inherent fairness and equity gaps, disadvantaging employees who lack reliable internet, private workspace, or proper ergonomic setups, thereby challenging organizational commitment to equality of opportunity.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.115173"
+    },
+    {
+      "id": "c827bfbd-422c-40a2-8b55-d1df37f41aba",
+      "text": "Verifying employee engagement and managing intangible or less quantifiable tasks becomes harder remotely, increasing managerial overhead and often forcing reliance on intrusive electronic monitoring that erodes worker autonomy and trust.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:20.115577"
+    },
+    {
+      "id": "619ce4f7-9a03-4a3e-ae30-85ce194aa0f5",
+      "text": "Modern cybersecurity models, such as Zero Trust Architecture (ZTA) and mandatory encrypted Virtual Private Networks (VPNs), focus security on the identity and application access, effectively isolating the corporate environment from the employee's personal home network and mitigating the risk of unsecured personal infrastructure.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d8083213-d811-4f2a-89ed-3fe1287c875b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:28.766528"
+    },
+    {
+      "id": "1b376747-de21-41db-9d79-9d23bb61b40c",
+      "text": "Remote management methodologies prioritize measurable professional outcomes, such as OKRs and project completion rates, fundamentally shifting accountability away from continuous activity tracking and thereby eliminating the necessity for intrusive monitoring.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c827bfbd-422c-40a2-8b55-d1df37f41aba",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:29.055044"
+    },
+    {
+      "id": "3f29348e-6e73-4182-a429-7da4bbd68cbc",
+      "text": "High-fidelity VR/AR training simulations in medicine and engineering provide objective, measurable, and immediate feedback, successfully replicating or surpassing the effectiveness of subjective direct observation for complex skill transfer.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c201a350-dbb0-4d36-abdc-18421494f0be",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:29.717238"
+    },
+    {
+      "id": "9db0c449-0a47-4a4c-9121-466efe8d1929",
+      "text": "The \"inherent\" gap is eliminated when companies provide compensatory measures such as technology stipends, ergonomic furniture reimbursement, or centralized hub access, effectively mitigating material disadvantages through policy rather than relying solely on employee resources.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "163a2e1c-2c77-4bdd-8b92-f86a457f975e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:29.949309"
+    },
+    {
+      "id": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "text": "Strong organizational cultures can be effectively sustained and unified through intentional digital frameworks, as demonstrated by successful remote-first companies like GitLab and Automattic, proving that physical proximity is beneficial, not mandatory.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:30.886999"
+    },
+    {
+      "id": "5c06b2c9-f7ae-44da-a4e4-f20c459aba6b",
+      "text": "Modern communication platforms and collaboration software are deliberately designed to mimic and create \"weak ties\" and informal bonding experiences, with features like persistent video channels and dedicated virtual water coolers maintaining bonding social capital.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:30.887806"
+    },
+    {
+      "id": "63147cfd-9cac-45ae-bf05-29e4ca03ee2c",
+      "text": "Institutional loyalty is predominantly determined by tangible factors like equitable compensation, perception of fairness, and clear career advancement opportunities, meaning reduced spontaneous social interaction is unlikely to be the primary driver of loyalty decline.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:30.888344"
+    },
+    {
+      "id": "3d531f18-62f1-4aec-8d5e-1c0d7631b3e2",
+      "text": "Collaboration tools like persistent video links, shared virtual whiteboards, and instant messaging channels create always-on digital spaces that functionally allow for high-bandwidth, spontaneous participation comparable to many in-person interactions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d4071bf4-4f2b-41d7-9957-8c965b90b5f6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:31.793461"
+    },
+    {
+      "id": "f98c1131-a434-4df2-a2d6-97590094fbbe",
+      "text": "Remote organizations often leverage high-efficiency asynchronous communication (e.g., structured documentation and shared decision logs) which promotes deliberate, interruption-free decision-making, eliminating the need for cumbersome formal scheduling.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d4071bf4-4f2b-41d7-9957-8c965b90b5f6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:31.794180"
+    },
+    {
+      "id": "3582012f-7e7f-4da7-83a1-7dde907301a1",
+      "text": "Compensatory policies fail to eliminate career disadvantages caused by management proximity bias, where lack of informal face-time leads to remote workers being systematically overlooked for promotions and high-visibility projects.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9db0c449-0a47-4a4c-9121-466efe8d1929",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:40.932227"
+    },
+    {
+      "id": "dfe617af-6c06-487e-83ee-5c104d84cc64",
+      "text": "Standardized technology stipends are insufficient to eliminate the gap for employees lacking sufficient dedicated space, stable childcare, or adequate infrastructure (broadband), resulting in persistent and disproportionate productivity disadvantages.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9db0c449-0a47-4a4c-9121-466efe8d1929",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:40.932270"
+    },
+    {
+      "id": "7e50e77f-388c-41a6-a891-3465815bf826",
+      "text": "The primary design intent for persistent video channels and \"virtual water coolers\" in collaboration software is often managerial oversight and continuous presence tracking to maximize productivity, not the deliberate creation of complex social bonding or weak ties.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5c06b2c9-f7ae-44da-a4e4-f20c459aba6b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:41.186153"
+    },
+    {
+      "id": "18908d60-36c0-42af-82c0-5526ca1bb2e8",
+      "text": "Asynchronous communication often introduces substantial information volume and latency, leading to 'documentation sprawl' and communication clutter, which hinders the necessary synthesis effort for truly deliberate and timely decision-making.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f98c1131-a434-4df2-a2d6-97590094fbbe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:41.278324"
+    },
+    {
+      "id": "eb36c104-3ae5-4fe5-92a6-067aa8f0859e",
+      "text": "Formal scheduling remains critical for organizational functions like building social capital, rapid crisis response, complex simultaneous negotiation, and interactive training, none of which can be eliminated solely by structured decision documentation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f98c1131-a434-4df2-a2d6-97590094fbbe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:41.278362"
+    },
+    {
+      "id": "0a0009cb-d938-4992-bee9-fb4af392c0db",
+      "text": "Digital communication significantly lacks multi-sensory and ambient non-verbal cues (e.g., shared physical context, subtle body language) crucial for reading intent and building trust, thus failing to achieve true \"high-bandwidth\" comparability with in-person interactions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3d531f18-62f1-4aec-8d5e-1c0d7631b3e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:42.366535"
+    },
+    {
+      "id": "316a3f10-3230-493a-8281-57c4201d1339",
+      "text": "Digital \"spontaneity\" requires a conscious, active click or specific initiation step within an \"always-on\" platform, fundamentally differing from the passive, ambient spontaneity of overhearing a conversation or noticing presence in a shared physical setting.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3d531f18-62f1-4aec-8d5e-1c0d7631b3e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:42.366574"
+    },
+    {
+      "id": "15039b99-761e-48ad-9a32-0b5f62a687f8",
+      "text": "Companies often use keystroke logging and webcam monitoring alongside OKRs, as managerial distrust mandates intrusive activity tracking despite measurable results, fundamentally nullifying the promised autonomy of remote work.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1b376747-de21-41db-9d79-9d23bb61b40c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:43.542446"
+    },
+    {
+      "id": "f2703a72-24c2-4ded-ac68-ee444c0199a0",
+      "text": "In sectors like remote customer service and data entry, productivity is inherently measured by explicit activity metrics (call time, keystroke volume), ensuring that intrusive, time-based surveillance remains mandatory.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1b376747-de21-41db-9d79-9d23bb61b40c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:43.542486"
+    },
+    {
+      "id": "50898150-1478-4db9-8dcd-0f09096ae67d",
+      "text": "Successful digital culture maintenance does not translate to industries where core activities, such as advanced manufacturing or medical operations, necessitate continuous physical co-presence for quality control and operational safety.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:49.705745"
+    },
+    {
+      "id": "6e822d3f-380d-4a25-8700-61f64a9d5228",
+      "text": "Evidence indicates that organizations transitioning from traditional models to hybrid work often struggle to maintain existing cultural unity, failing to replicate the unique \"intentional frameworks\" established by born-remote companies like GitLab.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:49.705770"
+    },
+    {
+      "id": "dd8a272c-1698-4fce-8905-518009966757",
+      "text": "Mandatory office attendance increases operational overhead and commute time without statistically correlating physical presence to improved organizational efficiency, innovation, or cultural cohesion.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:49.705780"
+    },
+    {
+      "id": "c5337580-d1b9-4492-a38a-c2b445368da6",
+      "text": "Real-time skill acquisition requires the trainee to develop proprioceptive and haptic sensitivity\u2014perceiving tissue texture, depth, and unexpected physical resistance\u2014which immersive technologies, regardless of visual fidelity, cannot yet fully replicate compared to direct hands-on observation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3f29348e-6e73-4182-a429-7da4bbd68cbc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:08:51.317995"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T01:07:50.126359"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T01:07:50.126359"
+    }
+  ],
+  "links": [
+    {
+      "source": "ce8b5064-9741-42a5-97fe-69c4d9e56185",
+      "target": "0627c2b7-a6b8-4978-bcee-da3d37a0fa3d",
+      "type": "objection"
+    },
+    {
+      "source": "ce8b5064-9741-42a5-97fe-69c4d9e56185",
+      "target": "afcb7e28-9664-4d1e-802d-d1117ddb9e25",
+      "type": "objection"
+    },
+    {
+      "source": "6f347d56-c8d6-4cd4-ba45-4ad81303e488",
+      "target": "4c4d758f-762f-4b71-ab76-2845a745f3b9",
+      "type": "objection"
+    },
+    {
+      "source": "454c505d-a755-4367-bfb0-7836b8312cf3",
+      "target": "5150e80e-f35b-4719-acf8-ce80735f6ca2",
+      "type": "objection"
+    },
+    {
+      "source": "66592356-cf9c-4313-8b4f-f537f4122502",
+      "target": "33d466fa-8090-45fc-bc83-020b6b7c9554",
+      "type": "objection"
+    },
+    {
+      "source": "66592356-cf9c-4313-8b4f-f537f4122502",
+      "target": "033e0399-e987-4528-91d5-aacf18c50b3c",
+      "type": "objection"
+    },
+    {
+      "source": "faa59853-5d11-4714-9c0b-1bd8e921dc65",
+      "target": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "type": "objection"
+    },
+    {
+      "source": "faa59853-5d11-4714-9c0b-1bd8e921dc65",
+      "target": "49146c3d-1e60-40b8-b955-641060e4fe34",
+      "type": "objection"
+    },
+    {
+      "source": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "target": "eb698dbe-0fba-4fcf-b0e2-33ca76cb9435",
+      "type": "objection"
+    },
+    {
+      "source": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "target": "8f1f213a-ff9e-499a-82fd-5243c751a959",
+      "type": "objection"
+    },
+    {
+      "source": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "target": "a527d508-3286-444f-84af-d7481447d0eb",
+      "type": "objection"
+    },
+    {
+      "source": "0627c2b7-a6b8-4978-bcee-da3d37a0fa3d",
+      "target": "5b847ade-4a7d-4adb-8514-5863393054e5",
+      "type": "response"
+    },
+    {
+      "source": "afcb7e28-9664-4d1e-802d-d1117ddb9e25",
+      "target": "f1b414a0-8b75-4de4-98a3-b70c3ca242a3",
+      "type": "response"
+    },
+    {
+      "source": "033e0399-e987-4528-91d5-aacf18c50b3c",
+      "target": "4d2186be-7b9d-4aa8-b1e7-988c73e57bdb",
+      "type": "response"
+    },
+    {
+      "source": "033e0399-e987-4528-91d5-aacf18c50b3c",
+      "target": "d2a376d6-4cb4-4243-9f57-49478ebb6a9e",
+      "type": "response"
+    },
+    {
+      "source": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "target": "d7c6e5d3-e70f-42c6-aca6-6e0961f46da2",
+      "type": "response"
+    },
+    {
+      "source": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "target": "ee616f02-932b-4467-abc4-360d40d6acee",
+      "type": "response"
+    },
+    {
+      "source": "c4475a51-7ca3-4ae6-b910-0c71bb81d717",
+      "target": "3d35b8f4-c6ef-4f6d-89a8-feeb47d494e7",
+      "type": "response"
+    },
+    {
+      "source": "4c4d758f-762f-4b71-ab76-2845a745f3b9",
+      "target": "32326fd2-1cc9-4a44-9676-d931b52a639f",
+      "type": "response"
+    },
+    {
+      "source": "4c4d758f-762f-4b71-ab76-2845a745f3b9",
+      "target": "37378f6a-e2cd-4c55-90b6-f3d8b18f6a79",
+      "type": "response"
+    },
+    {
+      "source": "8f1f213a-ff9e-499a-82fd-5243c751a959",
+      "target": "0e7355bb-e537-430b-afab-f33e448d6079",
+      "type": "response"
+    },
+    {
+      "source": "8f1f213a-ff9e-499a-82fd-5243c751a959",
+      "target": "47048176-3587-485f-9dc3-f2cbcaa0d85d",
+      "type": "response"
+    },
+    {
+      "source": "d8083213-d811-4f2a-89ed-3fe1287c875b",
+      "target": "619ce4f7-9a03-4a3e-ae30-85ce194aa0f5",
+      "type": "objection"
+    },
+    {
+      "source": "c827bfbd-422c-40a2-8b55-d1df37f41aba",
+      "target": "1b376747-de21-41db-9d79-9d23bb61b40c",
+      "type": "objection"
+    },
+    {
+      "source": "c201a350-dbb0-4d36-abdc-18421494f0be",
+      "target": "3f29348e-6e73-4182-a429-7da4bbd68cbc",
+      "type": "objection"
+    },
+    {
+      "source": "163a2e1c-2c77-4bdd-8b92-f86a457f975e",
+      "target": "9db0c449-0a47-4a4c-9121-466efe8d1929",
+      "type": "objection"
+    },
+    {
+      "source": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "target": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "type": "objection"
+    },
+    {
+      "source": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "target": "5c06b2c9-f7ae-44da-a4e4-f20c459aba6b",
+      "type": "objection"
+    },
+    {
+      "source": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "target": "63147cfd-9cac-45ae-bf05-29e4ca03ee2c",
+      "type": "objection"
+    },
+    {
+      "source": "d4071bf4-4f2b-41d7-9957-8c965b90b5f6",
+      "target": "3d531f18-62f1-4aec-8d5e-1c0d7631b3e2",
+      "type": "objection"
+    },
+    {
+      "source": "d4071bf4-4f2b-41d7-9957-8c965b90b5f6",
+      "target": "f98c1131-a434-4df2-a2d6-97590094fbbe",
+      "type": "objection"
+    },
+    {
+      "source": "9db0c449-0a47-4a4c-9121-466efe8d1929",
+      "target": "3582012f-7e7f-4da7-83a1-7dde907301a1",
+      "type": "response"
+    },
+    {
+      "source": "9db0c449-0a47-4a4c-9121-466efe8d1929",
+      "target": "dfe617af-6c06-487e-83ee-5c104d84cc64",
+      "type": "response"
+    },
+    {
+      "source": "5c06b2c9-f7ae-44da-a4e4-f20c459aba6b",
+      "target": "7e50e77f-388c-41a6-a891-3465815bf826",
+      "type": "response"
+    },
+    {
+      "source": "f98c1131-a434-4df2-a2d6-97590094fbbe",
+      "target": "18908d60-36c0-42af-82c0-5526ca1bb2e8",
+      "type": "response"
+    },
+    {
+      "source": "f98c1131-a434-4df2-a2d6-97590094fbbe",
+      "target": "eb36c104-3ae5-4fe5-92a6-067aa8f0859e",
+      "type": "response"
+    },
+    {
+      "source": "3d531f18-62f1-4aec-8d5e-1c0d7631b3e2",
+      "target": "0a0009cb-d938-4992-bee9-fb4af392c0db",
+      "type": "response"
+    },
+    {
+      "source": "3d531f18-62f1-4aec-8d5e-1c0d7631b3e2",
+      "target": "316a3f10-3230-493a-8281-57c4201d1339",
+      "type": "response"
+    },
+    {
+      "source": "1b376747-de21-41db-9d79-9d23bb61b40c",
+      "target": "15039b99-761e-48ad-9a32-0b5f62a687f8",
+      "type": "response"
+    },
+    {
+      "source": "1b376747-de21-41db-9d79-9d23bb61b40c",
+      "target": "f2703a72-24c2-4ded-ac68-ee444c0199a0",
+      "type": "response"
+    },
+    {
+      "source": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "target": "50898150-1478-4db9-8dcd-0f09096ae67d",
+      "type": "response"
+    },
+    {
+      "source": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "target": "6e822d3f-380d-4a25-8700-61f64a9d5228",
+      "type": "response"
+    },
+    {
+      "source": "7eafab85-60a9-4bc0-9328-60c09ac9daa8",
+      "target": "dd8a272c-1698-4fce-8905-518009966757",
+      "type": "response"
+    },
+    {
+      "source": "3f29348e-6e73-4182-a429-7da4bbd68cbc",
+      "target": "c5337580-d1b9-4492-a38a-c2b445368da6",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "faa59853-5d11-4714-9c0b-1bd8e921dc65",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6f347d56-c8d6-4cd4-ba45-4ad81303e488",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "bccd4ecf-237a-4b4f-9c6d-f51867b57b41",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "66592356-cf9c-4313-8b4f-f537f4122502",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "454c505d-a755-4367-bfb0-7836b8312cf3",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ce8b5064-9741-42a5-97fe-69c4d9e56185",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d4071bf4-4f2b-41d7-9957-8c965b90b5f6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "c201a350-dbb0-4d36-abdc-18421494f0be",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "9605f10d-aff2-4572-8ed5-e84b5f35a96e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d8083213-d811-4f2a-89ed-3fe1287c875b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "163a2e1c-2c77-4bdd-8b92-f86a457f975e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "c827bfbd-422c-40a2-8b55-d1df37f41aba",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

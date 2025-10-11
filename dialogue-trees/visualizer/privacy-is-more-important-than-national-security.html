@@ -1,0 +1,3501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy is more important than national security - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Privacy is more important than national security</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            120 total nodes • Max depth: 4 •
+            Version 4
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/privacy-is-more-important-than-national-security.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">120</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "d7d5e8e7-be67-4a9f-bb78-4ea6bfef4f9a",
+      "text": "Prioritizing security over privacy creates environments ripe for systemic human rights abuses and state control, exemplified by the mass surveillance and political suppression carried out by the Stasi in East Germany.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:09.212165"
+    },
+    {
+      "id": "81cedd12-6b46-4c37-a177-29b1940373e5",
+      "text": "Privacy is an essential prerequisite for healthy democratic function, as it safeguards freedom of political expression and the ability to organize dissent without fear of retribution, a principle foundational to many Western constitutional systems.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:09.213064"
+    },
+    {
+      "id": "91d637da-e614-4119-b120-f35930615837",
+      "text": "National security surveillance programs frequently demonstrate massive scope creep and minimal efficacy against actual threats; for instance, the NSA's bulk metadata collection violated millions of Americans' privacy without demonstrably thwarting subsequent terrorist attacks.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:09.213612"
+    },
+    {
+      "id": "6f0e4a9f-c9dd-4b36-a44b-6d14434d0c19",
+      "text": "Privacy is inextricably linked to human dignity and personal autonomy, establishing the necessary space for individuals to develop and act independently of state coercion; this intrinsic value supersedes security concerns based on contingent risks.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:09.214256"
+    },
+    {
+      "id": "bf6a0dc1-f086-498f-9977-4dae5a02f73c",
+      "text": "The generalization ignores targeted surveillance programs (e.g., signals intelligence monitoring of specific overseas terror cells) that have demonstrably yielded actionable intelligence essential for national security, undermining the \"frequently\" and \"minimal efficacy\" claims.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "91d637da-e614-4119-b120-f35930615837",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:18.382830"
+    },
+    {
+      "id": "ed8c27c2-5cc2-4e80-969d-940507f7ae6e",
+      "text": "Moderate security measures, such as targeted surveillance under judicial oversight, demonstrate that security can be prioritized without leading to the systemic totalitarian abuses characteristic of the Stasi, which requires the complete dismantling of civil checks.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d7d5e8e7-be67-4a9f-bb78-4ea6bfef4f9a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:19.863634"
+    },
+    {
+      "id": "9afd87a9-d06c-440e-8bf9-6b31f0253b45",
+      "text": "The analogy is weak because the Stasi was intrinsically designed by a totalitarian regime for internal political self-preservation, whereas modern democratic security frameworks are typically codified to address foreign threats or serious crime and are subject to constitutional accountability.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d7d5e8e7-be67-4a9f-bb78-4ea6bfef4f9a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:19.864458"
+    },
+    {
+      "id": "d9923963-65a3-4498-9838-12558fb8096e",
+      "text": "In existential security crises, such as preventing mass casualty terror attacks, the right to life\u2014a precondition for human dignity and autonomy\u2014ethically demands proportionate and temporary privacy limitations. Dignity and autonomy cannot be exercised if the lives necessary to enjoy them are extinguished by catastrophic events.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6f0e4a9f-c9dd-4b36-a44b-6d14434d0c19",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:20.859565"
+    },
+    {
+      "id": "e203392b-3a4d-48e5-906e-9319a2bca83e",
+      "text": "The term \"contingent risks\" dismissively ignores systemic and immediate security threats, such as preventing systematic child exploitation, intelligence failures leading to mass death (like 9/11), or critical infrastructure cyberattacks. These highly probable and catastrophic risks cannot be ethically sidelined merely because they involve potential future events.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6f0e4a9f-c9dd-4b36-a44b-6d14434d0c19",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:20.860239"
+    },
+    {
+      "id": "64507bdd-6f38-44a8-ba5f-2f27b72f9f63",
+      "text": "Highly targeted SIGINT against specific overseas terror cells operates under different legal and operational constraints than the domestic mass surveillance programs (e.g., bulk metadata collection) to which the claims of \"frequently minimal efficacy\" usually apply.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bf6a0dc1-f086-498f-9977-4dae5a02f73c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:31.404040"
+    },
+    {
+      "id": "eb8a65ad-95b4-442d-b62e-90a0e1ca423d",
+      "text": "Successes from targeted signals intelligence do not validate mass surveillance, which the 2014 PCLOB report determined has minimal utility, finding no evidence that bulk data collection stopped a single imminent terror attack.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bf6a0dc1-f086-498f-9977-4dae5a02f73c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:31.404731"
+    },
+    {
+      "id": "e89cedc9-461d-4869-8802-9c139f11281e",
+      "text": "Catastrophic threats like 9/11 intelligence failures and critical infrastructure cyberattacks are the central, funded mandate of DHS and CISA, demonstrating their established national security priority.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e203392b-3a4d-48e5-906e-9319a2bca83e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:32.442778"
+    },
+    {
+      "id": "17bc8336-8180-4b85-bffd-693af9f65eee",
+      "text": "All future security threats, including systematic exploitation and infrastructure failure, are technically \"contingent\" upon the failure of current preventative systems and conditions; this universally accepted risk terminology does not restrict the analysis only to low-probability or distant future events.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e203392b-3a4d-48e5-906e-9319a2bca83e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:32.443518"
+    },
+    {
+      "id": "a90bdae1-6d12-45c1-96ab-fa52a27efd0f",
+      "text": "The US FISA court system, intended to provide judicial oversight, functioned for years largely as a rubber stamp, demonstrating that formalized checks can be co-opted or circumvented in practice when security agencies maximize their power.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ed8c27c2-5cc2-4e80-969d-940507f7ae6e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:33.164404"
+    },
+    {
+      "id": "beb6cec7-0727-4c48-a3b5-a1a7a6ecaa96",
+      "text": "Targeted surveillance remains moderate only when security is balanced with civil liberties; the abstract prioritization of security necessitates escalating measures beyond what is targeted, inevitably exceeding and eroding the civil checks required for moderation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ed8c27c2-5cc2-4e80-969d-940507f7ae6e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:33.164879"
+    },
+    {
+      "id": "a6bb440c-3a54-4960-b261-d6b8708a953e",
+      "text": "Large-scale surveillance programs often fail to demonstrate efficacy; for instance, US government reviews of the NSA's bulk data collection found no instances where the data was crucial in preventing a mass casualty attack. The proposed trade-off therefore sacrifices privacy without demonstrating a proportional gain in the right to life.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d9923963-65a3-4498-9838-12558fb8096e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:34.263205"
+    },
+    {
+      "id": "ed82d9d3-40f3-4c66-8fbc-bf7deff39d46",
+      "text": "Statistics show that mass casualty terror attacks, while horrific, account for a minuscule percentage of annual fatalities compared to risks like traffic incidents or gun violence, making the \"existential security crisis\" label inaccurate. An actual existential threat to a society is necessary to justify the suspension of fundamental rights like privacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d9923963-65a3-4498-9838-12558fb8096e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:34.263953"
+    },
+    {
+      "id": "b93cb63d-4940-47b0-9f8c-e66172ee37d6",
+      "text": "Mass surveillance systems deployed by democracies, such as the NSA's metadata collection revealed by Snowden, demonstrably create a powerful chilling effect on political and journalistic communication, thus mirroring the Stasi's functional outcome of discouraging internal dissent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9afd87a9-d06c-440e-8bf9-6b31f0253b45",
+      "children_count": 2,
+      "references": [
+        "https://www.aclu.org/press-releases/nsa-surveillance-has-chilling-effect-free-speech-aclu-report-says",
+        "https://www.eff.org/pages/chilling-effects-surveillance-and-journalism"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:37.445712"
+    },
+    {
+      "id": "5073dabb-083d-4e44-8c76-1b9ecd404045",
+      "text": "Constitutional accountability often fails in practice, as demonstrated by the FBI's historical COINTELPRO operations (1956\u20131971), which utilized secret surveillance and disruption tactics explicitly targeted at suppressing domestic political opposition groups, not just foreign threats.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9afd87a9-d06c-440e-8bf9-6b31f0253b45",
+      "children_count": 1,
+      "references": [
+        "https://vault.fbi.gov/cointel-pro",
+        "https://www.law.cornell.edu/wex/cointelpro"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:37.446154"
+    },
+    {
+      "id": "4ae8b5f7-0239-4c3a-89c3-c0a72f960c6f",
+      "text": "The \u201cexistential security crisis\u201d is defined by terrorism\u2019s systemic impact, not just fatalities, as seen when the 9/11 attacks caused billions in immediate economic loss and led to massive, enduring shifts in global foreign and domestic security policy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ed82d9d3-40f3-4c66-8fbc-bf7deff39d46",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:45.306692"
+    },
+    {
+      "id": "4a84e59d-c6b0-4fcd-a70d-41484cb0d2ed",
+      "text": "Security measures are legally grounded in proportionality, enabling targeted privacy compromises when facing serious threats that fall well short of posing an existential risk to the state.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ed82d9d3-40f3-4c66-8fbc-bf7deff39d46",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:45.306717"
+    },
+    {
+      "id": "8066c8b8-8963-4389-832b-d8c6f03a8f59",
+      "text": "National security provides the stable foundation upon which all other civil liberties, including privacy, depend; in failed states or war zones, fundamental human rights often cease to exist.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:45.306819"
+    },
+    {
+      "id": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "text": "Targeted intelligence gathering and data analysis have demonstrably prevented major large-scale terrorist plots, justifying the limited curtailment of privacy for the immediate preservation of life, as seen in pre-emptive counter-terrorism operations following 9/11.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:45.307231"
+    },
+    {
+      "id": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "text": "Strict adherence to absolute privacy prevents governmental and public health agencies from executing essential functions, such as tracing criminal networks or effectively conducting necessary contact tracing during pandemics like COVID-19.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:45.307485"
+    },
+    {
+      "id": "7aacb5af-8b29-4185-801f-99f948759f37",
+      "text": "Protecting critical national infrastructure (e.g., power grids, financial systems, communications networks) requires constant technological monitoring and data analysis that inherently involves limited privacy trade-offs to prevent systemic collapse.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:45.307725"
+    },
+    {
+      "id": "254f41b1-1960-4a82-a43c-9d0923aa6368",
+      "text": "Proportional privacy frameworks, upheld by strong judicial oversight and warrant requirements, facilitate necessary criminal tracking and contact tracing without requiring the surrender of fundamental rights.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:56.780268"
+    },
+    {
+      "id": "dbc06f56-730b-4d6a-bf47-7f06441b1a60",
+      "text": "Privacy and effective function are not mutually exclusive: effective COVID-19 contact tracing was achieved using decentralized systems like DP-3T, which explicitly avoid centralizing personal medical data.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:56.780990"
+    },
+    {
+      "id": "46c5472f-1570-400a-b6a7-fbc6a26aaa03",
+      "text": "Conflating targeted criminal network tracing (which requires a warrant based on individualized suspicion) with broad public health tracing (which relies on aggregated, voluntary data) ignores their fundamentally different legal and ethical requirements.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:56.781446"
+    },
+    {
+      "id": "01f05a9b-1112-4e34-94d1-f4c42b75cc0e",
+      "text": "National security measures frequently *compete with* and *compromise* civil liberties, rather than serving as their foundation; for instance, post-9/11 surveillance programs justified by security concerns directly eroded privacy without enhancing other fundamental rights.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8066c8b8-8963-4389-832b-d8c6f03a8f59",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:57.815414"
+    },
+    {
+      "id": "57ea754f-a4f6-4395-861c-1919f28aeed4",
+      "text": "The maintenance of domestic stability often requires systematic repression; history shows regimes like the East German Stasi used \"national security\" to actively eliminate privacy and dissent.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8066c8b8-8963-4389-832b-d8c6f03a8f59",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:57.815961"
+    },
+    {
+      "id": "4bbb90ec-7e02-446b-b22a-619c41bd6c9b",
+      "text": "Cybersecurity monitoring of infrastructure can utilize privacy-preserving methods like differential privacy and homomorphic encryption to analyze threats and system health without compromising individual user data.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7aacb5af-8b29-4185-801f-99f948759f37",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:00.048988"
+    },
+    {
+      "id": "8777e25f-9bd9-48fb-9b36-4743c990c22a",
+      "text": "Infrastructure monitoring is primarily designed to address localized technical failures and low-level cyber disruptions, not solely to stave off an immediate, guaranteed national \"systemic collapse,\" which exaggerates the operational need.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7aacb5af-8b29-4185-801f-99f948759f37",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:00.049447"
+    },
+    {
+      "id": "d8bd1538-2aa3-43a3-b7d1-ca5ae6306522",
+      "text": "Decentralized systems like DP-3T failed to achieve the high adoption rates required for epidemiological effectiveness (often under 20%), demonstrating that while they protected privacy, their operational impact on controlling COVID-19 spread was severely limited.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "dbc06f56-730b-4d6a-bf47-7f06441b1a60",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:05.559722"
+    },
+    {
+      "id": "cea9037c-ddc0-426d-a30e-3e3970fc4e47",
+      "text": "The ability to safely exercise fundamental rights, such as freedom of assembly or the rule of law within the judicial system, requires antecedent national and public safety measures to prevent internal chaos and external coercion. Therefore, security is a necessary precondition for the existence and enjoyment of civil liberties.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "01f05a9b-1112-4e34-94d1-f4c42b75cc0e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:07.179740"
+    },
+    {
+      "id": "794e1571-db44-4ffd-8c33-d2a2764e56df",
+      "text": "Generalizing that security measures frequently compromise liberties based primarily on the contentious post-9/11 surveillance example ignores the many foundational security measures that uphold rights, such as border protection and military defense securing the right to life and national sovereignty.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "01f05a9b-1112-4e34-94d1-f4c42b75cc0e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:07.180629"
+    },
+    {
+      "id": "051104dc-be3e-4c49-911a-2a12ff06a887",
+      "text": "Due to the classified nature of counter-terrorism operations, the public cannot independently verify whether successes stem from necessary mass surveillance or from traditional, targeted policing and intelligence work.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:08.450461"
+    },
+    {
+      "id": "22bb4991-4f2f-4a77-bd79-54901c82aadc",
+      "text": "The privacy curtailment enacted through programs like the NSA\u2019s bulk collection of metadata (Section 215) constitutes pervasive mass surveillance, not a \u201climited curtailment\u201d of privacy, affecting millions of non-suspect citizens.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:08.451254"
+    },
+    {
+      "id": "ae620998-fc13-44c3-8040-6285c412a5bd",
+      "text": "Official reviews, such as the 2014 Privacy and Civil Liberties Oversight Board (PCLOB) report, found that bulk data collection was not essential to the disruption of terrorist plots.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:08.451776"
+    },
+    {
+      "id": "c19849d9-71fa-4204-9da6-af376d0b1afc",
+      "text": "Real-time threat analysis of large-scale infrastructure is currently impractical using Fully Homomorphic Encryption (FHE) due to the massive computational overhead and latency introduced during decryption and processing of high-volume data streams.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4bbb90ec-7e02-446b-b22a-619c41bd6c9b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:10.904663"
+    },
+    {
+      "id": "c6a3c9b0-7433-42bb-8933-9508a246721e",
+      "text": "Differential privacy does not eliminate all risk; combining the anonymized datasets with external metadata allows for correlation, facilitating the re-identification and compromise of source user records.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4bbb90ec-7e02-446b-b22a-619c41bd6c9b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:10.905088"
+    },
+    {
+      "id": "e86e6bfb-5b0b-4f4f-80c8-781e24e84af6",
+      "text": "Infrastructure monitoring is designed to prevent cascading failures, where localized incidents\u2014like the 2003 Northeast Blackout\u2014trigger widespread regional disruption, which is a far greater threat than merely addressing \"localized technical failures.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8777e25f-9bd9-48fb-9b36-4743c990c22a",
+      "children_count": 2,
+      "references": [
+        "https://energy.gov/oe/services/infrastructure-security-and-energy-restoration/cybersecurity-and-infrastructure",
+        "https://www.nerc.com/pa/rrm/ea/Pages/Major-Event-Reports.aspx"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:11.151775"
+    },
+    {
+      "id": "83c62974-67df-4999-b0c1-8a04d08f2ec3",
+      "text": "Constitutional and human rights frameworks frequently establish an absolute right to privacy as the default, requiring governments to meet a high, strict necessity threshold (like the \"compelling state interest\" test) to justify any infringement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "254f41b1-1960-4a82-a43c-9d0923aa6368",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:13.127161"
+    },
+    {
+      "id": "0aa5d50f-be35-45a8-8c7a-befff5c76590",
+      "text": "Without defining the theoretical maximum of \"absolute privacy,\" terms like \"proportional limitations\" and \"judicial oversight\" become meaningless, as there is no fixed standard against which government infringements can be measured or limited.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "254f41b1-1960-4a82-a43c-9d0923aa6368",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:13.127596"
+    },
+    {
+      "id": "d6fb6d49-3e54-4b9a-b3ea-35e9cc84b974",
+      "text": "Metadata collection is inherently limited to transactional data (who, when, where) and specifically excludes communication content, which qualitatively prevents it from meeting the high threshold of \"pervasive mass surveillance\" that implies monitoring intimate private life.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "22bb4991-4f2f-4a77-bd79-54901c82aadc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:20.137090"
+    },
+    {
+      "id": "a86677f7-6250-42ab-ab72-dacf80ac355d",
+      "text": "The principle of proportionality requires balancing competing interests (e.g., security versus privacy), not measuring against a theoretical absolute maximum. Judicial oversight is meaningful when assessing if an encroachment is necessary and the least restrictive means, independent of a maximum privacy definition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0aa5d50f-be35-45a8-8c7a-befff5c76590",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:24.404698"
+    },
+    {
+      "id": "eb020a22-f744-478b-ad18-ea78b6033c46",
+      "text": "Courts successfully mandate strict proportionality for mass surveillance and data retention, demanding necessity and suitability to limit government power. This established judicial practice confirms that privacy can be practically protected through active oversight without requiring an abstract definition of \"absolute privacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0aa5d50f-be35-45a8-8c7a-befff5c76590",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:00:24.404725"
+    },
+    {
+      "id": "4a9f0d13-61a0-4000-870c-093e682e4567",
+      "text": "Public health systems in nations like South Korea and Israel during the 2020 pandemic used mandatory GPS location data and credit card transaction records to trace infections, amounting to involuntary, individualized surveillance. This demonstrates that public health tracing often relies on comprehensive, non-voluntary data sets that resemble criminal investigative tools used by the state.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46c5472f-1570-400a-b6a7-fbc6a26aaa03",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:47.490782+00:00"
+    },
+    {
+      "id": "b135068c-fff6-40e6-9da1-2c2b2d02489e",
+      "text": "Under US surveillance programs like FISA Section 702, agencies sweep up communications data on millions of citizens without requiring individualized suspicion or a specific warrant targeting a crime. In practice, criminal network tracing increasingly uses broad, suspicion-less collection methods, making its data gathering mechanisms structurally identical to mass public health monitoring.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46c5472f-1570-400a-b6a7-fbc6a26aaa03",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:47.490807+00:00"
+    },
+    {
+      "id": "828e4ab2-c7d1-4463-b8c9-9e9efda0d96b",
+      "text": "Legitimate national security measures in stable democracies primarily focus on external threats like sophisticated transnational terrorism, foreign espionage, and cyber warfare, preventing large-scale events that destabilize the state and eliminate freedoms.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "57ea754f-a4f6-4395-861c-1919f28aeed4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:59.062148+00:00"
+    },
+    {
+      "id": "cb38a93d-2d14-4d8f-9e37-741683cfafb2",
+      "text": "National security measures are sometimes necessary to prevent catastrophic events; following the intelligence failures leading to 9/11, the subsequent legal restrictions on privacy imposed by the Patriot Act were far broader than preventative measures that might have averted the initial attacks.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "57ea754f-a4f6-4395-861c-1919f28aeed4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:23:59.062168+00:00"
+    },
+    {
+      "id": "2854da11-cca4-4d06-861e-4fc645a33c23",
+      "text": "Analysis of threat reduction rates and attack prevention success/failure patterns pre- and post-implementation of bulk surveillance policies provides verifiable metrics for policy effectiveness, independent of classified operational details. Independent oversight bodies (e.g., the Privacy and Civil Liberties Oversight Board) have produced declassified reports demonstrating little or no evidence that bulk collection programs have been essential for disrupting specific terror plots.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "051104dc-be3e-4c49-911a-2a12ff06a887",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:10.631984+00:00"
+    },
+    {
+      "id": "9a9fdc7c-3e67-4de1-9f93-dec6f24b1b66",
+      "text": "Major case disruptions, such as the D.C. subway bombing plot or the arrest of Najibullah Zazi, relied primarily on traditional, legally approved targeted wiretaps and detailed human intelligence (HUMINT) leads, not random data trawling from mass surveillance programs. Numerous reports cite these targeted methods as the key driver of successful counter-terrorism outcomes, not generalized data collection.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "051104dc-be3e-4c49-911a-2a12ff06a887",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:10.632006+00:00"
+    },
+    {
+      "id": "058faeb9-3682-4485-903a-48e04c04b1e4",
+      "text": "Bulk data collection provides baseline intelligence necessary for identifying unknown threats and patterns that intelligence analysts cannot predict, a function not captured by merely reviewing past, already-disrupted plots.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ae620998-fc13-44c3-8040-6285c412a5bd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:16.162385+00:00"
+    },
+    {
+      "id": "862c93b6-690a-4087-8e21-852f8191b113",
+      "text": "The intelligence community consistently reports that bulk data forms the necessary foundation for \"contact chaining,\" allowing analysts to identify previously unknown domestic associates of foreign targets, a tool significantly hampered when data is collected only narrowly.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ae620998-fc13-44c3-8040-6285c412a5bd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:16.162427+00:00"
+    },
+    {
+      "id": "f09a8091-1810-45d7-ad3b-83495115b248",
+      "text": "Mandatory public disclosure of political donations and lobbying activities strictly limits donor and recipient financial privacy, yet this transparency is a legally required safeguard against corruption considered essential for modern democratic integrity.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "81cedd12-6b46-4c37-a177-29b1940373e5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:29.678902+00:00"
+    },
+    {
+      "id": "0091f979-b612-45c9-8fce-6e4dfc505615",
+      "text": "Extensive state surveillance and metadata collection programs, such as those conducted by the NSA and GCHQ, are implemented by established democracies to neutralize threats to security and government stability, indicating public safety is frequently prioritized over individual political privacy.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "81cedd12-6b46-4c37-a177-29b1940373e5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:29.679462+00:00"
+    },
+    {
+      "id": "d2e17bb1-1ccf-43d7-bd85-60572a05a546",
+      "text": "State surveillance is frequently employed against journalists, political dissidents, and activists (e.g., the historical COINTELPRO program), indicating the true priority is maintaining specific political control rather than broadly defined public safety for the general populace.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0091f979-b612-45c9-8fce-6e4dfc505615",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:41.589945+00:00"
+    },
+    {
+      "id": "ece72e4b-6c7e-4273-a78b-49d5c506f10a",
+      "text": "The chilling effect caused by mass surveillance discourages political organization, investigative journalism, and and free expression, directly undermining the foundational rights necessary for an established democracy to function and thus contradicting the stated goal of preserving government stability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0091f979-b612-45c9-8fce-6e4dfc505615",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:41.589987+00:00"
+    },
+    {
+      "id": "f1f913f5-708d-4395-ad96-10a6823f4fd7",
+      "text": "Anti-corruption integrity can be maintained through less intrusive mechanisms, such as strict conflict-of-interest laws enforced by independent ethics commissions, meaning mandatory full public disclosure is not an essential requirement for democratic safeguards.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f09a8091-1810-45d7-ad3b-83495115b248",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:42.479543+00:00"
+    },
+    {
+      "id": "c1fda418-215a-4fb2-a2aa-6465a0c7b0c7",
+      "text": "Public disclosure rules often have the perverse effect of driving political funding underground into unregulated \"dark money\" vehicles, which reduces overall transparency and chills donor participation, undermining the stated goal of preserving democratic integrity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f09a8091-1810-45d7-ad3b-83495115b248",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:42.479578+00:00"
+    },
+    {
+      "id": "e91ff39e-36fd-470c-85c4-05be39112cf4",
+      "text": "Targeted data acquisition against foreign persons under programs like FISA Section 702 or PRISM constantly acquires communications and metadata of U.S. persons whose data is co-mingled in the same databases. This makes the operational constraints of \"targeted overseas SIGINT\" indistinguishable from domestic surveillance infrastructures.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "64507bdd-6f38-44a8-ba5f-2f27b72f9f63",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:24:58.044040+00:00"
+    },
+    {
+      "id": "b218068b-c800-4dff-809d-b2ed7e88e4cf",
+      "text": "The operational constraints are legally distinct: FISA Section 702 collection must adhere to strict, government-wide minimization procedures and require oversight from the Foreign Intelligence Surveillance Court (FISC), whereas purely domestic surveillance often requires individualized Title III probable cause warrants.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "e91ff39e-36fd-470c-85c4-05be39112cf4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:25:06.425504+00:00"
+    },
+    {
+      "id": "accf7733-2166-4431-a80a-79e05ffa2a51",
+      "text": "Targeted surveillance and human intelligence operations, distinct from bulk data collection, have consistently provided essential intelligence; for example, the OBL raid relied on specific HUMINT and targeted tracking, showing high efficacy in critical sections of the security apparatus.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "eb8a65ad-95b4-442d-b62e-90a0e1ca423d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:25:20.662879+00:00"
+    },
+    {
+      "id": "7d396aba-a4ae-4b75-87a7-b810df01e80f",
+      "text": "Basing \"consistent efficacy\" on a single, high-profile success like the OBL raid is a hasty generalization, as the majority of targeted surveillance operations fail to produce actionable intelligence, making their overall value sporadic and inefficient.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "accf7733-2166-4431-a80a-79e05ffa2a51",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:25:31.766015+00:00"
+    },
+    {
+      "id": "3cbe6901-f252-488f-bf30-5380baec6ca0",
+      "text": "Targeted HUMINT operations are frequently initiated and validated by leads derived from pre-existing bulk data collection and pattern analysis, demonstrating that the two security mechanisms are interconnected, not distinct alternatives.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "accf7733-2166-4431-a80a-79e05ffa2a51",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:25:31.766041+00:00"
+    },
+    {
+      "id": "5daeb1dc-9d1b-4a36-b277-bc64a0caaea0",
+      "text": "Funding for catastrophic, politically expedient threats like terrorism is the exception, not the rule; historically, low-probability, high-consequence contingent risks like asteroid defense or pre-2020 pandemic preparation were routinely ignored or severely underfunded.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e89cedc9-461d-4869-8802-9c139f11281e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:25:44.637563+00:00"
+    },
+    {
+      "id": "19699e8a-f6ab-486a-8b1e-6512b2b43fe5",
+      "text": "The existence of dedicated funding does not establish prioritization relative to the threat scale; the DHS and CISA budgets are frequently inadequate for the scope of national security risks, demonstrated by consistent systemic failures like the 2020 SolarWinds hack.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e89cedc9-461d-4869-8802-9c139f11281e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:25:44.638001+00:00"
+    },
+    {
+      "id": "5c974b2e-e9e9-4c5b-82e8-14f8eccd76c1",
+      "text": "US federal spending on counter-terrorism, including the Global War on Terror, has totaled trillions since 2001, establishing this type of politically-driven funding as a massive, sustained, and dominant rule of resource allocation, not a fiscal exception.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "5daeb1dc-9d1b-4a36-b277-bc64a0caaea0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:25:55.287183+00:00"
+    },
+    {
+      "id": "e76aedbd-72cf-43c6-9b0d-219ca91c7c9c",
+      "text": "Implementation failures, such as poor third-party monitoring and lack of mandated encryption or Multi-Factor Authentication (MFA), allowed the SolarWinds breach, irrespective of the CISA's overall budget size.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "19699e8a-f6ab-486a-8b1e-6512b2b43fe5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:26:01.138436+00:00"
+    },
+    {
+      "id": "0cb85bb8-13e9-478d-98e1-38fe258129e7",
+      "text": "Despite high-profile breaches, CISA\u2019s operational presence successfully defends against millions of daily state-sponsored cyberattacks, including publicized campaigns like Operation Cloud Hopper, demonstrating that the existing budget achieves widespread protective prioritization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "19699e8a-f6ab-486a-8b1e-6512b2b43fe5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:26:01.138463+00:00"
+    },
+    {
+      "id": "7f421a10-71eb-42b9-b210-f1dbb1c5c166",
+      "text": "The international standard ISO 31000 defines risk as the \"effect of uncertainty on objectives\" focusing on likelihood and consequence, demonstrating that globally accepted risk terminology is more complex than simple contingency on the failure of current preventative systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "17bc8336-8180-4b85-bffd-693af9f65eee",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:26:26.778684+00:00"
+    },
+    {
+      "id": "89a3967a-a1d0-43b6-ba84-f2fc6ced56e1",
+      "text": "While ISO 31000 is broader, analyzing the likelihood and consequence of a single system failure often requires highly complex quantitative engineering reliability analysis, contradicting the idea that a narrower focus is inherently simpler.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "7f421a10-71eb-42b9-b210-f1dbb1c5c166",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:26:36.893495+00:00"
+    },
+    {
+      "id": "c9389345-1044-4d9d-8bf1-fb17fef8b04a",
+      "text": "Risk management focused on preventative systems is not simple, as complex fields like nuclear power safety rely on sophisticated Probabilistic Risk Assessments (PRA) which heavily model cascading failures and uncertainties using quantitative methods.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "7f421a10-71eb-42b9-b210-f1dbb1c5c166",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:26:36.893523+00:00"
+    },
+    {
+      "id": "602d83b1-e408-4795-995a-45734b87cf83",
+      "text": "The German Federal Constitutional Court established the right to informational self-determination in 1983, successfully restricting state access to census and personal data, demonstrating that strong constitutional checks can actively constrain security powers.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a90bdae1-6d12-45c1-96ab-fa52a27efd0f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:26:52.428023+00:00"
+    },
+    {
+      "id": "6aca0c2e-9793-47e0-9b9c-d32d16a02ef8",
+      "text": "Constitutional precedent concerning paper records does not constrain modern digital security powers; for example, the NSA's PRISM program, authorized by secret FISA courts, demonstrates security agencies can establish parallel legal frameworks to bypass traditional judicial checks on mass surveillance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "602d83b1-e408-4795-995a-45734b87cf83",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:03.699133+00:00"
+    },
+    {
+      "id": "ae00570e-1acf-4105-8bb3-4b51b6ce77c3",
+      "text": "The US Supreme Court rulings and subsequent Congressional legislation post-2013 curtailed major NSA bulk data collection programs, demonstrating that legal structures can stop security escalation even when security is nationally prioritized.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "beb6cec7-0727-4c48-a3b5-a1a7a6ecaa96",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:22.962727+00:00"
+    },
+    {
+      "id": "4cc49f86-7b91-4207-bb3d-b6ab0b105037",
+      "text": "German intelligence oversight requires judicial warrants for nearly all domestic surveillance and limits data retention under stringent BND laws, proving that high safety prioritization can coexist with rigid, practical limitations on state power.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "beb6cec7-0727-4c48-a3b5-a1a7a6ecaa96",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:22.963179+00:00"
+    },
+    {
+      "id": "df1f101a-d8b1-411d-b8c9-eecca9637952",
+      "text": "Legal structures failed to halt the overall security escalation, as US surveillance activities merely shifted focus post-2013, continuing mass data collection under unchecked foreign intelligence authorities like FISA Section 702.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ae00570e-1acf-4105-8bb3-4b51b6ce77c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:34.021796+00:00"
+    },
+    {
+      "id": "5e517bbb-b076-476a-948f-cbacffd281c8",
+      "text": "The supposed legal success was reactive, triggered only by the unprecedented public pressure and global scrutiny following the 2013 Snowden leaks, proving that legal structures failed to uphold privacy until forced by an external crisis.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ae00570e-1acf-4105-8bb3-4b51b6ce77c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:34.021824+00:00"
+    },
+    {
+      "id": "be13f30f-8f8e-41f5-9b9f-78c4a1a4525e",
+      "text": "The German domestic intelligence agency (BfV) was widely criticized for failing to detect and neutralize the National Socialist Underground (NSU) terrorist cell for over a decade, demonstrating that rigid legal constraints and oversight do not automatically ensure effective, high safety prioritization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "4cc49f86-7b91-4207-bb3d-b6ab0b105037",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:35.592467+00:00"
+    },
+    {
+      "id": "d5462ca7-fb86-4a25-942b-fc7bc4d867e2",
+      "text": "Bulk surveillance data is crucial for police agencies in investigations into organized crime and violent drug trafficking (e.g., tracing illicit fentanyl supply chains), which save significantly more lives annually than terror prevention efforts alone.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a6bb440c-3a54-4960-b261-d6b8708a953e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:54.446807+00:00"
+    },
+    {
+      "id": "07fbfe5c-5c48-4cb9-9cfc-8ef04a5b85a6",
+      "text": "Intelligence agencies rely on bulk data to connect low-level threats, such as suspicious purchases or travel, into actionable patterns, meaning that surveillance provides essential contextual data for countless smaller, resolved threats that never meet the threshold of a mass casualty attack.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a6bb440c-3a54-4960-b261-d6b8708a953e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:27:54.447234+00:00"
+    },
+    {
+      "id": "5ce857ad-8616-4e9b-893f-64a813b5f13a",
+      "text": "Data collected after the implementation of mass surveillance programs often shows a significant lack of success; for example, the US PCLOB found that the NSA's Section 215 bulk phone data collection program was not essential in preventing any major terrorist attack.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "07fbfe5c-5c48-4cb9-9cfc-8ef04a5b85a6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:05.280629+00:00"
+    },
+    {
+      "id": "6733deb0-d503-4406-8ff6-d45a6b350073",
+      "text": "The assumed necessity of bulk data is contradicted by the fact that targeted surveillance based on probable cause and traditional intelligence gathering methods have a proven track record of finding actionable leads without collecting massive amounts of irrelevant civilian data.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "07fbfe5c-5c48-4cb9-9cfc-8ef04a5b85a6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:05.280722+00:00"
+    },
+    {
+      "id": "eef5d178-9388-4d3e-a5f1-a5af5d478dd0",
+      "text": "Major interdictions of illicit supply chains, such as the international takedown of the EncroChat encrypted network (2020), resulted from targeted access and judicial authorization, demonstrating that bulk surveillance is not crucial.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "d5462ca7-fb86-4a25-942b-fc7bc4d867e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:17.186676+00:00"
+    },
+    {
+      "id": "8014d058-7aad-4ad3-9ca7-97bc9d66ec8d",
+      "text": "Focusing the justification solely on \"lives saved\" ignores the tangible erosion of rule of law and public trust when surveillance indiscriminately targets millions of law-abiding citizens for marginal gains.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "d5462ca7-fb86-4a25-942b-fc7bc4d867e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:17.186702+00:00"
+    },
+    {
+      "id": "afc61c8b-4ee6-4e72-abc7-29f8f55c98c9",
+      "text": "The East German Stasi actively maintained 189,000 political agents, utilized routine physical searches and arrests, and imprisoned over 250,000 citizens for political subversion, a scale of state violence unmatched by democratic surveillance programs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b93cb63d-4940-47b0-9f8c-e66172ee37d6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:33.190432+00:00"
+    },
+    {
+      "id": "88e7a494-1ad1-4ce6-b4c2-d23344c52631",
+      "text": "Post-Snowden studies on communication behavior demonstrate that measurable changes, such as reduced searches for sensitive political terms, affect only niche user populations, contradicting claims of a powerful, widespread chilling effect on mainstream political reporting.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b93cb63d-4940-47b0-9f8c-e66172ee37d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:33.190924+00:00"
+    },
+    {
+      "id": "56acdf3c-b3cc-4f3f-8a48-d29055222997",
+      "text": "Democratic electronic surveillance programs, such as the NSA's global data collection, monitor the communications of billions of people globally, a scale of privacy intrusion far exceeding the Stasi's focus on its 17 million citizens. The totalitarian Stasi model focused on physical repression and human agents, whereas modern democratic surveillance leverages superior technology to achieve pervasive monitoring without relying on mass arrests.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "afc61c8b-4ee6-4e72-abc7-29f8f55c98c9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:44.761581+00:00"
+    },
+    {
+      "id": "1c486a42-f126-4c17-954d-cbc74fc7bd7b",
+      "text": "A 2014 survey of investigative journalists reported that 28% had censored or softened their reporting on national security since the Snowden disclosures. This demonstrates that self-censorship occurs within mainstream political reporting, regardless of public search behavior.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "88e7a494-1ad1-4ce6-b4c2-d23344c52631",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:50.886723+00:00"
+    },
+    {
+      "id": "410bcb21-cb38-48be-8016-bb4ae3885084",
+      "text": "The chilling effect manifests significantly in source reluctance and editorial caution, phenomena not captured by search term analysis; the dramatic post-Snowden increase in end-to-end encrypted communication services adoption indicates widespread behavioral change.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "88e7a494-1ad1-4ce6-b4c2-d23344c52631",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:28:50.886749+00:00"
+    },
+    {
+      "id": "2b7d2cf1-bbda-47d8-b01e-de18655b34ef",
+      "text": "The investigation and public exposure of COINTELPRO during the 1970s Church Committee hearings directly resulted in major intelligence oversight reforms and the establishment of permanent intelligence committees in Congress, demonstrating systemic self-correction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5073dabb-083d-4e44-8c76-1b9ecd404045",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:29:04.934807+00:00"
+    },
+    {
+      "id": "f8737dc9-e236-42e0-bd3f-aa0421da724f",
+      "text": "The NSA mass surveillance programs revealed in 2013 demonstrate that intelligence agencies circumvented these oversight committees to conduct widespread domestic surveillance, proving the supposed \"systemic self-correction\" was incomplete and ineffective against continuous abuses.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "2b7d2cf1-bbda-47d8-b01e-de18655b34ef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:29:15.072636+00:00"
+    },
+    {
+      "id": "6e8bd1f4-617b-4293-8849-9dcc10bcd903",
+      "text": "Implementing decentralized apps in countries like Ireland and Denmark achieved effective adoption rates (over 40% of the target population), demonstrating that success hinged on clear public communication and high government trust, not an intrinsic failure of the privacy-preserving design itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d8bd1538-2aa3-43a3-b7d1-ca5ae6306522",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:29:29.747418+00:00"
+    },
+    {
+      "id": "13e30681-0613-40ec-99bd-964c3530237a",
+      "text": "Ireland and Denmark already possess highly digitized public services and near-universal smartphone penetration rates; these existing technological foundations were necessary infrastructural preconditions for effective DApp deployment, not solely clear communication or government trust.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "6e8bd1f4-617b-4293-8849-9dcc10bcd903",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:29:45.503657+00:00"
+    },
+    {
+      "id": "a18eee48-720b-4de2-b9cc-1976f92a1d62",
+      "text": "The failure of initial centralized contact tracing apps, such as the UK\u2019s first attempt, was directly caused by quantifiable technical difficulties like insufficient Bluetooth accuracy, confirming that poor technical implementation, not just public trust, limits adoption.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "6e8bd1f4-617b-4293-8849-9dcc10bcd903",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:29:45.503695+00:00"
+    },
+    {
+      "id": "a2f6172b-25dd-420e-baef-c5122d668e9a",
+      "text": "Highly secure regimes, such as China, maintain control through mass surveillance and preventative detention, yet citizens possess no freedom of assembly or judicial rights, demonstrating that overwhelming internal security actively suppresses civil liberties.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cea9037c-ddc0-426d-a30e-3e3970fc4e47",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:30:04.122445+00:00"
+    },
+    {
+      "id": "45932783-c295-4af6-bed1-02bb35ee26d0",
+      "text": "The former Soviet Union and North Korea suppressed freedom of assembly and judicial rights through centralized political terror and secret police, often lacking modern mass surveillance technology but still achieving systemic control.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "a2f6172b-25dd-420e-baef-c5122d668e9a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:30:24.518176+00:00"
+    },
+    {
+      "id": "2b9516c9-0a5a-4987-aff8-45a02019684e",
+      "text": "Democratic nations like Israel maintain extremely high internal security, including extensive digital monitoring and physical checkpoints, while still providing relatively robust freedom of media and an independent judiciary.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "a2f6172b-25dd-420e-baef-c5122d668e9a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:30:24.518203+00:00"
+    },
+    {
+      "id": "ae1a9607-c61a-46b2-a8b1-dc0eb631fa82",
+      "text": "US security policies like the Espionage Act of 1917 criminalized speech and the mass internment of Japanese-Americans during WWII limited fundamental rights, demonstrating numerous historical conflicts between security measures and liberty predating 2001.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "794e1571-db44-4ffd-8c33-d2a2764e56df",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:30:39.604506+00:00"
+    },
+    {
+      "id": "f415c1ee-261a-48a1-a7ad-0af96daeac63",
+      "text": "Essential security measures, such as military defense, actively compromise personal liberty through mandatory conscription or national service in nations like South Korea and Israel by forcing individuals into state service.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "794e1571-db44-4ffd-8c33-d2a2764e56df",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:30:39.604951+00:00"
+    },
+    {
+      "id": "5f5f210c-4b8a-4d7d-884b-09c8c2373a2c",
+      "text": "Essential security measures in NATO nations like the United States and Germany rely on professional volunteer forces, proving that military defense is possible without the compromise to personal liberty caused by mandatory conscription.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "f415c1ee-261a-48a1-a7ad-0af96daeac63",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:30:48.872421+00:00"
+    },
+    {
+      "id": "61a5484b-39c9-4f72-9fd7-e2e79277164c",
+      "text": "Unlike historical conflicts that were typically resolved or limited after crises (such as the repeal of parts of the Espionage Act), modern digital surveillance programs (like the NSA's bulk data collection) are systemic, permanent, and expand privacy erosion to the entire population without defined temporal limits.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "ae1a9607-c61a-46b2-a8b1-dc0eb631fa82",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:30:49.281825+00:00"
+    },
+    {
+      "id": "23947402-57a6-4c41-ba13-34eab38d0c47",
+      "text": "Specialized hardware accelerators using FPGAs and custom ASICs have been demonstrated to reduce the computational latency of lattice-based FHE operations by factors of 10x to 100x, making near-real-time processing feasible for certain encrypted data streams.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c19849d9-71fa-4204-9da6-af376d0b1afc",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:31:05.461110+00:00"
+    },
+    {
+      "id": "6bb05495-bd23-4550-b751-a4dafc045e21",
+      "text": "Intelligence agency reforms post-9/11, such as those enabled by the Patriot Act, focused on gathering electronic data to prevent imminent large-scale loss of life, establishing that national security decisively outweighs generalized electronic privacy during periods of high threat.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "23947402-57a6-4c41-ba13-34eab38d0c47",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:31:15.088435+00:00"
+    },
+    {
+      "id": "91b0fb7a-7b6d-4ba5-826e-82a9cb64c22c",
+      "text": "Differential privacy provides a mathematically provable upper bound (epsilon) on the increase in individual risk from data analysis, establishing a quantified, manageable limit on compromise. By contrast, undisclosed mass national security surveillance poses an unquantifiable, potentially maximal risk to individual liberty, demonstrating why a bounded privacy risk is preferable.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c6a3c9b0-7433-42bb-8933-9508a246721e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:31:30.344708+00:00"
+    },
+    {
+      "id": "4fb161e9-a2d3-4dbf-9d8d-8641498c0853",
+      "text": "The utility derived from mass national security surveillance, such as preventing catastrophic attacks like those that justified the US PATRIOT Act programs post-9/11, is often considered by states to outweigh the preference for mathematically quantifying and bounding individual privacy risks (epsilon). The comparison of preferability is invalid because it omits the necessary utility analysis.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "91b0fb7a-7b6d-4ba5-826e-82a9cb64c22c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:31:42.109124+00:00"
+    },
+    {
+      "id": "6aaf23fe-486f-49d1-9991-5c0c6b99c37d",
+      "text": "Infrastructure monitoring prevents cascading events specifically by immediately identifying and mitigating localized technical failures, as the initial power line fault in Ohio during the 2003 blackout was the direct trigger for the regional cascade.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e86e6bfb-5b0b-4f4f-80c8-781e24e84af6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:04.650132+00:00"
+    },
+    {
+      "id": "249b60e4-d24d-451e-886c-bd4758d3bd27",
+      "text": "Monitoring systems are used extensively for performance optimization and capacity planning in modern infrastructure like telecommunication networks to lower latency and handle peak traffic, a primary function distinct from preventing catastrophic collapse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e86e6bfb-5b0b-4f4f-80c8-781e24e84af6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:04.650574+00:00"
+    },
+    {
+      "id": "c3d404a0-0673-4b5f-8e2b-57c30d8c784e",
+      "text": "Capacity planning and managing peak traffic are direct, preventative measures against catastrophic failure caused by network overload, making the two functions intrinsically linked, not distinct.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "249b60e4-d24d-451e-886c-bd4758d3bd27",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:14.596817+00:00"
+    },
+    {
+      "id": "cbc2bcc7-3771-4a52-b90c-ce3bee78adc4",
+      "text": "Immediate fault detection and rapid alerting of anomalous behavior are arguably the primary functions of monitoring in safety-critical infrastructure, superseding long-term capacity planning by focusing on minimizing damage from unexpected, immediate failures.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "249b60e4-d24d-451e-886c-bd4758d3bd27",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:14.596859+00:00"
+    },
+    {
+      "id": "156618ac-6508-48f7-a77c-19e679e65a36",
+      "text": "The 2003 Northeast Blackout cascaded because system operators had ineffective mitigation protocols and delayed human intervention for nearly an hour, demonstrating that timely detection is insufficient to prevent regional failure. Effective infrastructure monitoring hardware does not guarantee a competent or timely operational response needed to prevent a full system collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "6aaf23fe-486f-49d1-9991-5c0c6b99c37d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:27.894905+00:00"
+    },
+    {
+      "id": "7f06678a-bdf2-44e7-8d1a-f6f6cb114c4b",
+      "text": "Article 8 of the European Convention on Human Rights explicitly permits interference with the right to private life when necessary for national security or public safety. The US Fourth Amendment allows exceptions for exigent circumstances and \"plain view,\" proving the right is qualified, not absolute.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "83c62974-67df-4999-b0c1-8a04d08f2ec3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:44.176820+00:00"
+    },
+    {
+      "id": "8f69878e-3430-4855-a7a5-dc09a95d0e30",
+      "text": "Many jurisdictions apply tiered scrutiny; for example, the US Supreme Court has accepted \"reasonable suspicion\" for minimal intrusions like border searches and traffic stops, which is a significantly lower standard than the strict necessity standard.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "83c62974-67df-4999-b0c1-8a04d08f2ec3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:44.177247+00:00"
+    },
+    {
+      "id": "0509bd4b-75f8-40db-b8c3-27f5db9beb9e",
+      "text": "The application of lower standards like reasonable suspicion often leads to systemic civil rights violations, as seen with widespread, ineffective 'stop-and-frisk' policies in New York City, demonstrating that tiered scrutiny fails to properly weigh privacy harms against speculative security benefits.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "8f69878e-3430-4855-a7a5-dc09a95d0e30",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:32:51.666795+00:00"
+    },
+    {
+      "id": "13111824-d20b-4f7c-b58f-af4c3bf6d44c",
+      "text": "Mass surveillance programs publicized after the 2013 Snowden revelations cause documented \"chilling effects,\" leading citizens and journalists to self-censor political speech. This demonstrable curtailment of democratic discourse proves that the functional importance of privacy outweighs the legal existence of security exceptions.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "7f06678a-bdf2-44e7-8d1a-f6f6cb114c4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:33:01.237358+00:00"
+    },
+    {
+      "id": "b0685124-f815-40e7-a587-78601d6a87a6",
+      "text": "Aggregated transactional metadata, such as location and communication patterns, allows intelligence agencies to infer highly intimate details, including medical conditions, political affiliations, and extramarital affairs, achieving the same qualitative surveillance as content monitoring.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d6fb6d49-3e54-4b9a-b3ea-35e9cc84b974",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:33:12.962889+00:00"
+    },
+    {
+      "id": "b3acee25-f7ae-4583-925d-6fa09d46691e",
+      "text": "The definition of \"pervasive mass surveillance\" hinges on the monitoring of entire populations at an unprecedented scale, and its impact is derived from the mere comprehensiveness of coverage and data retention, separate from the intimacy of any single transaction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d6fb6d49-3e54-4b9a-b3ea-35e9cc84b974",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:33:12.963321+00:00"
+    },
+    {
+      "id": "3fa6b6ae-f9f0-44a8-b9d2-2d506865705e",
+      "text": "Metadata proves association (e.g., location, communication frequency) but explicit content provides the direct evidence, such as specific threats or plans of action, required for successful criminal prosecution under evidentiary standards like beyond a reasonable doubt. Inference based on patterns is not qualitatively the same as the direct confirmation of content.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "b0685124-f815-40e7-a587-78601d6a87a6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:33:29.437549+00:00"
+    },
+    {
+      "id": "a8f5f21f-6fae-4d7b-92f3-1d554888050f",
+      "text": "Automated analysis of billions of low-intimacy metadata points\u2014such as call logs and internet activity\u2014reveals highly sensitive information, including political dissent and private health issues. Mass surveillance derives its power from aggregating comprehensive coverage to produce highly intimate and exploitable personal profiles.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "b3acee25-f7ae-4583-925d-6fa09d46691e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:33:33.505080+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:59:09.212073"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:59:09.212073"
+    }
+  ],
+  "links": [
+    {
+      "source": "91d637da-e614-4119-b120-f35930615837",
+      "target": "bf6a0dc1-f086-498f-9977-4dae5a02f73c",
+      "type": "objection"
+    },
+    {
+      "source": "d7d5e8e7-be67-4a9f-bb78-4ea6bfef4f9a",
+      "target": "ed8c27c2-5cc2-4e80-969d-940507f7ae6e",
+      "type": "objection"
+    },
+    {
+      "source": "d7d5e8e7-be67-4a9f-bb78-4ea6bfef4f9a",
+      "target": "9afd87a9-d06c-440e-8bf9-6b31f0253b45",
+      "type": "objection"
+    },
+    {
+      "source": "6f0e4a9f-c9dd-4b36-a44b-6d14434d0c19",
+      "target": "d9923963-65a3-4498-9838-12558fb8096e",
+      "type": "objection"
+    },
+    {
+      "source": "6f0e4a9f-c9dd-4b36-a44b-6d14434d0c19",
+      "target": "e203392b-3a4d-48e5-906e-9319a2bca83e",
+      "type": "objection"
+    },
+    {
+      "source": "bf6a0dc1-f086-498f-9977-4dae5a02f73c",
+      "target": "64507bdd-6f38-44a8-ba5f-2f27b72f9f63",
+      "type": "response"
+    },
+    {
+      "source": "bf6a0dc1-f086-498f-9977-4dae5a02f73c",
+      "target": "eb8a65ad-95b4-442d-b62e-90a0e1ca423d",
+      "type": "response"
+    },
+    {
+      "source": "e203392b-3a4d-48e5-906e-9319a2bca83e",
+      "target": "e89cedc9-461d-4869-8802-9c139f11281e",
+      "type": "response"
+    },
+    {
+      "source": "e203392b-3a4d-48e5-906e-9319a2bca83e",
+      "target": "17bc8336-8180-4b85-bffd-693af9f65eee",
+      "type": "response"
+    },
+    {
+      "source": "ed8c27c2-5cc2-4e80-969d-940507f7ae6e",
+      "target": "a90bdae1-6d12-45c1-96ab-fa52a27efd0f",
+      "type": "response"
+    },
+    {
+      "source": "ed8c27c2-5cc2-4e80-969d-940507f7ae6e",
+      "target": "beb6cec7-0727-4c48-a3b5-a1a7a6ecaa96",
+      "type": "response"
+    },
+    {
+      "source": "d9923963-65a3-4498-9838-12558fb8096e",
+      "target": "a6bb440c-3a54-4960-b261-d6b8708a953e",
+      "type": "response"
+    },
+    {
+      "source": "d9923963-65a3-4498-9838-12558fb8096e",
+      "target": "ed82d9d3-40f3-4c66-8fbc-bf7deff39d46",
+      "type": "response"
+    },
+    {
+      "source": "9afd87a9-d06c-440e-8bf9-6b31f0253b45",
+      "target": "b93cb63d-4940-47b0-9f8c-e66172ee37d6",
+      "type": "response"
+    },
+    {
+      "source": "9afd87a9-d06c-440e-8bf9-6b31f0253b45",
+      "target": "5073dabb-083d-4e44-8c76-1b9ecd404045",
+      "type": "response"
+    },
+    {
+      "source": "ed82d9d3-40f3-4c66-8fbc-bf7deff39d46",
+      "target": "4ae8b5f7-0239-4c3a-89c3-c0a72f960c6f",
+      "type": "response"
+    },
+    {
+      "source": "ed82d9d3-40f3-4c66-8fbc-bf7deff39d46",
+      "target": "4a84e59d-c6b0-4fcd-a70d-41484cb0d2ed",
+      "type": "response"
+    },
+    {
+      "source": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "target": "254f41b1-1960-4a82-a43c-9d0923aa6368",
+      "type": "objection"
+    },
+    {
+      "source": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "target": "dbc06f56-730b-4d6a-bf47-7f06441b1a60",
+      "type": "objection"
+    },
+    {
+      "source": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "target": "46c5472f-1570-400a-b6a7-fbc6a26aaa03",
+      "type": "objection"
+    },
+    {
+      "source": "8066c8b8-8963-4389-832b-d8c6f03a8f59",
+      "target": "01f05a9b-1112-4e34-94d1-f4c42b75cc0e",
+      "type": "objection"
+    },
+    {
+      "source": "8066c8b8-8963-4389-832b-d8c6f03a8f59",
+      "target": "57ea754f-a4f6-4395-861c-1919f28aeed4",
+      "type": "objection"
+    },
+    {
+      "source": "7aacb5af-8b29-4185-801f-99f948759f37",
+      "target": "4bbb90ec-7e02-446b-b22a-619c41bd6c9b",
+      "type": "objection"
+    },
+    {
+      "source": "7aacb5af-8b29-4185-801f-99f948759f37",
+      "target": "8777e25f-9bd9-48fb-9b36-4743c990c22a",
+      "type": "objection"
+    },
+    {
+      "source": "dbc06f56-730b-4d6a-bf47-7f06441b1a60",
+      "target": "d8bd1538-2aa3-43a3-b7d1-ca5ae6306522",
+      "type": "response"
+    },
+    {
+      "source": "01f05a9b-1112-4e34-94d1-f4c42b75cc0e",
+      "target": "cea9037c-ddc0-426d-a30e-3e3970fc4e47",
+      "type": "response"
+    },
+    {
+      "source": "01f05a9b-1112-4e34-94d1-f4c42b75cc0e",
+      "target": "794e1571-db44-4ffd-8c33-d2a2764e56df",
+      "type": "response"
+    },
+    {
+      "source": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "target": "051104dc-be3e-4c49-911a-2a12ff06a887",
+      "type": "objection"
+    },
+    {
+      "source": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "target": "22bb4991-4f2f-4a77-bd79-54901c82aadc",
+      "type": "objection"
+    },
+    {
+      "source": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "target": "ae620998-fc13-44c3-8040-6285c412a5bd",
+      "type": "objection"
+    },
+    {
+      "source": "4bbb90ec-7e02-446b-b22a-619c41bd6c9b",
+      "target": "c19849d9-71fa-4204-9da6-af376d0b1afc",
+      "type": "response"
+    },
+    {
+      "source": "4bbb90ec-7e02-446b-b22a-619c41bd6c9b",
+      "target": "c6a3c9b0-7433-42bb-8933-9508a246721e",
+      "type": "response"
+    },
+    {
+      "source": "8777e25f-9bd9-48fb-9b36-4743c990c22a",
+      "target": "e86e6bfb-5b0b-4f4f-80c8-781e24e84af6",
+      "type": "response"
+    },
+    {
+      "source": "254f41b1-1960-4a82-a43c-9d0923aa6368",
+      "target": "83c62974-67df-4999-b0c1-8a04d08f2ec3",
+      "type": "response"
+    },
+    {
+      "source": "254f41b1-1960-4a82-a43c-9d0923aa6368",
+      "target": "0aa5d50f-be35-45a8-8c7a-befff5c76590",
+      "type": "response"
+    },
+    {
+      "source": "22bb4991-4f2f-4a77-bd79-54901c82aadc",
+      "target": "d6fb6d49-3e54-4b9a-b3ea-35e9cc84b974",
+      "type": "response"
+    },
+    {
+      "source": "0aa5d50f-be35-45a8-8c7a-befff5c76590",
+      "target": "a86677f7-6250-42ab-ab72-dacf80ac355d",
+      "type": "response"
+    },
+    {
+      "source": "0aa5d50f-be35-45a8-8c7a-befff5c76590",
+      "target": "eb020a22-f744-478b-ad18-ea78b6033c46",
+      "type": "response"
+    },
+    {
+      "source": "46c5472f-1570-400a-b6a7-fbc6a26aaa03",
+      "target": "4a9f0d13-61a0-4000-870c-093e682e4567",
+      "type": "response"
+    },
+    {
+      "source": "46c5472f-1570-400a-b6a7-fbc6a26aaa03",
+      "target": "b135068c-fff6-40e6-9da1-2c2b2d02489e",
+      "type": "response"
+    },
+    {
+      "source": "57ea754f-a4f6-4395-861c-1919f28aeed4",
+      "target": "828e4ab2-c7d1-4463-b8c9-9e9efda0d96b",
+      "type": "response"
+    },
+    {
+      "source": "57ea754f-a4f6-4395-861c-1919f28aeed4",
+      "target": "cb38a93d-2d14-4d8f-9e37-741683cfafb2",
+      "type": "response"
+    },
+    {
+      "source": "051104dc-be3e-4c49-911a-2a12ff06a887",
+      "target": "2854da11-cca4-4d06-861e-4fc645a33c23",
+      "type": "response"
+    },
+    {
+      "source": "051104dc-be3e-4c49-911a-2a12ff06a887",
+      "target": "9a9fdc7c-3e67-4de1-9f93-dec6f24b1b66",
+      "type": "response"
+    },
+    {
+      "source": "ae620998-fc13-44c3-8040-6285c412a5bd",
+      "target": "058faeb9-3682-4485-903a-48e04c04b1e4",
+      "type": "response"
+    },
+    {
+      "source": "ae620998-fc13-44c3-8040-6285c412a5bd",
+      "target": "862c93b6-690a-4087-8e21-852f8191b113",
+      "type": "response"
+    },
+    {
+      "source": "81cedd12-6b46-4c37-a177-29b1940373e5",
+      "target": "f09a8091-1810-45d7-ad3b-83495115b248",
+      "type": "objection"
+    },
+    {
+      "source": "81cedd12-6b46-4c37-a177-29b1940373e5",
+      "target": "0091f979-b612-45c9-8fce-6e4dfc505615",
+      "type": "objection"
+    },
+    {
+      "source": "0091f979-b612-45c9-8fce-6e4dfc505615",
+      "target": "d2e17bb1-1ccf-43d7-bd85-60572a05a546",
+      "type": "response"
+    },
+    {
+      "source": "0091f979-b612-45c9-8fce-6e4dfc505615",
+      "target": "ece72e4b-6c7e-4273-a78b-49d5c506f10a",
+      "type": "response"
+    },
+    {
+      "source": "f09a8091-1810-45d7-ad3b-83495115b248",
+      "target": "f1f913f5-708d-4395-ad96-10a6823f4fd7",
+      "type": "response"
+    },
+    {
+      "source": "f09a8091-1810-45d7-ad3b-83495115b248",
+      "target": "c1fda418-215a-4fb2-a2aa-6465a0c7b0c7",
+      "type": "response"
+    },
+    {
+      "source": "64507bdd-6f38-44a8-ba5f-2f27b72f9f63",
+      "target": "e91ff39e-36fd-470c-85c4-05be39112cf4",
+      "type": "response"
+    },
+    {
+      "source": "e91ff39e-36fd-470c-85c4-05be39112cf4",
+      "target": "b218068b-c800-4dff-809d-b2ed7e88e4cf",
+      "type": "response"
+    },
+    {
+      "source": "eb8a65ad-95b4-442d-b62e-90a0e1ca423d",
+      "target": "accf7733-2166-4431-a80a-79e05ffa2a51",
+      "type": "response"
+    },
+    {
+      "source": "accf7733-2166-4431-a80a-79e05ffa2a51",
+      "target": "7d396aba-a4ae-4b75-87a7-b810df01e80f",
+      "type": "response"
+    },
+    {
+      "source": "accf7733-2166-4431-a80a-79e05ffa2a51",
+      "target": "3cbe6901-f252-488f-bf30-5380baec6ca0",
+      "type": "response"
+    },
+    {
+      "source": "e89cedc9-461d-4869-8802-9c139f11281e",
+      "target": "5daeb1dc-9d1b-4a36-b277-bc64a0caaea0",
+      "type": "response"
+    },
+    {
+      "source": "e89cedc9-461d-4869-8802-9c139f11281e",
+      "target": "19699e8a-f6ab-486a-8b1e-6512b2b43fe5",
+      "type": "response"
+    },
+    {
+      "source": "5daeb1dc-9d1b-4a36-b277-bc64a0caaea0",
+      "target": "5c974b2e-e9e9-4c5b-82e8-14f8eccd76c1",
+      "type": "response"
+    },
+    {
+      "source": "19699e8a-f6ab-486a-8b1e-6512b2b43fe5",
+      "target": "e76aedbd-72cf-43c6-9b0d-219ca91c7c9c",
+      "type": "response"
+    },
+    {
+      "source": "19699e8a-f6ab-486a-8b1e-6512b2b43fe5",
+      "target": "0cb85bb8-13e9-478d-98e1-38fe258129e7",
+      "type": "response"
+    },
+    {
+      "source": "17bc8336-8180-4b85-bffd-693af9f65eee",
+      "target": "7f421a10-71eb-42b9-b210-f1dbb1c5c166",
+      "type": "response"
+    },
+    {
+      "source": "7f421a10-71eb-42b9-b210-f1dbb1c5c166",
+      "target": "89a3967a-a1d0-43b6-ba84-f2fc6ced56e1",
+      "type": "response"
+    },
+    {
+      "source": "7f421a10-71eb-42b9-b210-f1dbb1c5c166",
+      "target": "c9389345-1044-4d9d-8bf1-fb17fef8b04a",
+      "type": "response"
+    },
+    {
+      "source": "a90bdae1-6d12-45c1-96ab-fa52a27efd0f",
+      "target": "602d83b1-e408-4795-995a-45734b87cf83",
+      "type": "response"
+    },
+    {
+      "source": "602d83b1-e408-4795-995a-45734b87cf83",
+      "target": "6aca0c2e-9793-47e0-9b9c-d32d16a02ef8",
+      "type": "response"
+    },
+    {
+      "source": "beb6cec7-0727-4c48-a3b5-a1a7a6ecaa96",
+      "target": "ae00570e-1acf-4105-8bb3-4b51b6ce77c3",
+      "type": "response"
+    },
+    {
+      "source": "beb6cec7-0727-4c48-a3b5-a1a7a6ecaa96",
+      "target": "4cc49f86-7b91-4207-bb3d-b6ab0b105037",
+      "type": "response"
+    },
+    {
+      "source": "ae00570e-1acf-4105-8bb3-4b51b6ce77c3",
+      "target": "df1f101a-d8b1-411d-b8c9-eecca9637952",
+      "type": "response"
+    },
+    {
+      "source": "ae00570e-1acf-4105-8bb3-4b51b6ce77c3",
+      "target": "5e517bbb-b076-476a-948f-cbacffd281c8",
+      "type": "response"
+    },
+    {
+      "source": "4cc49f86-7b91-4207-bb3d-b6ab0b105037",
+      "target": "be13f30f-8f8e-41f5-9b9f-78c4a1a4525e",
+      "type": "response"
+    },
+    {
+      "source": "a6bb440c-3a54-4960-b261-d6b8708a953e",
+      "target": "d5462ca7-fb86-4a25-942b-fc7bc4d867e2",
+      "type": "response"
+    },
+    {
+      "source": "a6bb440c-3a54-4960-b261-d6b8708a953e",
+      "target": "07fbfe5c-5c48-4cb9-9cfc-8ef04a5b85a6",
+      "type": "response"
+    },
+    {
+      "source": "07fbfe5c-5c48-4cb9-9cfc-8ef04a5b85a6",
+      "target": "5ce857ad-8616-4e9b-893f-64a813b5f13a",
+      "type": "response"
+    },
+    {
+      "source": "07fbfe5c-5c48-4cb9-9cfc-8ef04a5b85a6",
+      "target": "6733deb0-d503-4406-8ff6-d45a6b350073",
+      "type": "response"
+    },
+    {
+      "source": "d5462ca7-fb86-4a25-942b-fc7bc4d867e2",
+      "target": "eef5d178-9388-4d3e-a5f1-a5af5d478dd0",
+      "type": "response"
+    },
+    {
+      "source": "d5462ca7-fb86-4a25-942b-fc7bc4d867e2",
+      "target": "8014d058-7aad-4ad3-9ca7-97bc9d66ec8d",
+      "type": "response"
+    },
+    {
+      "source": "b93cb63d-4940-47b0-9f8c-e66172ee37d6",
+      "target": "afc61c8b-4ee6-4e72-abc7-29f8f55c98c9",
+      "type": "response"
+    },
+    {
+      "source": "b93cb63d-4940-47b0-9f8c-e66172ee37d6",
+      "target": "88e7a494-1ad1-4ce6-b4c2-d23344c52631",
+      "type": "response"
+    },
+    {
+      "source": "afc61c8b-4ee6-4e72-abc7-29f8f55c98c9",
+      "target": "56acdf3c-b3cc-4f3f-8a48-d29055222997",
+      "type": "response"
+    },
+    {
+      "source": "88e7a494-1ad1-4ce6-b4c2-d23344c52631",
+      "target": "1c486a42-f126-4c17-954d-cbc74fc7bd7b",
+      "type": "response"
+    },
+    {
+      "source": "88e7a494-1ad1-4ce6-b4c2-d23344c52631",
+      "target": "410bcb21-cb38-48be-8016-bb4ae3885084",
+      "type": "response"
+    },
+    {
+      "source": "5073dabb-083d-4e44-8c76-1b9ecd404045",
+      "target": "2b7d2cf1-bbda-47d8-b01e-de18655b34ef",
+      "type": "response"
+    },
+    {
+      "source": "2b7d2cf1-bbda-47d8-b01e-de18655b34ef",
+      "target": "f8737dc9-e236-42e0-bd3f-aa0421da724f",
+      "type": "response"
+    },
+    {
+      "source": "d8bd1538-2aa3-43a3-b7d1-ca5ae6306522",
+      "target": "6e8bd1f4-617b-4293-8849-9dcc10bcd903",
+      "type": "response"
+    },
+    {
+      "source": "6e8bd1f4-617b-4293-8849-9dcc10bcd903",
+      "target": "13e30681-0613-40ec-99bd-964c3530237a",
+      "type": "response"
+    },
+    {
+      "source": "6e8bd1f4-617b-4293-8849-9dcc10bcd903",
+      "target": "a18eee48-720b-4de2-b9cc-1976f92a1d62",
+      "type": "response"
+    },
+    {
+      "source": "cea9037c-ddc0-426d-a30e-3e3970fc4e47",
+      "target": "a2f6172b-25dd-420e-baef-c5122d668e9a",
+      "type": "response"
+    },
+    {
+      "source": "a2f6172b-25dd-420e-baef-c5122d668e9a",
+      "target": "45932783-c295-4af6-bed1-02bb35ee26d0",
+      "type": "response"
+    },
+    {
+      "source": "a2f6172b-25dd-420e-baef-c5122d668e9a",
+      "target": "2b9516c9-0a5a-4987-aff8-45a02019684e",
+      "type": "response"
+    },
+    {
+      "source": "794e1571-db44-4ffd-8c33-d2a2764e56df",
+      "target": "ae1a9607-c61a-46b2-a8b1-dc0eb631fa82",
+      "type": "response"
+    },
+    {
+      "source": "794e1571-db44-4ffd-8c33-d2a2764e56df",
+      "target": "f415c1ee-261a-48a1-a7ad-0af96daeac63",
+      "type": "response"
+    },
+    {
+      "source": "f415c1ee-261a-48a1-a7ad-0af96daeac63",
+      "target": "5f5f210c-4b8a-4d7d-884b-09c8c2373a2c",
+      "type": "response"
+    },
+    {
+      "source": "ae1a9607-c61a-46b2-a8b1-dc0eb631fa82",
+      "target": "61a5484b-39c9-4f72-9fd7-e2e79277164c",
+      "type": "response"
+    },
+    {
+      "source": "c19849d9-71fa-4204-9da6-af376d0b1afc",
+      "target": "23947402-57a6-4c41-ba13-34eab38d0c47",
+      "type": "response"
+    },
+    {
+      "source": "23947402-57a6-4c41-ba13-34eab38d0c47",
+      "target": "6bb05495-bd23-4550-b751-a4dafc045e21",
+      "type": "response"
+    },
+    {
+      "source": "c6a3c9b0-7433-42bb-8933-9508a246721e",
+      "target": "91b0fb7a-7b6d-4ba5-826e-82a9cb64c22c",
+      "type": "response"
+    },
+    {
+      "source": "91b0fb7a-7b6d-4ba5-826e-82a9cb64c22c",
+      "target": "4fb161e9-a2d3-4dbf-9d8d-8641498c0853",
+      "type": "response"
+    },
+    {
+      "source": "e86e6bfb-5b0b-4f4f-80c8-781e24e84af6",
+      "target": "6aaf23fe-486f-49d1-9991-5c0c6b99c37d",
+      "type": "response"
+    },
+    {
+      "source": "e86e6bfb-5b0b-4f4f-80c8-781e24e84af6",
+      "target": "249b60e4-d24d-451e-886c-bd4758d3bd27",
+      "type": "response"
+    },
+    {
+      "source": "249b60e4-d24d-451e-886c-bd4758d3bd27",
+      "target": "c3d404a0-0673-4b5f-8e2b-57c30d8c784e",
+      "type": "response"
+    },
+    {
+      "source": "249b60e4-d24d-451e-886c-bd4758d3bd27",
+      "target": "cbc2bcc7-3771-4a52-b90c-ce3bee78adc4",
+      "type": "response"
+    },
+    {
+      "source": "6aaf23fe-486f-49d1-9991-5c0c6b99c37d",
+      "target": "156618ac-6508-48f7-a77c-19e679e65a36",
+      "type": "response"
+    },
+    {
+      "source": "83c62974-67df-4999-b0c1-8a04d08f2ec3",
+      "target": "7f06678a-bdf2-44e7-8d1a-f6f6cb114c4b",
+      "type": "response"
+    },
+    {
+      "source": "83c62974-67df-4999-b0c1-8a04d08f2ec3",
+      "target": "8f69878e-3430-4855-a7a5-dc09a95d0e30",
+      "type": "response"
+    },
+    {
+      "source": "8f69878e-3430-4855-a7a5-dc09a95d0e30",
+      "target": "0509bd4b-75f8-40db-b8c3-27f5db9beb9e",
+      "type": "response"
+    },
+    {
+      "source": "7f06678a-bdf2-44e7-8d1a-f6f6cb114c4b",
+      "target": "13111824-d20b-4f7c-b58f-af4c3bf6d44c",
+      "type": "response"
+    },
+    {
+      "source": "d6fb6d49-3e54-4b9a-b3ea-35e9cc84b974",
+      "target": "b0685124-f815-40e7-a587-78601d6a87a6",
+      "type": "response"
+    },
+    {
+      "source": "d6fb6d49-3e54-4b9a-b3ea-35e9cc84b974",
+      "target": "b3acee25-f7ae-4583-925d-6fa09d46691e",
+      "type": "response"
+    },
+    {
+      "source": "b0685124-f815-40e7-a587-78601d6a87a6",
+      "target": "3fa6b6ae-f9f0-44a8-b9d2-2d506865705e",
+      "type": "response"
+    },
+    {
+      "source": "b3acee25-f7ae-4583-925d-6fa09d46691e",
+      "target": "a8f5f21f-6fae-4d7b-92f3-1d554888050f",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d7d5e8e7-be67-4a9f-bb78-4ea6bfef4f9a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "81cedd12-6b46-4c37-a177-29b1940373e5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "91d637da-e614-4119-b120-f35930615837",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6f0e4a9f-c9dd-4b36-a44b-6d14434d0c19",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "8066c8b8-8963-4389-832b-d8c6f03a8f59",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5dbe75cb-6b2d-450d-9c40-218c4fcb2338",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ca567c2f-b1f5-44ea-bfbe-562a69d4b31f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "7aacb5af-8b29-4185-801f-99f948759f37",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

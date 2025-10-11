@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space exploration should be privatized rather than government-funded - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Space exploration should be privatized rather than government-funded</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            47 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/space-exploration-should-be-privatized-rather-than-government-funded.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">47</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "a60de446-3459-4c1c-aa0a-3b634bae9129",
+      "text": "Privatization leverages market competition to drive down costs and increase operational efficiency, accelerating mission timelines and reducing the overall financial expenditure necessary for space objectives.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:21.079340"
+    },
+    {
+      "id": "3b28fb6f-0b72-4b36-812a-85723eade197",
+      "text": "The competitive nature of the private sector encourages higher risk tolerance and faster iteration of technology, leading to more rapid innovation and specialized capabilities that accelerate the pace of exploration.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:21.080316"
+    },
+    {
+      "id": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "text": "Shifting the financial burden to the private sector frees up significant public funds, allowing taxpayer resources to be redirected toward essential domestic priorities or deficit reduction without halting exploration efforts.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:21.081370"
+    },
+    {
+      "id": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "text": "Private entities prioritize the creation of long-term, self-sustaining space economies, such as resource utilization and manufacturing, ensuring the viability and continuity of space endeavors beyond fluctuating government budgets and political cycles.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:21.082210"
+    },
+    {
+      "id": "714eceec-1446-49cc-86f8-339b9fcbb0ab",
+      "text": "Private entities are fundamentally obligated to maximize short-term shareholder returns, which often discourages the vast, delayed capital investment required for self-sustaining foundational economies like space manufacturing.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:31.726995"
+    },
+    {
+      "id": "d9ea9c5c-154f-41cb-9fac-acd9e6c19bfa",
+      "text": "Current major private space initiatives are heavily dependent on large, non-competitive government contracts from agencies like NASA and the DoD, meaning their financial viability remains ultimately tied to fluctuating governmental policy and budgets.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:31.727713"
+    },
+    {
+      "id": "5d927dcc-6a79-4742-9215-2a1180247249",
+      "text": "The continuity of private space endeavors is highly reliant on volatile global market conditions and investor confidence; unlike national programs, foundational private projects face abrupt collapse without a taxpayer-funded safety net.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:31.728173"
+    },
+    {
+      "id": "175fe5aa-b924-48a0-92bb-09246acd5525",
+      "text": "The private sector typically minimizes risk on foundational research lacking immediate market returns, whereas true acceleration of exploration often depends on public funding for high-cost, high-risk basic technological groundwork.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3b28fb6f-0b72-4b36-812a-85723eade197",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:32.211008"
+    },
+    {
+      "id": "1f0ec0a3-3e21-4f69-9379-d2eca43f87c6",
+      "text": "Specialized capabilities driven by near-term profit motives may accelerate commercial applications like resource extraction, but they do not guarantee alignment with or investment in broader, non-commercial scientific exploration objectives.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3b28fb6f-0b72-4b36-812a-85723eade197",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:32.211613"
+    },
+    {
+      "id": "99125ab6-b52d-4304-88dc-b40c4bdf9ed0",
+      "text": "High barriers to entry and specialized requirements often result in an oligopoly or sole-source suppliers for critical space capabilities, preventing the sustained market competition required to consistently lower costs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a60de446-3459-4c1c-aa0a-3b634bae9129",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:32.825887"
+    },
+    {
+      "id": "624ed85b-3c36-424d-99d7-79ccab2ac6da",
+      "text": "Increased operational efficiency and cost reductions frequently prioritize increased capability, greater reliability, or risk reduction over reducing the duration of complex, sequence-dependent mission timelines.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a60de446-3459-4c1c-aa0a-3b634bae9129",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:32.827326"
+    },
+    {
+      "id": "cdeb5998-f268-4de6-a6ca-c015ab12b218",
+      "text": "Shifting the financial burden often necessitates new public investments, such as subsidies, tax breaks, or liability guarantees, which can negate the original savings, preventing the recovery of public funds.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:32.978877"
+    },
+    {
+      "id": "3c2e15e6-5d26-4cfc-91ea-5f6998d44c93",
+      "text": "Private sector returns-on-investment requirements inherently exclude pure scientific research and high-risk exploratory missions that do not guarantee an immediate commercial application.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:32.980113"
+    },
+    {
+      "id": "9da9be07-4f7a-4b01-8dac-a5475fd122cb",
+      "text": "Public funds are fungible; there is no mechanism to guarantee that resources \"freed up\" from one area will be verifiably directed toward specific domestic priorities or deficit reduction rather than being absorbed into general administrative budgets.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:32.981106"
+    },
+    {
+      "id": "521eea31-6834-4989-ac18-c4110a682fcc",
+      "text": "Foundational private space endeavors are often stabilized by multi-billion dollar government contracts (NASA/DoD), effectively creating a taxpayer-funded revenue floor that minimizes sole reliance on external investor confidence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5d927dcc-6a79-4742-9215-2a1180247249",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:41.465083"
+    },
+    {
+      "id": "fa941195-97c9-4b64-ab5e-a388c74ebe97",
+      "text": "National programs are also vulnerable to abrupt collapse, as continuity is jeopardized by political volatility, changes in administration, and the unpredictable shifting of governmental priorities that frequently result in cancelled projects.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5d927dcc-6a79-4742-9215-2a1180247249",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:41.465132"
+    },
+    {
+      "id": "dccd98d8-7383-4cb9-b99b-be32bbbd5bf9",
+      "text": "Cost reduction in high-technology fields, such as space capabilities, is often achieved through technological advancement, production learning curves, and economies of scale, processes that can consistently lower costs in a consolidated market independent of sustained external competition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "99125ab6-b52d-4304-88dc-b40c4bdf9ed0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:43.063753"
+    },
+    {
+      "id": "01635d67-34ea-4f50-a5db-863bc88cdbe1",
+      "text": "Corporations routinely make decades-long, loss-leading investments in foundational technologies, such as pharmaceutical R&D and autonomous vehicles, when long-term monopoly profits are anticipated.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "714eceec-1446-49cc-86f8-339b9fcbb0ab",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:43.678399"
+    },
+    {
+      "id": "1ad35429-0577-41a6-9878-4694d40057de",
+      "text": "Many large-scale space enterprises are privately held or founder-led companies that specifically avoid public market pressures and quarterly reporting mandates to facilitate long-term, high-risk capital deployment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "714eceec-1446-49cc-86f8-339b9fcbb0ab",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:43.678426"
+    },
+    {
+      "id": "65ffecba-3573-4e1b-bc4c-68dd71cfc7cb",
+      "text": "Private investment is not limited to immediate commercial return; strategic corporate ventures funding high-risk, fundamental exploration are justified when the potential for massive long-term market creation or significant technological advantages exists.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3c2e15e6-5d26-4cfc-91ea-5f6998d44c93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:43.925332"
+    },
+    {
+      "id": "2d2cef3e-ad43-449f-8476-697fd434a136",
+      "text": "The neglect of select non-profit scientific work does not logically imply the halting of all exploration efforts, as commercial entities will still aggressively pursue ventures with high potential for resource extraction, space tourism, or infrastructure development.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3c2e15e6-5d26-4cfc-91ea-5f6998d44c93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:43.925376"
+    },
+    {
+      "id": "0568fc55-e3f2-4a1e-8925-7e506b3c5ffb",
+      "text": "Funds that are not \"verifiably directed\" to specific, high-profile projects are not necessarily absorbed into general administrative budgets; they can still be productively reallocated to other existing authorized domestic programs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9da9be07-4f7a-4b01-8dac-a5475fd122cb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:44.755621"
+    },
+    {
+      "id": "465200a5-9a90-4a60-bacf-3d33878dc096",
+      "text": "Burden shifts resulting from regulatory reform or changes to liability standards are primarily administrative or legislative actions, not mandating the new subsidies or tax expenditures that are assumed to negate the public savings.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cdeb5998-f268-4de6-a6ca-c015ab12b218",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:44.928880"
+    },
+    {
+      "id": "efe0084b-2507-4d0a-9ad7-9cfb63550b76",
+      "text": "Reducing the duration of complex space missions is the most direct way to eliminate high fixed costs associated with consumables, long-term monitoring, and workforce retention, making it integral to operational efficiency.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "624ed85b-3c36-424d-99d7-79ccab2ac6da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:46.811735"
+    },
+    {
+      "id": "e3c6b336-51bb-4952-86f8-ca664be535d2",
+      "text": "In time-sensitive or highly resource-intensive contexts, decreasing mission duration directly increases asset turnaround and reduces resource burn, making it mandatorily prioritized over marginal increases in capability or reliability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "624ed85b-3c36-424d-99d7-79ccab2ac6da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:46.811782"
+    },
+    {
+      "id": "3eabd784-0346-40ce-af7b-6ab598d79108",
+      "text": "Major government contracts are highly competitive, not \"non-competitive\"; programs like Commercial Crew and NSSL require private initiatives to beat rivals on cost and performance, not rely on preferential treatment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d9ea9c5c-154f-41cb-9fac-acd9e6c19bfa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:47.797180"
+    },
+    {
+      "id": "183ff081-98bd-4307-8bd1-10f82c6a8db5",
+      "text": "SpaceX\u2019s Starlink already services millions of non-governmental subscribers, generating a massive, independent commercial revenue stream that shifts the company\u2019s financial viability away from federal contracts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d9ea9c5c-154f-41cb-9fac-acd9e6c19bfa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:47.797213"
+    },
+    {
+      "id": "12d2cac8-7d70-41c3-9e5d-1eaeb455d2a5",
+      "text": "Crucial military and intelligence assets in space, such as surveillance and missile warning systems, require full governmental control and funding to ensure operational continuity and protect national security interests from profit-driven compromise or foreign influence.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:47.797304"
+    },
+    {
+      "id": "9e7cf4f3-c9c2-42c5-b5ad-b4c484684d15",
+      "text": "Fundamental long-term science missions and deep-space exploration, which generate immense public knowledge but lack near-term commercial viability, represent a classic market failure that private funding cannot sustain. These essential public goods require exclusive government investment.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:47.797975"
+    },
+    {
+      "id": "9e146f75-7c42-44f9-8fe0-2abcba3c7718",
+      "text": "International treaties, such as the Outer Space Treaty, hold national governments legally liable for the activities and damaging contamination caused by their nationals in space, necessitating robust public oversight and funding for effective compliance and liability management.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:47.798418"
+    },
+    {
+      "id": "74e5cb10-82c5-4400-b126-e90ba1b1600c",
+      "text": "Government-funded programs ensure equitable access to space for academic research and smaller national interests, whereas full privatization risks the concentration of essential infrastructure and exploratory knowledge within a few profit-maximizing entities.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:47.798817"
+    },
+    {
+      "id": "ad91b057-6f0c-4072-be6d-579115c7590d",
+      "text": "Government-funded programs frequently prioritize large-scale national or political goals, which often restricts, rather than ensures, equitable access for smaller academic and national interests due to bureaucratic processes and cost overruns.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "74e5cb10-82c5-4400-b126-e90ba1b1600c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:57.393795"
+    },
+    {
+      "id": "b9117291-b4fa-464a-b422-33f31328b229",
+      "text": "Programs like NASA's Commercial Crew demonstrate that government mandates incorporated into private contracts ensure research data dissemination and equitable infrastructure access, preventing proprietary hoarding by corporations.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "74e5cb10-82c5-4400-b126-e90ba1b1600c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:57.394433"
+    },
+    {
+      "id": "03d9c12b-e422-454e-ba41-ced6f69d84c2",
+      "text": "The costs associated with government liability do not necessitate public funding; funds for oversight and liability management can be generated by imposing mandatory insurance requirements, regulatory fees, or risk bonds on the private entities conducting the commercial activities.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9e146f75-7c42-44f9-8fe0-2abcba3c7718",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:58.155087"
+    },
+    {
+      "id": "93f340a5-2445-44a7-8b78-947af6f97c08",
+      "text": "Robust government contracting and regulatory oversight can enforce strict operational continuity and national security standards on private entities, mitigating profit-driven risk without requiring full state ownership.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "12d2cac8-7d70-41c3-9e5d-1eaeb455d2a5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:59.258420"
+    },
+    {
+      "id": "bd7c8cda-6ec5-494d-a293-8c506ac6ae06",
+      "text": "Governmental systems are themselves vulnerable to political instability, bureaucratic failures, and foreign espionage, demonstrating that public control does not inherently guarantee greater protection or continuity than a securely regulated private enterprise.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "12d2cac8-7d70-41c3-9e5d-1eaeb455d2a5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:04:59.259150"
+    },
+    {
+      "id": "168851b9-3501-49a6-8dd8-4fe2c84d4d0e",
+      "text": "The necessity of exclusive government funding does not follow from the inability of private funding to solely sustain a public good; hybrid public-private partnerships, strategic government contracting, and philanthropic models are effective alternative funding solutions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9e7cf4f3-c9c2-42c5-b5ad-b4c484684d15",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:00.182742"
+    },
+    {
+      "id": "ac6fb61b-b950-497b-b059-3b8043df987a",
+      "text": "Near-term commercial viability is already emerging through private sector development of lunar infrastructure, resource prospecting, and advanced off-world manufacturing, creating sustainable financial models beyond government investment.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9e7cf4f3-c9c2-42c5-b5ad-b4c484684d15",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:00.183427"
+    },
+    {
+      "id": "604c5739-b69d-4d95-83f9-1cc6608d7a91",
+      "text": "P3 contracts frequently create long-term, exclusive private monopolies over essential public services, which concentrates market power and systemic risk rather than mitigating it.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b9117291-b4fa-464a-b422-33f31328b229",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:07.605738"
+    },
+    {
+      "id": "ce8b6c68-4049-4eab-b841-e210517965e8",
+      "text": "Public-Private Partnership models often experience systemic failures; for instance, the initial Commercial Orbital Transportation Services (COTS) contracts experienced major schedule slippages and significant cost overruns.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b9117291-b4fa-464a-b422-33f31328b229",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:07.605765"
+    },
+    {
+      "id": "7a9e41cf-c951-4856-b345-325c5b93b0f6",
+      "text": "For public goods requiring universal, non-excludable provision (e.g., national defense, judicial systems), alternative and hybrid models fail to achieve the necessary scale, stability, and equitable access reliably provided by exclusive government funding.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "168851b9-3501-49a6-8dd8-4fe2c84d4d0e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:10.407219"
+    },
+    {
+      "id": "fe5669d7-9889-4889-bbbe-0acb2ab56236",
+      "text": "Catastrophic liabilities often exceed the capacity of private insurance and risk bonds, making public funding necessary as the ultimate financial backstop for systemic failure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "03d9c12b-e422-454e-ba41-ced6f69d84c2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:10.726413"
+    },
+    {
+      "id": "b237b9c0-27a3-486b-84b8-0e08c0cdb0d8",
+      "text": "The initial establishment and ongoing enforcement of mandatory private funding mechanisms, such as auditing and compliance checks, necessitates public funding for administrative and regulatory infrastructure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "03d9c12b-e422-454e-ba41-ced6f69d84c2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:10.726442"
+    },
+    {
+      "id": "ae9309e3-c0c8-4dec-9136-49b6e4a57481",
+      "text": "Private entities\u2019 inherent profit motive drives continuous efforts, such as lobbying and legal maneuvering, to weaken or bypass the very strict standards and enforcement mechanisms designed to mitigate risk.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "93f340a5-2445-44a7-8b78-947af6f97c08",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:11.906463"
+    },
+    {
+      "id": "8b4170e4-db33-4f89-b686-a82f14dc17f3",
+      "text": "The necessary administrative costs and required bureaucratic resources to maintain truly \\u2018robust\\u2019 and \\u2018strict\\u2019 oversight may ultimately parallel or even exceed the operational costs of direct state ownership.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "93f340a5-2445-44a7-8b78-947af6f97c08",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:11.906532"
+    },
+    {
+      "id": "1854097c-015e-4666-97e1-3f539940ab96",
+      "text": "The examples of lunar infrastructure and resource prospecting are Cislunar activities, not true deep-space exploration (beyond the Earth-Moon system). Extrapolating the near-term economic feasibility of Cislunar operations to the vastly greater logistical demands and timelines of deep-space missions is scientifically premature.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ac6fb61b-b950-497b-b059-3b8043df987a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:13.089187"
+    },
+    {
+      "id": "4b97f853-e0f2-4652-8166-f61509bfe512",
+      "text": "Increased private sector growth and investment reflect confidence in future prospects, but not a present demonstration of commercial viability. Near-term commercial viability requires the existence of established, repeatable revenue streams and profitability, which are currently unproven for these projects.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ac6fb61b-b950-497b-b059-3b8043df987a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:05:13.089245"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:04:21.079274"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:04:21.079274"
+    }
+  ],
+  "links": [
+    {
+      "source": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "target": "714eceec-1446-49cc-86f8-339b9fcbb0ab",
+      "type": "objection"
+    },
+    {
+      "source": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "target": "d9ea9c5c-154f-41cb-9fac-acd9e6c19bfa",
+      "type": "objection"
+    },
+    {
+      "source": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "target": "5d927dcc-6a79-4742-9215-2a1180247249",
+      "type": "objection"
+    },
+    {
+      "source": "3b28fb6f-0b72-4b36-812a-85723eade197",
+      "target": "175fe5aa-b924-48a0-92bb-09246acd5525",
+      "type": "objection"
+    },
+    {
+      "source": "3b28fb6f-0b72-4b36-812a-85723eade197",
+      "target": "1f0ec0a3-3e21-4f69-9379-d2eca43f87c6",
+      "type": "objection"
+    },
+    {
+      "source": "a60de446-3459-4c1c-aa0a-3b634bae9129",
+      "target": "99125ab6-b52d-4304-88dc-b40c4bdf9ed0",
+      "type": "objection"
+    },
+    {
+      "source": "a60de446-3459-4c1c-aa0a-3b634bae9129",
+      "target": "624ed85b-3c36-424d-99d7-79ccab2ac6da",
+      "type": "objection"
+    },
+    {
+      "source": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "target": "cdeb5998-f268-4de6-a6ca-c015ab12b218",
+      "type": "objection"
+    },
+    {
+      "source": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "target": "3c2e15e6-5d26-4cfc-91ea-5f6998d44c93",
+      "type": "objection"
+    },
+    {
+      "source": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "target": "9da9be07-4f7a-4b01-8dac-a5475fd122cb",
+      "type": "objection"
+    },
+    {
+      "source": "5d927dcc-6a79-4742-9215-2a1180247249",
+      "target": "521eea31-6834-4989-ac18-c4110a682fcc",
+      "type": "response"
+    },
+    {
+      "source": "5d927dcc-6a79-4742-9215-2a1180247249",
+      "target": "fa941195-97c9-4b64-ab5e-a388c74ebe97",
+      "type": "response"
+    },
+    {
+      "source": "99125ab6-b52d-4304-88dc-b40c4bdf9ed0",
+      "target": "dccd98d8-7383-4cb9-b99b-be32bbbd5bf9",
+      "type": "response"
+    },
+    {
+      "source": "714eceec-1446-49cc-86f8-339b9fcbb0ab",
+      "target": "01635d67-34ea-4f50-a5db-863bc88cdbe1",
+      "type": "response"
+    },
+    {
+      "source": "714eceec-1446-49cc-86f8-339b9fcbb0ab",
+      "target": "1ad35429-0577-41a6-9878-4694d40057de",
+      "type": "response"
+    },
+    {
+      "source": "3c2e15e6-5d26-4cfc-91ea-5f6998d44c93",
+      "target": "65ffecba-3573-4e1b-bc4c-68dd71cfc7cb",
+      "type": "response"
+    },
+    {
+      "source": "3c2e15e6-5d26-4cfc-91ea-5f6998d44c93",
+      "target": "2d2cef3e-ad43-449f-8476-697fd434a136",
+      "type": "response"
+    },
+    {
+      "source": "9da9be07-4f7a-4b01-8dac-a5475fd122cb",
+      "target": "0568fc55-e3f2-4a1e-8925-7e506b3c5ffb",
+      "type": "response"
+    },
+    {
+      "source": "cdeb5998-f268-4de6-a6ca-c015ab12b218",
+      "target": "465200a5-9a90-4a60-bacf-3d33878dc096",
+      "type": "response"
+    },
+    {
+      "source": "624ed85b-3c36-424d-99d7-79ccab2ac6da",
+      "target": "efe0084b-2507-4d0a-9ad7-9cfb63550b76",
+      "type": "response"
+    },
+    {
+      "source": "624ed85b-3c36-424d-99d7-79ccab2ac6da",
+      "target": "e3c6b336-51bb-4952-86f8-ca664be535d2",
+      "type": "response"
+    },
+    {
+      "source": "d9ea9c5c-154f-41cb-9fac-acd9e6c19bfa",
+      "target": "3eabd784-0346-40ce-af7b-6ab598d79108",
+      "type": "response"
+    },
+    {
+      "source": "d9ea9c5c-154f-41cb-9fac-acd9e6c19bfa",
+      "target": "183ff081-98bd-4307-8bd1-10f82c6a8db5",
+      "type": "response"
+    },
+    {
+      "source": "74e5cb10-82c5-4400-b126-e90ba1b1600c",
+      "target": "ad91b057-6f0c-4072-be6d-579115c7590d",
+      "type": "objection"
+    },
+    {
+      "source": "74e5cb10-82c5-4400-b126-e90ba1b1600c",
+      "target": "b9117291-b4fa-464a-b422-33f31328b229",
+      "type": "objection"
+    },
+    {
+      "source": "9e146f75-7c42-44f9-8fe0-2abcba3c7718",
+      "target": "03d9c12b-e422-454e-ba41-ced6f69d84c2",
+      "type": "objection"
+    },
+    {
+      "source": "12d2cac8-7d70-41c3-9e5d-1eaeb455d2a5",
+      "target": "93f340a5-2445-44a7-8b78-947af6f97c08",
+      "type": "objection"
+    },
+    {
+      "source": "12d2cac8-7d70-41c3-9e5d-1eaeb455d2a5",
+      "target": "bd7c8cda-6ec5-494d-a293-8c506ac6ae06",
+      "type": "objection"
+    },
+    {
+      "source": "9e7cf4f3-c9c2-42c5-b5ad-b4c484684d15",
+      "target": "168851b9-3501-49a6-8dd8-4fe2c84d4d0e",
+      "type": "objection"
+    },
+    {
+      "source": "9e7cf4f3-c9c2-42c5-b5ad-b4c484684d15",
+      "target": "ac6fb61b-b950-497b-b059-3b8043df987a",
+      "type": "objection"
+    },
+    {
+      "source": "b9117291-b4fa-464a-b422-33f31328b229",
+      "target": "604c5739-b69d-4d95-83f9-1cc6608d7a91",
+      "type": "response"
+    },
+    {
+      "source": "b9117291-b4fa-464a-b422-33f31328b229",
+      "target": "ce8b6c68-4049-4eab-b841-e210517965e8",
+      "type": "response"
+    },
+    {
+      "source": "168851b9-3501-49a6-8dd8-4fe2c84d4d0e",
+      "target": "7a9e41cf-c951-4856-b345-325c5b93b0f6",
+      "type": "response"
+    },
+    {
+      "source": "03d9c12b-e422-454e-ba41-ced6f69d84c2",
+      "target": "fe5669d7-9889-4889-bbbe-0acb2ab56236",
+      "type": "response"
+    },
+    {
+      "source": "03d9c12b-e422-454e-ba41-ced6f69d84c2",
+      "target": "b237b9c0-27a3-486b-84b8-0e08c0cdb0d8",
+      "type": "response"
+    },
+    {
+      "source": "93f340a5-2445-44a7-8b78-947af6f97c08",
+      "target": "ae9309e3-c0c8-4dec-9136-49b6e4a57481",
+      "type": "response"
+    },
+    {
+      "source": "93f340a5-2445-44a7-8b78-947af6f97c08",
+      "target": "8b4170e4-db33-4f89-b686-a82f14dc17f3",
+      "type": "response"
+    },
+    {
+      "source": "ac6fb61b-b950-497b-b059-3b8043df987a",
+      "target": "1854097c-015e-4666-97e1-3f539940ab96",
+      "type": "response"
+    },
+    {
+      "source": "ac6fb61b-b950-497b-b059-3b8043df987a",
+      "target": "4b97f853-e0f2-4652-8166-f61509bfe512",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a60de446-3459-4c1c-aa0a-3b634bae9129",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "3b28fb6f-0b72-4b36-812a-85723eade197",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "1049ca61-60a9-425c-b841-00112c47f2c4",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "bde7f352-58c8-4f58-b456-8eddb0322673",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "12d2cac8-7d70-41c3-9e5d-1eaeb455d2a5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "9e7cf4f3-c9c2-42c5-b5ad-b4c484684d15",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "9e146f75-7c42-44f9-8fe0-2abcba3c7718",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "74e5cb10-82c5-4400-b126-e90ba1b1600c",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

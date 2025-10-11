@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>God exists - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>God exists</h1>
+        <div class="meta">
+            5 arguments for • 6 arguments against •
+            69 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/god-exists.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">69</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">5</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "text": "All contingent things require a cause, necessitating a first cause that is uncaused and exists outside space and time. The physical universe, which scientific consensus states began abruptly at the Big Bang, is thus contingent, requiring a transcendent agent to initiate its existence.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:44.443113+00:00"
+    },
+    {
+      "id": "dca672c1-9d13-4b2a-975a-4a87674ad83d",
+      "text": "The physical constants, such as the precise ratio of the electromagnetic force to gravity, possess values so exact that even minute variations would prevent the formation of stable atoms or life. This extremely narrow probability window, known as fine-tuning, is more plausibly explained by an intelligent designer than by random chance.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:44.443797+00:00"
+    },
+    {
+      "id": "fa613289-c6ec-4019-8aa3-959ed9c4f244",
+      "text": "Humans experience a universal sense of objective moral imperatives, such as the duty to protect the innocent from harm, that transcends cultural preference or self-interest. This inherent moral structure and sense of \"oughtness\" suggests an ultimate moral lawgiver external to human convention.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:44.444243+00:00"
+    },
+    {
+      "id": "9f728bbf-36c5-40f3-9701-0cc5714bcd19",
+      "text": "The pervasive and fundamental human yearning for ultimate fulfillment, perfect justice, and infinite meaning is a consistent psychological phenomenon across all cultures and history. This profound desire implies the real existence of an ultimate, infinite good capable of satisfying it, just as hunger implies the existence of food.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:44.444641+00:00"
+    },
+    {
+      "id": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "text": "The \"hard problem\" of consciousness\u2014specifically the subjective, first-person experience (qualia)\u2014remains fundamentally inexplicable by purely physical, reductionist material mechanisms. The emergence of self-aware, non-physical mind from brain matter suggests a foundational non-material reality, pointing toward an underlying divine mind.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:44.445236+00:00"
+    },
+    {
+      "id": "1c1da76d-916d-4535-b57f-9ea3fb9845fb",
+      "text": "Moral imperatives are demonstrably not universal; historical practices like the widespread acceptance of infanticide in ancient cultures or state-sanctioned torture in modern autocracies show that the duty to protect the innocent is highly conditional and contingent on social convention.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fa613289-c6ec-4019-8aa3-959ed9c4f244",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:55.961994+00:00"
+    },
+    {
+      "id": "bafed875-7472-44ea-8071-1edfd4dbfdbb",
+      "text": "The inherent moral structure is more plausibly explained by evolutionary psychology, where fitness-enhancing social mechanisms like reciprocal altruism and kin selection were naturally selected, resulting in an internal sense of \"oughtness\" without needing an external lawgiver.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fa613289-c6ec-4019-8aa3-959ed9c4f244",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:55.962760+00:00"
+    },
+    {
+      "id": "1a3e7be5-b7b6-4b6a-9e84-49c4708db1c7",
+      "text": "The prevailing Multiverse theory, supported by extensions of cosmic inflation and string theory, posits that countless universes with different physical constants exist, making the fine-tuning of this universe statistically expected rather than miraculous.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "dca672c1-9d13-4b2a-975a-4a87674ad83d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:58.758557+00:00"
+    },
+    {
+      "id": "8f38996e-b13b-4364-bb21-a8a5415bec0d",
+      "text": "Current research in physics seeks a Theory of Everything which would mathematically link the fundamental constants, demonstrating that their exact values are physically necessary, not freely chosen or randomly generated.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "dca672c1-9d13-4b2a-975a-4a87674ad83d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:58.759419+00:00"
+    },
+    {
+      "id": "ce237760-f010-401b-b90f-fbe3ce0a2bb1",
+      "text": "Efficient causation, where antecedent events generate consequences, is observed to operate only within the spacetime fabric of the physical universe, suggesting it may not be applicable to the origin of that universe.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:00.948999+00:00"
+    },
+    {
+      "id": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "text": "A necessary uncaused condition could equally be an eternal, self-sustaining set of physical laws or background quantum fields that do not qualify as a transcendent agent.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:00.949758+00:00"
+    },
+    {
+      "id": "dcf68899-afe4-4b1d-80bd-7326d9a2fb3e",
+      "text": "Quantum mechanics describes phenomena like virtual particle pairs spontaneously arising from a vacuum and true radioactive decay as fundamentally acausal, indicating that not all contingent events require an efficient cause.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:00.950172+00:00"
+    },
+    {
+      "id": "eac3eee3-b8b5-4e3b-bc51-14a265195571",
+      "text": "Biological needs like hunger are functional mechanisms rooted in quantifiable physical deficiencies (e.g., low blood sugar) and are satisfied by verifiable material substances (food). Conversely, the pervasive historical desire for the Fountain of Youth demonstrates that intense human yearnings often target non-existent physical realities.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9f728bbf-36c5-40f3-9701-0cc5714bcd19",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:01.650550+00:00"
+    },
+    {
+      "id": "1cb01ff6-64c8-424d-a4ef-6c0df7a0c0e6",
+      "text": "The subjective intensity of a psychological phenomenon does not guarantee objective reality, as seen in the universal human desire for immortality, which persists despite the objective reality of physical decay and death. Intense yearnings for \"ultimate\" fulfillment consistently resolve into temporary or culturally bound satisfactions, not permanent infinities.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9f728bbf-36c5-40f3-9701-0cc5714bcd19",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:01.651269+00:00"
+    },
+    {
+      "id": "943ffc80-8504-478b-9745-be592078b6b9",
+      "text": "Modern neuroscience, utilizing techniques like EEG and fMRI, links every known variation in subjective experience and qualia disruption directly to specific, localized physical brain states and neural correlates.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:01.737772+00:00"
+    },
+    {
+      "id": "5a5bfd8d-7139-428d-b88e-f36360bc2e6c",
+      "text": "Physicalist theories like Integrated Information Theory (IIT) propose consciousness is an intrinsic property of any physical system with high complexity, offering a potentially non-reductive, yet entirely physical, explanation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:01.738425+00:00"
+    },
+    {
+      "id": "5fbfa86a-0076-4694-a2c6-9ab9e79b1a22",
+      "text": "The existence of an unsupported non-material reality does not necessitate a divine or intelligent source, as this entity could align with neutral concepts like panpsychism or a fundamental, non-purposeful field.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:01.739261+00:00"
+    },
+    {
+      "id": "991b6c91-660b-4f8d-a9fe-d3af94346e07",
+      "text": "The Multiverse hypothesis, arising from non-validated extensions of eternal inflation and string theory, lacks direct empirical verification and is not accepted as an established scientific consensus by the broader physics community.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1a3e7be5-b7b6-4b6a-9e84-49c4708db1c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:11.875805+00:00"
+    },
+    {
+      "id": "5ba11b92-7764-4066-ba98-f329774e25eb",
+      "text": "Claiming that fine-tuning is statistically expected requires defining the probability distribution of physical constants across the multiverse, a calculation that current theoretical physics cannot perform due to the measure problem.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1a3e7be5-b7b6-4b6a-9e84-49c4708db1c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:11.875840+00:00"
+    },
+    {
+      "id": "546d65d8-c1a6-46db-a9ca-e744f4fb8e39",
+      "text": "Merely knowing that reciprocal altruism was selected does not confer normative justification; behaviors like violent inter-group competition or xenophobia were also fitness-enhancing in ancestral environments, yet modern morality universally condemns them.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bafed875-7472-44ea-8071-1edfd4dbfdbb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:13.218497+00:00"
+    },
+    {
+      "id": "d6b0eef3-214e-424d-87f0-3267d2b8a12a",
+      "text": "Non-naturalistic moral justifications include purely rationalist systems, such as Kant\u2019s Categorical Imperative or Rawls\u2019s contractualism, which derive the \"ought\" from universal reason independent of divine command or evolutionary history.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bafed875-7472-44ea-8071-1edfd4dbfdbb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:13.218523+00:00"
+    },
+    {
+      "id": "e1048011-c6ed-4da1-8047-de728221c738",
+      "text": "A necessary uncaused condition must be non-contingent, yet physical laws like electromagnetism and the strong nuclear force are observational descriptions tied to the contingent initial conditions and specific parameters of this universe.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:16.638962+00:00"
+    },
+    {
+      "id": "485fa139-02f3-4426-a630-a3b7080b1777",
+      "text": "Physics describes the behavior of matter, making physical laws conceptually dependent on the existence of matter, whereas a truly uncaused condition must exist non-derivatively and independently of all physical things.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:16.638990+00:00"
+    },
+    {
+      "id": "a0e24356-10d6-499f-823e-496e6ae65bf0",
+      "text": "Cosmological theories involving multiverse concepts suggest that the fundamental constants and structures of physics are contingent outcomes that vary across different temporal or spatial domains, indicating they are not universally eternal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:16.639002+00:00"
+    },
+    {
+      "id": "38d908db-f71f-414f-b864-30a4a511c04a",
+      "text": "The Universal Declaration of Human Rights and the Geneva Conventions establish universal moral standards outlawing torture and genocide, demonstrating that a normative ideal persists globally despite local breaches.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1c1da76d-916d-4535-b57f-9ea3fb9845fb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:17.143780+00:00"
+    },
+    {
+      "id": "c0415122-acd9-4037-8a56-38c95a4efa3e",
+      "text": "The vast number of bank robberies documented globally does not mean the legal or moral imperative against stealing is merely a conditional social convention, contradicting the necessary existence of universal rules.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1c1da76d-916d-4535-b57f-9ea3fb9845fb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:17.143818+00:00"
+    },
+    {
+      "id": "bd6c4727-5ab8-46a2-9c0e-b7a624646a0e",
+      "text": "Even though individual decay events are unpredictable, the decay rate T 1/2 of large ensembles of atoms follows the precise, time-independent probabilistic laws derived from the Schr\u00f6dinger equation, establishing an efficient cause for the distribution of outcomes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dcf68899-afe4-4b1d-80bd-7326d9a2fb3e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:17.380569+00:00"
+    },
+    {
+      "id": "eeb13714-c065-4ffa-bff6-44fae3681164",
+      "text": "The spontaneous arising of virtual particle pairs is caused by the non-zero energy density of the surrounding quantum fields, known as zero-point energy in Quantum Electrodynamics, meaning the vacuum state itself is the efficient cause.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dcf68899-afe4-4b1d-80bd-7326d9a2fb3e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:17.380594+00:00"
+    },
+    {
+      "id": "1393fffb-9ee8-4409-b689-6b65c699b286",
+      "text": "Neuroscience can identify the neural correlates for perceiving the color red, but a complete physical explanation for why that specific material state generates the subjective feeling (qualia) remains absent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "943ffc80-8504-478b-9745-be592078b6b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:17.738089+00:00"
+    },
+    {
+      "id": "cf2a8f70-44d2-4b3c-9965-d26253407d35",
+      "text": "Functional brain imaging techniques like Diffusion Tensor Imaging (DTI) demonstrate that complex functions, such as memory and language, rely on widely distributed networks and dynamic integration, not isolated, localized brain states.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "943ffc80-8504-478b-9745-be592078b6b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:17.738121+00:00"
+    },
+    {
+      "id": "48edb713-68f0-4e4d-ae0a-01db46bde4ef",
+      "text": "The BOLD signal utilized by fMRI measures energy consumption correlated with neural activity, yet this correlation does not constitute a robust physical theory explaining the causal mechanism between the signal and subjective conscious experience.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "943ffc80-8504-478b-9745-be592078b6b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:17.738133+00:00"
+    },
+    {
+      "id": "0115f9a5-eace-4ada-a95e-44ac9bce6c0d",
+      "text": "Quantum mechanics already involves non-local, non-deterministic influences that challenge the classical understanding of linear efficient causation within spacetime, making the physical limits of causality uncertain.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ce237760-f010-401b-b90f-fbe3ce0a2bb1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.004170+00:00"
+    },
+    {
+      "id": "478547d1-1f0f-4540-aa13-4b637062b6b5",
+      "text": "Aristotle's metaphysics distinguished efficient causation from formal and final causation, demonstrating that a universe's origin could hypothetically be explained by essential source or purpose without requiring a prior temporal event.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ce237760-f010-401b-b90f-fbe3ce0a2bb1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.004221+00:00"
+    },
+    {
+      "id": "b8058dbd-a94f-4225-8a6d-4d6a60349614",
+      "text": "The intense historical yearning for abolition of slavery or for national self-determination, such as in India's independence movement in 1947, targeted definite and achieved political realities, not non-existent physical realities. The desire for freedom and justice, prominent in most human history, also consistently targets achievable changes in the physical world.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eac3eee3-b8b5-4e3b-bc51-14a265195571",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.705317+00:00"
+    },
+    {
+      "id": "554bed61-f583-4499-aae7-e771eede2399",
+      "text": "Intense biological yearnings like the drive for secure social attachment and belonging are not satisfied solely by the quantifiable material substances that resolve physical deficiencies. Harlow's experiments demonstrated that Rhesus monkeys prioritized warm cloth surrogates over wire surrogates that provided only physical sustenance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eac3eee3-b8b5-4e3b-bc51-14a265195571",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.705372+00:00"
+    },
+    {
+      "id": "1e68b2d7-960a-4192-aca5-124d71909dbd",
+      "text": "The existence of gratuitous, intense, and widespread suffering\u2014such as congenital diseases in children or indiscriminate death from natural disasters\u2014is logically incompatible with a being that is simultaneously omnipotent, omniscient, and perfectly moral. A loving and powerful deity would eliminate suffering it knew to be pointless, yet it persists globally.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.705798+00:00"
+    },
+    {
+      "id": "f0703cd3-b289-473e-92b7-d6797641f71e",
+      "text": "Scientific advancements provide continuously expanding naturalistic explanations for phenomena once attributed to divine action, such as the origin of species via evolution and the formation of the universe via physical laws. This process consistently shrinks the so-called \"God of the Gaps,\" demonstrating the explanatory power of materialism over the necessity of a supernatural agent.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.706579+00:00"
+    },
+    {
+      "id": "6e54bf97-351e-4808-ab20-6d839c1ae65c",
+      "text": "If an omnipotent being desired a universal and personal relationship with humankind, the lack of universally clear and non-ambiguous evidence for its presence is inexplicable. The current reality is one of mutually exclusive religious claims and profound philosophical doubt, which is inconsistent with an all-loving deity universally desiring belief.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.707082+00:00"
+    },
+    {
+      "id": "bd982b9d-f9b2-4c98-b3d9-00353d23931f",
+      "text": "Cognitive science of religion explains belief in supernatural agents as a natural byproduct of human cognitive architecture, such as the evolved tendency for hyperactive agency detection. This systematic demonstration of a psychological origin for theological concepts across diverse cultures makes an external, divine explanation for their existence superfluous.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.707511+00:00"
+    },
+    {
+      "id": "15eaa058-2a1f-436d-872f-9841ed1c2f67",
+      "text": "All classical philosophical proofs for the existence of God, including the ontological and cosmological arguments, are undermined by reliance on unwarranted assumptions or logical fallacies like assuming what needs to be proven. Consequently, the burden of proof for the existence of a transcendent being remains fully unmet by purely rational means.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.707974+00:00"
+    },
+    {
+      "id": "8dacc596-9c65-4eaf-b827-c310dcc3c81d",
+      "text": "The Euthyphro dilemma demonstrates that morality is either arbitrary\u2014because God merely wills it\u2014or external to God\u2014because God commands actions that are inherently good. If morality exists independently of the divine will, then God is not the necessary foundation or source of ethics.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:25.708288+00:00"
+    },
+    {
+      "id": "3df93fc4-cc27-4ce9-b8b2-b1285a896bd2",
+      "text": "Classical theological positions, such as those articulated by Augustine and Maimonides, define God's essence as identical to perfect goodness, not merely as an external commander. This definition provides a \"Third Way\" where God's commands are necessary expressions of an immutable nature, bypassing the arbitrary vs. external dichotomy.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8dacc596-9c65-4eaf-b827-c310dcc3c81d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:42.071093+00:00"
+    },
+    {
+      "id": "b9fbaa77-1eab-4e85-a91f-acc0d5f7f9c7",
+      "text": "Even if moral truths are independent of God's volitional choices (the second horn), God can still be the necessary source of ethics by being the ultimate ontological ground for the reality in which those truths subsist. The foundation of existence is not negated by the constraint of necessary goodness.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8dacc596-9c65-4eaf-b827-c310dcc3c81d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:42.071999+00:00"
+    },
+    {
+      "id": "c9777203-bf58-4107-b98b-d98c321b4971",
+      "text": "Neurobiology explains how the human brain processes the visual input of a tree, but that psychological explanation does not make the physical tree nonexistent or its external existence superfluous.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bd982b9d-f9b2-4c98-b3d9-00353d23931f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:42.221199+00:00"
+    },
+    {
+      "id": "920f4a11-fcf8-4cdf-90de-5d5dbcc19938",
+      "text": "Evolutionary mechanisms, such as the visual system, develop to track real external phenomena, even if they are occasionally prone to false positives like optical illusions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bd982b9d-f9b2-4c98-b3d9-00353d23931f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:42.221896+00:00"
+    },
+    {
+      "id": "7d46a23c-072d-4398-9311-94d37764a6aa",
+      "text": "Theistic doctrines maintain that irrefutable evidence nullifies the need for faith, turning a choice of personal relationship into an intellectual certainty incompatible with genuine free will.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6e54bf97-351e-4808-ab20-6d839c1ae65c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:42.453266+00:00"
+    },
+    {
+      "id": "bc3f7561-e1a7-4882-8def-b94a00f381ba",
+      "text": "Many theological positions posit that doubt and the need for moral testing create a \"soul-making\" environment, where character development is prioritized over immediately resolving profound philosophical ambiguity.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6e54bf97-351e-4808-ab20-6d839c1ae65c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:42.453975+00:00"
+    },
+    {
+      "id": "bb82c87e-90da-43d3-8081-f418c536ce23",
+      "text": "Intense suffering, while horrific for limited human observers, can be philosophically necessary for the process of \"soul-making\" or moral development, a purpose which an observer cannot logically judge as pointless.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "1e68b2d7-960a-4192-aca5-124d71909dbd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:43.773764+00:00"
+    },
+    {
+      "id": "4c78bcb8-4c81-4426-b6c4-c5031b1cbd06",
+      "text": "If a deity intervened universally to eliminate non-human suffering like disease or natural disasters, it would negate the systematic and consistent operation of natural laws necessary for a stable, intelligible universe.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "1e68b2d7-960a-4192-aca5-124d71909dbd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:43.774391+00:00"
+    },
+    {
+      "id": "efef5c1b-52c3-42de-a785-9c489368340c",
+      "text": "Physical explanations for the universe and life, like the Lambda-CDM model and evolution, rely on fixed, fine-tuned constants and initial conditions. Scientific success in describing how these natural laws operate does not explain the origin or necessary existence of those specific laws.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f0703cd3-b289-473e-92b7-d6797641f71e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:48.129647+00:00"
+    },
+    {
+      "id": "ffb8eff0-5bb4-4de9-ba50-57a04c39b389",
+      "text": "Major monotheistic traditions define the divine not as an explanation for unknown phenomena but as the continuous ground of being and necessary first cause for the fine-tuned physical laws themselves. Therefore, increased knowledge of natural processes does not diminish the need for a foundational agent.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f0703cd3-b289-473e-92b7-d6797641f71e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:48.130183+00:00"
+    },
+    {
+      "id": "8efbe8ff-a5ff-4945-aa4d-6752ca8b1844",
+      "text": "Philosophers like Alvin Plantinga and William Lane Craig actively defend modernized versions of the Ontological and Kalam Cosmological Arguments as logically sound, asserting that only the necessity of their premises is debatable, not their structure.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "15eaa058-2a1f-436d-872f-9841ed1c2f67",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:49.373170+00:00"
+    },
+    {
+      "id": "cee1f47c-ee89-4954-b879-b9671b652b94",
+      "text": "Acting morally requires believing that virtue will ultimately be rewarded with happiness (the Summum Bonum). Since the natural world does not guarantee this ultimate justice, rational moral action necessitates the existence of God to ensure the final realization of the highest good.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "15eaa058-2a1f-436d-872f-9841ed1c2f67",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:49.373735+00:00"
+    },
+    {
+      "id": "9e951ef0-bbc6-4a71-8e67-0a8c1bee7693",
+      "text": "Many historical Christian theological doctrines emphasize that belief holds greater merit when made without irrefutable physical proof, contrasting the faith of those who saw signs with the faith of those who did not.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7d46a23c-072d-4398-9311-94d37764a6aa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:55.715512+00:00"
+    },
+    {
+      "id": "df0568f6-89be-4e99-9987-f24e92b0274d",
+      "text": "Intellectual certainty does not eliminate free will, as a person retaining full knowledge still chooses how to act based on that certainty, similar to someone choosing whether or not to obey a known physical law like gravity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7d46a23c-072d-4398-9311-94d37764a6aa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:55.715563+00:00"
+    },
+    {
+      "id": "e6c01378-b631-4c78-8917-9b9fb5c56dc4",
+      "text": "Establishing an ontological ground for existence, such as spatio-temporal reality, does not demonstrate an inherent connection to the content of normativity, creating an unjustified logical leap between the ground of \"is\" and the source of \"ought.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b9fbaa77-1eab-4e85-a91f-acc0d5f7f9c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:56.570731+00:00"
+    },
+    {
+      "id": "54311868-061d-4b26-bedd-7db87b852802",
+      "text": "If moral truths are independent and necessarily true, like mathematical or logical equations, their source is derived from their logical necessity, regardless of, and prior to, the existence of the ontological reality in which they are instantiated.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b9fbaa77-1eab-4e85-a91f-acc0d5f7f9c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:56.570761+00:00"
+    },
+    {
+      "id": "5f8d4933-fc79-4c00-b062-37014f1b11db",
+      "text": "Defining the divine as a \"necessary first cause\" merely asserts its necessity; it does not logically prove that such an agent is objectively required or undiminished by counter-evidence.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ffb8eff0-5bb4-4de9-ba50-57a04c39b389",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:59.398186+00:00"
+    },
+    {
+      "id": "b620938c-6af5-4d83-8081-e8ba443e9e68",
+      "text": "Theoretical physics, through models like the multiverse hypothesis, posits mechanisms (e.g., physical law selection) that explain cosmological fine-tuning without invoking a conscious external foundational agent.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ffb8eff0-5bb4-4de9-ba50-57a04c39b389",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:59.398214+00:00"
+    },
+    {
+      "id": "f68989b7-63eb-4ff8-ba66-2aba1a7d370b",
+      "text": "Highly advanced human technologies like gene editing (CRISPR) locally alter the outcome of biological processes, such as eliminating disease susceptibility, without suspending the fundamental laws of chemistry and physics. Divine intervention could similarly manipulate natural systems through non-law-breaking, ultra-sophisticated means.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4c78bcb8-4c81-4426-b6c4-c5031b1cbd06",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:59.439620+00:00"
+    },
+    {
+      "id": "6b051059-a5f9-4582-b05d-411f8b646d47",
+      "text": "The local elimination of suffering on a single planet, such as preventing a specific tsunami or curing a local disease, constitutes a negligible physical change set against the scale and stability of universal constants and galactic motions. This localized intervention would not negate the systematic operation of natural laws across the entire cosmos.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4c78bcb8-4c81-4426-b6c4-c5031b1cbd06",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:59.439648+00:00"
+    },
+    {
+      "id": "6084b2b0-b80a-4447-a99b-db093c285007",
+      "text": "Severe, intense suffering, such as prolonged trauma or exposure to conflict, frequently precipitates moral injury and PTSD, leading to degradation of empathy and compassion rather than necessary moral development.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bb82c87e-90da-43d3-8081-f418c536ce23",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:59.860027+00:00"
+    },
+    {
+      "id": "a81612d3-6a22-4e80-89e5-b8cd0aaa9978",
+      "text": "The principle of proportionality used in international law, like jus in bello, illustrates that means (force) can be logically judged excessive and pointless relative to the end (military objective), even when the objective is necessary.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bb82c87e-90da-43d3-8081-f418c536ce23",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:42:59.860056+00:00"
+    },
+    {
+      "id": "35523f87-50b2-4895-a1aa-a5e818a7af0b",
+      "text": "Moral philosophy, such as Immanuel Kant's deontology, proposes that good actions are rational obligations that derive their value purely from duty, independent of any anticipated reward of ultimate divine happiness.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cee1f47c-ee89-4954-b879-b9671b652b94",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:05.725166+00:00"
+    },
+    {
+      "id": "8321c020-c711-48a1-b7e3-d8610862e4cb",
+      "text": "Many non-theistic philosophical systems, including Stoicism and certain schools of Daoism, describe an impersonal cosmic order that ensures systemic balance and moral consequence, independent of a personal rewarding deity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cee1f47c-ee89-4954-b879-b9671b652b94",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:05.725196+00:00"
+    },
+    {
+      "id": "25af5e9d-f9c7-4a76-b3f2-d3c98e54d7a8",
+      "text": "Scientific models, including the Standard Model and evolution, succeed by providing mathematically coherent descriptions and verifiable predictions of observable phenomena, a function distinct from philosophical inquiries into ontological necessities.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "efef5c1b-52c3-42de-a785-9c489368340c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:07.538879+00:00"
+    },
+    {
+      "id": "f7f4cbd1-b947-4702-aaf1-df193a4bda56",
+      "text": "Ongoing research in particle physics and cosmology, such as efforts to unify gravity and quantum mechanics, actively seeks to derive fundamental constants from a single underlying theory rather than treating them as merely arbitrary input values.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "efef5c1b-52c3-42de-a785-9c489368340c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:07.538933+00:00"
+    },
+    {
+      "id": "e190513f-930f-4041-b6a7-afe0c197f734",
+      "text": "Existence is not a definable property that can be included in the concept of supreme perfection. Determining if a supreme being exists is a matter of reality, not adding defining characteristics to its definition.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8efbe8ff-a5ff-4945-aa4d-6752ca8b1844",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:16.694270+00:00"
+    },
+    {
+      "id": "74dd5c7f-27d8-4a6b-b211-0aa7ac31cddb",
+      "text": "Quantum mechanics describes naturally occurring vacuum fluctuations and particle creation events that appear uncaused, directly challenging the certainty and universal applicability of the Kalam argument's major premise.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8efbe8ff-a5ff-4945-aa4d-6752ca8b1844",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:16.694300+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 5,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:41:44.443028+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:41:44.443028+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "fa613289-c6ec-4019-8aa3-959ed9c4f244",
+      "target": "1c1da76d-916d-4535-b57f-9ea3fb9845fb",
+      "type": "objection"
+    },
+    {
+      "source": "fa613289-c6ec-4019-8aa3-959ed9c4f244",
+      "target": "bafed875-7472-44ea-8071-1edfd4dbfdbb",
+      "type": "objection"
+    },
+    {
+      "source": "dca672c1-9d13-4b2a-975a-4a87674ad83d",
+      "target": "1a3e7be5-b7b6-4b6a-9e84-49c4708db1c7",
+      "type": "objection"
+    },
+    {
+      "source": "dca672c1-9d13-4b2a-975a-4a87674ad83d",
+      "target": "8f38996e-b13b-4364-bb21-a8a5415bec0d",
+      "type": "objection"
+    },
+    {
+      "source": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "target": "ce237760-f010-401b-b90f-fbe3ce0a2bb1",
+      "type": "objection"
+    },
+    {
+      "source": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "target": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "type": "objection"
+    },
+    {
+      "source": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "target": "dcf68899-afe4-4b1d-80bd-7326d9a2fb3e",
+      "type": "objection"
+    },
+    {
+      "source": "9f728bbf-36c5-40f3-9701-0cc5714bcd19",
+      "target": "eac3eee3-b8b5-4e3b-bc51-14a265195571",
+      "type": "objection"
+    },
+    {
+      "source": "9f728bbf-36c5-40f3-9701-0cc5714bcd19",
+      "target": "1cb01ff6-64c8-424d-a4ef-6c0df7a0c0e6",
+      "type": "objection"
+    },
+    {
+      "source": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "target": "943ffc80-8504-478b-9745-be592078b6b9",
+      "type": "objection"
+    },
+    {
+      "source": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "target": "5a5bfd8d-7139-428d-b88e-f36360bc2e6c",
+      "type": "objection"
+    },
+    {
+      "source": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "target": "5fbfa86a-0076-4694-a2c6-9ab9e79b1a22",
+      "type": "objection"
+    },
+    {
+      "source": "1a3e7be5-b7b6-4b6a-9e84-49c4708db1c7",
+      "target": "991b6c91-660b-4f8d-a9fe-d3af94346e07",
+      "type": "response"
+    },
+    {
+      "source": "1a3e7be5-b7b6-4b6a-9e84-49c4708db1c7",
+      "target": "5ba11b92-7764-4066-ba98-f329774e25eb",
+      "type": "response"
+    },
+    {
+      "source": "bafed875-7472-44ea-8071-1edfd4dbfdbb",
+      "target": "546d65d8-c1a6-46db-a9ca-e744f4fb8e39",
+      "type": "response"
+    },
+    {
+      "source": "bafed875-7472-44ea-8071-1edfd4dbfdbb",
+      "target": "d6b0eef3-214e-424d-87f0-3267d2b8a12a",
+      "type": "response"
+    },
+    {
+      "source": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "target": "e1048011-c6ed-4da1-8047-de728221c738",
+      "type": "response"
+    },
+    {
+      "source": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "target": "485fa139-02f3-4426-a630-a3b7080b1777",
+      "type": "response"
+    },
+    {
+      "source": "3e0da785-1fff-4861-8fe1-e1eb6decadfe",
+      "target": "a0e24356-10d6-499f-823e-496e6ae65bf0",
+      "type": "response"
+    },
+    {
+      "source": "1c1da76d-916d-4535-b57f-9ea3fb9845fb",
+      "target": "38d908db-f71f-414f-b864-30a4a511c04a",
+      "type": "response"
+    },
+    {
+      "source": "1c1da76d-916d-4535-b57f-9ea3fb9845fb",
+      "target": "c0415122-acd9-4037-8a56-38c95a4efa3e",
+      "type": "response"
+    },
+    {
+      "source": "dcf68899-afe4-4b1d-80bd-7326d9a2fb3e",
+      "target": "bd6c4727-5ab8-46a2-9c0e-b7a624646a0e",
+      "type": "response"
+    },
+    {
+      "source": "dcf68899-afe4-4b1d-80bd-7326d9a2fb3e",
+      "target": "eeb13714-c065-4ffa-bff6-44fae3681164",
+      "type": "response"
+    },
+    {
+      "source": "943ffc80-8504-478b-9745-be592078b6b9",
+      "target": "1393fffb-9ee8-4409-b689-6b65c699b286",
+      "type": "response"
+    },
+    {
+      "source": "943ffc80-8504-478b-9745-be592078b6b9",
+      "target": "cf2a8f70-44d2-4b3c-9965-d26253407d35",
+      "type": "response"
+    },
+    {
+      "source": "943ffc80-8504-478b-9745-be592078b6b9",
+      "target": "48edb713-68f0-4e4d-ae0a-01db46bde4ef",
+      "type": "response"
+    },
+    {
+      "source": "ce237760-f010-401b-b90f-fbe3ce0a2bb1",
+      "target": "0115f9a5-eace-4ada-a95e-44ac9bce6c0d",
+      "type": "response"
+    },
+    {
+      "source": "ce237760-f010-401b-b90f-fbe3ce0a2bb1",
+      "target": "478547d1-1f0f-4540-aa13-4b637062b6b5",
+      "type": "response"
+    },
+    {
+      "source": "eac3eee3-b8b5-4e3b-bc51-14a265195571",
+      "target": "b8058dbd-a94f-4225-8a6d-4d6a60349614",
+      "type": "response"
+    },
+    {
+      "source": "eac3eee3-b8b5-4e3b-bc51-14a265195571",
+      "target": "554bed61-f583-4499-aae7-e771eede2399",
+      "type": "response"
+    },
+    {
+      "source": "8dacc596-9c65-4eaf-b827-c310dcc3c81d",
+      "target": "3df93fc4-cc27-4ce9-b8b2-b1285a896bd2",
+      "type": "objection"
+    },
+    {
+      "source": "8dacc596-9c65-4eaf-b827-c310dcc3c81d",
+      "target": "b9fbaa77-1eab-4e85-a91f-acc0d5f7f9c7",
+      "type": "objection"
+    },
+    {
+      "source": "bd982b9d-f9b2-4c98-b3d9-00353d23931f",
+      "target": "c9777203-bf58-4107-b98b-d98c321b4971",
+      "type": "objection"
+    },
+    {
+      "source": "bd982b9d-f9b2-4c98-b3d9-00353d23931f",
+      "target": "920f4a11-fcf8-4cdf-90de-5d5dbcc19938",
+      "type": "objection"
+    },
+    {
+      "source": "6e54bf97-351e-4808-ab20-6d839c1ae65c",
+      "target": "7d46a23c-072d-4398-9311-94d37764a6aa",
+      "type": "objection"
+    },
+    {
+      "source": "6e54bf97-351e-4808-ab20-6d839c1ae65c",
+      "target": "bc3f7561-e1a7-4882-8def-b94a00f381ba",
+      "type": "objection"
+    },
+    {
+      "source": "1e68b2d7-960a-4192-aca5-124d71909dbd",
+      "target": "bb82c87e-90da-43d3-8081-f418c536ce23",
+      "type": "objection"
+    },
+    {
+      "source": "1e68b2d7-960a-4192-aca5-124d71909dbd",
+      "target": "4c78bcb8-4c81-4426-b6c4-c5031b1cbd06",
+      "type": "objection"
+    },
+    {
+      "source": "f0703cd3-b289-473e-92b7-d6797641f71e",
+      "target": "efef5c1b-52c3-42de-a785-9c489368340c",
+      "type": "objection"
+    },
+    {
+      "source": "f0703cd3-b289-473e-92b7-d6797641f71e",
+      "target": "ffb8eff0-5bb4-4de9-ba50-57a04c39b389",
+      "type": "objection"
+    },
+    {
+      "source": "15eaa058-2a1f-436d-872f-9841ed1c2f67",
+      "target": "8efbe8ff-a5ff-4945-aa4d-6752ca8b1844",
+      "type": "objection"
+    },
+    {
+      "source": "15eaa058-2a1f-436d-872f-9841ed1c2f67",
+      "target": "cee1f47c-ee89-4954-b879-b9671b652b94",
+      "type": "objection"
+    },
+    {
+      "source": "7d46a23c-072d-4398-9311-94d37764a6aa",
+      "target": "9e951ef0-bbc6-4a71-8e67-0a8c1bee7693",
+      "type": "response"
+    },
+    {
+      "source": "7d46a23c-072d-4398-9311-94d37764a6aa",
+      "target": "df0568f6-89be-4e99-9987-f24e92b0274d",
+      "type": "response"
+    },
+    {
+      "source": "b9fbaa77-1eab-4e85-a91f-acc0d5f7f9c7",
+      "target": "e6c01378-b631-4c78-8917-9b9fb5c56dc4",
+      "type": "response"
+    },
+    {
+      "source": "b9fbaa77-1eab-4e85-a91f-acc0d5f7f9c7",
+      "target": "54311868-061d-4b26-bedd-7db87b852802",
+      "type": "response"
+    },
+    {
+      "source": "ffb8eff0-5bb4-4de9-ba50-57a04c39b389",
+      "target": "5f8d4933-fc79-4c00-b062-37014f1b11db",
+      "type": "response"
+    },
+    {
+      "source": "ffb8eff0-5bb4-4de9-ba50-57a04c39b389",
+      "target": "b620938c-6af5-4d83-8081-e8ba443e9e68",
+      "type": "response"
+    },
+    {
+      "source": "4c78bcb8-4c81-4426-b6c4-c5031b1cbd06",
+      "target": "f68989b7-63eb-4ff8-ba66-2aba1a7d370b",
+      "type": "response"
+    },
+    {
+      "source": "4c78bcb8-4c81-4426-b6c4-c5031b1cbd06",
+      "target": "6b051059-a5f9-4582-b05d-411f8b646d47",
+      "type": "response"
+    },
+    {
+      "source": "bb82c87e-90da-43d3-8081-f418c536ce23",
+      "target": "6084b2b0-b80a-4447-a99b-db093c285007",
+      "type": "response"
+    },
+    {
+      "source": "bb82c87e-90da-43d3-8081-f418c536ce23",
+      "target": "a81612d3-6a22-4e80-89e5-b8cd0aaa9978",
+      "type": "response"
+    },
+    {
+      "source": "cee1f47c-ee89-4954-b879-b9671b652b94",
+      "target": "35523f87-50b2-4895-a1aa-a5e818a7af0b",
+      "type": "response"
+    },
+    {
+      "source": "cee1f47c-ee89-4954-b879-b9671b652b94",
+      "target": "8321c020-c711-48a1-b7e3-d8610862e4cb",
+      "type": "response"
+    },
+    {
+      "source": "efef5c1b-52c3-42de-a785-9c489368340c",
+      "target": "25af5e9d-f9c7-4a76-b3f2-d3c98e54d7a8",
+      "type": "response"
+    },
+    {
+      "source": "efef5c1b-52c3-42de-a785-9c489368340c",
+      "target": "f7f4cbd1-b947-4702-aaf1-df193a4bda56",
+      "type": "response"
+    },
+    {
+      "source": "8efbe8ff-a5ff-4945-aa4d-6752ca8b1844",
+      "target": "e190513f-930f-4041-b6a7-afe0c197f734",
+      "type": "response"
+    },
+    {
+      "source": "8efbe8ff-a5ff-4945-aa4d-6752ca8b1844",
+      "target": "74dd5c7f-27d8-4a6b-b211-0aa7ac31cddb",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "edd2a558-5152-46d8-9167-0b9fbe7b8ad5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "dca672c1-9d13-4b2a-975a-4a87674ad83d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "fa613289-c6ec-4019-8aa3-959ed9c4f244",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9f728bbf-36c5-40f3-9701-0cc5714bcd19",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "57c63c3e-22c7-40e2-917b-5937143a3d91",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "1e68b2d7-960a-4192-aca5-124d71909dbd",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "f0703cd3-b289-473e-92b7-d6797641f71e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6e54bf97-351e-4808-ab20-6d839c1ae65c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "bd982b9d-f9b2-4c98-b3d9-00353d23931f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "15eaa058-2a1f-436d-872f-9841ed1c2f67",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "8dacc596-9c65-4eaf-b827-c310dcc3c81d",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

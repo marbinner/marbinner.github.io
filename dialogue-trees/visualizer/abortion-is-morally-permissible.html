@@ -1,0 +1,3484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abortion is morally permissible - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Abortion is morally permissible</h1>
+        <div class="meta">
+            6 arguments for • 5 arguments against •
+            118 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/abortion-is-morally-permissible.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">118</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">5</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "d836ee78-f25e-497c-9415-e94ec9daa8d2",
+      "text": "Moral permissibility stems from the fundamental ethical right to bodily autonomy, which grants every person control over their own medical decisions and physical integrity. This principle dictates that no individual can be morally compelled to use their body, including donating tissues or sustaining a pregnancy, to save another's life.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:30.542892+00:00"
+    },
+    {
+      "id": "4f2badd7-ebe8-410a-9c2c-46b38909695f",
+      "text": "A fetus, especially in the early stages, lacks the necessary neurological development for consciousness, sentience, or self-awareness required to possess the moral standing or rights of a person. Standard moral and medical ethics only grant full personhood status to individuals capable of experiencing pain and conceptualizing their own existence.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:30.543613+00:00"
+    },
+    {
+      "id": "9cf78b92-9799-4c2c-bac5-56765c8d905d",
+      "text": "Rationally permitting abortion drastically reduces severe personal and societal harm by preventing unsafe procedures, which the World Health Organization identifies as a leading cause of preventable maternal death globally. Legal access minimizes the documented negative outcomes associated with forced, unwanted pregnancy and birth, including increased poverty for the mother and reduced resources for existing children.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "World Health Organization"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:30.544127+00:00"
+    },
+    {
+      "id": "6ea55dca-1695-4a06-a9bd-280f443f55bb",
+      "text": "Abortion is morally permissible, and often necessary, because it is the only viable medical intervention to protect the life or prevent serious, irreversible physical harm to the pregnant person. Medically necessary abortions, such as those performed for ectopic pregnancies, aggressive cancers, or severe preeclampsia, are standard procedures required to uphold the fundamental principle of preserving the existing patient's life.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:30.544569+00:00"
+    },
+    {
+      "id": "0c49d4d1-3627-4e73-bdfd-a355d55e9b3a",
+      "text": "Restricting access to abortion violates equal protection and social justice principles, as bans disproportionately impact low-income women and women of color by creating financial and geographic barriers to care. This structurally embeds systemic inequality by compounding financial hardship, poorer health outcomes, and limited educational opportunities for already marginalized populations.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:30.545233+00:00"
+    },
+    {
+      "id": "d6117ad0-07fa-48b8-8eef-5dc7d12c5bc2",
+      "text": "The ability for individuals to reliably control their reproductive timing and family size promotes greater economic stability and improved educational attainment for the mother. OECD data confirms that effective access to reproductive health services is strongly correlated with higher female labor force participation and reduced rates of intergenerational child poverty.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "OECD"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:30.545687+00:00"
+    },
+    {
+      "id": "4832e575-321a-495d-b598-d33bbd8473dc",
+      "text": "The strong correlation cited might reflect reverse causality, where existing economic stability and higher educational attainment predispose women to utilize reproductive planning resources, rather than the access causing the stability. For instance, wealthier nations generally have lower birth rates irrespective of specialized reproductive health access programs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d6117ad0-07fa-48b8-8eef-5dc7d12c5bc2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:41.478361+00:00"
+    },
+    {
+      "id": "a499a241-4663-4de8-b608-547143b612a7",
+      "text": "Access to reproductive health services is necessary but insufficient; the primary policy drivers for maternal economic stability are structural supports like subsidized universal childcare and legally enforced equal pay, exemplified by the high female labor force participation in Nordic countries.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d6117ad0-07fa-48b8-8eef-5dc7d12c5bc2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:41.479396+00:00"
+    },
+    {
+      "id": "dfde5e48-4da6-46cb-b2b3-f9ec3a5b7fb1",
+      "text": "Comprehensive public health initiatives, maternal care improvements, and widespread contraception availability, as demonstrated by the sharp reduction of maternal mortality in Chile since the 1960s despite strict anti-abortion laws, are the primary drivers for reducing maternal death, independent of abortion legality.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9cf78b92-9799-4c2c-bac5-56765c8d905d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:50.118537+00:00"
+    },
+    {
+      "id": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "text": "The documented socioeconomic disadvantages of unwanted births, such as increased poverty, are effectively mitigated by robust social welfare systems, including the universal child benefits and parental leave common in Nordic countries, making abortion an unnecessary tool for poverty reduction.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9cf78b92-9799-4c2c-bac5-56765c8d905d",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:50.119142+00:00"
+    },
+    {
+      "id": "13b7dbe1-27ae-4b9e-9a07-70c6a227f5af",
+      "text": "Laws in countries like France (Code P\u00e9nal, Article 223-6) and Germany (Strafgesetzbuch, \u00a7 323c) legally punish citizens for failing to offer aid when a person is in grave danger, demonstrating that society mandates minimal personal action to save a life. This shows that bodily autonomy is not absolute and is routinely balanced against a minimal duty to rescue when the cost of aid is low.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d836ee78-f25e-497c-9415-e94ec9daa8d2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:50.589140+00:00"
+    },
+    {
+      "id": "62af771b-1cfc-4ed7-81e3-fe8e00f48611",
+      "text": "Public health laws, such as those mandating quarantine or compulsory smallpox vaccination in the early 20th century, directly restrict physical integrity and movement for the collective good. This proves that societies consistently limit individual control over their bodies and medical decisions when necessary to prevent severe harm to others.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d836ee78-f25e-497c-9415-e94ec9daa8d2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:50.589690+00:00"
+    },
+    {
+      "id": "bb0e0955-5230-4af7-85fb-9119976b28a5",
+      "text": "Over 90% of abortions in the United States are performed for social or financial reasons and not due to immediate, severe threats to the mother's life from conditions like cancer or severe preeclampsia. This factual distribution shows the justification based on unique life-saving necessity applies only to a small minority of procedures.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6ea55dca-1695-4a06-a9bd-280f443f55bb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:52.449228+00:00"
+    },
+    {
+      "id": "7aa80fd4-7093-4cfa-87f1-aeb09d9a658e",
+      "text": "For critical medical events like severe preeclampsia or internal hemorrhage, the necessary life-saving intervention is often an emergency early delivery via C-section or induction. This medical practice demonstrates that abortion is routinely not the sole viable intervention to preserve the existing patient's life.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6ea55dca-1695-4a06-a9bd-280f443f55bb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:52.449763+00:00"
+    },
+    {
+      "id": "101a80b5-7ce1-4c19-a227-0b470f6a5cc5",
+      "text": "The Nordic model's success relies heavily on decades of extensive, months-long paid parental leave and high union density, meaning subsidized childcare and equal pay enforcement are not the exclusive primary drivers of maternal stability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a499a241-4663-4de8-b608-547143b612a7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:53.807622+00:00"
+    },
+    {
+      "id": "d5e89b29-f47a-474e-b9a0-5d2ba59ef390",
+      "text": "Maternal economic stability fundamentally depends on non-workplace transfer payments like robust child allowances and unemployment benefits, which are entirely distinct from the two structural mechanisms named.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a499a241-4663-4de8-b608-547143b612a7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:28:53.808381+00:00"
+    },
+    {
+      "id": "823df875-6e4d-484e-b66b-d525c1c26bfb",
+      "text": "Standard U.S. and European legal systems grant full protection and personhood rights to patients in a persistent vegetative state, who demonstrably lack both self-awareness and self-conceptualization. This demonstrates that these capacities are not necessary preconditions for full moral standing under current jurisprudence.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4f2badd7-ebe8-410a-9c2c-46b38909695f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:00.867231+00:00"
+    },
+    {
+      "id": "6d11b542-c47e-473e-b16f-cbe925080b43",
+      "text": "Newborn infants possess full personhood rights despite not having the developed neurological capacity for self-awareness or conceptual thought, a status confirmed by established pediatric medical ethics. The legal system often grants rights based on species membership or potentiality, not solely on the current performance of mature cognitive functions.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4f2badd7-ebe8-410a-9c2c-46b38909695f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:00.867697+00:00"
+    },
+    {
+      "id": "78ceee98-92c4-43a2-b670-2a3f07feca3a",
+      "text": "Laws and judicial interpretations in numerous US states and countries like Poland prioritize the potential personhood and fundamental right to life of the fetus, asserting that this right is the preeminent protection principle regardless of any resulting socio-economic disparities for the mother.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0c49d4d1-3627-4e73-bdfd-a355d55e9b3a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:01.594658+00:00"
+    },
+    {
+      "id": "57892db1-47ca-4cb9-800c-59998f66220f",
+      "text": "Persistent systemic inequality, such as inadequate maternal healthcare, lack of universal childcare, and stagnant wages in the US, remains the primary cause of poor outcomes for marginalized women, meaning lifting abortion restrictions offers only a partial intervention without addressing these deeper root causes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0c49d4d1-3627-4e73-bdfd-a355d55e9b3a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:01.595381+00:00"
+    },
+    {
+      "id": "8a46026d-7a81-4f09-aedf-42bb60cc354b",
+      "text": "The universal availability of high-quality, heavily subsidized childcare\u2014often capped at a small percentage of income\u2014is the necessary prerequisite for continuous maternal workforce stability once the temporary parental leave period ends. Without this permanent infrastructure, the temporary benefit of parental leave does not translate into long-term career security.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "101a80b5-7ce1-4c19-a227-0b470f6a5cc5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:06.899630+00:00"
+    },
+    {
+      "id": "a8a781d5-e0b4-4ba8-a537-af44d1d7fbb8",
+      "text": "Societies do not impose mandatory bodily restrictions for widespread, chronic collective harm, such as compulsory weight loss surgery or forced abstention from smoking, even though obesity and tobacco use severely strain public healthcare systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "62af771b-1cfc-4ed7-81e3-fe8e00f48611",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:07.855677+00:00"
+    },
+    {
+      "id": "0fe979f2-2252-4f70-b79e-2f3598dd4804",
+      "text": "Modern public health policy manages serious transmissible threats like HIV or seasonal influenza primarily through voluntary measures and education, demonstrating that the threshold for compulsory bodily intervention is rarely met outside of catastrophic historical diseases like smallpox.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "62af771b-1cfc-4ed7-81e3-fe8e00f48611",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:07.856611+00:00"
+    },
+    {
+      "id": "4a0eb5c0-5115-4660-b4ab-ba5b01cf17a4",
+      "text": "In the United States, which lacks universal benefits and comprehensive parental leave, the cost of raising an unwanted child frequently drives families into poverty, thus robust welfare systems are not universally available to mitigate this specific risk.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:13.263427+00:00"
+    },
+    {
+      "id": "ef16f434-7905-45b2-9c63-c94dfc6b011d",
+      "text": "The lifting of the comprehensive abortion ban in Romania after 1989 demonstrated long-term negative psychological and social impacts on families forced to carry pregnancies to term under Decree 770, proving financial mitigation is insufficient to address non-pecuniary harms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:13.264009+00:00"
+    },
+    {
+      "id": "28ea587a-bc7b-46f3-87f8-1a60a18d5831",
+      "text": "Abortion is a necessary medical intervention for preserving maternal life and health in cases like ectopic pregnancies or uterine cancers, which are critical justifications distinct from socioeconomic concerns and poverty reduction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:13.264346+00:00"
+    },
+    {
+      "id": "985a40ac-09c8-47a0-b7ed-b4510382b8e9",
+      "text": "The Czech Republic and Romania experienced sharp reductions in overall maternal mortality in the early 1990s following the legalization of abortion, proving legality is a significant factor in many nations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dfde5e48-4da6-46cb-b2b3-f9ec3a5b7fb1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:13.265479+00:00"
+    },
+    {
+      "id": "4a56fa02-cbd1-4477-b5d4-8ade5894726f",
+      "text": "In the United States, unsafe abortions historically accounted for up to 20% of pregnancy-related maternal deaths, demonstrating that eliminating illegal procedures through legalization is a primary and immediate driver.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dfde5e48-4da6-46cb-b2b3-f9ec3a5b7fb1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:13.265951+00:00"
+    },
+    {
+      "id": "29be7a7d-60cf-4a5a-8694-1ffa1f3b16ba",
+      "text": "In Norway and Denmark, overall maternal economic stability relies primarily on high labor force participation rates, often exceeding 75%, leading to higher earned income. This earned income, supplemented by but not fundamentally replaced by robust child allowances, is the main source of long-term economic security.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d5e89b29-f47a-474e-b9a0-5d2ba59ef390",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:14.993311+00:00"
+    },
+    {
+      "id": "b96dfcad-93d2-49ed-a611-647abede2dd0",
+      "text": "The Earned Income Tax Credit (EITC) in the United States and mandatory paid family leave in Germany directly link earned income to transfer payments, proving stability mechanisms are not \"entirely distinct.\" These integrated income and support policies create economic security by offsetting work expenses or replacing wages.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d5e89b29-f47a-474e-b9a0-5d2ba59ef390",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:14.993341+00:00"
+    },
+    {
+      "id": "6f9cc385-98e9-4b22-9b3a-860b4bebd9e7",
+      "text": "In pre-viability emergencies like severe preterm premature rupture of membranes (PPROM) or septic abortion before 24 weeks, the required life-saving intervention is uterine evacuation, which medical bodies define as an abortion. Due to the fetus's non-viability, early delivery is medically impossible to achieve a favorable outcome.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7aa80fd4-7093-4cfa-87f1-aeb09d9a658e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:15.654703+00:00"
+    },
+    {
+      "id": "d2f6b6c8-2cc4-4c9d-ba89-fc0107e8b4fa",
+      "text": "The American College of Obstetricians and Gynecologists (ACOG) classifies any procedure required to end a non-viable pregnancy before 20 weeks, even via C-section or induction, as an induced abortion. The intervention is solely intended to stop the life-threatening maternal condition, not to save the fetus.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7aa80fd4-7093-4cfa-87f1-aeb09d9a658e",
+      "children_count": 1,
+      "references": [
+        "American College of Obstetricians and Gynecologists"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:15.655244+00:00"
+    },
+    {
+      "id": "44a14852-d048-44b4-b325-a02b6fdcbf9d",
+      "text": "The legal allowance for discontinuing life support toward PVS patients, upheld in jurisdictions like the U.S. and UK, proves they do not possess the same \"full personhood rights\" as fully conscious individuals whose lives cannot generally be ended by others.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "823df875-6e4d-484e-b66b-d525c1c26bfb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:16.040288+00:00"
+    },
+    {
+      "id": "0c8f51f8-1059-4b3d-8367-294aed8507b6",
+      "text": "Legal protection for patients in a vegetative state stems from the principle of inherent human dignity and the recognition of past personhood, rather than an active legal confirmation that their current lack of capacities confers full moral standing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "823df875-6e4d-484e-b66b-d525c1c26bfb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:16.041050+00:00"
+    },
+    {
+      "id": "b17c4a13-7929-4020-9c0c-2db6a80b3094",
+      "text": "The high percentage of procedures performed for non-emergency reasons does not invalidate them, as patient autonomy is the primary justification for most major medical decisions. US legal precedent, such as the 1990 Cruzan case, affirms the right to refuse life-sustaining medical treatment based on personal quality-of-life considerations, not just immediate necessity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bb0e0955-5230-4af7-85fb-9119976b28a5",
+      "children_count": 2,
+      "references": [
+        "Cruzan v. Director, Missouri Department of Health (1990)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:17.576020+00:00"
+    },
+    {
+      "id": "65d6ed7a-481a-4655-bc03-d5ad65d8c5dd",
+      "text": "The category of justifications is incomplete, as many abortions are performed due to significant medical conditions that are not immediately life-threatening. These common reasons include diagnoses of severe and non-viable fetal anomalies like anencephaly or trisomy 18, which are health-related but not \"social or financial.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bb0e0955-5230-4af7-85fb-9119976b28a5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:17.576814+00:00"
+    },
+    {
+      "id": "914f1829-07ae-46e2-a81a-60a4354f23fd",
+      "text": "Restrictive laws in US states and Poland explicitly maintain exceptions for terminating a pregnancy when the mother's life is in danger, demonstrating that the mother's right to survival remains the highest legal priority, not the fetal right.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "78ceee98-92c4-43a2-b670-2a3f07feca3a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:19.616321+00:00"
+    },
+    {
+      "id": "1b446573-1b26-41c2-b0de-dde1845cca21",
+      "text": "Maternal mortality rates in restrictive US states like Mississippi and Louisiana are significantly higher than the national average, showing that prioritizing fetal life legally exacerbates severe, measurable public health and socio-economic consequences for the mother.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "78ceee98-92c4-43a2-b670-2a3f07feca3a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:19.617202+00:00"
+    },
+    {
+      "id": "1da624b6-4c6a-4c88-8ec2-847c4b99ef02",
+      "text": "Pediatric medical ethics establish a duty of care to vulnerable patients, but this is a standard clinical obligation and not a legal grant of full personhood status. Hospitals apply similar maximal care duties to brain-dead patients whose life support is maintained for organ donation purposes, yet these individuals are legally deceased and lack full personhood.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6d11b542-c47e-473e-b16f-cbe925080b43",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:20.092228+00:00"
+    },
+    {
+      "id": "fb75fee2-1a65-4c14-ad47-fd3cb9c99e1d",
+      "text": "The legal system grants limited rights based on potentiality, not automatic full personhood. Minors in jurisdictions like the United States possess a constitutional right to life, but are systematically denied key rights like voting, signing binding contracts, or joining the military until they achieve cognitive maturity at 18.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6d11b542-c47e-473e-b16f-cbe925080b43",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:20.092968+00:00"
+    },
+    {
+      "id": "6e45a36c-e2cf-49f5-83ab-4a56798638c4",
+      "text": "Abortion was legalized in Czechoslovakia in 1957, decades before the 1990s mortality drop, meaning the reduction is more accurately linked to improvements in overall healthcare quality and reporting following the post-communist transition, not new legalization.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "985a40ac-09c8-47a0-b7ed-b4510382b8e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:25.804883+00:00"
+    },
+    {
+      "id": "86b9f866-5f17-48d7-9873-f6f03ef67b48",
+      "text": "Drawing a general conclusion from only two post-communist states involves a hasty generalization, as the dramatic effect in Romania followed the immediate repeal of Nicolae Ceau\u015fescu's 1966 ban, a unique return from extreme state control.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "985a40ac-09c8-47a0-b7ed-b4510382b8e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:25.804940+00:00"
+    },
+    {
+      "id": "ec6698a5-6ad7-44b8-975d-aafbffd2a84e",
+      "text": "Mandatory childhood vaccinations for diseases like Polio and Measles are a standard prerequisite for school enrollment across the United States and France, demonstrating routine compulsory bodily intervention outside of catastrophic historical diseases like smallpox.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0fe979f2-2252-4f70-b79e-2f3598dd4804",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:25.917816+00:00"
+    },
+    {
+      "id": "b20fee43-5703-4266-8527-7f13f7370226",
+      "text": "Public health statutes in US states and the United Kingdom include provisions for mandatory isolation and enforced quarantine for active communicable diseases like open tuberculosis, proving policies extend beyond voluntary measures even for endemic threats.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0fe979f2-2252-4f70-b79e-2f3598dd4804",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:25.917849+00:00"
+    },
+    {
+      "id": "1793dd06-a8fe-4969-a07e-86f761fb7468",
+      "text": "The forced continuation of pregnancy itself is a direct, independent cause of hardship, as demonstrated by the Turnaway Study where women denied abortions experienced a 51% increase in debt overdue and an 81% increase in bankruptcies. This financial devastation proves restrictions cause poor outcomes separate from general systemic inequality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "57892db1-47ca-4cb9-800c-59998f66220f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:26.254856+00:00"
+    },
+    {
+      "id": "86487f3f-e81b-4a3b-894e-072a902e08eb",
+      "text": "Securing fundamental autonomy is a moral prerequisite for addressing systemic inequality, as removing the right to decide one's reproductive future guarantees worse outcomes for marginalized groups. For instance, the implementation of Texas SB 8 immediately exacerbated economic disparity, forcing many low-income women to travel hundreds of miles simply to access essential care.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "57892db1-47ca-4cb9-800c-59998f66220f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:26.255336+00:00"
+    },
+    {
+      "id": "98fb3991-54ea-4e1c-87f1-cc6832b96f0b",
+      "text": "Governments routinely impose mandatory bodily isolation and quarantine measures on individuals diagnosed with infectious diseases like active tuberculosis or during the COVID-19 pandemic. These are direct, legally mandated restrictions on personal bodily movement and autonomy enforced specifically to prevent widespread collective harm.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a8a781d5-e0b4-4ba8-a537-af44d1d7fbb8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:26.564438+00:00"
+    },
+    {
+      "id": "492ce46d-622f-4b48-973f-2cb103325064",
+      "text": "Life-saving treatment for severe infections like septic abortion primarily involves aggressive supportive stabilization, broad-spectrum antibiotics, and fluid resuscitation, not solely the surgical intervention of uterine evacuation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6f9cc385-98e9-4b22-9b3a-860b4bebd9e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:27.060204+00:00"
+    },
+    {
+      "id": "e376160e-efc5-42c3-b929-461ab9a160d4",
+      "text": "Even countries with extensive universal benefits and social safety nets, like Sweden and Finland, report that single parenthood is the primary factor increasing a household's risk of relative poverty, showing that welfare systems only mitigate, but do not eliminate, the financial burden of child-rearing.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4a0eb5c0-5115-4660-b4ab-ba5b01cf17a4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:27.467155+00:00"
+    },
+    {
+      "id": "beb897e8-77cb-44c7-96cf-8161328a58c6",
+      "text": "The US Department of Agriculture estimates the cost of raising a child to age 18 exceeds $300,000 regardless of the parents' subjective desire for the child, demonstrating that the structural poverty risk stems from the economic burden, not the unwanted status.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4a0eb5c0-5115-4660-b4ab-ba5b01cf17a4",
+      "children_count": 0,
+      "references": [
+        "US Department of Agriculture estimates"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:27.467208+00:00"
+    },
+    {
+      "id": "52c21bb5-4b9c-491c-bc32-ef1eb2befad6",
+      "text": "The severe negative impacts observed in Romania stemmed from totalitarian state surveillance, forced child-rearing penalties, and systemic resource scarcity under Decree 770, not the failure of an adequate financial mitigation program, which was entirely absent.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ef16f434-7905-45b2-9c63-c94dfc6b011d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:29.603832+00:00"
+    },
+    {
+      "id": "5da99d92-e7c6-4d0e-8f43-f58225facb2e",
+      "text": "Nordic welfare states like Sweden and Finland successfully mitigate high-stress non-pecuniary harms associated with child-rearing through robust, universal financial support like guaranteed parental leave, free high-quality childcare, and mental health services.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ef16f434-7905-45b2-9c63-c94dfc6b011d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:29.603863+00:00"
+    },
+    {
+      "id": "15c7e406-dc5b-4c0c-bb4a-50730035cafc",
+      "text": "The moral permissibility of abortion for elective reasons is globally recognized, with legal frameworks in countries like the Netherlands and Australia permitting termination upon request, demonstrating that personal autonomy is a sufficient moral justification, not only maternal health crises.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "28ea587a-bc7b-46f3-87f8-1a60a18d5831",
+      "children_count": 0,
+      "references": [
+        "Netherlands law on abortion",
+        "Australian state laws on abortion"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:29.911942+00:00"
+    },
+    {
+      "id": "b236ee11-9d76-4b3f-9ce8-d3d817f79c35",
+      "text": "The moral status of a fetus is independent of its non-viability or a medical organization's classification, meaning the act remains the termination of a potential human life, which is morally impermissible within many ethical and religious frameworks.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d2f6b6c8-2cc4-4c9d-ba89-fc0107e8b4fa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:30.343326+00:00"
+    },
+    {
+      "id": "ae45c637-e70d-41b0-82e1-54b1443d6a98",
+      "text": "The restrictive laws cited, such as Poland's near-total ban on abortion, eliminate exceptions for cases of rape, incest, or severe maternal health problems, thereby prioritizing the fetal right over the mother's bodily and psychological autonomy in nearly all circumstances.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "914f1829-07ae-46e2-a81a-60a4354f23fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:31.279628+00:00"
+    },
+    {
+      "id": "b389e1ad-715a-4963-8ce4-6380661dd9a2",
+      "text": "The life-of-the-mother exception is maintained primarily because physicians treating an imminent threat to life must be shielded from liability for failing to prioritize the patient's survival, making it a medical necessity rather than a definitive legal priority ranking.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "914f1829-07ae-46e2-a81a-60a4354f23fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:31.279657+00:00"
+    },
+    {
+      "id": "477b3bd3-252d-4e4f-b5bc-48904e1ad0b1",
+      "text": "Fully conscious and legally competent individuals also possess the right to refuse life-sustaining medical treatment, demonstrating that the allowance to discontinue care is based on the right to autonomy, not a patient's level of personhood.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "44a14852-d048-44b4-b325-a02b6fdcbf9d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:31.743656+00:00"
+    },
+    {
+      "id": "ab42ae4d-1f13-4f96-89de-7c6fafea707f",
+      "text": "The legally permissible act is the withdrawal or withholding of unwanted medical intervention (passive), which is distinct from the generally illegal act of active euthanasia, which applies to fully conscious individuals as well.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "44a14852-d048-44b4-b325-a02b6fdcbf9d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:31.743688+00:00"
+    },
+    {
+      "id": "b8a8b9be-1aad-4948-989b-b4cb1d4a7eb1",
+      "text": "The analogy fails because the duty of care to a minor is intrinsically *patient-centric*, oriented toward their health benefit and potential future personhood, which is not true of a fetus; conversely, maximal care for a brain-dead person is an *organ-centric* duty purely for the utilitarian benefit of external recipients.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1da624b6-4c6a-4c88-8ec2-847c4b99ef02",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:32.193661+00:00"
+    },
+    {
+      "id": "1df6aebc-fe0f-474e-8aa6-8a05e81ae439",
+      "text": "Termination for lethal fetal anomalies, while not an immediate threat, is a medical necessity to prevent significant psychological morbidity and potential complex delivery complications for the mother. This justification is logically encompassed within a comprehensive \"health-related\" medical category, rather than establishing a new type of justification.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "65d6ed7a-481a-4655-bc03-d5ad65d8c5dd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:32.453120+00:00"
+    },
+    {
+      "id": "98aa4c3c-c1fd-4a7a-8985-3fb066a93772",
+      "text": "Maternal mortality in the United States plummeted by over 90% between 1930 and 1950, primarily due to medical advances like antibiotics and blood transfusions. These advancements were the primary drivers, addressing 80% of deaths unrelated to unsafe abortion, thereby outweighing the impact of eliminating illegal procedures.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4a56fa02-cbd1-4477-b5d4-8ade5894726f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:33.893394+00:00"
+    },
+    {
+      "id": "e00763c0-d2ee-4e76-9ca7-1e6c8cb61ad7",
+      "text": "Establishing safe abortion access requires significant time for regulatory and physical infrastructure development. Conversely, public health measures like mandatory water chlorination in U.S. cities produced rapid, measurable, and immediate mortality reductions across entire populations in the early 20th century.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4a56fa02-cbd1-4477-b5d4-8ade5894726f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:33.893424+00:00"
+    },
+    {
+      "id": "06b26d8a-36fa-4f3d-8302-0ed3cfeca2a9",
+      "text": "The Cruzan ruling affirmed a negative right to refuse unwanted intervention; conversely, systems like the UK\\'s National Health Service (NHS) restrict access to high-volume elective procedures based strictly on clinical appropriateness and resource constraints, even when patients demand them.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b17c4a13-7929-4020-9c0c-2db6a80b3094",
+      "children_count": 0,
+      "references": [
+        "UK National Health Service (NHS)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:36.644004+00:00"
+    },
+    {
+      "id": "8237ff82-7b3b-4e73-a5fa-fbf46defaf07",
+      "text": "The primary concern with high-percentage non-emergency procedures is medical appropriateness and patient harm, as demonstrated by the Dartmouth Atlas data showing regional variation where procedure rates (like spinal fusions) correlate with physician supply, not necessarily autonomous patient demand.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b17c4a13-7929-4020-9c0c-2db6a80b3094",
+      "children_count": 0,
+      "references": [
+        "The Dartmouth Atlas of Health Care"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:36.644054+00:00"
+    },
+    {
+      "id": "2dacd887-dfef-4f6f-b0e5-11cba8a38026",
+      "text": "Maternal mortality rates in states like Mississippi are primarily driven by high regional rates of chronic health issues, such as hypertension and diabetes, and deep structural poverty, which are widely documented drivers of poor maternal outcomes independent of abortion access.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1b446573-1b26-41c2-b0de-dde1845cca21",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:38.611120+00:00"
+    },
+    {
+      "id": "0b8368d1-5365-4ec5-aba1-2cbd9d462b48",
+      "text": "Ireland and Malta, despite having highly restrictive abortion laws for decades, maintain maternal mortality rates dramatically lower than the US national average due to comprehensive universal healthcare, indicating legal policy is not the dominant factor.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1b446573-1b26-41c2-b0de-dde1845cca21",
+      "children_count": 0,
+      "references": [
+        "Ireland",
+        "Malta"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:38.611175+00:00"
+    },
+    {
+      "id": "de4032e7-7b3b-4e4f-8a18-c22c3c980fd5",
+      "text": "Authoritarian states like China (post-1978) and Cuba (post-1959) achieved massive reductions in systemic poverty and economic inequality through centralized planning and wealth distribution before expanding fundamental personal or political autonomies.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "86487f3f-e81b-4a3b-894e-072a902e08eb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:43.960134+00:00"
+    },
+    {
+      "id": "4d61b9c1-a470-4e58-b328-f90f0a06c7d4",
+      "text": "In states that strictly limit reproductive access, such as Poland and parts of Eastern Europe, social safety nets with mandatory child support enforcement and universal childcare provision frequently mitigate the automatic worsening of long-term economic disparity for low-income women.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "86487f3f-e81b-4a3b-894e-072a902e08eb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:43.960189+00:00"
+    },
+    {
+      "id": "0065077a-167a-4e92-8e8e-dd546cf4bfb4",
+      "text": "The severe financial outcomes documented in the Turnaway Study are primarily enabled by the weak social safety net in the United States. Countries like Sweden and Finland, through universal childcare and mandatory parental leave, prevent sudden parenthood from reliably causing personal debt or bankruptcy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1793dd06-a8fe-4969-a07e-86f761fb7468",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:44.696767+00:00"
+    },
+    {
+      "id": "d7381438-ab1c-46ca-a8af-29ef6a925a9f",
+      "text": "The hardship stems directly from the immense cost of supporting the new dependent, which the US Department of Agriculture estimates at over $310,000 to age 18. This long-term cost of forced parenthood, not the denial of the procedure itself, is the actual mechanism causing the financial devastation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1793dd06-a8fe-4969-a07e-86f761fb7468",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:44.696814+00:00"
+    },
+    {
+      "id": "e96a8928-ac09-4216-b9da-bd244b3b9cce",
+      "text": "Adults determined legally incompetent due to severe cognitive impairment, such as those diagnosed with advanced Alzheimer's disease, retain the core right to life and full legal personhood status in the United States, even though they are unable to exercise rights like voting or signing contracts.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "fb75fee2-1a65-4c14-ad47-fd3cb9c99e1d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:29:49.984593+00:00"
+    },
+    {
+      "id": "10ae2826-9de8-4325-99ba-2da8eaa0b88a",
+      "text": "In landmark U.S. cases like Cruzan v. Director, Missouri Dept. of Health (1990), legal protection for PVS patients was affirmed through the state\u2019s compelling interest in preserving all life, demonstrating a policy foundation independent of individual moral dignity. Jurisprudence frequently mandates protection to safeguard the integrity of the medical profession and prevent the ethical \"slippery slope,\" not solely due to the patient's past personhood.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0c8f51f8-1059-4b3d-8367-294aed8507b6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:20.435882+00:00"
+    },
+    {
+      "id": "a588d5b9-6f5f-4776-b306-a8bab9f4f0fe",
+      "text": "The onset of a new, genetically unique human organism at fertilization establishes an inherent right to life. Deontological ethics hold that intentionally killing an innocent human being is wrong, meaning abortion is morally impermissible regardless of the circumstances of the pregnancy.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:20.436161+00:00"
+    },
+    {
+      "id": "951c8b4f-fc80-4b2c-8b0a-0a6e5ee7a8a8",
+      "text": "The human fetus intrinsically contains the complete genetic instructions and capacity to develop into a mature, rational person. This potential grants the organism a special moral status, making its intentional destruction a violation of the inherent value of a developing human being.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:20.436999+00:00"
+    },
+    {
+      "id": "3a09cdea-21fe-43c6-8ccb-d7790cb93d05",
+      "text": "Defining a protected life conditionally based on developmental maturity, autonomy, or dependence creates a dangerous social precedent. This consequentialist \"slippery slope\" risks justifying the elimination of other dependent or disabled populations, undermining the universal protection central to human rights.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:20.437569+00:00"
+    },
+    {
+      "id": "eb53a6cd-c7f3-490c-b316-78aa844a3b87",
+      "text": "Advances in neonatal medicine consistently push the threshold of fetal viability to earlier gestational ages, with survival rates now reported closer to 22 weeks. This empirical shift demonstrates that any specific gestational-age boundary used to define moral permissibility is technologically contingent and therefore arbitrary.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "advances in neonatal medicine"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:20.438052+00:00"
+    },
+    {
+      "id": "2ae4c657-a865-4458-abb8-a26b8cc61198",
+      "text": "The biological reality of pregnancy establishes a non-delegable moral duty of care from the mother toward her fully dependent offspring. Abortion fundamentally violates this unique responsibility by resulting in the deliberate termination of the dependent human life.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:20.438486+00:00"
+    },
+    {
+      "id": "9fa75000-d303-4f77-bd8f-743b76aaad56",
+      "text": "The necessity of updating the threshold based on empirical survival rates, similar to how the medical definition of death shifted to include brain death criteria in the 1960s, maintains the non-arbitrary principle of viability. Just like the principle that death terminates moral status is fixed, the moral status attached to independent existence remains relevant despite changing medical capabilities.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "eb53a6cd-c7f3-490c-b316-78aa844a3b87",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:36.235786+00:00"
+    },
+    {
+      "id": "11e32dde-bdf4-421e-b004-ed989a4b47f9",
+      "text": "Moral standards derived from non-technological criteria, such as the formation of thalamocortical connections essential for pain perception and sentience, establish a fixed developmental boundary around 20-24 weeks. This neurological milestone sets a moral threshold independent of neonatal medical advancements in viability technology.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "eb53a6cd-c7f3-490c-b316-78aa844a3b87",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:36.236605+00:00"
+    },
+    {
+      "id": "c2b11868-c09f-4668-8617-3953861dcb88",
+      "text": "Western European legal systems, such as those in France and the Netherlands, define fetal personhood conditionally while simultaneously offering comprehensive legal and social protections that strictly prohibit involuntary euthanasia or elimination of citizens with disabilities.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3a09cdea-21fe-43c6-8ccb-d7790cb93d05",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:37.915034+00:00"
+    },
+    {
+      "id": "295e5064-05ec-40e3-ab4a-493c876d7a69",
+      "text": "International human rights law routinely grants increased legal protection based on developmental status and dependence, as seen in the UN Convention on the Rights of the Child, which assigns specific status to enhance rights rather than diminish them.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3a09cdea-21fe-43c6-8ccb-d7790cb93d05",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:37.915825+00:00"
+    },
+    {
+      "id": "86cd4396-3288-4af8-bbc0-1680fc52a638",
+      "text": "An unfertilized human egg or sperm cell contains the intrinsic genetic instructions and capacity to result in a rational person, yet the intentional destruction of these gametes is not considered a violation of a developing human in any legal or ethical system.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "951c8b4f-fc80-4b2c-8b0a-0a6e5ee7a8a8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:37.948070+00:00"
+    },
+    {
+      "id": "9fcc2bb1-d592-4f32-9e53-0f802214fcc8",
+      "text": "Moral frameworks based on sentience, such as those proposed by Peter Singer, grant moral status only when capacities like consciousness and the ability to feel pain are actualized, which occurs well after the developmental stage of the early fetus.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "951c8b4f-fc80-4b2c-8b0a-0a6e5ee7a8a8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:37.948795+00:00"
+    },
+    {
+      "id": "e7a67f84-ba91-438e-b4ea-3d69a2cbcdec",
+      "text": "Biological relationships do not create a non-delegable moral duty, as evidenced by legal systems allowing parental rights to be voluntarily delegated or terminated, such as through adoption in the United States. Ancient Greek city-states, like Sparta, routinely assigned the moral duty of child-rearing to state institutions, indicating the biological connection is not the sole source of moral obligation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2ae4c657-a865-4458-abb8-a26b8cc61198",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:38.452073+00:00"
+    },
+    {
+      "id": "0dc5c791-1091-4408-bbea-b6b06792f81c",
+      "text": "The fundamental right to bodily integrity legally protects all individuals from being forced to use their organs or tissues to sustain another, even if that results in the other person's death. Modern legal and ethical frameworks, including those in the United States and most of Europe, uniformly reject mandatory organ or blood donation, even to fully dependent family members.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2ae4c657-a865-4458-abb8-a26b8cc61198",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:38.452504+00:00"
+    },
+    {
+      "id": "fe96b4f7-2e00-43c1-b0a2-7b96c0db3fbc",
+      "text": "John Locke defined a person by self-awareness, reason, and memory, which are psychological traits developed long after fertilization. An early human organism lacks these traits, meaning that biological uniqueness is not sufficient to establish moral personhood.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a588d5b9-6f5f-4776-b306-a8bab9f4f0fe",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:41.926157+00:00"
+    },
+    {
+      "id": "452fae50-7b42-44b1-896a-dccb2491fef6",
+      "text": "Deontological ethics recognizes duties can conflict, making absolute prohibition untenable when the mother's established right to life is threatened. Physicians in the US are medically and ethically required to terminate life-threatening conditions like tubal ectopic pregnancies, prioritizing the mother's immediate survival.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a588d5b9-6f5f-4776-b306-a8bab9f4f0fe",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:41.926601+00:00"
+    },
+    {
+      "id": "6fc4dc52-8280-4e97-a6db-0ca8759f1a4a",
+      "text": "Moral personhood is often based on the criterion of species membership (being human) or the potential for advanced psychological traits, rather than the immediate presence of Lockean self-awareness.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fe96b4f7-2e00-43c1-b0a2-7b96c0db3fbc",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:54.684372+00:00"
+    },
+    {
+      "id": "8fb9cba2-8363-43f3-a0e3-a276ea0e6f0c",
+      "text": "Strict adherence to the Lockean criteria functionally de-personalizes individuals who temporarily or permanently lack self-awareness, such as human infants or adults in irreversible comas, contradicting established legal and ethical protections.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fe96b4f7-2e00-43c1-b0a2-7b96c0db3fbc",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:54.685295+00:00"
+    },
+    {
+      "id": "d8ba8ff3-ffdc-42a3-9e41-402ce79d0641",
+      "text": "Legal systems in countries like the Netherlands permit withdrawal of nutrition and life support from adults judged to lack consciousness despite the presence of thalamocortical connections necessary for pain perception. This shows that the mere biological fact of potential pain perception is not sufficient to guarantee moral personhood rights in all ethical frameworks.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "11e32dde-bdf4-421e-b004-ed989a4b47f9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:55.389730+00:00"
+    },
+    {
+      "id": "fe2e4361-0eb7-4c57-a1e7-140882ac316e",
+      "text": "Laws in various jurisdictions and philosophical arguments often establish moral status based on alternative, fixed criteria, such as the potential for fully developed humanity from conception or the ability to survive outside the womb. This contradicts the choice of sentience as the singular necessary moral boundary.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "11e32dde-bdf4-421e-b004-ed989a4b47f9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:55.390446+00:00"
+    },
+    {
+      "id": "fb318c1b-8b1b-4f67-9582-6c3b8040f06d",
+      "text": "A sperm or egg is a haploid cell with only 23 chromosomes, lacking the complete, diploid 46-chromosome instruction set required for self-directed organism development. In vitro fertilization requires a distinct, active combination event to create a unique, complete genome, demonstrating that gametes alone are not equivalent to a developing human.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "86cd4396-3288-4af8-bbc0-1680fc52a638",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:56.376394+00:00"
+    },
+    {
+      "id": "2bb63586-7084-479b-b1f0-1762060e8679",
+      "text": "A discarded human somatic cell, such as a skin cell, contains the complete diploid genetic instructions capable of resulting in a rational person through techniques like somatic cell nuclear transfer. However, the routine destruction of such cells requires no legal or ethical justification.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "86cd4396-3288-4af8-bbc0-1680fc52a638",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:56.377170+00:00"
+    },
+    {
+      "id": "3e636c3a-e89b-4e8b-8769-a0cebd228d2d",
+      "text": "Legal systems in the United States permit the involuntary termination of biological parental rights only after establishing severe neglect or abandonment, demonstrating that the moral duty is treated as fundamental and only forfeited by failure, not simply delegated.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e7a67f84-ba91-438e-b4ea-3d69a2cbcdec",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:56.430512+00:00"
+    },
+    {
+      "id": "3b980bf4-ff43-4d24-a372-8bc19913e2c3",
+      "text": "Anthropological studies of foraging societies indicate the immediate biological bond between mother and infant created a powerful, foundational care structure long before the rise of state institutions like Sparta. The Roman concept of *patria potestas* demonstrates a historical legal system where the biological father held near-absolute, non-delegable power over his children.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e7a67f84-ba91-438e-b4ea-3d69a2cbcdec",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:56.431214+00:00"
+    },
+    {
+      "id": "723e68fb-5c10-4186-a26c-2d72c11764b7",
+      "text": "The Harvard Ad Hoc Committee criteria (1968) defined death as the irreversible termination of integrated bodily function, finalizing moral status. Viability, exemplified by premature infants surviving at 22 weeks gestation, concerns the initiation of potential life, making the two criteria fundamentally distinct processes (termination vs. initiation).",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9fa75000-d303-4f77-bd8f-743b76aaad56",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:57.412786+00:00"
+    },
+    {
+      "id": "7c22f554-d4e1-424f-96c2-890e64e63de6",
+      "text": "Medical technology, such as the 2017 successful Biobag artificial womb lamb experiment, continually redefines the physical boundary of ex-utero survival. If \"independent existence\" is perpetually redefined by technology, the moral status attached to it cannot simultaneously be a fixed principle.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9fa75000-d303-4f77-bd8f-743b76aaad56",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:30:57.413520+00:00"
+    },
+    {
+      "id": "d9011162-3622-4bbe-9276-edd61b5ef031",
+      "text": "The Netherlands legalized voluntary active euthanasia and physician-assisted suicide in 2002 for competent adults facing unremitting suffering, contradicting a strict prohibition on the elimination of citizens.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c2b11868-c09f-4668-8617-3953861dcb88",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:03.435474+00:00"
+    },
+    {
+      "id": "08c37d21-223c-43e9-af25-d2833bc2008d",
+      "text": "The Netherlands\u2019 Groningen Protocol established legal guidelines for formalized medical decisions to terminate the lives of newborns with severe disabilities, demonstrating exceptions to absolute protection from elimination.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c2b11868-c09f-4668-8617-3953861dcb88",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:03.436115+00:00"
+    },
+    {
+      "id": "8a9c24ea-321a-426a-8143-068331595e7f",
+      "text": "Moral standing in critical medical and legal contexts often relies on functional criteria like demonstrable consciousness and sentience, as seen in end-of-life decisions where sustained lack of brain function negates personhood regardless of species.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "6fc4dc52-8280-4e97-a6db-0ca8759f1a4a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:04.107586+00:00"
+    },
+    {
+      "id": "3377df4b-072d-4286-a8f5-2596075cdc7a",
+      "text": "The Netherlands' legal decisions to withhold or withdraw treatment rely heavily on strict medical criteria for futility and prior documented patient autonomy (e.g., advance directives), which are principles consistent with respecting personhood and quality of life.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d8ba8ff3-ffdc-42a3-9e41-402ce79d0641",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:06.279910+00:00"
+    },
+    {
+      "id": "ba9621c8-c90f-4d08-bd65-38431c8a6780",
+      "text": "The withdrawal of non-beneficial life support is widely interpreted in medical ethics as a recognition of the limits of medical intervention and an act of respecting a person\u2019s natural dying process, not a declaration that the patient lacks moral status.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d8ba8ff3-ffdc-42a3-9e41-402ce79d0641",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:06.279941+00:00"
+    },
+    {
+      "id": "dd426362-24c6-4a15-8727-a513f1182aa9",
+      "text": "Established legal protections for entities like infants and coma patients are based on biological humanity and potential, not Lockean self-awareness; thus, the philosophical de-personalization does not inherently contradict or supersede distinct legal personhood provided by law.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8fb9cba2-8363-43f3-a0e3-a276ea0e6f0c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:07.562982+00:00"
+    },
+    {
+      "id": "fc88b7aa-df87-4672-87fd-85ed27443cde",
+      "text": "Immanuel Kant's strict deontology, articulated in the Groundwork of the Metaphysics of Morals, holds that perfect duties like the prohibition against killing are absolute, meaning they maintain authority even when conflicting duties arise.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "452fae50-7b42-44b1-896a-dccb2491fef6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:08.667740+00:00"
+    },
+    {
+      "id": "0f9ca05c-1b21-48da-8cb5-5a62cbbacf31",
+      "text": "The Catholic moral tradition resolves medical conflicts like ectopic pregnancy using the Doctrine of Double Effect, allowing the removal of the life-threatening fallopian tube without abandoning the absolute prohibition against actively intending to kill the fetus.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "452fae50-7b42-44b1-896a-dccb2491fef6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:08.668484+00:00"
+    },
+    {
+      "id": "e4bed879-88c7-4fa3-ab83-82aae138d651",
+      "text": "Viability sets a critical legal and moral boundary, recognized historically in the U.S. by Roe v. Wade, where the state's interest in protecting potential life becomes compelling. This threshold assigns significant moral weight to the fetus at a specific developmental stage, making the definitional distinction from the Harvard death criteria irrelevant to abortion rights.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "723e68fb-5c10-4186-a26c-2d72c11764b7",
+      "children_count": 0,
+      "references": [
+        "Roe v. Wade (1973)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:10.596362+00:00"
+    },
+    {
+      "id": "656603d8-5a0c-4dc3-bbc6-6e7bdd245c40",
+      "text": "In many US states, including Texas and New York, involuntary termination of parental rights is also permitted based on chronic substance abuse, severe mental incapacity, or prolonged incarceration, not only severe neglect or abandonment. These broader legal grounds demonstrate that parental rights can be forfeited based on incapacity or circumstance, not exclusively moral failure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3e636c3a-e89b-4e8b-8769-a0cebd228d2d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:13.003366+00:00"
+    },
+    {
+      "id": "b89afbae-bbdf-444f-8586-0330783b2a6d",
+      "text": "Functional brain activity for potential conscious experience does not occur immediately upon genetic recombination; neurological structures like the thalamocortical connections required for conscious pain perception are not fully developed until approximately 24 weeks gestation. Establishing a unique genome is biologically necessary but not sufficient for the development of morally relevant attributes like sentience or consciousness.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fb318c1b-8b1b-4f67-9582-6c3b8040f06d",
+      "children_count": 0,
+      "references": [
+        "Royal College of Obstetricians and Gynaecologists (RCOG)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:13.948662+00:00"
+    },
+    {
+      "id": "d52e577f-7026-4ece-893e-b0ea1b8748ff",
+      "text": "The moral principle of inherent human value, articulated by Immanuel Kant's categorical imperative, is fixed regardless of technological shifts or descriptive changes in viability. Legal definitions of personhood for slaves and women changed over time, but the underlying moral value of human life did not become technologically flexible.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7c22f554-d4e1-424f-96c2-890e64e63de6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:14.825496+00:00"
+    },
+    {
+      "id": "da12b63a-314e-4fc7-be50-82f47c1201e5",
+      "text": "Neurological activity, specifically the onset of irreversible integrated brain function, provides a fixed internal standard for moral status independent of external technological support. The widely accepted Harvard Brain Death Criteria (1968) fixes the end of life with internal brain parameters, suggesting these parameters, not viability, define the edges of personhood.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7c22f554-d4e1-424f-96c2-890e64e63de6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:14.825552+00:00"
+    },
+    {
+      "id": "8ad3e9f1-38a0-4f9f-8877-d562b22b2488",
+      "text": "The Groningen Protocol, controversial even in the Netherlands, deals with infants who have attained full legal personhood, fundamentally distinguishing it from abortion which concerns the legal status and termination of a pre-personal fetus.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "08c37d21-223c-43e9-af25-d2833bc2008d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:15.111257+00:00"
+    },
+    {
+      "id": "26595511-07e9-456a-914c-d38a8129e132",
+      "text": "The permissibility of abortion rests on informed consent and bodily autonomy established through reproductive regulations in countries like Sweden and Ireland, preventing the procedure from being defined as an involuntary state \"elimination.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d9011162-3622-4bbe-9276-edd61b5ef031",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:16.951874+00:00"
+    },
+    {
+      "id": "1ebfb30d-9850-4df3-9ac5-737e57f95d42",
+      "text": "While DDE permits the immediate removal of the tube (salpingectomy), the Catholic tradition prohibits medically less invasive and fertility-preserving treatments like salpingostomy or the use of methotrexate, indicating that the ethical framework unduly restricts superior clinical judgment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0f9ca05c-1b21-48da-8cb5-5a62cbbacf31",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:20.080352+00:00"
+    },
+    {
+      "id": "8ce3e699-6254-46bf-bd7a-f70e2d0dd73f",
+      "text": "Viability laws in countries like Canada and the Netherlands base the moral permissibility of abortion on the fetus's level of neurological development and independence, establishing a moral threshold separate from natural maternal bonds or ancient legal power dynamics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3b980bf4-ff43-4d24-a372-8bc19913e2c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:20.556783+00:00"
+    },
+    {
+      "id": "125c0220-36dd-454d-8057-002eb9be3d4a",
+      "text": "Catholic doctrine holds that moral status begins at conception, yet nearly all European countries legally permit elective abortion based on gestational cutoffs related to fetal brain activity, demonstrating that multiple, competing moral frameworks can coexist with no necessary contradiction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fe2e4361-0eb7-4c57-a1e7-140882ac316e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:21.136308+00:00"
+    },
+    {
+      "id": "c1cea8fa-4efa-4a31-a2e9-94ac774b0b9f",
+      "text": "A fertilized zygote possesses intrinsic, independent developmental capacity, unlike a somatic cell, which only gains proliferative potential through technologically intensive nuclear reprogramming, exemplified by the somatic cell nuclear transfer (SCNT) technique used to create Dolly the Sheep.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2bb63586-7084-479b-b1f0-1762060e8679",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:22.206392+00:00"
+    },
+    {
+      "id": "bdbd683f-3178-4ef5-a76c-e96ab81f0290",
+      "text": "Moral and legal status is typically tied to integrated biological function (e.g., sentience or consciousness) rather than mere genetic code; major jurisdictions like the United States define death by the irreversible cessation of brain function, even when somatic cells remain genetically intact.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2bb63586-7084-479b-b1f0-1762060e8679",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:22.206443+00:00"
+    },
+    {
+      "id": "7c0a83ac-c32d-4927-a6e0-65a0018bb55c",
+      "text": "Kant acknowledged his system offered no practical resolution for the conflict between two absolute prohibitions, such as the duty not to lie versus the duty to prevent murder when facing the classic \"murderer at the door\" scenario.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fc88b7aa-df87-4672-87fd-85ed27443cde",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:31:23.145279+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:28:30.542801+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 5,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:28:30.542801+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "d6117ad0-07fa-48b8-8eef-5dc7d12c5bc2",
+      "target": "4832e575-321a-495d-b598-d33bbd8473dc",
+      "type": "objection"
+    },
+    {
+      "source": "d6117ad0-07fa-48b8-8eef-5dc7d12c5bc2",
+      "target": "a499a241-4663-4de8-b608-547143b612a7",
+      "type": "objection"
+    },
+    {
+      "source": "9cf78b92-9799-4c2c-bac5-56765c8d905d",
+      "target": "dfde5e48-4da6-46cb-b2b3-f9ec3a5b7fb1",
+      "type": "objection"
+    },
+    {
+      "source": "9cf78b92-9799-4c2c-bac5-56765c8d905d",
+      "target": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "type": "objection"
+    },
+    {
+      "source": "d836ee78-f25e-497c-9415-e94ec9daa8d2",
+      "target": "13b7dbe1-27ae-4b9e-9a07-70c6a227f5af",
+      "type": "objection"
+    },
+    {
+      "source": "d836ee78-f25e-497c-9415-e94ec9daa8d2",
+      "target": "62af771b-1cfc-4ed7-81e3-fe8e00f48611",
+      "type": "objection"
+    },
+    {
+      "source": "6ea55dca-1695-4a06-a9bd-280f443f55bb",
+      "target": "bb0e0955-5230-4af7-85fb-9119976b28a5",
+      "type": "objection"
+    },
+    {
+      "source": "6ea55dca-1695-4a06-a9bd-280f443f55bb",
+      "target": "7aa80fd4-7093-4cfa-87f1-aeb09d9a658e",
+      "type": "objection"
+    },
+    {
+      "source": "a499a241-4663-4de8-b608-547143b612a7",
+      "target": "101a80b5-7ce1-4c19-a227-0b470f6a5cc5",
+      "type": "response"
+    },
+    {
+      "source": "a499a241-4663-4de8-b608-547143b612a7",
+      "target": "d5e89b29-f47a-474e-b9a0-5d2ba59ef390",
+      "type": "response"
+    },
+    {
+      "source": "4f2badd7-ebe8-410a-9c2c-46b38909695f",
+      "target": "823df875-6e4d-484e-b66b-d525c1c26bfb",
+      "type": "objection"
+    },
+    {
+      "source": "4f2badd7-ebe8-410a-9c2c-46b38909695f",
+      "target": "6d11b542-c47e-473e-b16f-cbe925080b43",
+      "type": "objection"
+    },
+    {
+      "source": "0c49d4d1-3627-4e73-bdfd-a355d55e9b3a",
+      "target": "78ceee98-92c4-43a2-b670-2a3f07feca3a",
+      "type": "objection"
+    },
+    {
+      "source": "0c49d4d1-3627-4e73-bdfd-a355d55e9b3a",
+      "target": "57892db1-47ca-4cb9-800c-59998f66220f",
+      "type": "objection"
+    },
+    {
+      "source": "101a80b5-7ce1-4c19-a227-0b470f6a5cc5",
+      "target": "8a46026d-7a81-4f09-aedf-42bb60cc354b",
+      "type": "response"
+    },
+    {
+      "source": "62af771b-1cfc-4ed7-81e3-fe8e00f48611",
+      "target": "a8a781d5-e0b4-4ba8-a537-af44d1d7fbb8",
+      "type": "response"
+    },
+    {
+      "source": "62af771b-1cfc-4ed7-81e3-fe8e00f48611",
+      "target": "0fe979f2-2252-4f70-b79e-2f3598dd4804",
+      "type": "response"
+    },
+    {
+      "source": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "target": "4a0eb5c0-5115-4660-b4ab-ba5b01cf17a4",
+      "type": "response"
+    },
+    {
+      "source": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "target": "ef16f434-7905-45b2-9c63-c94dfc6b011d",
+      "type": "response"
+    },
+    {
+      "source": "a6b972a9-a92d-486f-8550-2c2d91ed07d0",
+      "target": "28ea587a-bc7b-46f3-87f8-1a60a18d5831",
+      "type": "response"
+    },
+    {
+      "source": "dfde5e48-4da6-46cb-b2b3-f9ec3a5b7fb1",
+      "target": "985a40ac-09c8-47a0-b7ed-b4510382b8e9",
+      "type": "response"
+    },
+    {
+      "source": "dfde5e48-4da6-46cb-b2b3-f9ec3a5b7fb1",
+      "target": "4a56fa02-cbd1-4477-b5d4-8ade5894726f",
+      "type": "response"
+    },
+    {
+      "source": "d5e89b29-f47a-474e-b9a0-5d2ba59ef390",
+      "target": "29be7a7d-60cf-4a5a-8694-1ffa1f3b16ba",
+      "type": "response"
+    },
+    {
+      "source": "d5e89b29-f47a-474e-b9a0-5d2ba59ef390",
+      "target": "b96dfcad-93d2-49ed-a611-647abede2dd0",
+      "type": "response"
+    },
+    {
+      "source": "7aa80fd4-7093-4cfa-87f1-aeb09d9a658e",
+      "target": "6f9cc385-98e9-4b22-9b3a-860b4bebd9e7",
+      "type": "response"
+    },
+    {
+      "source": "7aa80fd4-7093-4cfa-87f1-aeb09d9a658e",
+      "target": "d2f6b6c8-2cc4-4c9d-ba89-fc0107e8b4fa",
+      "type": "response"
+    },
+    {
+      "source": "823df875-6e4d-484e-b66b-d525c1c26bfb",
+      "target": "44a14852-d048-44b4-b325-a02b6fdcbf9d",
+      "type": "response"
+    },
+    {
+      "source": "823df875-6e4d-484e-b66b-d525c1c26bfb",
+      "target": "0c8f51f8-1059-4b3d-8367-294aed8507b6",
+      "type": "response"
+    },
+    {
+      "source": "bb0e0955-5230-4af7-85fb-9119976b28a5",
+      "target": "b17c4a13-7929-4020-9c0c-2db6a80b3094",
+      "type": "response"
+    },
+    {
+      "source": "bb0e0955-5230-4af7-85fb-9119976b28a5",
+      "target": "65d6ed7a-481a-4655-bc03-d5ad65d8c5dd",
+      "type": "response"
+    },
+    {
+      "source": "78ceee98-92c4-43a2-b670-2a3f07feca3a",
+      "target": "914f1829-07ae-46e2-a81a-60a4354f23fd",
+      "type": "response"
+    },
+    {
+      "source": "78ceee98-92c4-43a2-b670-2a3f07feca3a",
+      "target": "1b446573-1b26-41c2-b0de-dde1845cca21",
+      "type": "response"
+    },
+    {
+      "source": "6d11b542-c47e-473e-b16f-cbe925080b43",
+      "target": "1da624b6-4c6a-4c88-8ec2-847c4b99ef02",
+      "type": "response"
+    },
+    {
+      "source": "6d11b542-c47e-473e-b16f-cbe925080b43",
+      "target": "fb75fee2-1a65-4c14-ad47-fd3cb9c99e1d",
+      "type": "response"
+    },
+    {
+      "source": "985a40ac-09c8-47a0-b7ed-b4510382b8e9",
+      "target": "6e45a36c-e2cf-49f5-83ab-4a56798638c4",
+      "type": "response"
+    },
+    {
+      "source": "985a40ac-09c8-47a0-b7ed-b4510382b8e9",
+      "target": "86b9f866-5f17-48d7-9873-f6f03ef67b48",
+      "type": "response"
+    },
+    {
+      "source": "0fe979f2-2252-4f70-b79e-2f3598dd4804",
+      "target": "ec6698a5-6ad7-44b8-975d-aafbffd2a84e",
+      "type": "response"
+    },
+    {
+      "source": "0fe979f2-2252-4f70-b79e-2f3598dd4804",
+      "target": "b20fee43-5703-4266-8527-7f13f7370226",
+      "type": "response"
+    },
+    {
+      "source": "57892db1-47ca-4cb9-800c-59998f66220f",
+      "target": "1793dd06-a8fe-4969-a07e-86f761fb7468",
+      "type": "response"
+    },
+    {
+      "source": "57892db1-47ca-4cb9-800c-59998f66220f",
+      "target": "86487f3f-e81b-4a3b-894e-072a902e08eb",
+      "type": "response"
+    },
+    {
+      "source": "a8a781d5-e0b4-4ba8-a537-af44d1d7fbb8",
+      "target": "98fb3991-54ea-4e1c-87f1-cc6832b96f0b",
+      "type": "response"
+    },
+    {
+      "source": "6f9cc385-98e9-4b22-9b3a-860b4bebd9e7",
+      "target": "492ce46d-622f-4b48-973f-2cb103325064",
+      "type": "response"
+    },
+    {
+      "source": "4a0eb5c0-5115-4660-b4ab-ba5b01cf17a4",
+      "target": "e376160e-efc5-42c3-b929-461ab9a160d4",
+      "type": "response"
+    },
+    {
+      "source": "4a0eb5c0-5115-4660-b4ab-ba5b01cf17a4",
+      "target": "beb897e8-77cb-44c7-96cf-8161328a58c6",
+      "type": "response"
+    },
+    {
+      "source": "ef16f434-7905-45b2-9c63-c94dfc6b011d",
+      "target": "52c21bb5-4b9c-491c-bc32-ef1eb2befad6",
+      "type": "response"
+    },
+    {
+      "source": "ef16f434-7905-45b2-9c63-c94dfc6b011d",
+      "target": "5da99d92-e7c6-4d0e-8f43-f58225facb2e",
+      "type": "response"
+    },
+    {
+      "source": "28ea587a-bc7b-46f3-87f8-1a60a18d5831",
+      "target": "15c7e406-dc5b-4c0c-bb4a-50730035cafc",
+      "type": "response"
+    },
+    {
+      "source": "d2f6b6c8-2cc4-4c9d-ba89-fc0107e8b4fa",
+      "target": "b236ee11-9d76-4b3f-9ce8-d3d817f79c35",
+      "type": "response"
+    },
+    {
+      "source": "914f1829-07ae-46e2-a81a-60a4354f23fd",
+      "target": "ae45c637-e70d-41b0-82e1-54b1443d6a98",
+      "type": "response"
+    },
+    {
+      "source": "914f1829-07ae-46e2-a81a-60a4354f23fd",
+      "target": "b389e1ad-715a-4963-8ce4-6380661dd9a2",
+      "type": "response"
+    },
+    {
+      "source": "44a14852-d048-44b4-b325-a02b6fdcbf9d",
+      "target": "477b3bd3-252d-4e4f-b5bc-48904e1ad0b1",
+      "type": "response"
+    },
+    {
+      "source": "44a14852-d048-44b4-b325-a02b6fdcbf9d",
+      "target": "ab42ae4d-1f13-4f96-89de-7c6fafea707f",
+      "type": "response"
+    },
+    {
+      "source": "1da624b6-4c6a-4c88-8ec2-847c4b99ef02",
+      "target": "b8a8b9be-1aad-4948-989b-b4cb1d4a7eb1",
+      "type": "response"
+    },
+    {
+      "source": "65d6ed7a-481a-4655-bc03-d5ad65d8c5dd",
+      "target": "1df6aebc-fe0f-474e-8aa6-8a05e81ae439",
+      "type": "response"
+    },
+    {
+      "source": "4a56fa02-cbd1-4477-b5d4-8ade5894726f",
+      "target": "98aa4c3c-c1fd-4a7a-8985-3fb066a93772",
+      "type": "response"
+    },
+    {
+      "source": "4a56fa02-cbd1-4477-b5d4-8ade5894726f",
+      "target": "e00763c0-d2ee-4e76-9ca7-1e6c8cb61ad7",
+      "type": "response"
+    },
+    {
+      "source": "b17c4a13-7929-4020-9c0c-2db6a80b3094",
+      "target": "06b26d8a-36fa-4f3d-8302-0ed3cfeca2a9",
+      "type": "response"
+    },
+    {
+      "source": "b17c4a13-7929-4020-9c0c-2db6a80b3094",
+      "target": "8237ff82-7b3b-4e73-a5fa-fbf46defaf07",
+      "type": "response"
+    },
+    {
+      "source": "1b446573-1b26-41c2-b0de-dde1845cca21",
+      "target": "2dacd887-dfef-4f6f-b0e5-11cba8a38026",
+      "type": "response"
+    },
+    {
+      "source": "1b446573-1b26-41c2-b0de-dde1845cca21",
+      "target": "0b8368d1-5365-4ec5-aba1-2cbd9d462b48",
+      "type": "response"
+    },
+    {
+      "source": "86487f3f-e81b-4a3b-894e-072a902e08eb",
+      "target": "de4032e7-7b3b-4e4f-8a18-c22c3c980fd5",
+      "type": "response"
+    },
+    {
+      "source": "86487f3f-e81b-4a3b-894e-072a902e08eb",
+      "target": "4d61b9c1-a470-4e58-b328-f90f0a06c7d4",
+      "type": "response"
+    },
+    {
+      "source": "1793dd06-a8fe-4969-a07e-86f761fb7468",
+      "target": "0065077a-167a-4e92-8e8e-dd546cf4bfb4",
+      "type": "response"
+    },
+    {
+      "source": "1793dd06-a8fe-4969-a07e-86f761fb7468",
+      "target": "d7381438-ab1c-46ca-a8af-29ef6a925a9f",
+      "type": "response"
+    },
+    {
+      "source": "fb75fee2-1a65-4c14-ad47-fd3cb9c99e1d",
+      "target": "e96a8928-ac09-4216-b9da-bd244b3b9cce",
+      "type": "response"
+    },
+    {
+      "source": "0c8f51f8-1059-4b3d-8367-294aed8507b6",
+      "target": "10ae2826-9de8-4325-99ba-2da8eaa0b88a",
+      "type": "response"
+    },
+    {
+      "source": "eb53a6cd-c7f3-490c-b316-78aa844a3b87",
+      "target": "9fa75000-d303-4f77-bd8f-743b76aaad56",
+      "type": "objection"
+    },
+    {
+      "source": "eb53a6cd-c7f3-490c-b316-78aa844a3b87",
+      "target": "11e32dde-bdf4-421e-b004-ed989a4b47f9",
+      "type": "objection"
+    },
+    {
+      "source": "3a09cdea-21fe-43c6-8ccb-d7790cb93d05",
+      "target": "c2b11868-c09f-4668-8617-3953861dcb88",
+      "type": "objection"
+    },
+    {
+      "source": "3a09cdea-21fe-43c6-8ccb-d7790cb93d05",
+      "target": "295e5064-05ec-40e3-ab4a-493c876d7a69",
+      "type": "objection"
+    },
+    {
+      "source": "951c8b4f-fc80-4b2c-8b0a-0a6e5ee7a8a8",
+      "target": "86cd4396-3288-4af8-bbc0-1680fc52a638",
+      "type": "objection"
+    },
+    {
+      "source": "951c8b4f-fc80-4b2c-8b0a-0a6e5ee7a8a8",
+      "target": "9fcc2bb1-d592-4f32-9e53-0f802214fcc8",
+      "type": "objection"
+    },
+    {
+      "source": "2ae4c657-a865-4458-abb8-a26b8cc61198",
+      "target": "e7a67f84-ba91-438e-b4ea-3d69a2cbcdec",
+      "type": "objection"
+    },
+    {
+      "source": "2ae4c657-a865-4458-abb8-a26b8cc61198",
+      "target": "0dc5c791-1091-4408-bbea-b6b06792f81c",
+      "type": "objection"
+    },
+    {
+      "source": "a588d5b9-6f5f-4776-b306-a8bab9f4f0fe",
+      "target": "fe96b4f7-2e00-43c1-b0a2-7b96c0db3fbc",
+      "type": "objection"
+    },
+    {
+      "source": "a588d5b9-6f5f-4776-b306-a8bab9f4f0fe",
+      "target": "452fae50-7b42-44b1-896a-dccb2491fef6",
+      "type": "objection"
+    },
+    {
+      "source": "fe96b4f7-2e00-43c1-b0a2-7b96c0db3fbc",
+      "target": "6fc4dc52-8280-4e97-a6db-0ca8759f1a4a",
+      "type": "response"
+    },
+    {
+      "source": "fe96b4f7-2e00-43c1-b0a2-7b96c0db3fbc",
+      "target": "8fb9cba2-8363-43f3-a0e3-a276ea0e6f0c",
+      "type": "response"
+    },
+    {
+      "source": "11e32dde-bdf4-421e-b004-ed989a4b47f9",
+      "target": "d8ba8ff3-ffdc-42a3-9e41-402ce79d0641",
+      "type": "response"
+    },
+    {
+      "source": "11e32dde-bdf4-421e-b004-ed989a4b47f9",
+      "target": "fe2e4361-0eb7-4c57-a1e7-140882ac316e",
+      "type": "response"
+    },
+    {
+      "source": "86cd4396-3288-4af8-bbc0-1680fc52a638",
+      "target": "fb318c1b-8b1b-4f67-9582-6c3b8040f06d",
+      "type": "response"
+    },
+    {
+      "source": "86cd4396-3288-4af8-bbc0-1680fc52a638",
+      "target": "2bb63586-7084-479b-b1f0-1762060e8679",
+      "type": "response"
+    },
+    {
+      "source": "e7a67f84-ba91-438e-b4ea-3d69a2cbcdec",
+      "target": "3e636c3a-e89b-4e8b-8769-a0cebd228d2d",
+      "type": "response"
+    },
+    {
+      "source": "e7a67f84-ba91-438e-b4ea-3d69a2cbcdec",
+      "target": "3b980bf4-ff43-4d24-a372-8bc19913e2c3",
+      "type": "response"
+    },
+    {
+      "source": "9fa75000-d303-4f77-bd8f-743b76aaad56",
+      "target": "723e68fb-5c10-4186-a26c-2d72c11764b7",
+      "type": "response"
+    },
+    {
+      "source": "9fa75000-d303-4f77-bd8f-743b76aaad56",
+      "target": "7c22f554-d4e1-424f-96c2-890e64e63de6",
+      "type": "response"
+    },
+    {
+      "source": "c2b11868-c09f-4668-8617-3953861dcb88",
+      "target": "d9011162-3622-4bbe-9276-edd61b5ef031",
+      "type": "response"
+    },
+    {
+      "source": "c2b11868-c09f-4668-8617-3953861dcb88",
+      "target": "08c37d21-223c-43e9-af25-d2833bc2008d",
+      "type": "response"
+    },
+    {
+      "source": "6fc4dc52-8280-4e97-a6db-0ca8759f1a4a",
+      "target": "8a9c24ea-321a-426a-8143-068331595e7f",
+      "type": "response"
+    },
+    {
+      "source": "d8ba8ff3-ffdc-42a3-9e41-402ce79d0641",
+      "target": "3377df4b-072d-4286-a8f5-2596075cdc7a",
+      "type": "response"
+    },
+    {
+      "source": "d8ba8ff3-ffdc-42a3-9e41-402ce79d0641",
+      "target": "ba9621c8-c90f-4d08-bd65-38431c8a6780",
+      "type": "response"
+    },
+    {
+      "source": "8fb9cba2-8363-43f3-a0e3-a276ea0e6f0c",
+      "target": "dd426362-24c6-4a15-8727-a513f1182aa9",
+      "type": "response"
+    },
+    {
+      "source": "452fae50-7b42-44b1-896a-dccb2491fef6",
+      "target": "fc88b7aa-df87-4672-87fd-85ed27443cde",
+      "type": "response"
+    },
+    {
+      "source": "452fae50-7b42-44b1-896a-dccb2491fef6",
+      "target": "0f9ca05c-1b21-48da-8cb5-5a62cbbacf31",
+      "type": "response"
+    },
+    {
+      "source": "723e68fb-5c10-4186-a26c-2d72c11764b7",
+      "target": "e4bed879-88c7-4fa3-ab83-82aae138d651",
+      "type": "response"
+    },
+    {
+      "source": "3e636c3a-e89b-4e8b-8769-a0cebd228d2d",
+      "target": "656603d8-5a0c-4dc3-bbc6-6e7bdd245c40",
+      "type": "response"
+    },
+    {
+      "source": "fb318c1b-8b1b-4f67-9582-6c3b8040f06d",
+      "target": "b89afbae-bbdf-444f-8586-0330783b2a6d",
+      "type": "response"
+    },
+    {
+      "source": "7c22f554-d4e1-424f-96c2-890e64e63de6",
+      "target": "d52e577f-7026-4ece-893e-b0ea1b8748ff",
+      "type": "response"
+    },
+    {
+      "source": "7c22f554-d4e1-424f-96c2-890e64e63de6",
+      "target": "da12b63a-314e-4fc7-be50-82f47c1201e5",
+      "type": "response"
+    },
+    {
+      "source": "08c37d21-223c-43e9-af25-d2833bc2008d",
+      "target": "8ad3e9f1-38a0-4f9f-8877-d562b22b2488",
+      "type": "response"
+    },
+    {
+      "source": "d9011162-3622-4bbe-9276-edd61b5ef031",
+      "target": "26595511-07e9-456a-914c-d38a8129e132",
+      "type": "response"
+    },
+    {
+      "source": "0f9ca05c-1b21-48da-8cb5-5a62cbbacf31",
+      "target": "1ebfb30d-9850-4df3-9ac5-737e57f95d42",
+      "type": "response"
+    },
+    {
+      "source": "3b980bf4-ff43-4d24-a372-8bc19913e2c3",
+      "target": "8ce3e699-6254-46bf-bd7a-f70e2d0dd73f",
+      "type": "response"
+    },
+    {
+      "source": "fe2e4361-0eb7-4c57-a1e7-140882ac316e",
+      "target": "125c0220-36dd-454d-8057-002eb9be3d4a",
+      "type": "response"
+    },
+    {
+      "source": "2bb63586-7084-479b-b1f0-1762060e8679",
+      "target": "c1cea8fa-4efa-4a31-a2e9-94ac774b0b9f",
+      "type": "response"
+    },
+    {
+      "source": "2bb63586-7084-479b-b1f0-1762060e8679",
+      "target": "bdbd683f-3178-4ef5-a76c-e96ab81f0290",
+      "type": "response"
+    },
+    {
+      "source": "fc88b7aa-df87-4672-87fd-85ed27443cde",
+      "target": "7c0a83ac-c32d-4927-a6e0-65a0018bb55c",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d836ee78-f25e-497c-9415-e94ec9daa8d2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "4f2badd7-ebe8-410a-9c2c-46b38909695f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9cf78b92-9799-4c2c-bac5-56765c8d905d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6ea55dca-1695-4a06-a9bd-280f443f55bb",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "0c49d4d1-3627-4e73-bdfd-a355d55e9b3a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d6117ad0-07fa-48b8-8eef-5dc7d12c5bc2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a588d5b9-6f5f-4776-b306-a8bab9f4f0fe",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "951c8b4f-fc80-4b2c-8b0a-0a6e5ee7a8a8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "3a09cdea-21fe-43c6-8ccb-d7790cb93d05",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "eb53a6cd-c7f3-490c-b316-78aa844a3b87",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2ae4c657-a865-4458-abb8-a26b8cc61198",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,3597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptocurrency should be regulated like traditional currencies - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Cryptocurrency should be regulated like traditional currencies</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            126 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/cryptocurrency-should-be-regulated-like-traditional-currencies.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">126</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "ba1b6e05-a546-4cea-98e8-86146efd083c",
+      "text": "Regulation establishes essential consumer protection by demanding transparent disclosure and secure custody standards, offering redress mechanisms against prevalent fraud, theft, and market manipulation that have harmed millions of users.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:32.180297+00:00"
+    },
+    {
+      "id": "adf043ac-ddde-4ac8-aa26-e1e3051b511a",
+      "text": "Applying traditional financial rules, including capital and liquidity requirements, is necessary to mitigate systemic risk and contagion as crypto market integration increases, preventing failures from destabilizing the broader financial system.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:32.181484+00:00"
+    },
+    {
+      "id": "6c3c4e42-8249-4615-a85b-847f07b896c6",
+      "text": "Imposing standard Know Your Customer (KYC) and Anti-Money Laundering (AML) obligations fulfills established statutory and international duties, preventing unregulated digital assets from serving as conduits for mass money laundering and terrorist financing.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:32.182308+00:00"
+    },
+    {
+      "id": "64340cfe-75fd-4222-98bd-a3355e176784",
+      "text": "Regulation creates essential legal clarity by formally defining the regulatory status of crypto assets (security, commodity, or currency) and codifying explicit property rights, thereby reducing counterparty risk and ambiguity for all market participants.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:32.183464+00:00"
+    },
+    {
+      "id": "a9e7ebc4-7a02-4573-9d47-952267538ab1",
+      "text": "Regulating transactions provides the necessary infrastructure and data visibility for tax authorities to accurately assess and capture capital gains owed, ensuring fiscal fairness and closing the substantial tax non-compliance gap.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:32.184348+00:00"
+    },
+    {
+      "id": "8c47059b-b017-4df7-b23c-d34497921c06",
+      "text": "Following historical precedent, regulation is the inevitable and necessary evolutionary step for any major financial innovation to stabilize, protecting users and investors from the inherently destructive nature of purely speculative bubbles and market panics.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:32.185127+00:00"
+    },
+    {
+      "id": "65626c6c-5dad-4f85-bebd-9197889e6b68",
+      "text": "Financial stabilization is not universally inevitable via regulation; many innovations, such as specific high-risk derivative products or early internet commercial protocols, stabilized or failed through market forces and self-governance without subsequent government intervention.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8c47059b-b017-4df7-b23c-d34497921c06",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:41.234796+00:00"
+    },
+    {
+      "id": "a0955d7d-eddc-4449-bdd6-9fc7a10862c3",
+      "text": "Stability and investor protection are not solely dependent on government regulation; common law liability frameworks, mandatory transparency standards, and standardized exchange rules often provide sufficient safeguards without state intervention.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8c47059b-b017-4df7-b23c-d34497921c06",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:41.235575+00:00"
+    },
+    {
+      "id": "a096c251-6af2-47cb-95fe-6a8806f776da",
+      "text": "Many heavily regulated entities, such as FTX and financial institutions leading up to the 2008 crisis, actively circumvented compliance measures while maintaining the facade of transparency, proving that disclosure demands do not prevent systemic fraud.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ba1b6e05-a546-4cea-98e8-86146efd083c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:41.976954+00:00"
+    },
+    {
+      "id": "592f5d07-1d2c-4b1e-b1c3-894c29c1884c",
+      "text": "Enforcement bodies often lack the resources, speed, or specialization necessary to effectively investigate sophisticated fraud, rendering the offered redress mechanisms too slow, too complex, or entirely inaccessible to the majority of harmed users.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ba1b6e05-a546-4cea-98e8-86146efd083c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:41.977417+00:00"
+    },
+    {
+      "id": "44f54dca-f4b9-4d03-abed-0c8f52f0e6b4",
+      "text": "Traditional capital requirements designed for leveraged intermediaries are often inapplicable to non-custodial decentralized finance (DeFi) protocols, which rely on automated smart contracts and governance structures where counterparty risk and centralized capital buffers are nonsensical.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "adf043ac-ddde-4ac8-aa26-e1e3051b511a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:42.050508+00:00"
+    },
+    {
+      "id": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "text": "The necessity of traditional rules is bypassed by specialized crypto frameworks; for instance, mandatory on-chain proof-of-reserves for stablecoins and standardized automated liquidation mechanisms in DeFi can offer superior, real-time transparency and risk mitigation over retrospective, ex-post financial audits.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "adf043ac-ddde-4ac8-aa26-e1e3051b511a",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:42.051048+00:00"
+    },
+    {
+      "id": "ea0a7e13-0385-4c3d-b7fc-b165e9429cbe",
+      "text": "Fiscal fairness is determined by the tax structure (e.g., differential rates for labor vs. capital), not merely enforcement mechanics. Enhanced data visibility only ensures compliance with existing laws, which may still favor wealthy taxpayers through preferential rates or legal loopholes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a9e7ebc4-7a02-4573-9d47-952267538ab1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:42.268317+00:00"
+    },
+    {
+      "id": "6d98e366-6e2e-4841-b1ab-08fb307fd590",
+      "text": "No enforcement mechanism, including enhanced data visibility, has ever fully closed a substantial compliance gap; evasion and non-compliance persist due to complex legal tax avoidance schemes and cross-border asset shifting, as evidenced by persistent multi-billion dollar tax gaps reported in major OECD economies.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a9e7ebc4-7a02-4573-9d47-952267538ab1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:42.268914+00:00"
+    },
+    {
+      "id": "81ea84a4-a78c-479c-b1ad-cd5a22377ab9",
+      "text": "Traditional financial institutions, which operate under stringent global KYC/AML standards, still handle over 99% of global money laundering volume, demonstrating that these measures only mitigate risk, rather than *preventing* illicit activity.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6c3c4e42-8249-4615-a85b-847f07b896c6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:43.508620+00:00"
+    },
+    {
+      "id": "8a27b8eb-cc40-4ff1-bfe0-c4a807b42287",
+      "text": "Standard KYC/AML is technically impossible to implement in decentralized finance (DeFi) protocols or self-custody wallets, as these non-custodial systems lack the central intermediary required to collect, store, and verify customer identity data.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6c3c4e42-8249-4615-a85b-847f07b896c6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:43.509091+00:00"
+    },
+    {
+      "id": "662cbb2d-9c1e-428e-9db2-b3c29a068420",
+      "text": "Defining complex crypto assets across jurisdictions often results in regulatory fragmentation, with agencies (e.g., SEC vs. CFTC in the US) issuing conflicting classifications, increasing cross-border ambiguity rather than uniformly reducing it.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "64340cfe-75fd-4222-98bd-a3355e176784",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:43.576807+00:00"
+    },
+    {
+      "id": "a3e636f2-8b14-4614-9de4-2d6205bc1a40",
+      "text": "Newly imposed regulations create substantial compliance and operational risks, such as high compliance costs (e.g., EU MiCA requirements) and the potential for regulatory capture, which counteracts the claimed reduction in overall market risk.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "64340cfe-75fd-4222-98bd-a3355e176784",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:43.577239+00:00"
+    },
+    {
+      "id": "42704feb-f5d4-443a-a9d1-f1109ebb03c7",
+      "text": "Market forces did not stabilize high-risk derivatives in 2008; their failure required a $700 billion US TARP bailout and the subsequent Dodd-Frank Act because self-governance led to systemic financial collapse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "65626c6c-5dad-4f85-bebd-9197889e6b68",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:51.002145+00:00"
+    },
+    {
+      "id": "1c7fd7c4-2cc0-4528-8ff3-e87326bff8d7",
+      "text": "The essential function of non-financial technologies, like internet protocols, lacks the systemic contagion risk characteristic of financial products; therefore, their self-stabilization does not logically apply to the management of macro-level financial instability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "65626c6c-5dad-4f85-bebd-9197889e6b68",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:51.002609+00:00"
+    },
+    {
+      "id": "b0b1eb52-53ad-47d9-928c-a9c57e14f3b4",
+      "text": "Common law liability frameworks rely entirely on the state's judicial system (courts) and executive power (police/sheriffs) to enforce judgments, define property rights, and resolve disputes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a0955d7d-eddc-4449-bdd6-9fc7a10862c3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:51.661498+00:00"
+    },
+    {
+      "id": "49fca515-cbe4-4581-bb7b-01c5cb234fbf",
+      "text": "Standards cannot be \"mandatory\" without state legislation or delegated regulatory authority (e.g., the SEC defining accounting rules); otherwise, they are merely voluntary private agreements insufficient for universal investor protection.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a0955d7d-eddc-4449-bdd6-9fc7a10862c3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:51.661946+00:00"
+    },
+    {
+      "id": "8f47ceb6-22ad-48f2-b1ca-bba49167f3cf",
+      "text": "Traditional rules encompass critical functional areas like Anti-Money Laundering (AML), consumer protection, and jurisdictional law, none of which are inherently addressed by on-chain proof-of-reserves or automated liquidation mechanisms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:55.126671+00:00"
+    },
+    {
+      "id": "a23758b3-749e-424a-a1ae-ac88a4b70ba8",
+      "text": "On-chain mechanisms only verify the technical state of the collateral, but they cannot enforce the legal ownership or custodial safety of the off-chain reserves (like T-bills) that ultimately back stablecoins and provide real-world solvency.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:55.127411+00:00"
+    },
+    {
+      "id": "70782435-3ecd-40e2-859d-3a108bebe680",
+      "text": "Automated liquidation mechanisms can exacerbate systemic risk, creating rapid, cascading market contagion and flash crashes far faster than traditional financial systems, as demonstrated across DeFi platforms in May 2022.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:55.128105+00:00"
+    },
+    {
+      "id": "01f6e9f2-cc2a-44e5-b2be-3faaf93738e9",
+      "text": "Mandatory disclosure regimes in highly regulated sectors, such as SEC 10-K/10-Q public filings and FDA clinical trial data releases, consistently allow investors and the public to assess risk and ensure stability in the vast majority of regulated entities.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a096c251-6af2-47cb-95fe-6a8806f776da",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:56.500924+00:00"
+    },
+    {
+      "id": "79be16d0-3e04-4e33-a347-e4c02133f8f1",
+      "text": "The 2008 crisis and the FTX collapse involved intentional criminal non-compliance and fraud, meaning the failure was in enforcement and punishment, not the legal requirement for disclosure itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a096c251-6af2-47cb-95fe-6a8806f776da",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:56.501867+00:00"
+    },
+    {
+      "id": "437b4557-3e60-44cb-9192-c2d1e902df1b",
+      "text": "Claiming failure because the gap was not *fully* closed sets an unrealistic standard; effectiveness should be judged by significant reduction. Enforcement mechanisms, such as the US IRS Foreign Account Tax Compliance Act (FATCA) and OECD reporting standards, have demonstrably led to the recovery of billions in previously undeclared offshore assets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6d98e366-6e2e-4841-b1ab-08fb307fd590",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:56.705510+00:00"
+    },
+    {
+      "id": "24767399-02c0-4ef0-83ed-0f8fd93c491e",
+      "text": "Enhanced data visibility measures (e.g., the Common Reporting Standard) are primarily designed to combat *illegal tax evasion* through undeclared assets. The persistence of the overall tax gap is often driven by complex *legal corporate tax avoidance* (base erosion and profit shifting), which requires legislative, not merely enforcement, reform.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6d98e366-6e2e-4841-b1ab-08fb307fd590",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:56.705951+00:00"
+    },
+    {
+      "id": "2207ce8e-ffb8-416b-b1db-2f1169a79582",
+      "text": "Decentralized Identity (DID) uses Zero-Knowledge Proofs (ZKPs) to verify compliance parameters, such as legal status or non-sanctioned location, without requiring any central intermediary to store or access the user's private identity data.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a27b8eb-cc40-4ff1-bfe0-c4a807b42287",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:57.408829+00:00"
+    },
+    {
+      "id": "97e1780c-d82e-44f6-8cbb-e1ee8b89c013",
+      "text": "AML requirements concerning transaction monitoring and sanctions screening can be enforced through on-chain security measures, such as smart contracts that screen transaction addresses against sanctions lists before execution, a practice already used by compliance firms to manage risk.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a27b8eb-cc40-4ff1-bfe0-c4a807b42287",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:57.409275+00:00"
+    },
+    {
+      "id": "bd54fe4e-9c95-4ded-b750-745905fa4ee6",
+      "text": "Smart contract vulnerabilities and oracle failures generate substantial systemic risk, necessitating non-centralized risk mitigation buffers\u2014like dedicated protocol insurance funds or pooled collateral\u2014to absorb sudden, massive protocol losses.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "44f54dca-f4b9-4d03-abed-0c8f52f0e6b4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:57.614761+00:00"
+    },
+    {
+      "id": "92d927de-94b8-4704-b9b6-83d6dd7dc14b",
+      "text": "The regulatory principle of assuring user solvency remains relevant, as decentralized exchanges and lending protocols require dedicated, unallocated capital reserves (such as governance tokens or treasury funds) to absorb unexpected impairment losses, functionally equivalent to traditional capital buffers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "44f54dca-f4b9-4d03-abed-0c8f52f0e6b4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:57.615179+00:00"
+    },
+    {
+      "id": "99dd5721-1fe3-425b-9fbd-f5c4e337763a",
+      "text": "Basel III requirements, estimated to cost the global banking sector $100 billion annually, reduced the probability of a systemic financial crisis, thereby avoiding global recessionary losses estimated in the trillions of dollars.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a3e636f2-8b14-4614-9de4-2d6205bc1a40",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:58.700017+00:00"
+    },
+    {
+      "id": "5a54998e-af83-44c0-b0ee-e52cb1c01e21",
+      "text": "Simple disclosure regulations, such as mandatory Form 13F filings for large institutional investors in the U.S., significantly reduce information asymmetry and market manipulation risk with minimal compliance cost.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a3e636f2-8b14-4614-9de4-2d6205bc1a40",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:01:58.700586+00:00"
+    },
+    {
+      "id": "6e634481-9f1a-400f-af60-d46b7b2a3257",
+      "text": "Traditional financial institutions handle nearly all (over 99.9%) of global financial transaction volume, meaning that even a highly effective anti-money laundering system will still process the statistical majority of residual illicit funds. The volume is expected due to scale, not measure ineffectiveness.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "81ea84a4-a78c-479c-b1ad-cd5a22377ab9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:00.003798+00:00"
+    },
+    {
+      "id": "e644256d-5f5f-48f4-9bea-f17da62c7edc",
+      "text": "KYC/AML standards actively prevent specific illicit activities by triggering fund freezes and necessitating Suspicious Activity Reports (SARs), which directly intercepts active money laundering operations. This deterrence and active blocking function goes beyond mere risk mitigation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "81ea84a4-a78c-479c-b1ad-cd5a22377ab9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:00.004687+00:00"
+    },
+    {
+      "id": "1e976b5b-25a8-4b2a-9987-54ef250b1b80",
+      "text": "Regulating cryptocurrency fundamentally requires explicit legislative statutes defining digital assets and ownership, since flexible common law develops too slowly and reactively to govern fast-moving technological markets.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b0b1eb52-53ad-47d9-928c-a9c57e14f3b4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:00.899503+00:00"
+    },
+    {
+      "id": "7e432f4d-ec93-491c-bb82-d6e1f7a0d963",
+      "text": "The principle of decentralized redundancy, common in internet protocols, is directly applicable to managing the operational risks of financial infrastructure (e.g., payment systems and exchanges), preventing local tech failures from escalating into macro-level instability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1c7fd7c4-2cc0-4528-8ff3-e87326bff8d7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:01.012904+00:00"
+    },
+    {
+      "id": "b95a45ef-e9db-4bf4-b918-a3e54d8a99a8",
+      "text": "Clearing systems and major exchanges (e.g., the NYSE or Visa) impose de facto mandatory standards, such as listing requirements or transaction protocols, which market participants must follow to access critical infrastructure; non-compliance results in commercial exclusion, a powerful non-governmental enforcement mechanism.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "49fca515-cbe4-4581-bb7b-01c5cb234fbf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:03.338490+00:00"
+    },
+    {
+      "id": "a3f4259b-a87c-436e-b9b9-53f5ba616255",
+      "text": "National legislative standards are inherently jurisdictionally limited, failing to provide \"universal\" protection for global investors participating in decentralized markets. Global standards such as International Financial Reporting Standards (IFRS) often achieve broader voluntary adoption and greater investor reliance than any single state\u2019s mandate.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "49fca515-cbe4-4581-bb7b-01c5cb234fbf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:03.338516+00:00"
+    },
+    {
+      "id": "080a5794-5171-4ffd-bbcf-61064029dad5",
+      "text": "On-chain Proof-of-Reserves directly address the core consumer protection concern of institutional insolvency by providing continuous, auditable solvency data, a feature superior to the periodic or non-public audits mandated for traditional financial institutions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8f47ceb6-22ad-48f2-b1ca-bba49167f3cf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:04.390519+00:00"
+    },
+    {
+      "id": "62d6af1f-5dce-4a31-b96d-4aaa37098de1",
+      "text": "FTX was not legally required to provide the same real-time, independently verified custody and asset valuation disclosures mandated for regulated banks and exchanges. This structural gap, which allowed related-party assets like FTT to be opaque, proves the existing legal disclosure framework was insufficient for complex digital asset schemes, regardless of criminal intent.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "79be16d0-3e04-4e33-a347-e4c02133f8f1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:07.076755+00:00"
+    },
+    {
+      "id": "2551ab7b-fea3-4882-ae03-0dea2eac13fc",
+      "text": "Government-sponsored enterprises (Fannie Mae, Freddie Mac) received implicit federal backing and were mandated to meet affordable housing goals, actively driving demand for the subprime mortgages that later collapsed. This demonstrates the crisis's origin stemmed from policy failure and moral hazard created by state action, not pure market instability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "42704feb-f5d4-443a-a9d1-f1109ebb03c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:07.167205+00:00"
+    },
+    {
+      "id": "b8b71b94-0575-4934-b622-bb119969fd02",
+      "text": "Systemic risk is primarily driven by excessive leverage and inadequate collateralisation, not the speed of liquidation; the May 2022 DeFi flash crash involved unsustainable 10x leverage, which is the root cause of contagion regardless of execution speed.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "70782435-3ecd-40e2-859d-3a108bebe680",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:07.531033+00:00"
+    },
+    {
+      "id": "5b9b2b5f-7b7a-4aaa-beb0-4d11c740223d",
+      "text": "The contagion observed during the 2022 DeFi crash remained contained within the separate cryptocurrency ecosystem because the sector lacks the deep, interconnected regulatory and interbank linkages required to trigger a global economic crisis like the 2008 subprime market collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "70782435-3ecd-40e2-859d-3a108bebe680",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:07.531065+00:00"
+    },
+    {
+      "id": "017e12f2-2249-4aff-bec9-d2d43f76a68e",
+      "text": "If cryptocurrencies are regulated as traditional finance, established centralized risk mitigation frameworks\u2014such as government-backed deposit insurance or mandatory capital adequacy ratios (like Basel III)\u2014are demonstrably more effective at managing systemic risk than self-funded, non-centralized pools, which face correlation risk during crises (e.g., the DeFi failures of 2022).",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bd54fe4e-9c95-4ded-b750-745905fa4ee6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:07.725823+00:00"
+    },
+    {
+      "id": "eaf58e29-b652-4615-bae8-c5d9b6e023b0",
+      "text": "Measures like Country-by-Country Reporting (a form of enhanced data visibility) are critical tools used by tax authorities and policymakers to identify the mechanisms of Base Erosion and Profit Shifting (BEPS). This data directly informed the legislative frameworks of the OECD\u2019s Inclusive Framework (Pillars One and Two), proving that visibility measures are crucial prerequisites for drafting and enforcing avoidance legislation, not merely enforcement tools for evasion.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "24767399-02c0-4ef0-83ed-0f8fd93c491e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:07.969626+00:00"
+    },
+    {
+      "id": "68d749a8-96bd-40db-8de7-9b151bb95726",
+      "text": "Mandatory disclosure facilitates risk assessment but does not guarantee stability, as stability relies on external market conditions and the integrity of management, exemplified by the collapse of Lehman Brothers and Bear Stearns despite extensive SEC filings.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "01f6e9f2-cc2a-44e5-b2be-3faaf93738e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:08.084902+00:00"
+    },
+    {
+      "id": "8fd15892-d7e0-40a9-8d73-ff339df79a11",
+      "text": "Mandatory disclosure regimes frequently fail when active deception is present; the Madoff fraud thrived despite mandatory SEC filings, just as FDA data failed to prevent the severe market distribution of harmful drugs like Vioxx.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "01f6e9f2-cc2a-44e5-b2be-3faaf93738e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:08.084971+00:00"
+    },
+    {
+      "id": "275fbb8f-620e-4c56-87e6-f008e99485ac",
+      "text": "Consumer protection bodies (like the U.S. CFPB or U.K. FCA) compel regulated financial institutions to issue wide-scale redress schemes for systemic fraud, ensuring compensation for thousands of users even if individual criminal prosecutions are too complex.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "592f5d07-1d2c-4b1e-b1c3-894c29c1884c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:08.131783+00:00"
+    },
+    {
+      "id": "54a8eabc-f97d-48bf-99fb-891d47375510",
+      "text": "For common digital fraud, highly accessible commercial mechanisms, such as mandatory bank reimbursement schemes and credit card chargebacks, successfully refund funds to many users without requiring specialized state enforcement body investigation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "592f5d07-1d2c-4b1e-b1c3-894c29c1884c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:08.132239+00:00"
+    },
+    {
+      "id": "7dd9d8f6-29cf-4796-98ab-05159ed1e10e",
+      "text": "Major decentralized protocols like Aave and Compound maintain solvency primarily through over-collateralization and immediate liquidation mechanisms, rather than relying on dedicated, unallocated capital reserves held by the protocol treasury.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92d927de-94b8-4704-b9b6-83d6dd7dc14b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:08.603099+00:00"
+    },
+    {
+      "id": "c9d00dfc-a803-4a45-bfff-b8f4b47864ac",
+      "text": "Governance tokens or treasury funds lack the stability, regulatory scrutiny, and guaranteed sovereign legal backing that defines traditional bank capital buffers (e.g., Basel III Tier 1 capital), rendering their functional equivalence questionable.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92d927de-94b8-4704-b9b6-83d6dd7dc14b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:08.603124+00:00"
+    },
+    {
+      "id": "de0bc54f-0b8c-4704-adfa-38d2254f16f9",
+      "text": "Most transfers occur directly between wallets on the base protocol (e.g., Bitcoin or Ethereum Layer 1) without involving any smart contract, making them impossible for contract-based screening mechanisms to block before execution.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "97e1780c-d82e-44f6-8cbb-e1ee8b89c013",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:09.223954+00:00"
+    },
+    {
+      "id": "c0c98c47-a047-4ac1-8e81-9582fe3db99d",
+      "text": "Compliance firms screen only their own controlled liquidity (e.g., centralized stablecoin pools), which does not establish the global regulatory jurisdiction required to mandate the adoption of screening contracts across billions of permissionless wallets and decentralized transaction types.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "97e1780c-d82e-44f6-8cbb-e1ee8b89c013",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:09.223982+00:00"
+    },
+    {
+      "id": "7cbf1120-cf8a-4430-9523-0b64facab299",
+      "text": "While ZKPs address technical verification, they do not resolve the necessary jurisdictional challenge: regulators require a clear, legally accountable real-world entity to enforce remedial actions (e.g., asset seizure, freezing sanctioned wallets), which is inherently incompatible with fully trustless, decentralized architectures.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2207ce8e-ffb8-416b-b1db-2f1169a79582",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:09.526903+00:00"
+    },
+    {
+      "id": "dfba5b52-910c-4b1f-a621-c1925567d54d",
+      "text": "The annual global tax gap lost to offshore evasion exceeds $480 billion, according to the Tax Justice Network. Recovering a few billion dollars, which represents less than 1% of the total annual loss, does not constitute a \"significant reduction\" of the problem.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "437b4557-3e60-44cb-9192-c2d1e902df1b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:09.560394+00:00"
+    },
+    {
+      "id": "8cc7cab6-3258-4f7d-b958-409633140b53",
+      "text": "Form 13F filings are only required on a quarterly basis, up to 45 calendar days after the reporting period closes. This substantial delay renders the portfolio data nearly useless for reducing current information asymmetry or preventing real-time, short-term market manipulation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a54998e-af83-44c0-b0ee-e52cb1c01e21",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:09.860944+00:00"
+    },
+    {
+      "id": "d35f2080-1559-4edb-b68e-ed745fb64b2c",
+      "text": "The compliance cost is not minimal for large institutional investors when factoring in the strategic cost of revealing proprietary signal and strategy information to competitors, which can erode future investment returns (alpha).",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a54998e-af83-44c0-b0ee-e52cb1c01e21",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:09.860986+00:00"
+    },
+    {
+      "id": "c513c46a-d522-43ee-8543-26706171ea3a",
+      "text": "Stablecoins such as MakerDAO's DAI enforce solvency solely through over-collateralization by decentralized assets like ETH, utilizing smart contracts for automated liquidation against market volatility. This mechanism ensures technical custodial safety entirely on-chain, making the legal enforcement of off-chain reserve custody irrelevant for decentralized models.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a23758b3-749e-424a-a1ae-ac88a4b70ba8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:11.790888+00:00"
+    },
+    {
+      "id": "145a85c6-0e70-4087-bda3-c05abd5ac768",
+      "text": "Global estimates of laundered money exceed $2 trillion annually despite mandatory SAR reporting and fund freezes, demonstrating that these mechanisms primarily function as reactive detection and mitigation rather than successful active prevention.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e644256d-5f5f-48f4-9bea-f17da62c7edc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:12.827542+00:00"
+    },
+    {
+      "id": "12145910-4f1d-4e5f-9022-8e3a726aa709",
+      "text": "Even after the implementation of Basel III standards, major banking institutions like Credit Suisse (2023) and several large US regional banks (Signature, Silicon Valley Bank, 2023) failed, demonstrating that systemic fragility persists despite increased capital requirements.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "99dd5721-1fe3-425b-9fbd-f5c4e337763a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:14.552617+00:00"
+    },
+    {
+      "id": "7b428505-8bc2-4e89-b088-7761f431d9bc",
+      "text": "A crisis with losses in the trillions occurs approximately once every 50 to 100 years; calculating the expected annual benefit requires dividing the maximum loss by this frequency, resulting in a quantified annual benefit significantly lower than the implied reduction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "99dd5721-1fe3-425b-9fbd-f5c4e337763a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:14.552652+00:00"
+    },
+    {
+      "id": "4463851b-6944-4e2d-a985-4cd5ab5352ad",
+      "text": "The cited mechanisms largely fail to cover Authorized Push Payment (APP) fraud, where the user willingly transfers funds to a scammer; this type of fraud now dominates losses in countries like the UK, requiring government intervention to mandate liability and consumer protection.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "54a8eabc-f97d-48bf-99fb-891d47375510",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:19.541462+00:00"
+    },
+    {
+      "id": "b33b969d-b0e5-42c4-a47f-3690c7360efe",
+      "text": "Financial redress is fundamentally constrained by institutional resources; for example, the collapse of firms like London Capital & Finance (LC&F) under FCA supervision showed that eventual compensation was significantly limited by statutory FSCS caps and the insolvent firm\u2019s lack of recoverable assets. The existence of a court order or regulatory compulsion does not guarantee payment, especially in cases of massive fraud leading to institutional insolvency.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "275fbb8f-620e-4c56-87e6-f008e99485ac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:22.893724+00:00"
+    },
+    {
+      "id": "01e62c9b-77d9-472b-912a-062cac414f88",
+      "text": "While traditional banks handle the largest total volume, the UN estimates that darknet markets alone process billions in funds annually where nearly all transactions are illicit, demonstrating that unregulated systems can concentrate high-value residual crime.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6e634481-9f1a-400f-af60-d46b7b2a3257",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.155230+00:00"
+    },
+    {
+      "id": "7dc05c95-8982-4253-8d31-2a969c134c83",
+      "text": "Major regulated financial institutions have mandatory KYC/AML processes which flag millions of transactions annually via Suspicious Activity Reports (SARs), providing immediate government oversight, unlike many decentralized crypto platforms where detection mechanisms lag.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6e634481-9f1a-400f-af60-d46b7b2a3257",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.155276+00:00"
+    },
+    {
+      "id": "b69d317f-c8d1-4019-be06-e3bf09fa0432",
+      "text": "Over-regulating cryptocurrency like traditional finance stifles technological innovation and economic growth, potentially driving key development, talent, and capital to more permissive jurisdictions like Switzerland, Singapore, or Dubai.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.155476+00:00"
+    },
+    {
+      "id": "ecf7737d-27e0-4796-95fd-69c181d289cc",
+      "text": "Cryptocurrency\u2019s borderless and pseudonymous nature renders traditional national regulation impractical, leading to immediate regulatory arbitrage where capital flows instantly to less restrictive global jurisdictions.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.156263+00:00"
+    },
+    {
+      "id": "e3619aa8-3bc8-4f12-823b-a882105f8dbf",
+      "text": "Empirical data shows that the vast majority of cryptocurrency market capitalization functions as a speculative commodity or store of value rather than a stable medium of exchange, making traditional currency regulation fundamentally inapplicable.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.156868+00:00"
+    },
+    {
+      "id": "fb96031c-a84a-4068-9f9a-e9fc183d6257",
+      "text": "Strict regulation infringes upon the fundamental right of individuals to transact peer-to-peer and retain complete financial sovereignty over their assets without mandatory intermediation, surveillance, or government gatekeepers.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.157360+00:00"
+    },
+    {
+      "id": "d7230e51-8e1b-4f4b-93d0-23ab8a21172e",
+      "text": "The technical architecture of non-custodial wallets and Decentralized Autonomous Organizations (DAOs) makes traditional compliance impossible, as existing regulation mandates identifiable intermediaries and centralized control points for KYC/AML enforcement.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.157787+00:00"
+    },
+    {
+      "id": "726eb253-119d-44a7-b9e4-7b9f24bca728",
+      "text": "Historical precedents, such as the encryption wars of the 1990s and failed attempts to ban peer-to-peer file-sharing, demonstrate the futility of trying to impose centralized control on decentralized network protocols.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:23.158215+00:00"
+    },
+    {
+      "id": "e139b9d9-4677-42d5-bb4f-545a56d337a2",
+      "text": "National regulation remains practical because centralized exchanges (CEXs) and fiat on/off-ramps, where most capital enters crypto, are licensed and subject to standard Know Your Customer (KYC) and Anti-Money Laundering (AML) laws globally, such as in the US and the EU.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ecf7737d-27e0-4796-95fd-69c181d289cc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:34.376207+00:00"
+    },
+    {
+      "id": "c8f14e6e-b146-4b65-be06-94c7a5757a36",
+      "text": "International cooperation through bodies like the Financial Action Task Force (FATF) mandates compliance measures across jurisdictions, meaning even borderless capital movement is subject to globally coordinated AML standards that restrict regulatory arbitrage.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ecf7737d-27e0-4796-95fd-69c181d289cc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:34.376657+00:00"
+    },
+    {
+      "id": "9869efdf-83b0-48cd-a6ec-cb24391c41dc",
+      "text": "Implementing robust consumer protection and Anti-Money Laundering (AML) standards builds the institutional trust required for mass adoption and significant capital inflows, which ultimately fosters more sustained long-term growth and innovation than an unstable, unregulated market.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b69d317f-c8d1-4019-be06-e3bf09fa0432",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:35.087567+00:00"
+    },
+    {
+      "id": "98e5af8e-ca25-4cc2-8ab2-fc68b0ab7749",
+      "text": "The comparative advantage of \"permissive\" jurisdictions is diminishing as global regulatory convergence occurs; for instance, authorities in Singapore and Dubai have recently tightened enforcement and retail protective measures specific to cryptocurrency.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b69d317f-c8d1-4019-be06-e3bf09fa0432",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:35.088279+00:00"
+    },
+    {
+      "id": "374381c6-a5fb-4738-8d6f-e53cc4f146fb",
+      "text": "Centralized governance models, notably China's Great Firewall, effectively block mass access to decentralized protocols like Tor and many cryptocurrency P2P nodes within its jurisdiction.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "726eb253-119d-44a7-b9e4-7b9f24bca728",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:36.664138+00:00"
+    },
+    {
+      "id": "b7db3a0c-dfe5-4a51-9061-65e53dd62393",
+      "text": "The successful prosecution and shutdown of initial centralized P2P services like Napster and Grokster forced millions of users onto less convenient platforms, significantly disrupting the market and increasing user liability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "726eb253-119d-44a7-b9e4-7b9f24bca728",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:36.665275+00:00"
+    },
+    {
+      "id": "4d48026d-383b-4f5e-be5b-301c488cf463",
+      "text": "The U.S. Constitution and the Universal Declaration of Human Rights define fundamental rights such as free speech and association, but neither document recognizes an unqualified right to complete financial sovereignty or transactions free from oversight.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "fb96031c-a84a-4068-9f9a-e9fc183d6257",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:39.513377+00:00"
+    },
+    {
+      "id": "4e146bd7-afe7-4171-aecc-d558b38d4fdd",
+      "text": "Anti-Money Laundering (AML) and Counter-Terrorism Financing (CTF) regulations prevent un-intermediated financial systems from being used for large-scale criminal activity, racketeering, and sanctions evasion that threaten national security and economic stability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "fb96031c-a84a-4068-9f9a-e9fc183d6257",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:39.513809+00:00"
+    },
+    {
+      "id": "008a1384-a2fc-45d0-9b38-782c8b7c9a92",
+      "text": "The EU's MiCA regulation, alongside FATF guidance on the Travel Rule for non-custodial transfers, explicitly mandates or defines compliance obligations and technological solutions (like zero-knowledge proofs) for decentralized services, proving compliance mechanisms are evolving.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d7230e51-8e1b-4f4b-93d0-23ab8a21172e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:39.551112+00:00"
+    },
+    {
+      "id": "3c798ad9-e425-43be-b201-422af0a99880",
+      "text": "Many DAOs and non-custodial wallet providers rely on centralized elements like DNS registration, web hosting (AWS, Cloudflare), or specific multisig key holders, which serve as identifiable intermediaries and centralized control points for compliance enforcement.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d7230e51-8e1b-4f4b-93d0-23ab8a21172e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:39.551530+00:00"
+    },
+    {
+      "id": "5627886a-1e19-42a0-98c6-681085c59766",
+      "text": "Financial instruments classified as commodities or securities fall under the long-established regulatory authority of agencies like the CFTC and SEC, requiring oversight for market integrity and investor protection regardless of their status as currency.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e3619aa8-3bc8-4f12-823b-a882105f8dbf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:41.753400+00:00"
+    },
+    {
+      "id": "82837533-2f8a-4a2a-b888-8fe51cedb5a4",
+      "text": "Stablecoins like USDC and Tether maintain multi-billion dollar market capitalizations and are widely used for transactions and settlements across digital platforms, demonstrating a significant segment of crypto already functions as a stable medium of exchange.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e3619aa8-3bc8-4f12-823b-a882105f8dbf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:41.754493+00:00"
+    },
+    {
+      "id": "8a8bcbf9-f9d7-4b7d-8515-9c3060ce6ecf",
+      "text": "Many FATF-aligned jurisdictions (e.g., gray-listed nations) have significant legislative loopholes and weak judicial enforcement, creating compliance gaps that capital exploits for regulatory arbitrage, regardless of the global standard's existence.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8f14e6e-b146-4b65-be06-94c7a5757a36",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:46.135937+00:00"
+    },
+    {
+      "id": "e7853dcf-0bbf-42ae-9101-e8bd84a612e9",
+      "text": "Current AML standards primarily target traditional banking, often failing to effectively capture high-volume capital flows moving through informal Hundi/Hawala systems, trade-based money laundering, and privacy-enhanced decentralized finance channels, which remain outside effective FATF oversight.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8f14e6e-b146-4b65-be06-94c7a5757a36",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:46.137051+00:00"
+    },
+    {
+      "id": "b5b72288-169d-4dc6-ac16-952ccb307950",
+      "text": "The rapid growth of decentralized finance (DeFi), which accounts for tens of billions in Total Value Locked (TVL) and operates without centralized controls or KYC/AML, allows capital to be moved and traded globally without ever touching a regulated fiat on-ramp.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e139b9d9-4677-42d5-bb4f-545a56d337a2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:46.212726+00:00"
+    },
+    {
+      "id": "62b6f4cc-c4fe-41e9-b5a3-c95602e926d4",
+      "text": "National crypto regulation is easily circumvented by users accessing foreign, unlicensed centralized exchanges or utilizing peer-to-peer (P2P) platforms, making capital migration across jurisdictions nearly instantaneous and undermining the enforceability of national KYC and AML compliance.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e139b9d9-4677-42d5-bb4f-545a56d337a2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:46.213550+00:00"
+    },
+    {
+      "id": "c7b9d859-c160-4962-8f97-8e733976b81c",
+      "text": "Decentralized platforms like BitTorrent provided superior technical convenience, often yielding faster and more reliable download speeds by sourcing file segments from multiple users simultaneously, unlike centralized servers prone to single-point failure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b7db3a0c-dfe5-4a51-9061-65e53dd62393",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:48.560183+00:00"
+    },
+    {
+      "id": "cc36ddd1-a3af-4bce-a1e0-107642ada9b1",
+      "text": "The shift dramatically increased convenience regarding content selection, as decentralized networks allowed for an unbounded proliferation of niche and diverse media not limited by a single, centrally maintained index.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b7db3a0c-dfe5-4a51-9061-65e53dd62393",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:48.560620+00:00"
+    },
+    {
+      "id": "ec6efc0c-cd4e-4779-a6d6-87552c745601",
+      "text": "Jurisdictions like early internet-era Hong Kong demonstrated rapid capital inflow and stability with minimal interventionist regulation, establishing institutional trust without the highly \"robust\" standards proposed.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9869efdf-83b0-48cd-a6ec-cb24391c41dc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:50.125410+00:00"
+    },
+    {
+      "id": "46b10413-3863-48e3-b8c0-977207fb5341",
+      "text": "The large legal and compliance costs inherent to \"robust\" AML/KYC standards create insurmountable barriers to entry for early-stage innovators and small firms, slowing the rate of disruptive innovation in regulated sectors.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9869efdf-83b0-48cd-a6ec-cb24391c41dc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:50.126530+00:00"
+    },
+    {
+      "id": "42233d8a-106b-4da0-8f16-f1e32c2fcbe0",
+      "text": "Other permissive jurisdictions, such as Switzerland's Canton of Zug, have maintained or expanded favorable regulatory frameworks for decentralized ledger technology and decentralized finance, indicating the comparative advantage has not uniformly diminished across all sectors.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "98e5af8e-ca25-4cc2-8ab2-fc68b0ab7749",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:50.981179+00:00"
+    },
+    {
+      "id": "040b9235-b6da-4a82-975d-4970b670afca",
+      "text": "Singapore's cryptocurrency enforcement followed high-profile domestic investment losses and the collapse of local firms like Three Arrows Capital, indicating the action was a response to specific internal market failures rather than broad global regulatory convergence.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "98e5af8e-ca25-4cc2-8ab2-fc68b0ab7749",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:50.982290+00:00"
+    },
+    {
+      "id": "2b8e6289-de9a-4edc-8076-c3cfca667f95",
+      "text": "Regulations like MiCA and the FATF Travel Rule define high-level compliance *obligations* and *outcomes* (e.g., transaction monitoring) but are explicitly technology-neutral, meaning they do not mandate specific underlying technological solutions, such as zero-knowledge proofs.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "008a1384-a2fc-45d0-9b38-782c8b7c9a92",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:51.387397+00:00"
+    },
+    {
+      "id": "8a48f2e0-c8d8-47d1-ad60-e52f33807b22",
+      "text": "MiCA and FATF guidance focus compliance requirements on custodial Virtual Asset Service Providers (VASPs). The application to truly non-custodial decentralized services remains ambiguous, forcing *industry* groups like TRISA or OpenVASP to develop interpretation tools, not regulators to specify the technology.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "008a1384-a2fc-45d0-9b38-782c8b7c9a92",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:51.388289+00:00"
+    },
+    {
+      "id": "5b7c7c0a-a18b-403d-85dc-69d6f0f4bfbd",
+      "text": "AML/CTF regulations primarily function for detection and deterrence rather than prevention. The UNODC estimates that only a negligible fraction (less than 1%) of global illicit financial flows, which range from $800 billion to $2 trillion annually, is ever intercepted or successfully confiscated.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4e146bd7-afe7-4171-aecc-d558b38d4fdd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:52.068716+00:00"
+    },
+    {
+      "id": "25c7499a-ce41-467e-a7c8-0145af76db08",
+      "text": "These regulations are structurally predicated on regulated financial intermediaries (e.g., banks, major exchanges) to enforce Know Your Customer (KYC) and transaction reporting. Systems that are truly un-intermediated, such as decentralized finance (DeFi) or cash couriers, often bypass current AML/CTF controls entirely.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4e146bd7-afe7-4171-aecc-d558b38d4fdd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:52.069155+00:00"
+    },
+    {
+      "id": "a731db66-7d9b-479d-8c87-d6603d43ac2b",
+      "text": "Decentralized performance is conditional; files with poor seeding or low popularity often result in extremely slow or stalled transfers, failing to deliver superior convenience due to reliance on unpredictable user availability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c7b9d859-c160-4962-8f97-8e733976b81c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:58.580017+00:00"
+    },
+    {
+      "id": "f67a2a91-480d-47d0-aeb4-23d0d037249d",
+      "text": "Modern centralized delivery systems utilize robust Content Delivery Networks (CDNs) like those offered by AWS or Akamai, which negate the single-point failure risk through global redundancy and often exceed P2P speeds for popular content.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c7b9d859-c160-4962-8f97-8e733976b81c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:58.580044+00:00"
+    },
+    {
+      "id": "e9e18777-e310-45b7-83be-dbe5f26b8cbf",
+      "text": "The necessary conversion of fiat currency into crypto assets typically occurs on centralized exchanges (CEXs) like Coinbase and Binance, which are legally mandated to enforce KYC/AML checks, identifying the origin and destination of most capital flows.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b5b72288-169d-4dc6-ac16-952ccb307950",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:59.002461+00:00"
+    },
+    {
+      "id": "94bd19cc-3ecb-4869-b9d3-58cfbb13ef56",
+      "text": "Large-scale capital migration still relies on converting crypto to fiat through regulated domestic banking systems, which act as necessary choke points for AML and tax enforcement, limiting the practical scale of circumvention claimed by foreign exchanges or P2P platforms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "62b6f4cc-c4fe-41e9-b5a3-c95602e926d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:59.137762+00:00"
+    },
+    {
+      "id": "18f85e32-9a09-43ed-a143-5c0c37c5aafa",
+      "text": "Regulatory agencies, such as the US Treasury's Office of Foreign Assets Control (OFAC), use adaptive enforcement to restrict domestic banks from processing fiat transfers associated with specific non-compliant foreign exchanges or wallet addresses, effectively limiting accessibility regardless of the foreign entity's license status.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "62b6f4cc-c4fe-41e9-b5a3-c95602e926d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:59.137804+00:00"
+    },
+    {
+      "id": "7066b242-da24-40c9-95c4-c703c8b8c0dd",
+      "text": "The FATF has actively adapted its mandates, issuing the Travel Rule (Recommendation 16) to regulate Virtual Asset Service Providers (VASPs) and creating comprehensive guidelines for Hawala systems and Trade-Based Money Laundering, demonstrating specific, if difficult, efforts to centralize oversight of these non-traditional channels.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e7853dcf-0bbf-42ae-9101-e8bd84a612e9",
+      "children_count": 0,
+      "references": [
+        "FATF Recommendation 16 (Travel Rule)",
+        "FATF TBML Guidance"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:02:59.966330+00:00"
+    },
+    {
+      "id": "55f1d981-20ca-4360-850c-5c1f1319a74e",
+      "text": "Stablecoins maintain their value by holding centralized reserves of fiat currency and traditional assets like T-bills, meaning their stability is borrowed directly from the legacy financial system and not generated by decentralized crypto economics.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "82837533-2f8a-4a2a-b888-8fe51cedb5a4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:00.428358+00:00"
+    },
+    {
+      "id": "61acca24-ee88-48b1-92aa-c1a659babf40",
+      "text": "Algorithmic and centralized stablecoins have demonstrated fundamental instability risk; TerraUSD (UST) failed completely in May 2022, and major coins like USDC temporarily de-pegged by up to 8% during the March 2023 Silicon Valley Bank failure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "82837533-2f8a-4a2a-b888-8fe51cedb5a4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:00.429041+00:00"
+    },
+    {
+      "id": "b67c53da-214d-493b-a228-ad90c6837c4a",
+      "text": "The growth of specialized RegTech solutions and compliance service providers significantly lowers the marginal cost of AML/KYC adherence, allowing numerous small fintech firms to successfully gain entry to regulated markets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "46b10413-3863-48e3-b8c0-977207fb5341",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:01.349245+00:00"
+    },
+    {
+      "id": "2fee45cd-7ab9-4524-a3ea-6b75c6cd1396",
+      "text": "In heavily regulated sectors like finance, many large, disruptive innovations (e.g., real-time gross settlement systems) are often spearheaded by established institutions or government initiatives, irrespective of small firm barriers to entry.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "46b10413-3863-48e3-b8c0-977207fb5341",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:01.349273+00:00"
+    },
+    {
+      "id": "59b6c483-f03e-46f5-9129-d7a257c68e57",
+      "text": "The 'paradox of choice,' well-documented in consumer psychology, shows that large, unfiltered sets of options increase decision effort and lead to selection paralysis rather than simplifying the content selection process.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cc36ddd1-a3af-4bce-a1e0-107642ada9b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:01.541190+00:00"
+    },
+    {
+      "id": "a694e33d-2955-4beb-9219-ff2b60df3fd2",
+      "text": "The threat of punitive \"de-risking\" by global correspondent banks following a FATF gray-listing significantly constrains capital movement, forcing jurisdictions like the UAE and Turkey to rapidly enact legislative reforms to avoid financial isolation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8a8bcbf9-f9d7-4b7d-8515-9c3060ce6ecf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:01.739063+00:00"
+    },
+    {
+      "id": "e4ca8482-d825-48be-ada8-4a04286111b2",
+      "text": "Singapore\u2019s MAS had already significantly tightened regulatory requirements, including implementing the comprehensive Payment Services Act (PSA) license regime in 2020 and actively aligning with global standards set by international bodies like the FATF, indicating convergence was already underway before the major domestic collapses.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "040b9235-b6da-4a82-975d-4970b670afca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:02.124456+00:00"
+    },
+    {
+      "id": "eb3c2078-6354-4d01-91df-8df9ea34014a",
+      "text": "Regulatory action against retail crypto advertising and enhanced investor protection measures were announced by MAS beginning January 2022, several months before the major collapses of firms like Terra/Luna and Three Arrows Capital occurred mid-year, showing enforcement was part of a planned, continuous policy shift.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "040b9235-b6da-4a82-975d-4970b670afca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:02.124484+00:00"
+    },
+    {
+      "id": "74f80be5-8c81-43c3-bc57-9eddf7cf5778",
+      "text": "Hong Kong's early success was established on a robust, pre-existing common law system and independent judiciary inherited from the UK, proving that strong foundational legal institutions are required for institutional trust, irrespective of low specific industry regulation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ec6efc0c-cd4e-4779-a6d6-87552c745601",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:02.612890+00:00"
+    },
+    {
+      "id": "7307377b-2a87-4355-88e8-d99b1b124f58",
+      "text": "Early internet-era Hong Kong was a geographically defined financial center operating before the need for modern global compliance standards; borderless cryptocurrency, vulnerable to large-scale illicit finance, requires globally coordinated standards like those set by FATF.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ec6efc0c-cd4e-4779-a6d6-87552c745601",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:02.612939+00:00"
+    },
+    {
+      "id": "cfc6a581-675d-4606-8552-282986ab06c5",
+      "text": "The low confiscation rate (less than 1%) is an inadequate metric for evaluating the success of AML/CTF regulations because their primary purpose is to deter large-scale illicit activity from using formal financial systems. Success is achieved when criminal funds are forced into shadow markets (like cash or unregulated crypto), which minimizes systemic risk to banking institutions but makes global tracking and recovery inherently difficult.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5b7c7c0a-a18b-403d-85dc-69d6f0f4bfbd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:04.614716+00:00"
+    },
+    {
+      "id": "8390e497-162d-482c-a0bd-2a66d4598fd0",
+      "text": "The European Union's comprehensive MiCA framework, due to its jurisdictional breadth across 27 member states, standardizes crypto regulation across the continent, substantially diminishing the isolated regulatory arbitrage advantage afforded by specific local jurisdictions like Zug.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "42233d8a-106b-4da0-8f16-f1e32c2fcbe0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:04.663418+00:00"
+    },
+    {
+      "id": "0b396539-8950-4dbe-8a4a-0c384084b8fa",
+      "text": "Cryptocurrency's transparent, immutable public ledger allows law enforcement (e.g., the FBI's seizure of the Colonial Pipeline ransomware funds) to trace illicit transactions and identify associated real-world identities, demonstrating that AML/CTF controls are not entirely bypassed. This external monitoring and seizure capability acts as a crucial control layer independent of regulated financial intermediaries.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "25c7499a-ce41-467e-a7c8-0145af76db08",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:07.572177+00:00"
+    },
+    {
+      "id": "d3d9410e-3d07-4de1-a32d-fede7a432a38",
+      "text": "Meeting the FATF Travel Rule outcome of verifying and transmitting sender PII during transactions functionally requires centralized KYC/AML infrastructure and data storage. This mandatory architecture eliminates truly decentralized, privacy-preserving solutions, rendering the concept of \"technology-neutrality\" moot in practice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2b8e6289-de9a-4edc-8076-c3cfca667f95",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:08.377295+00:00"
+    },
+    {
+      "id": "cab6ee15-48a7-463f-a620-e008c29439e7",
+      "text": "Industry organizations frequently develop standards for new technologies, such as the FIX protocol for financial messaging, driven by market demands for interoperability and institutional readiness, independent of perceived regulatory gaps.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8a48f2e0-c8d8-47d1-ad60-e52f33807b22",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:09.438926+00:00"
+    },
+    {
+      "id": "ed28d081-0492-4e0f-b4e0-103135ec9956",
+      "text": "Regulatory bodies worldwide, including the EU (MiFID II) and the US SEC, routinely establish technology-neutral, outcome-based requirements; these agencies deliberately avoid specifying implementation methods to future-proof rules and encourage innovation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8a48f2e0-c8d8-47d1-ad60-e52f33807b22",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:09.438975+00:00"
+    },
+    {
+      "id": "9874477a-220f-4321-af20-8633057d0df6",
+      "text": "The catastrophic failure of TerraUSD (UST) was specific to its uncollateralized, fractional-reserve algorithmic model, which is fundamentally different from over-collateralized designs like MakerDAO's DAI, which has maintained its peg through multiple market crashes since 2017.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "61acca24-ee88-48b1-92aa-c1a659babf40",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:13.341544+00:00"
+    },
+    {
+      "id": "7befad3a-a82e-4c84-8e81-27e7941173c6",
+      "text": "The temporary de-pegging of USDC was a consequence of traditional fiat banking risk due to reserves held at the insolvent Silicon Valley Bank (SVB), not an internal failure of the stablecoin's fiat-backed design, evidenced by its full recovery within 48 hours.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "61acca24-ee88-48b1-92aa-c1a659babf40",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:13.341589+00:00"
+    },
+    {
+      "id": "5b6a686f-c83f-4512-be61-7f36623c1298",
+      "text": "Stablecoins like MakerDAO's DAI are primarily collateralized by deposits of volatile cryptocurrencies such as Ethereum, not fiat currency or T-bills, demonstrating that stability can be generated within crypto economics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "55f1d981-20ca-4360-850c-5c1f1319a74e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:17.614970+00:00"
+    },
+    {
+      "id": "9f9290a5-f743-4247-a547-d06c1bdb5949",
+      "text": "For asset-backed stablecoins like USDC and USDT, decentralized smart contracts and transparent blockchain governance enforce the peg and the redemption process, meaning the governing mechanism still originates in crypto economics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "55f1d981-20ca-4360-850c-5c1f1319a74e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:17.614998+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:01:32.180156+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:01:32.180156+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "8c47059b-b017-4df7-b23c-d34497921c06",
+      "target": "65626c6c-5dad-4f85-bebd-9197889e6b68",
+      "type": "objection"
+    },
+    {
+      "source": "8c47059b-b017-4df7-b23c-d34497921c06",
+      "target": "a0955d7d-eddc-4449-bdd6-9fc7a10862c3",
+      "type": "objection"
+    },
+    {
+      "source": "ba1b6e05-a546-4cea-98e8-86146efd083c",
+      "target": "a096c251-6af2-47cb-95fe-6a8806f776da",
+      "type": "objection"
+    },
+    {
+      "source": "ba1b6e05-a546-4cea-98e8-86146efd083c",
+      "target": "592f5d07-1d2c-4b1e-b1c3-894c29c1884c",
+      "type": "objection"
+    },
+    {
+      "source": "adf043ac-ddde-4ac8-aa26-e1e3051b511a",
+      "target": "44f54dca-f4b9-4d03-abed-0c8f52f0e6b4",
+      "type": "objection"
+    },
+    {
+      "source": "adf043ac-ddde-4ac8-aa26-e1e3051b511a",
+      "target": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "type": "objection"
+    },
+    {
+      "source": "a9e7ebc4-7a02-4573-9d47-952267538ab1",
+      "target": "ea0a7e13-0385-4c3d-b7fc-b165e9429cbe",
+      "type": "objection"
+    },
+    {
+      "source": "a9e7ebc4-7a02-4573-9d47-952267538ab1",
+      "target": "6d98e366-6e2e-4841-b1ab-08fb307fd590",
+      "type": "objection"
+    },
+    {
+      "source": "6c3c4e42-8249-4615-a85b-847f07b896c6",
+      "target": "81ea84a4-a78c-479c-b1ad-cd5a22377ab9",
+      "type": "objection"
+    },
+    {
+      "source": "6c3c4e42-8249-4615-a85b-847f07b896c6",
+      "target": "8a27b8eb-cc40-4ff1-bfe0-c4a807b42287",
+      "type": "objection"
+    },
+    {
+      "source": "64340cfe-75fd-4222-98bd-a3355e176784",
+      "target": "662cbb2d-9c1e-428e-9db2-b3c29a068420",
+      "type": "objection"
+    },
+    {
+      "source": "64340cfe-75fd-4222-98bd-a3355e176784",
+      "target": "a3e636f2-8b14-4614-9de4-2d6205bc1a40",
+      "type": "objection"
+    },
+    {
+      "source": "65626c6c-5dad-4f85-bebd-9197889e6b68",
+      "target": "42704feb-f5d4-443a-a9d1-f1109ebb03c7",
+      "type": "response"
+    },
+    {
+      "source": "65626c6c-5dad-4f85-bebd-9197889e6b68",
+      "target": "1c7fd7c4-2cc0-4528-8ff3-e87326bff8d7",
+      "type": "response"
+    },
+    {
+      "source": "a0955d7d-eddc-4449-bdd6-9fc7a10862c3",
+      "target": "b0b1eb52-53ad-47d9-928c-a9c57e14f3b4",
+      "type": "response"
+    },
+    {
+      "source": "a0955d7d-eddc-4449-bdd6-9fc7a10862c3",
+      "target": "49fca515-cbe4-4581-bb7b-01c5cb234fbf",
+      "type": "response"
+    },
+    {
+      "source": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "target": "8f47ceb6-22ad-48f2-b1ca-bba49167f3cf",
+      "type": "response"
+    },
+    {
+      "source": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "target": "a23758b3-749e-424a-a1ae-ac88a4b70ba8",
+      "type": "response"
+    },
+    {
+      "source": "279a02fc-c69c-4912-b449-07d0a80fe382",
+      "target": "70782435-3ecd-40e2-859d-3a108bebe680",
+      "type": "response"
+    },
+    {
+      "source": "a096c251-6af2-47cb-95fe-6a8806f776da",
+      "target": "01f6e9f2-cc2a-44e5-b2be-3faaf93738e9",
+      "type": "response"
+    },
+    {
+      "source": "a096c251-6af2-47cb-95fe-6a8806f776da",
+      "target": "79be16d0-3e04-4e33-a347-e4c02133f8f1",
+      "type": "response"
+    },
+    {
+      "source": "6d98e366-6e2e-4841-b1ab-08fb307fd590",
+      "target": "437b4557-3e60-44cb-9192-c2d1e902df1b",
+      "type": "response"
+    },
+    {
+      "source": "6d98e366-6e2e-4841-b1ab-08fb307fd590",
+      "target": "24767399-02c0-4ef0-83ed-0f8fd93c491e",
+      "type": "response"
+    },
+    {
+      "source": "8a27b8eb-cc40-4ff1-bfe0-c4a807b42287",
+      "target": "2207ce8e-ffb8-416b-b1db-2f1169a79582",
+      "type": "response"
+    },
+    {
+      "source": "8a27b8eb-cc40-4ff1-bfe0-c4a807b42287",
+      "target": "97e1780c-d82e-44f6-8cbb-e1ee8b89c013",
+      "type": "response"
+    },
+    {
+      "source": "44f54dca-f4b9-4d03-abed-0c8f52f0e6b4",
+      "target": "bd54fe4e-9c95-4ded-b750-745905fa4ee6",
+      "type": "response"
+    },
+    {
+      "source": "44f54dca-f4b9-4d03-abed-0c8f52f0e6b4",
+      "target": "92d927de-94b8-4704-b9b6-83d6dd7dc14b",
+      "type": "response"
+    },
+    {
+      "source": "a3e636f2-8b14-4614-9de4-2d6205bc1a40",
+      "target": "99dd5721-1fe3-425b-9fbd-f5c4e337763a",
+      "type": "response"
+    },
+    {
+      "source": "a3e636f2-8b14-4614-9de4-2d6205bc1a40",
+      "target": "5a54998e-af83-44c0-b0ee-e52cb1c01e21",
+      "type": "response"
+    },
+    {
+      "source": "81ea84a4-a78c-479c-b1ad-cd5a22377ab9",
+      "target": "6e634481-9f1a-400f-af60-d46b7b2a3257",
+      "type": "response"
+    },
+    {
+      "source": "81ea84a4-a78c-479c-b1ad-cd5a22377ab9",
+      "target": "e644256d-5f5f-48f4-9bea-f17da62c7edc",
+      "type": "response"
+    },
+    {
+      "source": "b0b1eb52-53ad-47d9-928c-a9c57e14f3b4",
+      "target": "1e976b5b-25a8-4b2a-9987-54ef250b1b80",
+      "type": "response"
+    },
+    {
+      "source": "1c7fd7c4-2cc0-4528-8ff3-e87326bff8d7",
+      "target": "7e432f4d-ec93-491c-bb82-d6e1f7a0d963",
+      "type": "response"
+    },
+    {
+      "source": "49fca515-cbe4-4581-bb7b-01c5cb234fbf",
+      "target": "b95a45ef-e9db-4bf4-b918-a3e54d8a99a8",
+      "type": "response"
+    },
+    {
+      "source": "49fca515-cbe4-4581-bb7b-01c5cb234fbf",
+      "target": "a3f4259b-a87c-436e-b9b9-53f5ba616255",
+      "type": "response"
+    },
+    {
+      "source": "8f47ceb6-22ad-48f2-b1ca-bba49167f3cf",
+      "target": "080a5794-5171-4ffd-bbcf-61064029dad5",
+      "type": "response"
+    },
+    {
+      "source": "79be16d0-3e04-4e33-a347-e4c02133f8f1",
+      "target": "62d6af1f-5dce-4a31-b96d-4aaa37098de1",
+      "type": "response"
+    },
+    {
+      "source": "42704feb-f5d4-443a-a9d1-f1109ebb03c7",
+      "target": "2551ab7b-fea3-4882-ae03-0dea2eac13fc",
+      "type": "response"
+    },
+    {
+      "source": "70782435-3ecd-40e2-859d-3a108bebe680",
+      "target": "b8b71b94-0575-4934-b622-bb119969fd02",
+      "type": "response"
+    },
+    {
+      "source": "70782435-3ecd-40e2-859d-3a108bebe680",
+      "target": "5b9b2b5f-7b7a-4aaa-beb0-4d11c740223d",
+      "type": "response"
+    },
+    {
+      "source": "bd54fe4e-9c95-4ded-b750-745905fa4ee6",
+      "target": "017e12f2-2249-4aff-bec9-d2d43f76a68e",
+      "type": "response"
+    },
+    {
+      "source": "24767399-02c0-4ef0-83ed-0f8fd93c491e",
+      "target": "eaf58e29-b652-4615-bae8-c5d9b6e023b0",
+      "type": "response"
+    },
+    {
+      "source": "01f6e9f2-cc2a-44e5-b2be-3faaf93738e9",
+      "target": "68d749a8-96bd-40db-8de7-9b151bb95726",
+      "type": "response"
+    },
+    {
+      "source": "01f6e9f2-cc2a-44e5-b2be-3faaf93738e9",
+      "target": "8fd15892-d7e0-40a9-8d73-ff339df79a11",
+      "type": "response"
+    },
+    {
+      "source": "592f5d07-1d2c-4b1e-b1c3-894c29c1884c",
+      "target": "275fbb8f-620e-4c56-87e6-f008e99485ac",
+      "type": "response"
+    },
+    {
+      "source": "592f5d07-1d2c-4b1e-b1c3-894c29c1884c",
+      "target": "54a8eabc-f97d-48bf-99fb-891d47375510",
+      "type": "response"
+    },
+    {
+      "source": "92d927de-94b8-4704-b9b6-83d6dd7dc14b",
+      "target": "7dd9d8f6-29cf-4796-98ab-05159ed1e10e",
+      "type": "response"
+    },
+    {
+      "source": "92d927de-94b8-4704-b9b6-83d6dd7dc14b",
+      "target": "c9d00dfc-a803-4a45-bfff-b8f4b47864ac",
+      "type": "response"
+    },
+    {
+      "source": "97e1780c-d82e-44f6-8cbb-e1ee8b89c013",
+      "target": "de0bc54f-0b8c-4704-adfa-38d2254f16f9",
+      "type": "response"
+    },
+    {
+      "source": "97e1780c-d82e-44f6-8cbb-e1ee8b89c013",
+      "target": "c0c98c47-a047-4ac1-8e81-9582fe3db99d",
+      "type": "response"
+    },
+    {
+      "source": "2207ce8e-ffb8-416b-b1db-2f1169a79582",
+      "target": "7cbf1120-cf8a-4430-9523-0b64facab299",
+      "type": "response"
+    },
+    {
+      "source": "437b4557-3e60-44cb-9192-c2d1e902df1b",
+      "target": "dfba5b52-910c-4b1f-a621-c1925567d54d",
+      "type": "response"
+    },
+    {
+      "source": "5a54998e-af83-44c0-b0ee-e52cb1c01e21",
+      "target": "8cc7cab6-3258-4f7d-b958-409633140b53",
+      "type": "response"
+    },
+    {
+      "source": "5a54998e-af83-44c0-b0ee-e52cb1c01e21",
+      "target": "d35f2080-1559-4edb-b68e-ed745fb64b2c",
+      "type": "response"
+    },
+    {
+      "source": "a23758b3-749e-424a-a1ae-ac88a4b70ba8",
+      "target": "c513c46a-d522-43ee-8543-26706171ea3a",
+      "type": "response"
+    },
+    {
+      "source": "e644256d-5f5f-48f4-9bea-f17da62c7edc",
+      "target": "145a85c6-0e70-4087-bda3-c05abd5ac768",
+      "type": "response"
+    },
+    {
+      "source": "99dd5721-1fe3-425b-9fbd-f5c4e337763a",
+      "target": "12145910-4f1d-4e5f-9022-8e3a726aa709",
+      "type": "response"
+    },
+    {
+      "source": "99dd5721-1fe3-425b-9fbd-f5c4e337763a",
+      "target": "7b428505-8bc2-4e89-b088-7761f431d9bc",
+      "type": "response"
+    },
+    {
+      "source": "54a8eabc-f97d-48bf-99fb-891d47375510",
+      "target": "4463851b-6944-4e2d-a985-4cd5ab5352ad",
+      "type": "response"
+    },
+    {
+      "source": "275fbb8f-620e-4c56-87e6-f008e99485ac",
+      "target": "b33b969d-b0e5-42c4-a47f-3690c7360efe",
+      "type": "response"
+    },
+    {
+      "source": "6e634481-9f1a-400f-af60-d46b7b2a3257",
+      "target": "01e62c9b-77d9-472b-912a-062cac414f88",
+      "type": "response"
+    },
+    {
+      "source": "6e634481-9f1a-400f-af60-d46b7b2a3257",
+      "target": "7dc05c95-8982-4253-8d31-2a969c134c83",
+      "type": "response"
+    },
+    {
+      "source": "ecf7737d-27e0-4796-95fd-69c181d289cc",
+      "target": "e139b9d9-4677-42d5-bb4f-545a56d337a2",
+      "type": "objection"
+    },
+    {
+      "source": "ecf7737d-27e0-4796-95fd-69c181d289cc",
+      "target": "c8f14e6e-b146-4b65-be06-94c7a5757a36",
+      "type": "objection"
+    },
+    {
+      "source": "b69d317f-c8d1-4019-be06-e3bf09fa0432",
+      "target": "9869efdf-83b0-48cd-a6ec-cb24391c41dc",
+      "type": "objection"
+    },
+    {
+      "source": "b69d317f-c8d1-4019-be06-e3bf09fa0432",
+      "target": "98e5af8e-ca25-4cc2-8ab2-fc68b0ab7749",
+      "type": "objection"
+    },
+    {
+      "source": "726eb253-119d-44a7-b9e4-7b9f24bca728",
+      "target": "374381c6-a5fb-4738-8d6f-e53cc4f146fb",
+      "type": "objection"
+    },
+    {
+      "source": "726eb253-119d-44a7-b9e4-7b9f24bca728",
+      "target": "b7db3a0c-dfe5-4a51-9061-65e53dd62393",
+      "type": "objection"
+    },
+    {
+      "source": "fb96031c-a84a-4068-9f9a-e9fc183d6257",
+      "target": "4d48026d-383b-4f5e-be5b-301c488cf463",
+      "type": "objection"
+    },
+    {
+      "source": "fb96031c-a84a-4068-9f9a-e9fc183d6257",
+      "target": "4e146bd7-afe7-4171-aecc-d558b38d4fdd",
+      "type": "objection"
+    },
+    {
+      "source": "d7230e51-8e1b-4f4b-93d0-23ab8a21172e",
+      "target": "008a1384-a2fc-45d0-9b38-782c8b7c9a92",
+      "type": "objection"
+    },
+    {
+      "source": "d7230e51-8e1b-4f4b-93d0-23ab8a21172e",
+      "target": "3c798ad9-e425-43be-b201-422af0a99880",
+      "type": "objection"
+    },
+    {
+      "source": "e3619aa8-3bc8-4f12-823b-a882105f8dbf",
+      "target": "5627886a-1e19-42a0-98c6-681085c59766",
+      "type": "objection"
+    },
+    {
+      "source": "e3619aa8-3bc8-4f12-823b-a882105f8dbf",
+      "target": "82837533-2f8a-4a2a-b888-8fe51cedb5a4",
+      "type": "objection"
+    },
+    {
+      "source": "c8f14e6e-b146-4b65-be06-94c7a5757a36",
+      "target": "8a8bcbf9-f9d7-4b7d-8515-9c3060ce6ecf",
+      "type": "response"
+    },
+    {
+      "source": "c8f14e6e-b146-4b65-be06-94c7a5757a36",
+      "target": "e7853dcf-0bbf-42ae-9101-e8bd84a612e9",
+      "type": "response"
+    },
+    {
+      "source": "e139b9d9-4677-42d5-bb4f-545a56d337a2",
+      "target": "b5b72288-169d-4dc6-ac16-952ccb307950",
+      "type": "response"
+    },
+    {
+      "source": "e139b9d9-4677-42d5-bb4f-545a56d337a2",
+      "target": "62b6f4cc-c4fe-41e9-b5a3-c95602e926d4",
+      "type": "response"
+    },
+    {
+      "source": "b7db3a0c-dfe5-4a51-9061-65e53dd62393",
+      "target": "c7b9d859-c160-4962-8f97-8e733976b81c",
+      "type": "response"
+    },
+    {
+      "source": "b7db3a0c-dfe5-4a51-9061-65e53dd62393",
+      "target": "cc36ddd1-a3af-4bce-a1e0-107642ada9b1",
+      "type": "response"
+    },
+    {
+      "source": "9869efdf-83b0-48cd-a6ec-cb24391c41dc",
+      "target": "ec6efc0c-cd4e-4779-a6d6-87552c745601",
+      "type": "response"
+    },
+    {
+      "source": "9869efdf-83b0-48cd-a6ec-cb24391c41dc",
+      "target": "46b10413-3863-48e3-b8c0-977207fb5341",
+      "type": "response"
+    },
+    {
+      "source": "98e5af8e-ca25-4cc2-8ab2-fc68b0ab7749",
+      "target": "42233d8a-106b-4da0-8f16-f1e32c2fcbe0",
+      "type": "response"
+    },
+    {
+      "source": "98e5af8e-ca25-4cc2-8ab2-fc68b0ab7749",
+      "target": "040b9235-b6da-4a82-975d-4970b670afca",
+      "type": "response"
+    },
+    {
+      "source": "008a1384-a2fc-45d0-9b38-782c8b7c9a92",
+      "target": "2b8e6289-de9a-4edc-8076-c3cfca667f95",
+      "type": "response"
+    },
+    {
+      "source": "008a1384-a2fc-45d0-9b38-782c8b7c9a92",
+      "target": "8a48f2e0-c8d8-47d1-ad60-e52f33807b22",
+      "type": "response"
+    },
+    {
+      "source": "4e146bd7-afe7-4171-aecc-d558b38d4fdd",
+      "target": "5b7c7c0a-a18b-403d-85dc-69d6f0f4bfbd",
+      "type": "response"
+    },
+    {
+      "source": "4e146bd7-afe7-4171-aecc-d558b38d4fdd",
+      "target": "25c7499a-ce41-467e-a7c8-0145af76db08",
+      "type": "response"
+    },
+    {
+      "source": "c7b9d859-c160-4962-8f97-8e733976b81c",
+      "target": "a731db66-7d9b-479d-8c87-d6603d43ac2b",
+      "type": "response"
+    },
+    {
+      "source": "c7b9d859-c160-4962-8f97-8e733976b81c",
+      "target": "f67a2a91-480d-47d0-aeb4-23d0d037249d",
+      "type": "response"
+    },
+    {
+      "source": "b5b72288-169d-4dc6-ac16-952ccb307950",
+      "target": "e9e18777-e310-45b7-83be-dbe5f26b8cbf",
+      "type": "response"
+    },
+    {
+      "source": "62b6f4cc-c4fe-41e9-b5a3-c95602e926d4",
+      "target": "94bd19cc-3ecb-4869-b9d3-58cfbb13ef56",
+      "type": "response"
+    },
+    {
+      "source": "62b6f4cc-c4fe-41e9-b5a3-c95602e926d4",
+      "target": "18f85e32-9a09-43ed-a143-5c0c37c5aafa",
+      "type": "response"
+    },
+    {
+      "source": "e7853dcf-0bbf-42ae-9101-e8bd84a612e9",
+      "target": "7066b242-da24-40c9-95c4-c703c8b8c0dd",
+      "type": "response"
+    },
+    {
+      "source": "82837533-2f8a-4a2a-b888-8fe51cedb5a4",
+      "target": "55f1d981-20ca-4360-850c-5c1f1319a74e",
+      "type": "response"
+    },
+    {
+      "source": "82837533-2f8a-4a2a-b888-8fe51cedb5a4",
+      "target": "61acca24-ee88-48b1-92aa-c1a659babf40",
+      "type": "response"
+    },
+    {
+      "source": "46b10413-3863-48e3-b8c0-977207fb5341",
+      "target": "b67c53da-214d-493b-a228-ad90c6837c4a",
+      "type": "response"
+    },
+    {
+      "source": "46b10413-3863-48e3-b8c0-977207fb5341",
+      "target": "2fee45cd-7ab9-4524-a3ea-6b75c6cd1396",
+      "type": "response"
+    },
+    {
+      "source": "cc36ddd1-a3af-4bce-a1e0-107642ada9b1",
+      "target": "59b6c483-f03e-46f5-9129-d7a257c68e57",
+      "type": "response"
+    },
+    {
+      "source": "8a8bcbf9-f9d7-4b7d-8515-9c3060ce6ecf",
+      "target": "a694e33d-2955-4beb-9219-ff2b60df3fd2",
+      "type": "response"
+    },
+    {
+      "source": "040b9235-b6da-4a82-975d-4970b670afca",
+      "target": "e4ca8482-d825-48be-ada8-4a04286111b2",
+      "type": "response"
+    },
+    {
+      "source": "040b9235-b6da-4a82-975d-4970b670afca",
+      "target": "eb3c2078-6354-4d01-91df-8df9ea34014a",
+      "type": "response"
+    },
+    {
+      "source": "ec6efc0c-cd4e-4779-a6d6-87552c745601",
+      "target": "74f80be5-8c81-43c3-bc57-9eddf7cf5778",
+      "type": "response"
+    },
+    {
+      "source": "ec6efc0c-cd4e-4779-a6d6-87552c745601",
+      "target": "7307377b-2a87-4355-88e8-d99b1b124f58",
+      "type": "response"
+    },
+    {
+      "source": "5b7c7c0a-a18b-403d-85dc-69d6f0f4bfbd",
+      "target": "cfc6a581-675d-4606-8552-282986ab06c5",
+      "type": "response"
+    },
+    {
+      "source": "42233d8a-106b-4da0-8f16-f1e32c2fcbe0",
+      "target": "8390e497-162d-482c-a0bd-2a66d4598fd0",
+      "type": "response"
+    },
+    {
+      "source": "25c7499a-ce41-467e-a7c8-0145af76db08",
+      "target": "0b396539-8950-4dbe-8a4a-0c384084b8fa",
+      "type": "response"
+    },
+    {
+      "source": "2b8e6289-de9a-4edc-8076-c3cfca667f95",
+      "target": "d3d9410e-3d07-4de1-a32d-fede7a432a38",
+      "type": "response"
+    },
+    {
+      "source": "8a48f2e0-c8d8-47d1-ad60-e52f33807b22",
+      "target": "cab6ee15-48a7-463f-a620-e008c29439e7",
+      "type": "response"
+    },
+    {
+      "source": "8a48f2e0-c8d8-47d1-ad60-e52f33807b22",
+      "target": "ed28d081-0492-4e0f-b4e0-103135ec9956",
+      "type": "response"
+    },
+    {
+      "source": "61acca24-ee88-48b1-92aa-c1a659babf40",
+      "target": "9874477a-220f-4321-af20-8633057d0df6",
+      "type": "response"
+    },
+    {
+      "source": "61acca24-ee88-48b1-92aa-c1a659babf40",
+      "target": "7befad3a-a82e-4c84-8e81-27e7941173c6",
+      "type": "response"
+    },
+    {
+      "source": "55f1d981-20ca-4360-850c-5c1f1319a74e",
+      "target": "5b6a686f-c83f-4512-be61-7f36623c1298",
+      "type": "response"
+    },
+    {
+      "source": "55f1d981-20ca-4360-850c-5c1f1319a74e",
+      "target": "9f9290a5-f743-4247-a547-d06c1bdb5949",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ba1b6e05-a546-4cea-98e8-86146efd083c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "adf043ac-ddde-4ac8-aa26-e1e3051b511a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6c3c4e42-8249-4615-a85b-847f07b896c6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "64340cfe-75fd-4222-98bd-a3355e176784",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a9e7ebc4-7a02-4573-9d47-952267538ab1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "8c47059b-b017-4df7-b23c-d34497921c06",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b69d317f-c8d1-4019-be06-e3bf09fa0432",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ecf7737d-27e0-4796-95fd-69c181d289cc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "e3619aa8-3bc8-4f12-823b-a882105f8dbf",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "fb96031c-a84a-4068-9f9a-e9fc183d6257",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d7230e51-8e1b-4f4b-93d0-23ab8a21172e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "726eb253-119d-44a7-b9e4-7b9f24bca728",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,3723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Censorship can be morally justified - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Censorship can be morally justified</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            132 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/censorship-can-be-morally-justified.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">132</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "b3b7cf0f-5f35-4dc3-b7c7-cb203098b61d",
+      "text": "Censorship is morally justified when speech constitutes a direct and immediate incitement to violence or physical harm that cannot be reversed. Blocking actionable threats, like the dissemination of instructions for creating homemade weapons of mass casualty, is necessary because the preservation of life outweighs unlimited expression.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "US Supreme Court precedent on incitement (e.g., Schenck v. United States)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:42.298996+00:00"
+    },
+    {
+      "id": "7acee775-9f5a-470a-bc61-3765df010c26",
+      "text": "The moral duty of societies to protect vulnerable populations, such as children, requires the censorship of inherently harmful and exploitative content. Global legal frameworks, which unanimously prohibit the production and distribution of child sexual abuse material, fulfill this necessary deontological obligation.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Global legal frameworks prohibiting child sexual abuse material (CSAM)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:42.299860+00:00"
+    },
+    {
+      "id": "a6e048c8-7b8d-4547-a146-bba201ca7197",
+      "text": "Banning clear, direct incitement to hatred or violence against protected groups is morally justified because it prevents systemic societal oppression and instability. Legislation in countries like Germany, prohibiting Holocaust denial and other forms of hate speech, successfully defends historical truth and prevents the normalization of dangerous persecution.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "German laws on Volksverhetzung (incitement to hatred)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:42.300254+00:00"
+    },
+    {
+      "id": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "text": "Historical examples confirm that temporary, targeted censorship is morally necessary during periods of existential national crisis, such as war or extreme public health threats. Information controls used by Allied nations during World War II to protect operational security and prevent civic panic demonstrate the primacy of national survival.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [
+        "Wartime censorship practiced by the US and UK during both World Wars"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:42.300680+00:00"
+    },
+    {
+      "id": "cd3757e1-ef65-49bf-a280-1e45a4241567",
+      "text": "Political authority has a moral duty of care to maintain public order and preserve critical infrastructure. Targeted censorship of coordinated disinformation campaigns that seek to delegitimize or disrupt essential public functions, such as impending free and fair elections, fulfills this protective moral duty.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Targeted content removal policies during global elections (e.g., US, France)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:42.301253+00:00"
+    },
+    {
+      "id": "ee380a2c-4959-4385-8005-8109a19e853e",
+      "text": "Censorship is morally justified when it serves as the only pragmatic mechanism to ensure a functional digital public sphere. Content moderation policies that remove verifiable financial fraud, extreme harassment, and child safety violations maintain basic platform usability and protect users from tangible harm.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Standard content moderation policies across major digital platforms (Meta, X, TikTok)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:42.301618+00:00"
+    },
+    {
+      "id": "8e6655bc-1e45-4618-be16-0785dee3f18a",
+      "text": "The Universal Declaration of Human Rights (1948, Article 19) designates freedom of expression as an intrinsic, inalienable right, establishing moral limits that transcend situational claims of necessity during a crisis.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:58.661569+00:00"
+    },
+    {
+      "id": "9984b3e9-71cc-4ada-a8fd-def1ba06f772",
+      "text": "Crisis-era restrictions on rights rarely remain temporary, as demonstrated by the U.S. Patriot Act (2001), which introduced expanded surveillance powers that were routinely readopted years after the initial counter-terrorism emergency subsided.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:58.662084+00:00"
+    },
+    {
+      "id": "a7da4cf6-6e37-4652-9e85-03e5be2e10cc",
+      "text": "Suppression of critical information during crises can directly endanger survival, as demonstrated when Chinese authorities censored doctor warnings about the COVID-19 outbreak in late 2019, crippling the ability to mount an effective early response.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:58.662389+00:00"
+    },
+    {
+      "id": "0669034f-33a8-4bb5-9c88-eb11fc0308cd",
+      "text": "Decentralized platforms like Mastodon and large platforms like YouTube use mechanisms such as user-configurable filters, algorithmic demotion, and labeling to manage harmful content and preserve usability without outright content removal. In the context of financial fraud, banks primarily rely on non-speech actions like transaction monitoring and account freezes to protect users.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ee380a2c-4959-4385-8005-8109a19e853e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:59.640263+00:00"
+    },
+    {
+      "id": "daad464b-969a-483f-b7e7-9df19084c0bf",
+      "text": "Authoritarian regimes routinely use the justification of preserving \"public order\" or \"social harmony\" to suppress legitimate political dissent, such as when the Chinese government removes information regarding the Tiananmen Square protests from social media platforms. Justifying censorship based on universally condemned content quickly translates to suppressing political opposition.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ee380a2c-4959-4385-8005-8109a19e853e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:59.640774+00:00"
+    },
+    {
+      "id": "6e3b8f6d-3559-42ec-8bcd-83ead7790aa2",
+      "text": "German laws banning Holocaust denial target specific historical falsehoods, but similar broad hate speech legislation in countries like Canada has been criticized for suppressing non-violent political opinion and creating a chilling effect on legitimate, albeit offensive, public debate.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a6e048c8-7b8d-4547-a146-bba201ca7197",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:59.948519+00:00"
+    },
+    {
+      "id": "743d9b8a-604c-4b0c-8954-594d016786d9",
+      "text": "Extremist groups in several European countries largely bypass national bans by utilizing encrypted messaging apps, foreign-hosted websites, and coded language to organize and disseminate hateful content. This demonstrates that prohibitions often fail to stop the normalization of persecution, merely displacing it to less controllable forums.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a6e048c8-7b8d-4547-a146-bba201ca7197",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:59.949341+00:00"
+    },
+    {
+      "id": "762cb475-f6af-4e5c-b627-dbb08bc4732a",
+      "text": "The criterion of \"direct and immediate incitement\" is easily corrupted when applied by governments; for example, the Turkish government regularly uses vague anti-terror laws to prosecute journalists and political opponents whose speech poses no actual threat of immediate violence.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b3b7cf0f-5f35-4dc3-b7c7-cb203098b61d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:04.837835+00:00"
+    },
+    {
+      "id": "1825ed14-3f8f-4ec7-b726-1427ca33288e",
+      "text": "Focusing censorship solely on violence fails to protect life when suppressing vital public health warnings causes massive preventable death; the Chinese government's initial public censorship of doctors reporting the COVID-19 outbreak caused irreversible global harm.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b3b7cf0f-5f35-4dc3-b7c7-cb203098b61d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:04.838309+00:00"
+    },
+    {
+      "id": "ac6d3383-e6f5-46d7-a6bd-3791fd76084a",
+      "text": "The moral duty to maintain order does not necessitate censorship when less restrictive means, such as mandatory transparency and aggressive governmental counter-speech, are widely available to protect free elections.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cd3757e1-ef65-49bf-a280-1e45a4241567",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:05.340074+00:00"
+    },
+    {
+      "id": "19aecea1-f600-478c-9817-74b670f2dc8a",
+      "text": "Political authorities in regimes like China and Turkey routinely classify critical reporting and political dissent as \"delegitimizing disinformation\" to justify its suppression and maintain power.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cd3757e1-ef65-49bf-a280-1e45a4241567",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:05.340547+00:00"
+    },
+    {
+      "id": "250a7e17-ce71-4aa5-8b01-6021fce793ec",
+      "text": "The unanimous global prohibition covers child sexual abuse material because its creation necessarily documents the underlying crime of child abuse itself. This unique principle does not extend to regulating subjective or debated categories of \"harmful content,\" such as violent media, which the US Supreme Court has protected under free speech.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7acee775-9f5a-470a-bc61-3765df010c26",
+      "children_count": 2,
+      "references": [
+        "US Supreme Court decision in Brown v. Entertainment Merchants Association (2011)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.002167+00:00"
+    },
+    {
+      "id": "0101138c-7406-4846-86e9-e388166e6b65",
+      "text": "The fundamental deontological duty met by prosecuting CSAM is the protection of bodily integrity and preventing physical criminal abuse against children. This duty, consistent with Immanuel Kant's imperative against using a person merely as a means, provides no direct ethical basis for censoring non-criminal material like challenging political speech.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7acee775-9f5a-470a-bc61-3765df010c26",
+      "children_count": 2,
+      "references": [
+        "Kant's Categorical Imperative"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.003036+00:00"
+    },
+    {
+      "id": "c0bd8831-5ebd-4776-aabb-0c21cc3098bc",
+      "text": "The International Covenant on Civil and Political Rights (ICCPR), which operationalizes the UDHR, explicitly permits limiting expression when necessary for the protection of public health or public order (Article 19-3), proving the right does not transcend situational necessity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8e6655bc-1e45-4618-be16-0785dee3f18a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.563374+00:00"
+    },
+    {
+      "id": "47c81926-d403-444b-b9b8-238c18676ae4",
+      "text": "Actual state practice consistently imposes limits on expression, such as Germany's laws against Holocaust denial or the widely enforced restrictions on incitement to violence, contradicting the idea of an absolute, inalienable limit.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8e6655bc-1e45-4618-be16-0785dee3f18a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.564156+00:00"
+    },
+    {
+      "id": "821e3544-427b-4283-9cb2-f4c96a514399",
+      "text": "Displacing extremist material to private, encrypted forums substantially constricts its audience reach and public visibility, directly hindering the mass exposure necessary for *normalization* among the general populace.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "743d9b8a-604c-4b0c-8954-594d016786d9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:11.039557+00:00"
+    },
+    {
+      "id": "ae941419-662d-4ddb-8ea1-45d0f958dfb8",
+      "text": "National bans create a critical legal basis for law enforcement agencies, like Germany's BKA, to justify monitoring, seizing assets, and prosecuting key organizers and financiers of extremist groups, successes which displacement does not negate.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "743d9b8a-604c-4b0c-8954-594d016786d9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:11.040111+00:00"
+    },
+    {
+      "id": "c35bf5f1-cc1e-4c1b-bffd-6bb6a5a39469",
+      "text": "In the United Kingdom, emergency policies allowing internment without trial during the Troubles in the 1970s did not become permanent practice and were phased out in the 1980s.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9984b3e9-71cc-4ada-a8fd-def1ba06f772",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:14.711942+00:00"
+    },
+    {
+      "id": "e499d3c8-488c-48bd-875f-e0b393baa8f8",
+      "text": "The controversial bulk phone metadata collection authorized under the Patriot Act's Section 215 was terminated and replaced by the more constrained USA Freedom Act of 2015.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9984b3e9-71cc-4ada-a8fd-def1ba06f772",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:14.712909+00:00"
+    },
+    {
+      "id": "c1f9f154-9b64-4976-8a75-1f1dd56f2255",
+      "text": "The Turkish case demonstrates circumvention, where the government uses distinct, vague anti-terror laws to prosecute speech, rather than corruption of the specific \"direct and immediate incitement\" standard.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "762cb475-f6af-4e5c-b627-dbb08bc4732a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:15.234239+00:00"
+    },
+    {
+      "id": "85c3b780-d5de-4d86-a8bb-4123e373396b",
+      "text": "The \"direct and immediate incitement\" standard, as established by the US Supreme Court's Brandenburg ruling, has proven highly resilient by robustly protecting even extremist political speech for decades.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "762cb475-f6af-4e5c-b627-dbb08bc4732a",
+      "children_count": 1,
+      "references": [
+        "Brandenburg v. Ohio (1969)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:15.234732+00:00"
+    },
+    {
+      "id": "e7ad4604-ba49-4f70-87b7-b1259809cb4e",
+      "text": "Western democracies, such as the United States and Germany, successfully prohibit content like child pornography and clear incitement to violence by law without eliminating legitimate political opposition. A strong legal framework can strictly separate prohibited criminal conduct from protected political speech, negating the supposed inevitable translation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "daad464b-969a-483f-b7e7-9df19084c0bf",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:16.117410+00:00"
+    },
+    {
+      "id": "317adf15-7377-4505-9e19-9cb3d7fdd3e0",
+      "text": "Authoritarian states like the former Soviet Union and present-day North Korea employ ubiquitous state surveillance and security forces to suppress dissent directly. Political suppression is primarily caused by regimes intentionally using police power to maintain control, independent of regulatory justifications for censoring anti-social content.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "daad464b-969a-483f-b7e7-9df19084c0bf",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:16.118228+00:00"
+    },
+    {
+      "id": "dc2bbd5c-3532-4735-8155-2955c9be8ca3",
+      "text": "Authoritarian states like China and Russia routinely cite maintaining \"public order\" and \"social harmony\" to legally suppress legitimate political opposition and human rights advocacy, revealing that a legal basis for restraint does not establish moral justification for censorship.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c0bd8831-5ebd-4776-aabb-0c21cc3098bc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:17.790648+00:00"
+    },
+    {
+      "id": "14ce53d7-af23-4cf7-957f-a0a52165db02",
+      "text": "YouTube's quarterly reports show the platform removes millions of videos and channels for severe policy violations like hate speech and spam, directly contradicting claims that content management occurs without outright removal. Mastodon server operators regularly implement account bans and de-federation from entire toxic instances like Gab to eliminate harmful content.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0669034f-33a8-4bb5-9c88-eb11fc0308cd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.019546+00:00"
+    },
+    {
+      "id": "3ade1233-fb84-487b-bbe5-bf1d05a68f28",
+      "text": "The analogy is flawed because transaction monitoring relied upon by banks addresses non-speech financial data governed by objective quantity metrics, unlike social platforms which must apply subjective, qualitative judgments to complex communications like hate speech or misinformation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0669034f-33a8-4bb5-9c88-eb11fc0308cd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.020344+00:00"
+    },
+    {
+      "id": "c0989db9-a510-4342-aece-d29b3aa9c4ee",
+      "text": "Legitimate restrictions on incitement are distinct from systematic state censorship, such as China\u2019s Great Firewall or Russia\u2019s laws suppressing independent media, which violate the internationally recognized inalienable right to political dissent.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "47c81926-d403-444b-b9b8-238c18676ae4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.028013+00:00"
+    },
+    {
+      "id": "47ef5fe6-0085-4aa6-ab6f-e19a5a137f63",
+      "text": "State-sponsored deepfake campaigns or coordinated bot networks, such as those observed during the 2016 US election, spread disinformation faster than governmental counter-speech can be formulated and distributed. This rapid, sophisticated interference demonstrates the insufficiency of slow, reactive measures against high-velocity foreign influence operations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ac6d3383-e6f5-46d7-a6bd-3791fd76084a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.652337+00:00"
+    },
+    {
+      "id": "28632788-2115-4ac0-8eb8-58641fe90672",
+      "text": "Legal demands for mandatory transparency and counter-speech cannot be enforced on end-to-end encrypted platforms like Telegram or decentralized servers operating beyond national jurisdiction, impeding the ability to trace disinformation origins. This limited jurisdictional reach makes non-censorial tools practically unavailable when the source of election interference is foreign or non-compliant.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ac6d3383-e6f5-46d7-a6bd-3791fd76084a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.653119+00:00"
+    },
+    {
+      "id": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "text": "The vast COVID-19 global death toll resulted primarily from the virus's high transmissibility, later domestic policy failures in democratic nations like the US and UK regarding testing and lockdowns, and high levels of international travel during early 2020.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1825ed14-3f8f-4ec7-b726-1427ca33288e",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:21.524116+00:00"
+    },
+    {
+      "id": "b74cd691-8509-4cc9-9667-3b555a16236a",
+      "text": "The Chinese government suppressed early COVID warnings using pre-existing laws against spreading unauthorized information that undermines social order, reflecting a broad political control system, not a policy failure focused only on violence prevention.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1825ed14-3f8f-4ec7-b726-1427ca33288e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:21.524963+00:00"
+    },
+    {
+      "id": "d7065028-a69c-4e0d-b60f-c859457d2221",
+      "text": "Shifting content to private, encrypted spaces often creates secure echo chambers that accelerate deep radicalization and increase the operational security of core extremist cells, fostering concrete planning for attacks rather than hindering overall mobilization.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "821e3544-427b-4283-9cb2-f4c96a514399",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.181822+00:00"
+    },
+    {
+      "id": "c9b4fd63-100c-41b4-897b-0c7e08781d63",
+      "text": "Germany's prohibition on Holocaust denial is legally characterized by the European Court of Human Rights as a measure necessary to preserve post-genocide historical peace, making it a unique exception rather than a template similar to general Canadian hate speech laws.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6e3b8f6d-3559-42ec-8bcd-83ead7790aa2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:23.281034+00:00"
+    },
+    {
+      "id": "c9e09c15-834b-48d2-8adb-c096956a4dee",
+      "text": "Successful prosecutions under Canada's federal hate speech laws (Criminal Code Section 319) are consistently rare, averaging only a few cases annually, indicating that the law's scope is narrowly applied and does not support claims of a broad chilling effect on public debate.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6e3b8f6d-3559-42ec-8bcd-83ead7790aa2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:23.281787+00:00"
+    },
+    {
+      "id": "4cbf736a-a602-48f1-b94f-c9c550469293",
+      "text": "Kant's Humanity Formula, articulated in the *Groundwork of the Metaphysics of Morals*, requires treating rational nature as an end in itself, a requirement that modern philosophy extends to protecting the psychological integrity and rational agency of individuals, not just their physical bodies.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0101138c-7406-4846-86e9-e388166e6b65",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.593113+00:00"
+    },
+    {
+      "id": "c95341bc-7f0c-42fe-b4ca-1bf95d0fc32e",
+      "text": "Forensic psychology demonstrates that the consumption of CSAM perpetuates severe, long-term psychological trauma and developmental degradation in victims, a harm the German legal system recognizes through laws penalizing severe emotional abuse and hate speech, thereby extending deontological protection beyond physical injury.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0101138c-7406-4846-86e9-e388166e6b65",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.593914+00:00"
+    },
+    {
+      "id": "902ea3c5-6470-47a2-b12d-44779db051d5",
+      "text": "The replacement of bulk collection with a constrained system does not eliminate the chilling effect, where pervasive monitoring causes individuals to self-censor dissenting speech and political communication. This continuation of surveillance facilitates a form of indirect censorship merely by shifting the legal mechanisms for government data access.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e499d3c8-488c-48bd-875f-e0b393baa8f8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.164813+00:00"
+    },
+    {
+      "id": "18a5d1eb-8426-4eb6-853c-6d2e7c818a9d",
+      "text": "The resilience of the Brandenburg standard is limited to US jurisprudence; major democracies like Germany and France legally restrict hate speech and Holocaust denial, demonstrating that moral and legal justifications for censorship exist internationally.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "85c3b780-d5de-4d86-a8bb-4123e373396b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.952925+00:00"
+    },
+    {
+      "id": "a3fda744-8f29-40f4-a141-725b2a7e18fd",
+      "text": "Recordings proving the commission of other serious crimes, such as murder or treason, are globally treated as evidence for prosecution and often prohibited from distribution, demonstrating that the documentation principle extends beyond CSAM.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "250a7e17-ce71-4aa5-8b01-6021fce793ec",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:27.088804+00:00"
+    },
+    {
+      "id": "23cdef17-6881-47e5-b187-7a999e5d7801",
+      "text": "Laws against content that is itself a crime, such as incitement to genocide, are enforced internationally without requiring the content to document an underlying victim crime, as seen in the prosecutions following the Rwandan hate radio broadcasts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "250a7e17-ce71-4aa5-8b01-6021fce793ec",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:27.089336+00:00"
+    },
+    {
+      "id": "623dd7da-c586-4a75-a036-302fdb7ab2d0",
+      "text": "Internment without trial officially ceased in Northern Ireland in December 1975; however, the UK immediately established non-jury Diplock courts, allowing the continued political detention of suspects without the full protections of British common law until 2007.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c35bf5f1-cc1e-4c1b-bffd-6bb6a5a39469",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:28.945896+00:00"
+    },
+    {
+      "id": "922ebe27-db94-4e12-bbb9-722c77763f64",
+      "text": "The ban on the Communist Party of Germany (KPD) in 1956 did not eliminate the underlying ideology; supporters simply formed new, distinct political groups and shifted operations, proving that proscription encourages re-branding and strategic functional displacement.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ae941419-662d-4ddb-8ea1-45d0f958dfb8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:31.148017+00:00"
+    },
+    {
+      "id": "0801bcb7-b632-4c31-84cc-f6e906aa0827",
+      "text": "The US Kingpin Act and related financial bans have historically had limited long-term success against high-level drug cartels in Mexico and Colombia; key organizers maintain financial integrity by decentralizing operations across multiple foreign jurisdictions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ae941419-662d-4ddb-8ea1-45d0f958dfb8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:31.148047+00:00"
+    },
+    {
+      "id": "2e226a34-03a0-4a47-9475-5b2e1f2e250d",
+      "text": "Germany's NetzDG law, aimed at hate speech, compels platforms to proactively remove controversial political commentary and satirical posts to avoid massive fines. This real-world over-censoring demonstrates that legal frameworks struggle to maintain a strict separation when regulating content that touches on political discourse.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e7ad4604-ba49-4f70-87b7-b1259809cb4e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:32.730564+00:00"
+    },
+    {
+      "id": "56adbca1-9a8e-4c82-a852-97620661abee",
+      "text": "China's state security and anti-separatism laws provide the broad regulatory pretext used to legally justify the arbitrary arrests and police suppression of dissent, showing the two mechanisms are interconnected. Regimes use vague definitions like \"undermining social stability\" or \"extremism\" to formalize the police power intended solely for political control.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "317adf15-7377-4505-9e19-9cb3d7fdd3e0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:33.458419+00:00"
+    },
+    {
+      "id": "227e0169-adc2-401f-8cb3-8dc537d0f1a5",
+      "text": "The chilling effect is driven by the immediate threat and substantial financial and mental cost of legal defense, making the low rate of successful final prosecutions irrelevant to the incentive for self-censorship.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c9e09c15-834b-48d2-8adb-c096956a4dee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.059541+00:00"
+    },
+    {
+      "id": "03b9e41a-1070-4db8-adec-504f8d3b6bd8",
+      "text": "Many dominant modern ethical frameworks, notably consequentialism and various forms of political realism, prioritize maximizing aggregate utility or state stability, often explicitly justifying means that compromise individual psychological integrity and agency for the greater good.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4cbf736a-a602-48f1-b94f-c9c550469293",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.098350+00:00"
+    },
+    {
+      "id": "e18033e2-5c8d-4aa6-8ea0-304bb9503946",
+      "text": "The moral justification for censoring speech is determined by the resulting chilling effect on dissent, not the legal mechanism used; Russia's \"Foreign Agent\" laws systematically silence NGOs and media without using anti-terror statutes, yet the outcome is identical political suppression.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c1f9f154-9b64-4976-8a75-1f1dd56f2255",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.394080+00:00"
+    },
+    {
+      "id": "f2a50d47-09a7-40f8-862e-f2a66d9d02d0",
+      "text": "The German prohibition on Holocaust denial is a content-based speech restriction enforced by criminal penalty, structurally identical to general hate speech laws used in France, Belgium, and Canada, demonstrating a shared legislative template despite the unique historical context.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c9b4fd63-100c-41b4-897b-0c7e08781d63",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.478357+00:00"
+    },
+    {
+      "id": "fe73bb08-6721-4caa-ac93-d91176c7a345",
+      "text": "Local health authorities and police in Wuhan initially suppressed the doctors' warnings in December 2019 and January 2020 by focusing on \"rumor-mongering,\" indicating a local bureaucratic policy failure driven by fear of reprimand, which was merely enabled by, rather than solely dictated by, the broad political control laws.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b74cd691-8509-4cc9-9667-3b555a16236a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:36.892759+00:00"
+    },
+    {
+      "id": "0b5348df-84dc-4070-a20a-8cc2e31359f0",
+      "text": "The moral justification for censoring incitement to genocide is an extreme exception that does not justify general content regulation; authoritarian regimes like China routinely use vague \"incitement to subversion\" laws to morally justify the broad censorship of political dissent and suppress valid criticism.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "23cdef17-6881-47e5-b187-7a999e5d7801",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.310641+00:00"
+    },
+    {
+      "id": "4440dc82-86c4-4e6c-ae97-05b5b29a04ba",
+      "text": "During the Cold War, Western broadcasters like Radio Free Europe and Voice of America disseminated authoritative counter-narratives that gradually eroded Soviet state propaganda over decades. This success demonstrates that slower, persistent, and institutionally trusted counter-speech mechanisms are sufficient to neutralize high-velocity foreign influence operations.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "47ef5fe6-0085-4aa6-ab6f-e19a5a137f63",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.363322+00:00"
+    },
+    {
+      "id": "4275bffb-8fbf-4977-85d6-7a991a91251c",
+      "text": "Anti-Money Laundering (AML) regulations in the US, defined by FinCEN, require banks to file Suspicious Activity Reports (SARs) based on contextual pattern recognition and policy judgment, demonstrating that financial monitoring applies complex, subjective interpretation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3ade1233-fb84-487b-bbe5-bf1d05a68f28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.543254+00:00"
+    },
+    {
+      "id": "3b67b0ae-de85-4980-b3b7-b93737f22936",
+      "text": "Platforms like Meta and Google rely on automated hash matching and keyword filters to pre-emptively remove or flag over 90% of illegal content like child exploitation or terrorist propaganda, making basic content screening primarily a quantitative filtering exercise.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3ade1233-fb84-487b-bbe5-bf1d05a68f28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.543281+00:00"
+    },
+    {
+      "id": "9fd72893-1dae-4eff-a9cc-bf98ed5f9547",
+      "text": "Removing large communities from centralized platforms does not eliminate content but forces it onto decentralized networks like Telegram and Gab, where it accelerates radicalization. This migration creates harder-to-monitor echo chambers, reducing the visibility of harmful speech without eliminating the underlying threats and speakers.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "14ce53d7-af23-4cf7-957f-a0a52165db02",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.616632+00:00"
+    },
+    {
+      "id": "d5d1345b-d52c-4551-bd08-acfc54a66b1b",
+      "text": "The European Union's Digital Services Act (DSA) imposes fines reaching 6% of global turnover on large online platforms like Meta and X for compliance failures, thus providing leverage over foreign-owned centralized entities like Telegram. Since these foreign platforms require access to national app stores (Apple App Store, Google Play) and financial systems to operate, they are not completely beyond national jurisdiction, enabling enforcement of transparency mandates.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "28632788-2115-4ac0-8eb8-58641fe90672",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.763897+00:00"
+    },
+    {
+      "id": "f4d80629-abfd-4d8a-a1fc-f7d06f736a1a",
+      "text": "Non-censorial tools are not limited to platform-specific mandates; Finland's national media literacy program has demonstrably increased citizen resilience to foreign disinformation since 2014, operating independently of platform compliance. Independent fact-checking collaboratives, such as those certified by the International Fact-Checking Network (IFCN), successfully trace and debunk disinformation narratives despite end-to-end encryption barriers.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "28632788-2115-4ac0-8eb8-58641fe90672",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.763926+00:00"
+    },
+    {
+      "id": "b81ac4f0-8536-4596-a488-2cde5dd4dccc",
+      "text": "High initial death rates in countries like Italy and Belgium correlated strongly with a high median age and prevalence of non-communicable diseases, factors which fatally combined with high transmission rates.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:38.616765+00:00"
+    },
+    {
+      "id": "244a4ed9-5ebf-46ab-9536-3893f9bbbe8b",
+      "text": "Brazil's and India's inadequate public health responses amplified global mortality substantially due to government denial and infrastructure collapse, demonstrating that significant policy failure was not limited to Western democracies.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:38.616949+00:00"
+    },
+    {
+      "id": "2d77e6b8-bbd3-4013-9776-2bbc9b31139b",
+      "text": "Systemic chronic underfunding of public health and poor supply chain management for PPE and oxygen were greater primary drivers of fatality than specific testing or lockdown policies.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:38.616971+00:00"
+    },
+    {
+      "id": "b4423416-ce74-4bda-8fe2-51dc00417446",
+      "text": "The German Penal Code (StGB) includes *Ma\u00dfregeln der Besserung und Sicherung* (security and correction measures) which prioritize preventing future societal harm. This consequentialist focus on public safety and deterrence demonstrates that the legal protection relies on utilitarian principles, not solely deontological duty.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c95341bc-7f0c-42fe-b4ca-1bf95d0fc32e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:43.991918+00:00"
+    },
+    {
+      "id": "351f1958-6fb3-4895-979a-78806854e319",
+      "text": "Crimes related to producing or possessing CSAM, such as under US federal law, are crimes against children because the content itself constitutes injury. Documentation of murder or treason, however, is not inherently criminal to possess, showing the different moral bases for restriction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a3fda744-8f29-40f4-a141-725b2a7e18fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.665258+00:00"
+    },
+    {
+      "id": "d54d3f92-5cad-4536-addd-a722da0df5b6",
+      "text": "News media in democratic countries often legally broadcast graphic evidence of serious crimes, such as the widely distributed video of George Floyd's murder, under public interest exceptions. This level of public distribution is universally prohibited for all CSAM, demonstrating a lack of equivalence in the applicable censorship principles.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a3fda744-8f29-40f4-a141-725b2a7e18fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.665288+00:00"
+    },
+    {
+      "id": "5ee7c6b9-782d-43fd-ab32-d7fe31d0f0d2",
+      "text": "Censorship fundamentally violates the inherent human right to freedom of expression and thought, recognized globally by the Universal Declaration of Human Rights. This violation intrinsically strips the individual of autonomy and dignity, which are prerequisites for any participation in a free and self-governing society.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "Universal Declaration of Human Rights, Article 19"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.665412+00:00"
+    },
+    {
+      "id": "367de982-2d9a-4a11-8abf-e36d7853f8c1",
+      "text": "The pursuit of truth and accurate knowledge relies on the rational process of open discourse, often called the \"marketplace of ideas.\" Censorship intrinsically obstructs this vital process by prematurely eliminating viewpoints, allowing unchallenged falsehoods or incomplete truths to persist within public consciousness.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.665922+00:00"
+    },
+    {
+      "id": "a1565be7-a700-4942-a6d3-829655d744a5",
+      "text": "To achieve adaptive human progress, society requires the ability to consider and adopt radical or uncomfortable viewpoints, such as those necessary for the abolitionist movement or major scientific paradigm shifts. Suppressing these challenging ideas through censorship stifles the social, scientific, and political innovation necessary for long-term societal improvement.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.666227+00:00"
+    },
+    {
+      "id": "32fec0e9-2978-4bcf-8e56-bc58ced30717",
+      "text": "Widespread state censorship is historically a necessary and defining operational tool used by all authoritarian and totalitarian regimes, including the Soviet Union and modern-day China and North Korea. This censorship is consistently deployed to suppress dissent, distort reality, and solidify the political power of the ruling class.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "Soviet Union",
+        "China",
+        "North Korea"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.666490+00:00"
+    },
+    {
+      "id": "818b1caf-b216-4547-82fc-0ac893cb6cab",
+      "text": "Any institutional allowance for censorship inevitably creates a dangerous \"slippery slope\" that leads to mission creep and the abuse of power by authorities. Anti-obscenity laws, for example, have historically been expanded to target political or artistic expression far beyond their original scope, demonstrating unchecked authoritative expansion.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.666749+00:00"
+    },
+    {
+      "id": "6cc6ee3b-4ade-4b2d-8a68-d73d3efc8e5c",
+      "text": "Defining objective and consistent criteria for morally justified censorship is pragmatically impossible because moral values and perceived harms are subjective and constantly shifting. This lack of objective criteria leads to the arbitrary and inconsistent application of censorship power by those whose temporary interests are threatened.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:05.667343+00:00"
+    },
+    {
+      "id": "09c3e221-c364-49a6-b3fc-a4eac1c99f24",
+      "text": "Claiming censorship is a \"necessary\" tool for all authoritarian regimes is an overgeneralization; historical examples like Franco's Spain maintained power through centralized military authority, state terror, and Catholic fundamentalism while permitting certain forms of non-political information flow.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "32fec0e9-2978-4bcf-8e56-bc58ced30717",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:17.324261+00:00"
+    },
+    {
+      "id": "da85d03f-9107-47b3-b4e1-78e82614655c",
+      "text": "Modern authoritarian regimes often rely on active information warfare and propaganda saturation rather than simple censorship; states like Russia maintain power primarily by flooding media ecosystems with disinformation to sow confusion, which is distinct from pure information denial.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "32fec0e9-2978-4bcf-8e56-bc58ced30717",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:17.324783+00:00"
+    },
+    {
+      "id": "cd8964bc-55cb-4677-87c2-c57c07deb585",
+      "text": "Objective legal criteria can consistently apply to subjective harms; for example, US defamation law uses the objective \"actual malice\" standard to limit speech, defining harm that warrants prohibition regardless of the subjective offense felt by the defamed party.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6cc6ee3b-4ade-4b2d-8a68-d73d3efc8e5c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.079745+00:00"
+    },
+    {
+      "id": "1711a480-4979-4024-bed1-2f2427da1db8",
+      "text": "Many functional democracies employ clear legal tests for content restriction, such as the US Supreme Court's \"incitement to imminent lawless action\" standard, which demonstrates that consistent procedural rules can manage context-dependent moral judgments.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6cc6ee3b-4ade-4b2d-8a68-d73d3efc8e5c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.080486+00:00"
+    },
+    {
+      "id": "adf61053-c730-440c-9641-46a931262668",
+      "text": "Institutional censorship, when legally bounded, is functional in many stable democracies; for instance, European Union regulations impose strict content limitations on illegal hate speech and pharmaceutical advertising without mission creep into political opinion censorship.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "818b1caf-b216-4547-82fc-0ac893cb6cab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:20.665680+00:00"
+    },
+    {
+      "id": "2ce1347f-cfc3-45df-a5d7-1cbff551f442",
+      "text": "Laws targeting the distribution of child sexual abuse material (CSAM) are highly specific institutional censorship measures in the US and UK that have functionally remained focused without historical expansion into political or artistic domains.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "818b1caf-b216-4547-82fc-0ac893cb6cab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:20.666383+00:00"
+    },
+    {
+      "id": "9a56c729-0131-4a61-9e08-6b8fb34b1f6f",
+      "text": "The International Covenant on Civil and Political Rights (Article 19) allows restrictions on expression necessary to protect public order and the rights of others. Countries like Germany and France legally prohibit hate speech and incitement to violence, establishing that not all restrictions constitute an intrinsic human rights violation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5ee7c6b9-782d-43fd-ab32-d7fe31d0f0d2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.016525+00:00"
+    },
+    {
+      "id": "28f09bac-859c-44c5-ba28-7458554b66a7",
+      "text": "Narrow restrictions on speech do not inherently eliminate autonomy, as demonstrated by the consistent enforcement of defamation and libel laws in most democracies. A citizen who cannot publish falsehoods about another person retains the political autonomy and dignity required for participation in society.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5ee7c6b9-782d-43fd-ab32-d7fe31d0f0d2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.017116+00:00"
+    },
+    {
+      "id": "e49afd15-9d42-46fa-b17a-cfbfc91a9bb6",
+      "text": "Radical ideas promoting mass violence, such as the dissemination of Hutu Power propaganda via radio in Rwanda prior to 1994, demonstrate that suppression is essential for preventing immediate atrocities, not merely stifling benign progress.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a1565be7-a700-4942-a6d3-829655d744a5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:22.594398+00:00"
+    },
+    {
+      "id": "89b4a3b2-79bf-456d-9a5a-785ce23f65af",
+      "text": "Regulation of communication necessary for professional conduct routinely suppresses radical claims; for instance, the U.S. Food and Drug Administration prohibits untested revolutionary drug advertising to maintain public health and safety.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a1565be7-a700-4942-a6d3-829655d744a5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:22.595183+00:00"
+    },
+    {
+      "id": "4caf694b-e746-4e59-86da-0e777457987c",
+      "text": "Behavioral economics shows that in an open information environment, cognitive biases often lead populations to accept appealing misinformation over verified scientific consensus, as seen with persistent anti-vaccine movements in Western countries.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "367de982-2d9a-4a11-8abf-e36d7853f8c1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:22.624938+00:00"
+    },
+    {
+      "id": "0fcdbb9c-185f-4e52-be14-d81a58d21f8f",
+      "text": "Regulatory bodies like the US Securities and Exchange Commission successfully prohibit fraudulent financial statements, demonstrating that restricting speech based on verifiable falsehoods is necessary for functional economic truth discovery.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "367de982-2d9a-4a11-8abf-e36d7853f8c1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:22.625660+00:00"
+    },
+    {
+      "id": "86c2b1ce-989e-498c-9d07-fbc336568ef5",
+      "text": "The example is flawed because defamation targets objective reputational damage, often leading to tangible economic or professional loss, rather than purely subjective felt offense. This fails to demonstrate objective criteria applying to solely subjective harms.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cd8964bc-55cb-4677-87c2-c57c07deb585",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:29.261680+00:00"
+    },
+    {
+      "id": "83d86f41-b14d-4106-ae5c-26a1a4998082",
+      "text": "Objective legal criteria struggle to consistently quantify genuinely subjective harms, resulting in highly inconsistent tort awards for \"pain and suffering\" across different jurisdictions and juries.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cd8964bc-55cb-4677-87c2-c57c07deb585",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:29.262074+00:00"
+    },
+    {
+      "id": "805546ae-6ef7-4d18-93e0-1f1f817f57f2",
+      "text": "States like China employ the Great Firewall to aggressively censor dissenting information while simultaneously using the \"50 Cent Army\" to flood social media with fabricated pro-government narratives, demonstrating that censorship and active disinformation are complementary, not alternative, tools.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "da85d03f-9107-47b3-b4e1-78e82614655c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.038248+00:00"
+    },
+    {
+      "id": "e657f138-0250-4372-b1cc-d9f1fb0101cc",
+      "text": "Russia maintains state power primarily through the control of national television, manipulation of elections, and the Federal Security Service (FSB) suppressing political opponents like Alexei Navalny, which are physical and institutional controls significantly preceding information warfare.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "da85d03f-9107-47b3-b4e1-78e82614655c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.039073+00:00"
+    },
+    {
+      "id": "35bb42a6-b722-45d9-a507-62430579ceef",
+      "text": "Despite the SEC's regulatory presence, high-profile cases like the Enron scandal (2001) and Bernie Madoff fraud (2008) demonstrate that fraudulent statements are not successfully prohibited but rather detected and prosecuted after significant economic damage occurs.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0fcdbb9c-185f-4e52-be14-d81a58d21f8f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.215515+00:00"
+    },
+    {
+      "id": "0cee64a5-538f-4d89-abde-d6c6b3ff92b4",
+      "text": "The SEC regulates mandated corporate financial disclosure, which is a specific legal requirement distinct from general economic speech; applying the necessity of restricting this fraud to all \"verifiable falsehoods\" dangerously over generalizes the scope of necessary speech restrictions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0fcdbb9c-185f-4e52-be14-d81a58d21f8f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.216352+00:00"
+    },
+    {
+      "id": "76136152-3aeb-4f8b-8c69-9930cd8b0564",
+      "text": "Legal frameworks in many functional democracies require highly subjective judgments beyond the incitement standard; for example, Germany's NetzDG forces social media platforms to make legally binding, context-dependent decisions on whether speech constitutes \"manifestly unlawful\" hate speech within 24 hours.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1711a480-4979-4024-bed1-2f2427da1db8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.637136+00:00"
+    },
+    {
+      "id": "12fa745a-2a70-4298-a464-26acbbff5396",
+      "text": "The US Supreme Court's own Brandenburg test is inherently subjective, requiring judicial panels to make interpretive judgments regarding the \"imminence\" and \"likelihood\" of lawless action, which results in inconsistent rulings in cases involving political rhetoric and organization.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1711a480-4979-4024-bed1-2f2427da1db8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.637569+00:00"
+    },
+    {
+      "id": "c21b0918-91ac-4b90-b5bb-8b8643f18fdc",
+      "text": "Franco's regime enforced strict political censorship, banning all opposition media and suppressing regional languages like Catalan and Basque, which is the defining characteristic of authoritarian information control. Permitting some non-political content does not negate the necessity of controlling political narratives for regime survival.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "09c3e221-c364-49a6-b3fc-a4eac1c99f24",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:34.038134+00:00"
+    },
+    {
+      "id": "deab7eed-83a1-4b6f-9eaf-c0b328fb50b9",
+      "text": "Modern authoritarian regimes, such as the Chinese Communist Party, rely on comprehensive technological censorship, like the digital Great Firewall, to control virtually all political and social information flow crucial for maintaining state authority in a globally connected world.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "09c3e221-c364-49a6-b3fc-a4eac1c99f24",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:34.038619+00:00"
+    },
+    {
+      "id": "1c0a745d-1a61-43f2-85dd-a37bf02456fe",
+      "text": "Laws criminalizing political criticism or specific ideological speech fundamentally limit the citizen's ability to challenge power structures, directly reducing political autonomy. This contradicts the generalization that all narrow restrictions maintain the necessary conditions for robust political participation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "28f09bac-859c-44c5-ba28-7458554b66a7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:34.787180+00:00"
+    },
+    {
+      "id": "f470c94b-2ec5-4f84-8d0b-cf18b5b7b608",
+      "text": "Autonomy is not solely political participation but includes the intrinsic human right to self-expression and intellectual liberty, which is reduced by any state-mandated restriction on communication. Limiting sovereign control over one's own speech, even non-politically, is an intrinsic reduction of personal autonomy.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "28f09bac-859c-44c5-ba28-7458554b66a7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:34.788037+00:00"
+    },
+    {
+      "id": "0f6d09c3-eea1-44c2-b20e-dfd62fe71d92",
+      "text": "Restrictions on pharmaceutical advertising protect consumers from fraudulent claims and fall under commercial speech regulation, similar to the US FDA framework. Conversely, European Union regulations targeting \"hate speech,\" such as Germany\u2019s NetzDG, require the suppression of expressed political and social opinions, engaging fundamentally different legal standards for suppression.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "adf61053-c730-440c-9641-46a931262668",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.152440+00:00"
+    },
+    {
+      "id": "f0669559-c58c-4290-b6bd-ac0e689bf293",
+      "text": "European content regulations are actively criticized for mission creep into political suppression; the German government has repeatedly attempted to use its content laws to pressure social media platforms into removing political satire and legitimate criticism that falls outside the legal definition of hate speech.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "adf61053-c730-440c-9641-46a931262668",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.153257+00:00"
+    },
+    {
+      "id": "549264a3-9d1e-4d06-a5c7-1e08301592b5",
+      "text": "Child sexual abuse material is categorically excluded from First Amendment protection in the US following New York v. Ferber (1982), meaning its prohibition is criminal regulation, not suppression of protected speech.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2ce1347f-cfc3-45df-a5d7-1cbff551f442",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.640349+00:00"
+    },
+    {
+      "id": "97b740e4-cb27-4b2c-985e-21b680f92b5e",
+      "text": "Legislative initiatives like the UK Online Safety Act introduce broad duties on platforms to manage content deemed \"legal but harmful\" to children, expanding monitoring to political, artistic, and satire content, not just CSAM.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2ce1347f-cfc3-45df-a5d7-1cbff551f442",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.641171+00:00"
+    },
+    {
+      "id": "74c8e088-674b-44a0-986c-8521adda0402",
+      "text": "Hate speech, while interpreted as subjective offense, causes objective, measurable public health harms in targeted communities, including chronic stress, depression, and documented increases in hate crimes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "86c2b1ce-989e-498c-9d07-fbc336568ef5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:40.147381+00:00"
+    },
+    {
+      "id": "b4f57163-50b9-4141-b346-84ef98f73cf8",
+      "text": "In democratic societies like Germany and the United States, outright suppression of non-violent extremist groups often leads to underground growth; counter-speech and economic opportunity are used instead to deradicalize individuals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e49afd15-9d42-46fa-b17a-cfbfc91a9bb6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:42.129198+00:00"
+    },
+    {
+      "id": "0e87a48a-a23c-4810-8ea3-63f2c84fb8f5",
+      "text": "The effectiveness of Hutu Power propaganda depended on active state collusion and institutional breakdown in Rwanda; the critical, neglected steps included jamming the RTLM radio signal and providing a robust UN peacekeeping force.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e49afd15-9d42-46fa-b17a-cfbfc91a9bb6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:42.129669+00:00"
+    },
+    {
+      "id": "75e77251-bb2c-431e-b5f6-746d13420445",
+      "text": "Technological controls are not comprehensive, as large segments of the population in regimes like China regularly bypass the Great Firewall using widely available personal VPNs and encrypted messaging services.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "deab7eed-83a1-4b6f-9eaf-c0b328fb50b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.361507+00:00"
+    },
+    {
+      "id": "9331b1b6-c2eb-4ec9-8b4d-3569daa22ffe",
+      "text": "Maintaining state authority relies equally on non-technological mechanisms, such as physical coercion against dissidents and strict legal restrictions on assembly, which digital censorship alone cannot supplant.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "deab7eed-83a1-4b6f-9eaf-c0b328fb50b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.361549+00:00"
+    },
+    {
+      "id": "aafa3f99-0305-4573-b47d-69208f104903",
+      "text": "The strict 24-hour removal deadline in NetzDG contradicts the possibility of genuine, context-dependent subjective judgment by forcing platforms to rely on automated, risk-averse over-removal to avoid substantial fines.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "76136152-3aeb-4f8b-8c69-9930cd8b0564",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.383193+00:00"
+    },
+    {
+      "id": "462e29bf-61c0-4747-8c4c-51774cb542c8",
+      "text": "Restricting verifiable falsehoods is not solely confined to mandated disclosure; the FDA routinely censors false health and consumer claims, such as fraudulent medical advertisements, because these verifiably false statements cause direct public harm and erode market trust.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0cee64a5-538f-4d89-abde-d6c6b3ff92b4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.900042+00:00"
+    },
+    {
+      "id": "a53d54dd-0379-44dd-8e5e-adf2e338faef",
+      "text": "The FDA prohibits advertising untested drugs because they lack safety and efficacy data, maintaining standards of evidence-based medicine; this standard applies equally to modest generic drugs and revolutionary therapies, confirming the issue is lack of evidence, not radicalism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "89b4a3b2-79bf-456d-9a5a-785ce23f65af",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.948016+00:00"
+    },
+    {
+      "id": "cc0ce61f-abb9-406d-9d3c-54a3d8fa2d31",
+      "text": "Professional bodies often endorse radical shifts when evidence is clear; after Joseph Lister demonstrated the efficacy of antiseptic surgery, the medical profession rapidly adopted this revolutionary practice as a new, regulated standard of care.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "89b4a3b2-79bf-456d-9a5a-785ce23f65af",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.948807+00:00"
+    },
+    {
+      "id": "39d66f4d-e6c8-4d5e-ad12-8d54f9ef504a",
+      "text": "The Brandenburg test actually introduced a high degree of consistency by setting a strict two-pronged standard\u2014imminence and likelihood\u2014that consistently protects political extremists, such as the Ku Klux Klan and neo-Nazis in *Skokie*, from prior restraint.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "12fa745a-2a70-4298-a464-26acbbff5396",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:45.619653+00:00"
+    },
+    {
+      "id": "d9017373-43e3-44fa-82ac-8de346543877",
+      "text": "State-mandated restrictions against communication like defamation, medical misinformation, or fraud are necessary boundaries designed to protect the physical safety and autonomy of other citizens. The legal prohibition against shouting false alarms in a crowded public space does not reduce the speaker's autonomy but protects the collective right to safety.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f470c94b-2ec5-4f84-8d0b-cf18b5b7b608",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:45.862473+00:00"
+    },
+    {
+      "id": "f7f6c153-34ea-4bc4-ae1d-8220c632fc7f",
+      "text": "Enforcement mechanisms for blocking CSAM, particularly automated content filters, frequently over-censor protected artistic, educational, and journalistic content due to overly broad rules or implementation failures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "549264a3-9d1e-4d06-a5c7-1e08301592b5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:46.674647+00:00"
+    },
+    {
+      "id": "57a70c74-5fbe-4dc2-a4fd-eb365221ea63",
+      "text": "The UK Online Safety Act explicitly includes statutory protections for content of \"democratic importance\" and journalistic content, preventing platforms from applying generalized \"legal but harmful\" duties to political, satirical, or artistic speech.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "97b740e4-cb27-4b2c-985e-21b680f92b5e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:48.362989+00:00"
+    },
+    {
+      "id": "9848ccf0-9954-453c-ac4c-13baaba691a5",
+      "text": "Extreme forms of speech, such as incitement to genocide broadcast by Radio T\u00e9l\u00e9vision Libre des Mille Collines during the 1994 Rwandan genocide, necessitate censorship to prevent imminent, widespread violence and moral catastrophe.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "83d86f41-b14d-4106-ae5c-26a1a4998082",
+      "children_count": 0,
+      "references": [
+        "Radio T\u00e9l\u00e9vision Libre des Mille Collines (RTLM)",
+        "Rwandan genocide, 1994"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:48.519998+00:00"
+    },
+    {
+      "id": "aaef774a-850c-4bfe-ad9d-6eec6c7b63df",
+      "text": "The European Union's Digital Services Act (DSA) establishes a transparent framework aimed at making platforms responsible for illegal content, not empowering national governments to mandate the removal of legal political criticism or satire.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f0669559-c58c-4290-b6bd-ac0e689bf293",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:49.169623+00:00"
+    },
+    {
+      "id": "5c2d9efb-8dc4-4857-80c7-82162005e09e",
+      "text": "The controversy surrounding laws like Germany's NetzDG results mainly from platform over-compliance and the resulting \"chilling effect\" on legal speech due to potential high fines, rather than repeated direct government persecution of political satire.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f0669559-c58c-4290-b6bd-ac0e689bf293",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:49.169654+00:00"
+    },
+    {
+      "id": "5b27fba6-901d-4f89-a48b-aa8a548ed636",
+      "text": "Awareness of massive state censorship, like the Great Firewall, causes domestic populations to treat all state-produced media, including 50 Cent Army narratives, with extreme skepticism. This systematic distrust renders coordinated disinformation campaigns less persuasive over time because the targeted audience anticipates manipulation and actively seeks external information.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "805546ae-6ef7-4d18-93e0-1f1f817f57f2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:49.267565+00:00"
+    },
+    {
+      "id": "f755b8ff-7460-44d4-89de-bd17c9dd78ca",
+      "text": "During World War II, democratic governments in the United States and the United Kingdom implemented widespread mandatory censorship of news, letters, and radio content under the guise of national security, demonstrating that strict state information control occurs in non-authoritarian states for purposes beyond mere political repression or regime survival.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c21b0918-91ac-4b90-b5bb-8b8643f18fdc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:50.566839+00:00"
+    },
+    {
+      "id": "03195e6a-6692-4b9a-88a9-09c9224d2507",
+      "text": "The SEC consistently brings hundreds of enforcement actions annually, recovering billions in funds and preventing countless instances of fraud from escalating beyond detection, suggesting successful prohibition in many less publicized instances.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "35bb42a6-b722-45d9-a507-62430579ceef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:51.384944+00:00"
+    },
+    {
+      "id": "bbdb1d93-65a6-4a3f-bd1d-14a58ff323af",
+      "text": "The U.S. regulatory framework, established by the Securities Acts of 1933 and 1934, provides the necessary transparency and trust required for the daily operation of trillion-dollar capital markets; this systemic utility is successful prohibition despite inevitable criminal activity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "35bb42a6-b722-45d9-a507-62430579ceef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:51.384981+00:00"
+    },
+    {
+      "id": "4f183c35-6c4f-46c2-a064-6151c56d0345",
+      "text": "Russian state control over national television entities like Channel One serves as the principal vector for information warfare by disseminating unified propaganda, meaning this method cannot \"significantly precede\" information warfare.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e657f138-0250-4372-b1cc-d9f1fb0101cc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:51.766744+00:00"
+    },
+    {
+      "id": "fe8a0ff0-486f-488d-83af-7ad389285e7d",
+      "text": "The state's massive revenue derived from the export of natural gas and oil through entities like Gazprom furnishes extensive patronage and funds social stability programs, establishing economic control as another primary pillar of power not mentioned.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e657f138-0250-4372-b1cc-d9f1fb0101cc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:51.766771+00:00"
+    },
+    {
+      "id": "50227002-973e-4e40-a66f-22cf0456b6a5",
+      "text": "Regulation of commercial speech often suppresses politically charged opinions under the guise of consumer protection; for instance, US FDA restrictions on advertising for off-label drug uses or prohibitions on certain claims about COVID-19 cures functionally censor medical opinions for public health, similar to how NetzDG censors political hate speech for public order.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0f6d09c3-eea1-44c2-b20e-dfd62fe71d92",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:52.386399+00:00"
+    },
+    {
+      "id": "667c4fe2-df26-4943-80c6-144c301b81d5",
+      "text": "The genocide was executed through decentralized, grassroots mobilization by local officials and the Interahamwe, meaning jamming the central RTLM radio signal would have been insufficient to stop the violence once the state infrastructure had failed.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0e87a48a-a23c-4810-8ea3-63f2c84fb8f5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:52.650600+00:00"
+    },
+    {
+      "id": "614b8570-a5e2-4bed-a90d-f7c182422076",
+      "text": "Democracies like Germany operate under the principle of \"Militant Democracy,\" justifying the outright legal suppression of parties and groups that threaten the constitutional order, proving that censorship is often a necessary and morally justified tool alongside deradicalization efforts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b4f57163-50b9-4141-b346-84ef98f73cf8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:53.724143+00:00"
+    },
+    {
+      "id": "ead01153-272b-4746-be77-935f9dcddc34",
+      "text": "Laws in many democracies, like Germany and France, criminalize historical revisionism and incitement to hatred which restricts certain speech. These narrow restrictions protect the safety and political participation rights of targeted minority populations, ensuring a climate conducive to robust autonomy for all citizens.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1c0a745d-1a61-43f2-85dd-a37bf02456fe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:53.947035+00:00"
+    },
+    {
+      "id": "5fe5276b-7cea-4c25-b321-8074ce7cd34a",
+      "text": "Ignaz Semmelweis proved in 1847 that handwashing drastically lowered puerperal fever mortality at Vienna hospitals, yet the medical community rejected this clear evidence for decades.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cc0ce61f-abb9-406d-9d3c-54a3d8fa2d31",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:57.199340+00:00"
+    },
+    {
+      "id": "e1e49692-c1d9-4f36-8c02-d7dc3ea40727",
+      "text": "Despite Joseph Lister\u2019s 1867 publication on antiseptic surgery, many prominent European surgeons resisted his recommendations well into the 1890s, proving widespread adoption was slow, not rapid, due to institutional inertia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cc0ce61f-abb9-406d-9d3c-54a3d8fa2d31",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:57.199376+00:00"
+    },
+    {
+      "id": "656e1ca0-7a52-4ef3-b21d-efe5cf830cf2",
+      "text": "The FDA established the Regenerative Medicine Advanced Therapy (RMAT) pathway, granting accelerated assessment and unique requirements for highly disruptive cell and gene therapies. This necessitates special regulatory frameworks and exemptions based on the therapy's novelty, proving the difficulty is not solely the lack of conventional evidence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a53d54dd-0379-44dd-8e5e-adf2e338faef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:02.041890+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:42.298890+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:42.298890+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "target": "8e6655bc-1e45-4618-be16-0785dee3f18a",
+      "type": "objection"
+    },
+    {
+      "source": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "target": "9984b3e9-71cc-4ada-a8fd-def1ba06f772",
+      "type": "objection"
+    },
+    {
+      "source": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "target": "a7da4cf6-6e37-4652-9e85-03e5be2e10cc",
+      "type": "objection"
+    },
+    {
+      "source": "ee380a2c-4959-4385-8005-8109a19e853e",
+      "target": "0669034f-33a8-4bb5-9c88-eb11fc0308cd",
+      "type": "objection"
+    },
+    {
+      "source": "ee380a2c-4959-4385-8005-8109a19e853e",
+      "target": "daad464b-969a-483f-b7e7-9df19084c0bf",
+      "type": "objection"
+    },
+    {
+      "source": "a6e048c8-7b8d-4547-a146-bba201ca7197",
+      "target": "6e3b8f6d-3559-42ec-8bcd-83ead7790aa2",
+      "type": "objection"
+    },
+    {
+      "source": "a6e048c8-7b8d-4547-a146-bba201ca7197",
+      "target": "743d9b8a-604c-4b0c-8954-594d016786d9",
+      "type": "objection"
+    },
+    {
+      "source": "b3b7cf0f-5f35-4dc3-b7c7-cb203098b61d",
+      "target": "762cb475-f6af-4e5c-b627-dbb08bc4732a",
+      "type": "objection"
+    },
+    {
+      "source": "b3b7cf0f-5f35-4dc3-b7c7-cb203098b61d",
+      "target": "1825ed14-3f8f-4ec7-b726-1427ca33288e",
+      "type": "objection"
+    },
+    {
+      "source": "cd3757e1-ef65-49bf-a280-1e45a4241567",
+      "target": "ac6d3383-e6f5-46d7-a6bd-3791fd76084a",
+      "type": "objection"
+    },
+    {
+      "source": "cd3757e1-ef65-49bf-a280-1e45a4241567",
+      "target": "19aecea1-f600-478c-9817-74b670f2dc8a",
+      "type": "objection"
+    },
+    {
+      "source": "7acee775-9f5a-470a-bc61-3765df010c26",
+      "target": "250a7e17-ce71-4aa5-8b01-6021fce793ec",
+      "type": "objection"
+    },
+    {
+      "source": "7acee775-9f5a-470a-bc61-3765df010c26",
+      "target": "0101138c-7406-4846-86e9-e388166e6b65",
+      "type": "objection"
+    },
+    {
+      "source": "8e6655bc-1e45-4618-be16-0785dee3f18a",
+      "target": "c0bd8831-5ebd-4776-aabb-0c21cc3098bc",
+      "type": "response"
+    },
+    {
+      "source": "8e6655bc-1e45-4618-be16-0785dee3f18a",
+      "target": "47c81926-d403-444b-b9b8-238c18676ae4",
+      "type": "response"
+    },
+    {
+      "source": "743d9b8a-604c-4b0c-8954-594d016786d9",
+      "target": "821e3544-427b-4283-9cb2-f4c96a514399",
+      "type": "response"
+    },
+    {
+      "source": "743d9b8a-604c-4b0c-8954-594d016786d9",
+      "target": "ae941419-662d-4ddb-8ea1-45d0f958dfb8",
+      "type": "response"
+    },
+    {
+      "source": "9984b3e9-71cc-4ada-a8fd-def1ba06f772",
+      "target": "c35bf5f1-cc1e-4c1b-bffd-6bb6a5a39469",
+      "type": "response"
+    },
+    {
+      "source": "9984b3e9-71cc-4ada-a8fd-def1ba06f772",
+      "target": "e499d3c8-488c-48bd-875f-e0b393baa8f8",
+      "type": "response"
+    },
+    {
+      "source": "762cb475-f6af-4e5c-b627-dbb08bc4732a",
+      "target": "c1f9f154-9b64-4976-8a75-1f1dd56f2255",
+      "type": "response"
+    },
+    {
+      "source": "762cb475-f6af-4e5c-b627-dbb08bc4732a",
+      "target": "85c3b780-d5de-4d86-a8bb-4123e373396b",
+      "type": "response"
+    },
+    {
+      "source": "daad464b-969a-483f-b7e7-9df19084c0bf",
+      "target": "e7ad4604-ba49-4f70-87b7-b1259809cb4e",
+      "type": "response"
+    },
+    {
+      "source": "daad464b-969a-483f-b7e7-9df19084c0bf",
+      "target": "317adf15-7377-4505-9e19-9cb3d7fdd3e0",
+      "type": "response"
+    },
+    {
+      "source": "c0bd8831-5ebd-4776-aabb-0c21cc3098bc",
+      "target": "dc2bbd5c-3532-4735-8155-2955c9be8ca3",
+      "type": "response"
+    },
+    {
+      "source": "0669034f-33a8-4bb5-9c88-eb11fc0308cd",
+      "target": "14ce53d7-af23-4cf7-957f-a0a52165db02",
+      "type": "response"
+    },
+    {
+      "source": "0669034f-33a8-4bb5-9c88-eb11fc0308cd",
+      "target": "3ade1233-fb84-487b-bbe5-bf1d05a68f28",
+      "type": "response"
+    },
+    {
+      "source": "47c81926-d403-444b-b9b8-238c18676ae4",
+      "target": "c0989db9-a510-4342-aece-d29b3aa9c4ee",
+      "type": "response"
+    },
+    {
+      "source": "ac6d3383-e6f5-46d7-a6bd-3791fd76084a",
+      "target": "47ef5fe6-0085-4aa6-ab6f-e19a5a137f63",
+      "type": "response"
+    },
+    {
+      "source": "ac6d3383-e6f5-46d7-a6bd-3791fd76084a",
+      "target": "28632788-2115-4ac0-8eb8-58641fe90672",
+      "type": "response"
+    },
+    {
+      "source": "1825ed14-3f8f-4ec7-b726-1427ca33288e",
+      "target": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "type": "response"
+    },
+    {
+      "source": "1825ed14-3f8f-4ec7-b726-1427ca33288e",
+      "target": "b74cd691-8509-4cc9-9667-3b555a16236a",
+      "type": "response"
+    },
+    {
+      "source": "821e3544-427b-4283-9cb2-f4c96a514399",
+      "target": "d7065028-a69c-4e0d-b60f-c859457d2221",
+      "type": "response"
+    },
+    {
+      "source": "6e3b8f6d-3559-42ec-8bcd-83ead7790aa2",
+      "target": "c9b4fd63-100c-41b4-897b-0c7e08781d63",
+      "type": "response"
+    },
+    {
+      "source": "6e3b8f6d-3559-42ec-8bcd-83ead7790aa2",
+      "target": "c9e09c15-834b-48d2-8adb-c096956a4dee",
+      "type": "response"
+    },
+    {
+      "source": "0101138c-7406-4846-86e9-e388166e6b65",
+      "target": "4cbf736a-a602-48f1-b94f-c9c550469293",
+      "type": "response"
+    },
+    {
+      "source": "0101138c-7406-4846-86e9-e388166e6b65",
+      "target": "c95341bc-7f0c-42fe-b4ca-1bf95d0fc32e",
+      "type": "response"
+    },
+    {
+      "source": "e499d3c8-488c-48bd-875f-e0b393baa8f8",
+      "target": "902ea3c5-6470-47a2-b12d-44779db051d5",
+      "type": "response"
+    },
+    {
+      "source": "85c3b780-d5de-4d86-a8bb-4123e373396b",
+      "target": "18a5d1eb-8426-4eb6-853c-6d2e7c818a9d",
+      "type": "response"
+    },
+    {
+      "source": "250a7e17-ce71-4aa5-8b01-6021fce793ec",
+      "target": "a3fda744-8f29-40f4-a141-725b2a7e18fd",
+      "type": "response"
+    },
+    {
+      "source": "250a7e17-ce71-4aa5-8b01-6021fce793ec",
+      "target": "23cdef17-6881-47e5-b187-7a999e5d7801",
+      "type": "response"
+    },
+    {
+      "source": "c35bf5f1-cc1e-4c1b-bffd-6bb6a5a39469",
+      "target": "623dd7da-c586-4a75-a036-302fdb7ab2d0",
+      "type": "response"
+    },
+    {
+      "source": "ae941419-662d-4ddb-8ea1-45d0f958dfb8",
+      "target": "922ebe27-db94-4e12-bbb9-722c77763f64",
+      "type": "response"
+    },
+    {
+      "source": "ae941419-662d-4ddb-8ea1-45d0f958dfb8",
+      "target": "0801bcb7-b632-4c31-84cc-f6e906aa0827",
+      "type": "response"
+    },
+    {
+      "source": "e7ad4604-ba49-4f70-87b7-b1259809cb4e",
+      "target": "2e226a34-03a0-4a47-9475-5b2e1f2e250d",
+      "type": "response"
+    },
+    {
+      "source": "317adf15-7377-4505-9e19-9cb3d7fdd3e0",
+      "target": "56adbca1-9a8e-4c82-a852-97620661abee",
+      "type": "response"
+    },
+    {
+      "source": "c9e09c15-834b-48d2-8adb-c096956a4dee",
+      "target": "227e0169-adc2-401f-8cb3-8dc537d0f1a5",
+      "type": "response"
+    },
+    {
+      "source": "4cbf736a-a602-48f1-b94f-c9c550469293",
+      "target": "03b9e41a-1070-4db8-adec-504f8d3b6bd8",
+      "type": "response"
+    },
+    {
+      "source": "c1f9f154-9b64-4976-8a75-1f1dd56f2255",
+      "target": "e18033e2-5c8d-4aa6-8ea0-304bb9503946",
+      "type": "response"
+    },
+    {
+      "source": "c9b4fd63-100c-41b4-897b-0c7e08781d63",
+      "target": "f2a50d47-09a7-40f8-862e-f2a66d9d02d0",
+      "type": "response"
+    },
+    {
+      "source": "b74cd691-8509-4cc9-9667-3b555a16236a",
+      "target": "fe73bb08-6721-4caa-ac93-d91176c7a345",
+      "type": "response"
+    },
+    {
+      "source": "23cdef17-6881-47e5-b187-7a999e5d7801",
+      "target": "0b5348df-84dc-4070-a20a-8cc2e31359f0",
+      "type": "response"
+    },
+    {
+      "source": "47ef5fe6-0085-4aa6-ab6f-e19a5a137f63",
+      "target": "4440dc82-86c4-4e6c-ae97-05b5b29a04ba",
+      "type": "response"
+    },
+    {
+      "source": "3ade1233-fb84-487b-bbe5-bf1d05a68f28",
+      "target": "4275bffb-8fbf-4977-85d6-7a991a91251c",
+      "type": "response"
+    },
+    {
+      "source": "3ade1233-fb84-487b-bbe5-bf1d05a68f28",
+      "target": "3b67b0ae-de85-4980-b3b7-b93737f22936",
+      "type": "response"
+    },
+    {
+      "source": "14ce53d7-af23-4cf7-957f-a0a52165db02",
+      "target": "9fd72893-1dae-4eff-a9cc-bf98ed5f9547",
+      "type": "response"
+    },
+    {
+      "source": "28632788-2115-4ac0-8eb8-58641fe90672",
+      "target": "d5d1345b-d52c-4551-bd08-acfc54a66b1b",
+      "type": "response"
+    },
+    {
+      "source": "28632788-2115-4ac0-8eb8-58641fe90672",
+      "target": "f4d80629-abfd-4d8a-a1fc-f7d06f736a1a",
+      "type": "response"
+    },
+    {
+      "source": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "target": "b81ac4f0-8536-4596-a488-2cde5dd4dccc",
+      "type": "response"
+    },
+    {
+      "source": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "target": "244a4ed9-5ebf-46ab-9536-3893f9bbbe8b",
+      "type": "response"
+    },
+    {
+      "source": "4023b64e-92a1-4319-a894-9196c3b0bb2f",
+      "target": "2d77e6b8-bbd3-4013-9776-2bbc9b31139b",
+      "type": "response"
+    },
+    {
+      "source": "c95341bc-7f0c-42fe-b4ca-1bf95d0fc32e",
+      "target": "b4423416-ce74-4bda-8fe2-51dc00417446",
+      "type": "response"
+    },
+    {
+      "source": "a3fda744-8f29-40f4-a141-725b2a7e18fd",
+      "target": "351f1958-6fb3-4895-979a-78806854e319",
+      "type": "response"
+    },
+    {
+      "source": "a3fda744-8f29-40f4-a141-725b2a7e18fd",
+      "target": "d54d3f92-5cad-4536-addd-a722da0df5b6",
+      "type": "response"
+    },
+    {
+      "source": "32fec0e9-2978-4bcf-8e56-bc58ced30717",
+      "target": "09c3e221-c364-49a6-b3fc-a4eac1c99f24",
+      "type": "objection"
+    },
+    {
+      "source": "32fec0e9-2978-4bcf-8e56-bc58ced30717",
+      "target": "da85d03f-9107-47b3-b4e1-78e82614655c",
+      "type": "objection"
+    },
+    {
+      "source": "6cc6ee3b-4ade-4b2d-8a68-d73d3efc8e5c",
+      "target": "cd8964bc-55cb-4677-87c2-c57c07deb585",
+      "type": "objection"
+    },
+    {
+      "source": "6cc6ee3b-4ade-4b2d-8a68-d73d3efc8e5c",
+      "target": "1711a480-4979-4024-bed1-2f2427da1db8",
+      "type": "objection"
+    },
+    {
+      "source": "818b1caf-b216-4547-82fc-0ac893cb6cab",
+      "target": "adf61053-c730-440c-9641-46a931262668",
+      "type": "objection"
+    },
+    {
+      "source": "818b1caf-b216-4547-82fc-0ac893cb6cab",
+      "target": "2ce1347f-cfc3-45df-a5d7-1cbff551f442",
+      "type": "objection"
+    },
+    {
+      "source": "5ee7c6b9-782d-43fd-ab32-d7fe31d0f0d2",
+      "target": "9a56c729-0131-4a61-9e08-6b8fb34b1f6f",
+      "type": "objection"
+    },
+    {
+      "source": "5ee7c6b9-782d-43fd-ab32-d7fe31d0f0d2",
+      "target": "28f09bac-859c-44c5-ba28-7458554b66a7",
+      "type": "objection"
+    },
+    {
+      "source": "a1565be7-a700-4942-a6d3-829655d744a5",
+      "target": "e49afd15-9d42-46fa-b17a-cfbfc91a9bb6",
+      "type": "objection"
+    },
+    {
+      "source": "a1565be7-a700-4942-a6d3-829655d744a5",
+      "target": "89b4a3b2-79bf-456d-9a5a-785ce23f65af",
+      "type": "objection"
+    },
+    {
+      "source": "367de982-2d9a-4a11-8abf-e36d7853f8c1",
+      "target": "4caf694b-e746-4e59-86da-0e777457987c",
+      "type": "objection"
+    },
+    {
+      "source": "367de982-2d9a-4a11-8abf-e36d7853f8c1",
+      "target": "0fcdbb9c-185f-4e52-be14-d81a58d21f8f",
+      "type": "objection"
+    },
+    {
+      "source": "cd8964bc-55cb-4677-87c2-c57c07deb585",
+      "target": "86c2b1ce-989e-498c-9d07-fbc336568ef5",
+      "type": "response"
+    },
+    {
+      "source": "cd8964bc-55cb-4677-87c2-c57c07deb585",
+      "target": "83d86f41-b14d-4106-ae5c-26a1a4998082",
+      "type": "response"
+    },
+    {
+      "source": "da85d03f-9107-47b3-b4e1-78e82614655c",
+      "target": "805546ae-6ef7-4d18-93e0-1f1f817f57f2",
+      "type": "response"
+    },
+    {
+      "source": "da85d03f-9107-47b3-b4e1-78e82614655c",
+      "target": "e657f138-0250-4372-b1cc-d9f1fb0101cc",
+      "type": "response"
+    },
+    {
+      "source": "0fcdbb9c-185f-4e52-be14-d81a58d21f8f",
+      "target": "35bb42a6-b722-45d9-a507-62430579ceef",
+      "type": "response"
+    },
+    {
+      "source": "0fcdbb9c-185f-4e52-be14-d81a58d21f8f",
+      "target": "0cee64a5-538f-4d89-abde-d6c6b3ff92b4",
+      "type": "response"
+    },
+    {
+      "source": "1711a480-4979-4024-bed1-2f2427da1db8",
+      "target": "76136152-3aeb-4f8b-8c69-9930cd8b0564",
+      "type": "response"
+    },
+    {
+      "source": "1711a480-4979-4024-bed1-2f2427da1db8",
+      "target": "12fa745a-2a70-4298-a464-26acbbff5396",
+      "type": "response"
+    },
+    {
+      "source": "09c3e221-c364-49a6-b3fc-a4eac1c99f24",
+      "target": "c21b0918-91ac-4b90-b5bb-8b8643f18fdc",
+      "type": "response"
+    },
+    {
+      "source": "09c3e221-c364-49a6-b3fc-a4eac1c99f24",
+      "target": "deab7eed-83a1-4b6f-9eaf-c0b328fb50b9",
+      "type": "response"
+    },
+    {
+      "source": "28f09bac-859c-44c5-ba28-7458554b66a7",
+      "target": "1c0a745d-1a61-43f2-85dd-a37bf02456fe",
+      "type": "response"
+    },
+    {
+      "source": "28f09bac-859c-44c5-ba28-7458554b66a7",
+      "target": "f470c94b-2ec5-4f84-8d0b-cf18b5b7b608",
+      "type": "response"
+    },
+    {
+      "source": "adf61053-c730-440c-9641-46a931262668",
+      "target": "0f6d09c3-eea1-44c2-b20e-dfd62fe71d92",
+      "type": "response"
+    },
+    {
+      "source": "adf61053-c730-440c-9641-46a931262668",
+      "target": "f0669559-c58c-4290-b6bd-ac0e689bf293",
+      "type": "response"
+    },
+    {
+      "source": "2ce1347f-cfc3-45df-a5d7-1cbff551f442",
+      "target": "549264a3-9d1e-4d06-a5c7-1e08301592b5",
+      "type": "response"
+    },
+    {
+      "source": "2ce1347f-cfc3-45df-a5d7-1cbff551f442",
+      "target": "97b740e4-cb27-4b2c-985e-21b680f92b5e",
+      "type": "response"
+    },
+    {
+      "source": "86c2b1ce-989e-498c-9d07-fbc336568ef5",
+      "target": "74c8e088-674b-44a0-986c-8521adda0402",
+      "type": "response"
+    },
+    {
+      "source": "e49afd15-9d42-46fa-b17a-cfbfc91a9bb6",
+      "target": "b4f57163-50b9-4141-b346-84ef98f73cf8",
+      "type": "response"
+    },
+    {
+      "source": "e49afd15-9d42-46fa-b17a-cfbfc91a9bb6",
+      "target": "0e87a48a-a23c-4810-8ea3-63f2c84fb8f5",
+      "type": "response"
+    },
+    {
+      "source": "deab7eed-83a1-4b6f-9eaf-c0b328fb50b9",
+      "target": "75e77251-bb2c-431e-b5f6-746d13420445",
+      "type": "response"
+    },
+    {
+      "source": "deab7eed-83a1-4b6f-9eaf-c0b328fb50b9",
+      "target": "9331b1b6-c2eb-4ec9-8b4d-3569daa22ffe",
+      "type": "response"
+    },
+    {
+      "source": "76136152-3aeb-4f8b-8c69-9930cd8b0564",
+      "target": "aafa3f99-0305-4573-b47d-69208f104903",
+      "type": "response"
+    },
+    {
+      "source": "0cee64a5-538f-4d89-abde-d6c6b3ff92b4",
+      "target": "462e29bf-61c0-4747-8c4c-51774cb542c8",
+      "type": "response"
+    },
+    {
+      "source": "89b4a3b2-79bf-456d-9a5a-785ce23f65af",
+      "target": "a53d54dd-0379-44dd-8e5e-adf2e338faef",
+      "type": "response"
+    },
+    {
+      "source": "89b4a3b2-79bf-456d-9a5a-785ce23f65af",
+      "target": "cc0ce61f-abb9-406d-9d3c-54a3d8fa2d31",
+      "type": "response"
+    },
+    {
+      "source": "12fa745a-2a70-4298-a464-26acbbff5396",
+      "target": "39d66f4d-e6c8-4d5e-ad12-8d54f9ef504a",
+      "type": "response"
+    },
+    {
+      "source": "f470c94b-2ec5-4f84-8d0b-cf18b5b7b608",
+      "target": "d9017373-43e3-44fa-82ac-8de346543877",
+      "type": "response"
+    },
+    {
+      "source": "549264a3-9d1e-4d06-a5c7-1e08301592b5",
+      "target": "f7f6c153-34ea-4bc4-ae1d-8220c632fc7f",
+      "type": "response"
+    },
+    {
+      "source": "97b740e4-cb27-4b2c-985e-21b680f92b5e",
+      "target": "57a70c74-5fbe-4dc2-a4fd-eb365221ea63",
+      "type": "response"
+    },
+    {
+      "source": "83d86f41-b14d-4106-ae5c-26a1a4998082",
+      "target": "9848ccf0-9954-453c-ac4c-13baaba691a5",
+      "type": "response"
+    },
+    {
+      "source": "f0669559-c58c-4290-b6bd-ac0e689bf293",
+      "target": "aaef774a-850c-4bfe-ad9d-6eec6c7b63df",
+      "type": "response"
+    },
+    {
+      "source": "f0669559-c58c-4290-b6bd-ac0e689bf293",
+      "target": "5c2d9efb-8dc4-4857-80c7-82162005e09e",
+      "type": "response"
+    },
+    {
+      "source": "805546ae-6ef7-4d18-93e0-1f1f817f57f2",
+      "target": "5b27fba6-901d-4f89-a48b-aa8a548ed636",
+      "type": "response"
+    },
+    {
+      "source": "c21b0918-91ac-4b90-b5bb-8b8643f18fdc",
+      "target": "f755b8ff-7460-44d4-89de-bd17c9dd78ca",
+      "type": "response"
+    },
+    {
+      "source": "35bb42a6-b722-45d9-a507-62430579ceef",
+      "target": "03195e6a-6692-4b9a-88a9-09c9224d2507",
+      "type": "response"
+    },
+    {
+      "source": "35bb42a6-b722-45d9-a507-62430579ceef",
+      "target": "bbdb1d93-65a6-4a3f-bd1d-14a58ff323af",
+      "type": "response"
+    },
+    {
+      "source": "e657f138-0250-4372-b1cc-d9f1fb0101cc",
+      "target": "4f183c35-6c4f-46c2-a064-6151c56d0345",
+      "type": "response"
+    },
+    {
+      "source": "e657f138-0250-4372-b1cc-d9f1fb0101cc",
+      "target": "fe8a0ff0-486f-488d-83af-7ad389285e7d",
+      "type": "response"
+    },
+    {
+      "source": "0f6d09c3-eea1-44c2-b20e-dfd62fe71d92",
+      "target": "50227002-973e-4e40-a66f-22cf0456b6a5",
+      "type": "response"
+    },
+    {
+      "source": "0e87a48a-a23c-4810-8ea3-63f2c84fb8f5",
+      "target": "667c4fe2-df26-4943-80c6-144c301b81d5",
+      "type": "response"
+    },
+    {
+      "source": "b4f57163-50b9-4141-b346-84ef98f73cf8",
+      "target": "614b8570-a5e2-4bed-a90d-f7c182422076",
+      "type": "response"
+    },
+    {
+      "source": "1c0a745d-1a61-43f2-85dd-a37bf02456fe",
+      "target": "ead01153-272b-4746-be77-935f9dcddc34",
+      "type": "response"
+    },
+    {
+      "source": "cc0ce61f-abb9-406d-9d3c-54a3d8fa2d31",
+      "target": "5fe5276b-7cea-4c25-b321-8074ce7cd34a",
+      "type": "response"
+    },
+    {
+      "source": "cc0ce61f-abb9-406d-9d3c-54a3d8fa2d31",
+      "target": "e1e49692-c1d9-4f36-8c02-d7dc3ea40727",
+      "type": "response"
+    },
+    {
+      "source": "a53d54dd-0379-44dd-8e5e-adf2e338faef",
+      "target": "656e1ca0-7a52-4ef3-b21d-efe5cf830cf2",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b3b7cf0f-5f35-4dc3-b7c7-cb203098b61d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "7acee775-9f5a-470a-bc61-3765df010c26",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a6e048c8-7b8d-4547-a146-bba201ca7197",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6c769110-5d00-4040-9d0c-4c4fc5551924",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "cd3757e1-ef65-49bf-a280-1e45a4241567",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ee380a2c-4959-4385-8005-8109a19e853e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5ee7c6b9-782d-43fd-ab32-d7fe31d0f0d2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "367de982-2d9a-4a11-8abf-e36d7853f8c1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a1565be7-a700-4942-a6d3-829655d744a5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "32fec0e9-2978-4bcf-8e56-bc58ced30717",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "818b1caf-b216-4547-82fc-0ac893cb6cab",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6cc6ee3b-4ade-4b2d-8a68-d73d3efc8e5c",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

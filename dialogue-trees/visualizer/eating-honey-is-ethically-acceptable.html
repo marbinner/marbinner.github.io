@@ -1,0 +1,3378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eating honey is ethically acceptable - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Eating honey is ethically acceptable</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            112 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/eating-honey-is-ethically-acceptable.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">112</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "bee78d85-d5d7-4c72-9e96-be240f20778f",
+      "text": "Beekeeping is essential for the commercial pollination of numerous food crops, including almonds, apples, and berries, sustaining global food security. Honey production is a justifiable byproduct of this critical and beneficial agricultural necessity.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:22.192409+00:00"
+    },
+    {
+      "id": "3ef38b85-26d4-43a7-bb90-615ae95ae7f1",
+      "text": "Honeybees lack the complex centralized nervous system structures required for scientifically verifiable sentience or advanced consciousness. Consequently, the ethical concerns regarding suffering applicable to vertebrates do not fully extend to bees.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:22.193195+00:00"
+    },
+    {
+      "id": "7e1fed58-47f9-4232-8469-510074e5f260",
+      "text": "The bee colony operates biologically as a superorganism, prioritizing the collective welfare and survival of the hive over the individual worker bee. Ethical considerations surrounding honey harvesting must respect the integrity of the colony as the primary entity.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:22.193664+00:00"
+    },
+    {
+      "id": "65f3ca76-f4b5-4d6d-a0d4-0935b6342d15",
+      "text": "Ethical beekeeping requires collecting only surplus resources and providing supplemental feed during scarcity. This careful management supports colony health, ensuring beekeeping practices result in minimal net harm to the bee population.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:22.194116+00:00"
+    },
+    {
+      "id": "91f6eaa7-9a9b-4f68-960a-411f692e8922",
+      "text": "Commercial beekeeping provides essential monitoring and treatment for colonies against existential threats, such as *Varroa* mites and American foulbrood. This expert stewardship is crucial for maintaining bee health and preventing widespread Colony Collapse Disorder.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:22.194752+00:00"
+    },
+    {
+      "id": "0172cbb2-3901-45c9-b210-577687f89619",
+      "text": "Honey offers unique nutritional benefits, including antioxidant and antibacterial properties, serving consumer welfare. Using honey as a natural sweetener provides a healthier alternative to environmentally detrimental and highly refined artificial sugars.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:22.195242+00:00"
+    },
+    {
+      "id": "df15eb60-e06c-47e0-959e-e081c36b3378",
+      "text": "Infanticide is a common biological behavior across species like lions and bears, yet human moral frameworks, such as those established by the Geneva Conventions, reject biological precedents as a source of ethical law.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7e1fed58-47f9-4232-8469-510074e5f260",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:35.409560+00:00"
+    },
+    {
+      "id": "65b3a72a-6e8e-4697-a38a-af76b166d7b9",
+      "text": "Utilitarian ethics, advanced by philosophers like Jeremy Bentham, prioritizes the alleviation of individual suffering; thus, the pain experienced by millions of sentient worker bees outweighs the abstract integrity of the collective organism.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7e1fed58-47f9-4232-8469-510074e5f260",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:35.410320+00:00"
+    },
+    {
+      "id": "763b1bfb-e827-4e85-b6d4-ffa163aef67e",
+      "text": "Commercial honey production frequently involves intensive practices such as culling colonies, performing artificial sugar feeding, and replacing all harvested honey with syrup, which are unnecessary for the primary function of crop pollination and therefore undermine the argument's blanket justification.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bee78d85-d5d7-4c72-9e96-be240f20778f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:35.525620+00:00"
+    },
+    {
+      "id": "36f54347-3976-455a-84c4-2e8e7ac43a51",
+      "text": "The economics of vast commercial pollination, such as for the California almond crops, requires mass hive transport and rental fees, making the primary service profitable and necessary regardless of honey extraction, establishing the two activities as financially independent.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bee78d85-d5d7-4c72-9e96-be240f20778f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:35.526409+00:00"
+    },
+    {
+      "id": "4e1a8102-2ce0-458a-8b06-0841cbae53ea",
+      "text": "The intensive practice of concentrating European honey bee (*Apis mellifera*) colonies enables rapid transmission of virulent pathogens like Deformed Wing Virus and *Varroa destructor*, directly increasing disease pressure on regional wild pollinator populations.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "65f3ca76-f4b5-4d6d-a0d4-0935b6342d15",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:36.391992+00:00"
+    },
+    {
+      "id": "65339266-2297-4f89-bc13-34029b31d13a",
+      "text": "Commercial migratory pollination, necessary for crops like California almonds, requires transporting colonies across vast distances, subjecting bees to intense stress, early mortality, and highly reduced nutritional diversity, regardless of whether surplus honey is harvested.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "65f3ca76-f4b5-4d6d-a0d4-0935b6342d15",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:36.392772+00:00"
+    },
+    {
+      "id": "c12cf4b2-d4f5-446e-89de-b96ead2ef948",
+      "text": "Many foods, such as blueberries and dark chocolate, possess strong antioxidant properties, and specialized products like Manuka honey often exhibit significantly higher antibacterial activity than standard culinary honeys.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0172cbb2-3901-45c9-b210-577687f89619",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:38.130982+00:00"
+    },
+    {
+      "id": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "text": "Commercial honey production requires environmentally disruptive migratory beekeeping to pollinate industrial mega-crops like almonds, creating substantial land use and transport costs, while natural sugar substitutes like stevia have minimal cultivation footprints.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0172cbb2-3901-45c9-b210-577687f89619",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:38.131803+00:00"
+    },
+    {
+      "id": "1903867a-0ab8-4a03-939e-682d061bff59",
+      "text": "Honey, which is primarily fructose and glucose, has a Glycemic Index (GI) of around 61, comparing similarly to table sugar (sucrose) at GI 65, and both are processed nearly identically by the human metabolism.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0172cbb2-3901-45c9-b210-577687f89619",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:38.132361+00:00"
+    },
+    {
+      "id": "91e30079-a509-4e38-9220-85d64ebe8bc6",
+      "text": "Studies on functional nociception in fruit flies and honeybees demonstrate that insects exhibit long-term pain avoidance and sustained physiological stress responses, behaviors that functionally indicate a capacity for suffering even without a vertebrate-style complex centralized nervous system.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3ef38b85-26d4-43a7-bb90-615ae95ae7f1",
+      "children_count": 2,
+      "references": [
+        "Gibson, R., & Lamm, C. (2022). Insect sentience: A survey of the evidence. Animal Sentience, 7(32), Article 2.",
+        "Sneddon, L. U., et al. (2021). Defining and recognizing pain in animals. Animal Behaviour, 178, 149-159."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:41.662536+00:00"
+    },
+    {
+      "id": "43dff008-caf3-4e35-82ad-2884b381ea82",
+      "text": "The classical utilitarian ethical standard, articulated by Peter Singer, determines moral standing based solely on an organism's capacity to suffer, meaning that functional evidence of pain outweighs structural complexity in ethical consideration.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3ef38b85-26d4-43a7-bb90-615ae95ae7f1",
+      "children_count": 2,
+      "references": [
+        "Singer, P. (1975). Animal Liberation. HarperCollins."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:41.663523+00:00"
+    },
+    {
+      "id": "066f8682-ae19-4167-8e6b-8ef00c95c958",
+      "text": "Fructose, which makes up roughly half of honey and sucrose, is metabolized almost exclusively by the liver where it preferentially supports lipogenesis, a pathway fundamentally different from how the body processes glucose.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1903867a-0ab8-4a03-939e-682d061bff59",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:49.605345+00:00"
+    },
+    {
+      "id": "67f96a47-aa0d-4e2b-bfe8-96f884ddeca8",
+      "text": "The Glycemic Index only measures the blood glucose response and fails to capture the distinct insulinemic index or the different effects on appetite-regulating hormones that vary based on the specific ratios of free fructose and glucose.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1903867a-0ab8-4a03-939e-682d061bff59",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:49.606120+00:00"
+    },
+    {
+      "id": "a1e6918b-569c-4e0a-a024-0043c85d8053",
+      "text": "The land use and transport costs cited are externalities of industrial monoculture pollination contracts (e.g., California almonds), not costs integral to the practice of stationary commercial honey harvesting globally.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:49.760644+00:00"
+    },
+    {
+      "id": "e2eb8aa3-087d-4e9f-9531-8ca12658aaa8",
+      "text": "Many commercial operations, such as those producing specialized honeys in Europe or New Zealand, utilize fixed, stationary apiaries with minimal transport, demonstrating that disruptive migratory beekeeping is not a requirement for commercial profitability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:49.761105+00:00"
+    },
+    {
+      "id": "df48ef4a-7db5-4e47-a3f5-5971e170dd29",
+      "text": "The comparison to stevia is incomplete because producing high-purity stevia leaf extract requires significant industrial energy input and chemical solvent usage, offsetting the purported minimal cultivation footprint compared to minimally processed raw honey.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:49.761386+00:00"
+    },
+    {
+      "id": "307a0ac7-52c0-4e42-8de1-3a82c657891e",
+      "text": "The primary function of commercial beekeeping is revenue generation through honey sales or paid migratory pollination services, meaning intensive maximization practices are justified by their necessity for economic viability and maximizing extractable yield, not by their necessity for passive pollination alone.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "763b1bfb-e827-4e85-b6d4-ffa163aef67e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:50.185997+00:00"
+    },
+    {
+      "id": "c9f79c01-1b1b-4626-84e7-c5d3cd9c5b71",
+      "text": "Intensive management practices, such as supplemental sugar feeding, are often a necessary input cost to maintain robust hive populations through winter or dearth periods, ensuring the colonies are strong enough to meet high-demand mass pollination contracts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "763b1bfb-e827-4e85-b6d4-ffa163aef67e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:50.186956+00:00"
+    },
+    {
+      "id": "9e369d40-552b-42f1-8461-7cdd79f3e08a",
+      "text": "Studies on pollinator health indicate that the highly reduced nutritional diversity resulting in weaker colonies is predominantly caused by weeks spent in agricultural monocultures, such as California almond groves, which lack varied forage sources.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "65339266-2297-4f89-bc13-34029b31d13a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:51.482686+00:00"
+    },
+    {
+      "id": "f6e9321e-1502-4074-ab97-cb4d5695205e",
+      "text": "Data from the Bee Informed Partnership Annual Colony Loss Survey (2010-2023) consistently shows that the leading causes of US commercial honeybee colony mortality are Varroa mites, followed by poor queens and pesticide exposure, not the acute stress of transport.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "65339266-2297-4f89-bc13-34029b31d13a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:51.483581+00:00"
+    },
+    {
+      "id": "59f50d30-752b-4512-94f0-e40b43aa438c",
+      "text": "Research documenting CCD onset (2006-2011) linked widespread die-offs to the synergistic effects of chronic neonicotinoid pesticide exposure and inadequate nutrition from large-scale agricultural monocultures. Treating *Varroa* mites alone does not mitigate these primary environmental causes of colony decline.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "91f6eaa7-9a9b-4f68-960a-411f692e8922",
+      "children_count": 2,
+      "references": [
+        "vanEngelsdorp, D. (2007). Colony collapse disorder: A descriptive study (US); Johnson, R. M. (2010). Acaricide, fungicide and insecticide residues in honey bees and their hive products."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:51.673267+00:00"
+    },
+    {
+      "id": "cda0faeb-98ab-4406-ae46-ddcfe28c9bd2",
+      "text": "Commercial migratory beekeeping imposes chronic physical and immunological stress, and the high colony density facilitates the rapid transmission of debilitating pathogens like Deformed Wing Virus (DWV) across regions. This practice inherently increases the risk of spreading disease rather than primarily preventing it.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "91f6eaa7-9a9b-4f68-960a-411f692e8922",
+      "children_count": 0,
+      "references": [
+        "Steinhauer, P. (2018). Increased Varroa mite infestation rates and honey bee colony losses linked to migratory beekeeping practices."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:51.674369+00:00"
+    },
+    {
+      "id": "adc29910-63dd-4d4f-97dc-c6afc1c16e04",
+      "text": "US Department of Agriculture data consistently shows commercial beekeepers rely on combined pollination fees and honey extraction revenue to cover specialized costs like migratory transport, hive health management, and labor, indicating financial interdependence rather than independence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "36f54347-3976-455a-84c4-2e8e7ac43a51",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:52.079249+00:00"
+    },
+    {
+      "id": "648bd448-b0c1-409c-ae8f-1f224d723b7b",
+      "text": "Mass pollination events like the California almond bloom require high colony strength and early deployment, routinely resulting in a 30-50% reduction in subsequent honey yields due to colony stress, establishing a biological trade-off that links the profitability of the two activities.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "36f54347-3976-455a-84c4-2e8e7ac43a51",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:52.079840+00:00"
+    },
+    {
+      "id": "3103506e-481e-433b-a583-14a025f8240d",
+      "text": "The Venus flytrap Dionaea muscipula exhibits complex memory and a sustained avoidance response (counting two touches before closing) using purely biochemical and hydraulic mechanisms, demonstrating that complex behavioral responses do not prove the presence of a central nervous system or subjective suffering.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "91e30079-a509-4e38-9220-85d64ebe8bc6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:56.810180+00:00"
+    },
+    {
+      "id": "ea6b925f-c1e6-4b13-830d-6dc70b6b4fd6",
+      "text": "Subjective pain perception (algesia) in vertebrates requires complex signal processing within the thalamus, insula, and somatosensory cortex for affective integration. Insects possess only a protocerebrum and lack the neural architecture necessary for equivalent conscious, affective suffering.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "91e30079-a509-4e38-9220-85d64ebe8bc6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:56.811393+00:00"
+    },
+    {
+      "id": "96911968-bbd8-4433-8eff-28bc6a0be300",
+      "text": "Neuroscientific reviews, such as Elwood\u2019s work (2011) on invertebrate sentience, conclude that insects exhibit reflexive nociception but lack sufficient neurological complexity to confirm subjective, quantifiable pain necessary for utilitarian calculation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "65b3a72a-6e8e-4697-a38a-af76b166d7b9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:57.029132+00:00"
+    },
+    {
+      "id": "c396849c-24ae-4887-8cf5-46a153d846a3",
+      "text": "Classical utilitarian thought, as seen in the Trolley Problem thought experiment, often dictates sacrificing a few individuals to secure the welfare or continued existence of a much larger group, quantifying the collective utility against individual suffering.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "65b3a72a-6e8e-4697-a38a-af76b166d7b9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:54:57.030264+00:00"
+    },
+    {
+      "id": "cbf4fe78-3060-46ff-a2d1-f68d64db1843",
+      "text": "Ethical decisions regarding medical experimentation routinely distinguish between mammals capable of complex emotions, like chimpanzees, and simpler organisms like mice, because chimpanzees suffer psychological harms (fear, grief, and lost future) that significantly increase the overall moral weight of their suffering.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "43dff008-caf3-4e35-82ad-2884b381ea82",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:00.609116+00:00"
+    },
+    {
+      "id": "648e2528-3f39-4502-8c48-ee7a858a4b33",
+      "text": "Peter Singer himself distinguishes the \"right to life\" held by self-aware beings, such as adult humans and great apes, from the diminished interest in continued existence held by non-self-aware conscious beings. This demonstrates that structural complexity is paramount because it generates higher-order interests that define the moral weight of suffering and harm.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "43dff008-caf3-4e35-82ad-2884b381ea82",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:00.610132+00:00"
+    },
+    {
+      "id": "a2a18fe3-a735-4f9f-bf42-ed1b716dcfa8",
+      "text": "Commercial beekeeping practices entail significant ethical compromises, including the mandatory culling of colonies to prevent disease spread or the practice of replacing natural honey stores with nutritionally inferior sugar syrup, prioritizing profit over bee welfare.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "67f96a47-aa0d-4e2b-bfe8-96f884ddeca8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:01.283220+00:00"
+    },
+    {
+      "id": "a8be15bb-2f7c-4bca-a8fa-19528fa42559",
+      "text": "Migratory beekeeping for commercial pollination causes chronic stress recognized as 'transport syndrome,' which significantly compromises the immune system of colonies, thereby accelerating mortality from mites and viruses listed as proximate causes.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f6e9321e-1502-4074-ab97-cb4d5695205e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:01.701893+00:00"
+    },
+    {
+      "id": "b47c1d86-1453-4adb-89d1-ec88c080a7c5",
+      "text": "The need for supplemental feeding is often self-imposed, as beekeepers intentionally remove the bees' natural honey stores for market sale, thereby creating the winter nutritional deficit they must subsequently remedy with cheap sugar subsidies.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c9f79c01-1b1b-4626-84e7-c5d3cd9c5b71",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:02.873448+00:00"
+    },
+    {
+      "id": "1f0dba55-9e6e-4bb0-8b99-de0a0fbb3605",
+      "text": "Sustainable beekeeping practices demonstrate that leaving ample natural stores and using locally adapted genetics often eliminates the need for sugar supplements, maintaining colony strength without reliance on intensive management inputs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c9f79c01-1b1b-4626-84e7-c5d3cd9c5b71",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:02.873500+00:00"
+    },
+    {
+      "id": "c0f2c1bf-77a7-48d2-922d-b3416e5d2334",
+      "text": "Stationary beekeeping is profitable only in high-value, low-volume niche markets like Manuka honey. High-volume commodity honey production and essential pollination services for crops like California almonds necessitate migratory beekeeping and large scale for commercial viability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e2eb8aa3-087d-4e9f-9531-8ca12658aaa8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:02.918159+00:00"
+    },
+    {
+      "id": "28f127a2-b863-42ad-9a4e-cb2b4b91f9d0",
+      "text": "The distinct metabolic pathway for fructose leads to significant hepatic lipogenesis only when large amounts (e.g., 50g+) are consumed rapidly in liquid form. The 8-10 grams of fructose in a typical tablespoon of honey, alongside glucose and other compounds, is insufficient to overload the liver and trigger the sustained negative metabolic effects observed in studies of high-fructose diets.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "066f8682-ae19-4167-8e6b-8ef00c95c958",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:04.551859+00:00"
+    },
+    {
+      "id": "ba4674de-90bf-4fff-99d6-e5b4d341c5a4",
+      "text": "Surveys from the USDA and Bee Informed Partnership consistently identify the parasitic Varroa destructor mite and associated viruses like Deformed Wing Virus as the single greatest driver of managed honey bee colony losses in the US, frequently exceeding 50% of annual winter die-offs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9e369d40-552b-42f1-8461-7cdd79f3e08a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:06.221086+00:00"
+    },
+    {
+      "id": "cc13b3dc-324f-4ccf-bdf0-7bbbd0957aa3",
+      "text": "Commercial honey production is ethically problematic because it requires high-impact interventions, such as artificially restricting the queen's ability to swarm by clipping her wings, thereby preventing natural colony reproduction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c396849c-24ae-4887-8cf5-46a153d846a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:06.583335+00:00"
+    },
+    {
+      "id": "45f7c441-56f0-48c6-bed1-9cad683d094d",
+      "text": "Stationary commercial beekeeping in regions like the European Union and North America routinely involves replacing honey stores with subsidized corn syrup or sugar water to maximize profit. This practice provides inadequate nutrition compared to natural pollen and nectar, significantly weakening bee immune response to common parasites like Varroa destructor.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a1e6918b-569c-4e0a-a024-0043c85d8053",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:07.296841+00:00"
+    },
+    {
+      "id": "b86fb77b-8085-43b3-a7cb-8cc8109a3475",
+      "text": "Commercial pollination fees, such as the $200+ per colony rate typically charged for California almonds, often constitute the vast majority of a commercial migratory beekeeper's annual revenue, showing that the total profitability is linked to the high fee income, not the potentially lost honey yield.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "648bd448-b0c1-409c-ae8f-1f224d723b7b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:08.691760+00:00"
+    },
+    {
+      "id": "01670377-a178-442f-8472-bce27c2054d3",
+      "text": "Certified organic and artisanal beekeeping operations in regions like Germany and France achieve high market prices despite low yields, proving that economic viability does not necessarily require intensive maximization practices like frequent migratory pollination or maximum honey extraction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "307a0ac7-52c0-4e42-8de1-3a82c657891e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:08.878816+00:00"
+    },
+    {
+      "id": "1ceb0014-e353-4ea1-9355-c0e9c26a438a",
+      "text": "Annual USDA surveys since 2012 consistently identify the parasitic mite Varroa destructor as the number one driver of managed national honeybee colony losses, often exceeding 40% of winter mortality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "59f50d30-752b-4512-94f0-e40b43aa438c",
+      "children_count": 1,
+      "references": [
+        "USDA APHIS National Honey Bee Loss Surveys (various years since 2012)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:12.037609+00:00"
+    },
+    {
+      "id": "62da6e2a-ecc6-4016-8b80-0b0302defc57",
+      "text": "Varroa mites are the primary vector for lethal infectious diseases like Deformed Wing Virus (DWV), which causes acute colony mortality independently of chronic pesticide exposure or nutritional deficits.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "59f50d30-752b-4512-94f0-e40b43aa438c",
+      "children_count": 1,
+      "references": [
+        "Pettis et al., 2012; Ryabov et al., 2014"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:12.038102+00:00"
+    },
+    {
+      "id": "a83810a7-5b6a-4e8f-8c31-390b9682ddcf",
+      "text": "Commercial honey production includes significant industrial energy inputs, such as the extensive use of fossil fuels and transportation for migratory beekeeping that moves hives thousands of miles annually, demonstrating that honey is not universally a low-input product compared to stevia extract.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "df48ef4a-7db5-4e47-a3f5-5971e170dd29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:12.606878+00:00"
+    },
+    {
+      "id": "36b627e7-7450-4c1a-b703-89653c27e5f2",
+      "text": "Industrial beekeeping exploits colonies by subjecting them to repeated forced migration solely for monoculture crops like California almonds, which is the primary cause of high management costs and systemic bee mortality.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "adc29910-63dd-4d4f-97dc-c6afc1c16e04",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:12.800602+00:00"
+    },
+    {
+      "id": "675d71dd-2957-4825-baa2-c599494a4102",
+      "text": "Research since 2011, demonstrated by studies showing bumblebees learn to avoid negative stimuli and exhibit changed behavior indicative of anxiety and trade-offs against electric shocks, suggests a form of affective state beyond simple reflex.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "96911968-bbd8-4433-8eff-28bc6a0be300",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:13.896087+00:00"
+    },
+    {
+      "id": "fe3de299-020a-495d-890b-cc38031b5aa9",
+      "text": "Utilitarian ethics, following Jeremy Bentham\u2019s emphasis on the capacity to suffer over the capacity to reason, dictates that scientific uncertainty about a creature\u2019s ability to experience pain merits precaution against inflicting suffering.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "96911968-bbd8-4433-8eff-28bc6a0be300",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:13.896113+00:00"
+    },
+    {
+      "id": "b3a6763e-282f-436a-a414-47a6fad5031d",
+      "text": "The honey bee (Apis mellifera) possesses a centralized brain containing approximately one million neurons that facilitates complex behaviors like the waggle dance, demonstrating a different level of neurological organization than the plant's purely hydraulic memory.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3103506e-481e-433b-a583-14a025f8240d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:15.504472+00:00"
+    },
+    {
+      "id": "8fb82e51-2fd0-4ad1-a03d-2ddcb2023f74",
+      "text": "Bees, which lack the self-awareness required for Singer's \"higher-order interests,\" are indispensable pollinators for approximately 75% of major food crops globally, demonstrating that moral consideration can be driven by a species' necessary ecological role rather than solely by high structural complexity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "648e2528-3f39-4502-8c48-ee7a858a4b33",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:15.768327+00:00"
+    },
+    {
+      "id": "3f2f5755-5c75-441a-a425-c946e446a48a",
+      "text": "US Institutional Animal Care and Use Committees (IACUCs) require stricter regulation and higher ethical oversight for non-human primates largely because of their close phylogenetic relationship to humans, not solely based on a demonstration of complex emotions like grief or fear.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "cbf4fe78-3060-46ff-a2d1-f68d64db1843",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:15.769416+00:00"
+    },
+    {
+      "id": "cc9c8a12-a34e-44ea-a40e-cbc0cead64e6",
+      "text": "Assessing moral weight based on 'lost future' requires established evidence of episodic future thought (mental time travel), yet common planning tests involving tool retention and transport show chimpanzees have limited time horizons relative to human conscious foresight.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "cbf4fe78-3060-46ff-a2d1-f68d64db1843",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:15.769437+00:00"
+    },
+    {
+      "id": "a10673ce-ae3d-4f25-a0e0-27876d39b423",
+      "text": "Studies demonstrate that bees, after localized noxious stimulation, exhibit prolonged sensitization and associative learning that fulfills a functional definition of negative welfare states, regardless of specific vertebrate neural architecture. The possession of nociception and behavioral response complexity, such as defensive grooming and autotomy in insects, indicates highly motivated rejection of harm.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ea6b925f-c1e6-4b13-830d-6dc70b6b4fd6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:16.114963+00:00"
+    },
+    {
+      "id": "6dcab447-269d-4d2d-9369-2d99d04e798c",
+      "text": "The systematic practice in commercial beekeeping involves harvesting the bees' necessary winter food source (honey) and replacing it with an artificial, nutritionally deficient sucrose or high-fructose corn syrup solution, which constitutes an exploitative welfare issue separate from pest management.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1ceb0014-e353-4ea1-9355-c0e9c26a438a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:21.770093+00:00"
+    },
+    {
+      "id": "8fdf3996-5013-4997-a9f6-c5a108c08afc",
+      "text": "Chronic exposure to commonly used neonicotinoid pesticides suppresses honey bee immune function, causing a measurable increase in Deformed Wing Virus titers and accelerating colony mortality.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "62da6e2a-ecc6-4016-8b80-0b0302defc57",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:23.741032+00:00"
+    },
+    {
+      "id": "ae871001-163e-4c55-be76-1beec6639b5a",
+      "text": "The practice of harvesting honey treats sentient bees exclusively as property and means of production, which fundamentally violates the deontological imperative against the non-exploitative use of living beings.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:23.741203+00:00"
+    },
+    {
+      "id": "f0d7abe9-eb69-4ad1-9596-49a19d7cf635",
+      "text": "Scientific studies demonstrate that replacing the bees' necessary, nutritionally rich honey stores with processed sugar syrup weakens colony immune systems and reduces overall longevity.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:23.741677+00:00"
+    },
+    {
+      "id": "ca99981f-02c6-4ee8-84f9-1ede9940b10c",
+      "text": "Honey extraction procedures and typical hive manipulation inevitably lead to the accidental death or physical injury of thousands of worker bees, drone brood, and occasionally the queen during removal and processing.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:23.741952+00:00"
+    },
+    {
+      "id": "74a0e16b-87aa-4b7f-9715-5a1160dc0b64",
+      "text": "Commercial beekeeping practices, such as forced long-distance transport for monoculture pollination, create high stress levels that compromise colony resilience and contribute to widespread disorders like Colony Collapse Disorder (CCD).",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:23.742194+00:00"
+    },
+    {
+      "id": "348f51f4-9ef9-4857-ae63-a5c737932021",
+      "text": "Practices designed for commercial efficiency, such as clipping the queen's wing or performing artificial insemination, violate the bees' fundamental bodily autonomy and disrupt their natural life cycle.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:23.742520+00:00"
+    },
+    {
+      "id": "518a73fb-a1c5-474b-bbd4-4318725ff71a",
+      "text": "Given the wide availability of functionally and nutritionally equivalent plant-based liquid sweeteners, such as maple syrup and agave nectar, the consumption of honey is pragmatically unnecessary, making the ethical costs easily avoidable.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:23.742814+00:00"
+    },
+    {
+      "id": "92eae638-3b4d-4ade-b47c-96b5479ee6c8",
+      "text": "CCD is overwhelmingly linked to the synergistic effects of high pathogen loads (e.g., Varroa mites and viruses) and systemic neonicotinoid pesticide exposure, suggesting commercial stress from transport is a secondary, not primary, contributing factor.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "74a0e16b-87aa-4b7f-9715-5a1160dc0b64",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:32.760953+00:00"
+    },
+    {
+      "id": "6f67bad3-67d2-4754-adde-5167b09ec2b7",
+      "text": "The high stress attributed to transport is often secondary to the severe nutritional deficiencies inherent in large-scale monoculture operations, where poor dietary diversity\u2014not movement\u2014is the main driver of immunosuppression and poor colony health outcomes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "74a0e16b-87aa-4b7f-9715-5a1160dc0b64",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:32.761913+00:00"
+    },
+    {
+      "id": "f3f0a95b-c88c-4240-9f3e-6c6df2ee7748",
+      "text": "Bodily autonomy is a concept rooted in human rights and self-awareness; applying it to social insects like bees without adequate justification for complex sentience or self-determination constitutes an anthropomorphic fallacy.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "348f51f4-9ef9-4857-ae63-a5c737932021",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:33.972072+00:00"
+    },
+    {
+      "id": "b4f7c99c-7817-4a72-bd97-dff58ba770aa",
+      "text": "Human management of domestic species invariably \"disrupts\" the natural life cycle (e.g., castrating livestock or milking cows) to ensure care, safety, and productivity; therefore, disruption itself is not the sole measure of ethical violation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "348f51f4-9ef9-4857-ae63-a5c737932021",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:33.972497+00:00"
+    },
+    {
+      "id": "a37ec934-53d0-4134-89aa-94f3c9801a7f",
+      "text": "Honey is chemically distinct from simple syrups, possessing unique humectant qualities and specific acidity levels essential for moisture retention and texture control in complex culinary applications and traditional recipes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "518a73fb-a1c5-474b-bbd4-4318725ff71a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:35.647186+00:00"
+    },
+    {
+      "id": "a165dbbc-a9e6-4a10-a5dd-e46679516364",
+      "text": "Honey, maple syrup, and agave nectar have distinct fructose-to-glucose ratios and resulting glycemic indices, meaning they are not nutritionally equivalent and affect dietary management and blood sugar regulation differently.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "518a73fb-a1c5-474b-bbd4-4318725ff71a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:35.647623+00:00"
+    },
+    {
+      "id": "096269d2-0d2e-4a22-89d5-4523a5fe563e",
+      "text": "Standard deontological systems often restrict moral consideration to rational agents, meaning the claimed universal imperative against the non-exploitative use of all living beings is philosophically contended and not universally accepted as a strict duty.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ae871001-163e-4c55-be76-1beec6639b5a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:35.791909+00:00"
+    },
+    {
+      "id": "67518178-ace9-4201-92e8-511cf5541bdb",
+      "text": "Defining \"sentience\" at a level that triggers strong prohibitions against exploitation typically requires evidence of complex subjective experience and pain, capabilities that neuroscientific consensus has not definitively verified for insects like bees.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ae871001-163e-4c55-be76-1beec6639b5a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:35.792624+00:00"
+    },
+    {
+      "id": "dee1e708-78fc-4ed4-a330-0478b3d8aa02",
+      "text": "Research from institutions, including the USDA Bee Lab, indicates that sugar syrup, when supplemented with essential commercial pollen substitutes, provides adequate nutrition for overwintering and mitigates immune decay.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f0d7abe9-eb69-4ad1-9596-49a19d7cf635",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:40.369973+00:00"
+    },
+    {
+      "id": "984e45ef-d79a-4d8b-8d8f-e17de92f9b64",
+      "text": "Many commercial beekeeping protocols utilize 1:1 sugar syrup primarily as a spring stimulant to artificially encourage early queen laying and worker population growth, leading to increased overall colony strength for the main nectar flow.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f0d7abe9-eb69-4ad1-9596-49a19d7cf635",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:40.370475+00:00"
+    },
+    {
+      "id": "94c129ae-fa85-414a-b45f-992a1d07da71",
+      "text": "A casual beekeeper performing a standard inspection using smoke and careful technique typically causes fewer than 50 casualties per hive, meaning \"thousands\" of deaths only applies to large commercial operations or highly negligent handling.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ca99981f-02c6-4ee8-84f9-1ede9940b10c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:42.366929+00:00"
+    },
+    {
+      "id": "bc12f9d7-d99c-44ba-9dfb-21f05186bbc8",
+      "text": "Modern professional beekeeping practices, such as those taught in Master Beekeeper certifications, utilize techniques like blowing bees off frames instead of shaking and using queen-specific cages, effectively eliminating most accidental queen or brood deaths.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ca99981f-02c6-4ee8-84f9-1ede9940b10c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:42.367524+00:00"
+    },
+    {
+      "id": "a613b73c-c9d4-49a4-9feb-b8eeb611e29b",
+      "text": "Poor nutrition reduces the colony's stress threshold, making transport exposure exponentially more damaging; therefore, high-stress movement is not merely secondary but often the acute trigger for colony collapse in nutritionally compromised hives.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6f67bad3-67d2-4754-adde-5167b09ec2b7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:42.830139+00:00"
+    },
+    {
+      "id": "fb1ae8d4-67cd-46f4-ab39-4f02ccc536dd",
+      "text": "Transport stress includes non-nutritional factors like vibration, continuous high-density confinement, and severe temperature spikes that are acute stressors capable of inducing immunosuppression and compromising health, even in well-fed colonies.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6f67bad3-67d2-4754-adde-5167b09ec2b7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:42.830752+00:00"
+    },
+    {
+      "id": "3b5cd5b7-a14f-4157-bc9d-99b54d2df130",
+      "text": "Extensive stress from migratory beekeeping severely impairs the immune function of bees, acting as a crucial pre-condition that allows Varroa mites and neonicotinoids to become lethal synergistic agents. This mechanism makes transport a necessary primary multiplier, not a mere secondary factor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "92eae638-3b4d-4ade-b47c-96b5479ee6c8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:42.987489+00:00"
+    },
+    {
+      "id": "57f5f1a5-e0de-45f6-9e4a-7df8ea9d53f6",
+      "text": "The need for commercial crop transport forces bees into environments characterized by low nutritional diversity from monoculture farming and high neonicotinoid exposure, making transport the primary economic driver ensuring the widespread application of the \"primary\" hazards.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "92eae638-3b4d-4ade-b47c-96b5479ee6c8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:42.988126+00:00"
+    },
+    {
+      "id": "fec358df-6d63-46b4-8b1d-c4df53662674",
+      "text": "Ethical frameworks routinely apply prohibitions based on sufficient, not definitive, evidence of nociception and aversive behavior, not the high bar of \"complex subjective experience,\" exemplified by recent protection laws for cephalopods and decapods.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "67518178-ace9-4201-92e8-511cf5541bdb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:45.598241+00:00"
+    },
+    {
+      "id": "d10d758d-65c5-406f-a349-431726e92151",
+      "text": "Demanding \"definitively verified\" internal states is an impossible epistemic standard, as the absence of definitive scientific consensus does not negate the strong probabilistic evidence for pain processing demonstrated by bee nociception and learning behavior.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "67518178-ace9-4201-92e8-511cf5541bdb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:45.599204+00:00"
+    },
+    {
+      "id": "f81ebc48-5197-49a5-85b9-3866b8f88f71",
+      "text": "Sugar syrup and substitute diets, while preventing starvation, typically fail to provide the full spectrum of micronutrients and phytosterols found in natural pollen, leading to measurable deficits in colony health, brood rearing rates, and spring weight gain.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "dee1e708-78fc-4ed4-a330-0478b3d8aa02",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:50.186573+00:00"
+    },
+    {
+      "id": "5958c0a1-924d-4fe4-b2c8-d69be2095b64",
+      "text": "The efficacy of pollen substitutes is highly dependent on regional factors like climate, the specific bee subspecies (e.g., Italian vs. Carniolan), and local pathogen load, meaning universal generalization about nutritional success across all overwintering conditions is unwarranted.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "dee1e708-78fc-4ed4-a330-0478b3d8aa02",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:50.187405+00:00"
+    },
+    {
+      "id": "2561eada-18b8-4460-9d43-b21600c9f709",
+      "text": "Modern professional pastry-making consistently utilizes ingredients like Trimoline (inverted sugar syrup) and specialized hydrocolloids to achieve superior moisture retention and texture control, demonstrating that honey is not essential for these culinary results.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a37ec934-53d0-4134-89aa-94f3c9801a7f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:51.415690+00:00"
+    },
+    {
+      "id": "986e0e0f-50b1-4958-bb53-989da57480df",
+      "text": "In most common applications, such as sweetening cocktails or producing commercial soft drinks, high fructose corn syrup (HFCS) or standard sugar syrup provides functionally identical sweetness and viscosity, rendering honey's unique properties irrelevant outside highly specialized recipes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a37ec934-53d0-4134-89aa-94f3c9801a7f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:51.416674+00:00"
+    },
+    {
+      "id": "bc603dbf-234b-46ad-adbd-745d34494227",
+      "text": "Many small-scale and stationary beekeeping operations do not transport colonies long distances, eliminating the acute stressors of vibration, high-density confinement, and temperature spikes, making transport stress irrelevant to localized honey ethics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fb1ae8d4-67cd-46f4-ab39-4f02ccc536dd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:51.923767+00:00"
+    },
+    {
+      "id": "e00ab8a4-e946-4bb5-9377-9841da7f7b41",
+      "text": "The primary economic drivers of monoculture farming and high neonicotinoid use are massive government subsidies and intense consumer demand for cheap, uniform produce. Bee transport is merely a required logistical consequence, not the fundamental economic cause that ensures these farming practices.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "57f5f1a5-e0de-45f6-9e4a-7df8ea9d53f6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:52.526946+00:00"
+    },
+    {
+      "id": "61e7d35a-d9b2-43bc-bd4b-573146f63b57",
+      "text": "Widespread neonicotinoid use is primarily driven by farm profitability, pest pressure, and preventative blanket spraying methods, regardless of whether commercial bees are transported to the area. Transport merely expands the scope of exposure for already vulnerable bee populations, conflating exposure facilitation with causal mechanism.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "57f5f1a5-e0de-45f6-9e4a-7df8ea9d53f6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:52.527008+00:00"
+    },
+    {
+      "id": "af25a5e8-c711-403f-a709-3a0723105ac0",
+      "text": "Research consistently identifies Varroa mites and associated viruses as the single greatest driver of overwintering colony losses globally, suggesting these, rather than sporadic transport, are the most frequent acute triggers acting on nutritionally stressed colonies.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a613b73c-c9d4-49a4-9feb-b8eeb611e29b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:52.921249+00:00"
+    },
+    {
+      "id": "7a0d713c-c724-499c-bd7f-c437b3945b97",
+      "text": "A serious hobbyist managing 50 hives who inspects each hive weekly over a four-month season causes 100,000 total casualties annually (50 casualties * 50 hives * 40 inspections), showing \"thousands\" of deaths are achievable by careful, non-commercial beekeepers.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "94c129ae-fa85-414a-b45f-992a1d07da71",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:58.790676+00:00"
+    },
+    {
+      "id": "45aad0fe-0ae2-4a01-8a9f-c62b1c3012e7",
+      "text": "Careful beekeeping practices require spring and summer inspections every 7-10 days, meaning a small hive operation (20 hives) performing 30 total inspections a year causes 30,000 deaths (50 per-hive deaths * 20 hives * 30 inspections).",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "94c129ae-fa85-414a-b45f-992a1d07da71",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:58.791563+00:00"
+    },
+    {
+      "id": "c4b3f665-29ee-406b-bd6d-0a43911ee39c",
+      "text": "Nutritional stress from continuous exposure to low-diversity monocultures, such as during the massive California almond pollination cycle, significantly compromises the bee immune system independently of physical transportation. Research shows that this lack of diverse pollen and essential proteins acts as an equally potent precondition that enables the lethal synergy between Varroa mites and neonicotinoids.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3b5cd5b7-a14f-4157-bc9d-99b54d2df130",
+      "children_count": 0,
+      "references": [
+        "Pettis et al., US National Honey Bee Disease Survey 2010",
+        "Di Pasquale et al., J Exp Biol. 2013"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:59.315881+00:00"
+    },
+    {
+      "id": "09297583-a84d-4ce3-ac03-d68d7ceead46",
+      "text": "Migratory commercial beekeeping, a cornerstone of modern practice, subjects hives to long-distance transport and increased stress, which elevate queen failure rates by 30-50% in the first season after movement, often outweighing gains from gentle handling.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bc12f9d7-d99c-44ba-9dfb-21f05186bbc8",
+      "children_count": 2,
+      "references": [
+        "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0140898",
+        "https://www.canr.msu.edu/news/queen_replacement_in_honey_bee_colonies"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:59.718563+00:00"
+    },
+    {
+      "id": "8d76cab8-f1b8-4855-bfb5-2ff6fc8afb45",
+      "text": "The overwhelming majority of modern queen and brood death stems from diseases vectored by the parasitic mite Varroa destructor and associated exposure to prophylactic chemical miticides, factors entirely separate from accidental physical handling methods.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bc12f9d7-d99c-44ba-9dfb-21f05186bbc8",
+      "children_count": 2,
+      "references": [
+        "https://www.ars.usda.gov/news-events/news/research-news/2021/study-documents-key-factors-in-honey-bee-colony-loss/",
+        "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6641772/"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:59.719481+00:00"
+    },
+    {
+      "id": "d72ac1fc-8d8b-4133-9b84-69992a1276d8",
+      "text": "Sweetness and viscosity are not the only functional properties; honey's distinct flavor profile (e.g., floral, earthy notes) is often the primary reason it is chosen for high-end cocktails and craft sodas, where taste differentiation is paramount.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "986e0e0f-50b1-4958-bb53-989da57480df",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:59.941451+00:00"
+    },
+    {
+      "id": "2a7d5bde-6809-4ecc-be7f-f29e5d367a39",
+      "text": "The relevance of a sweetener is not limited to physical function; honey provides significant commercial value for marketing \"natural\" or \"premium\" products, driving consumer appeal and justifying higher prices, regardless of its chemical interchangeability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "986e0e0f-50b1-4958-bb53-989da57480df",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:59.941505+00:00"
+    },
+    {
+      "id": "ee003495-6d2d-408c-88f4-7bd6ecf83407",
+      "text": "Venus flytraps exhibit nociceptive withdrawal responses to a physical stimulus and demonstrate a short-term \"memory\" function related to triggering, yet these phenomena rely on chemical and electrophysiological responses, not subjective experience or pain processing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d10d758d-65c5-406f-a349-431726e92151",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:55:59.978457+00:00"
+    },
+    {
+      "id": "0169e043-fb25-482b-ae8b-205be2aca747",
+      "text": "Legislation across major economies, including the US Animal Welfare Act and the European Union's Directive 2010/63/EU, primarily excludes most invertebrates and insects from protection, demonstrating that complex sentience requirements, not just nociception, remain the dominant default ethical standard.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fec358df-6d63-46b4-8b1d-c4df53662674",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:01.702413+00:00"
+    },
+    {
+      "id": "05672fa2-7b74-44f6-9bfd-a22193590e28",
+      "text": "A scientifically optimized pollen substitute can be nutritionally superior to the \"natural pollen\" collected by bees in agricultural monocultures, which often provides poor lipid and protein diversity, successfully preventing the very health deficits claimed.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f81ebc48-5197-49a5-85b9-3866b8f88f71",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:02.254272+00:00"
+    },
+    {
+      "id": "cd349004-4df4-4fa7-9f12-835467a5f508",
+      "text": "The ethical debate regarding honey addresses the large-scale exploitation and stress placed on species like the Western honey bee due to practices like forced migratory beekeeping for almond crop pollination in California, an issue completely separate from culinary function.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2561eada-18b8-4460-9d43-b21600c9f709",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:06.188442+00:00"
+    },
+    {
+      "id": "6e944630-65a6-4bfd-a6a2-462452c8c641",
+      "text": "Major industry surveys show that the leading causes for high colony loss rates (typically 20-30%) are parasitic mites and pesticide exposure, not primarily the stress of migratory transport, undermining the specific statistical claim.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "09297583-a84d-4ce3-ac03-d68d7ceead46",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:09.024368+00:00"
+    },
+    {
+      "id": "76f5170c-213f-46d0-95a1-a6ebefcf936f",
+      "text": "The economic benefit of migratory beekeeping lies in providing essential pollination services for crops like the California almond crop, generating revenue that dwarfs the relatively minor costs associated with increased queen failure rates.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "09297583-a84d-4ce3-ac03-d68d7ceead46",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:09.024394+00:00"
+    },
+    {
+      "id": "1531b502-0a82-497e-9921-92c95580f26e",
+      "text": "Industrial migratory beekeeping, necessary for large-scale production like the California almond crop, subjects billions of bees to artificial stress from transport, leading to high annual colony loss rates (30-50%), making this system inherently unethical.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5958c0a1-924d-4fe4-b2c8-d69be2095b64",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:10.622672+00:00"
+    },
+    {
+      "id": "6b4cd345-0deb-438b-af01-2aade2744f99",
+      "text": "In temperate climates like the United Kingdom, hive inspections cease entirely between October and March due to cold, making the 40-week inspection period required for 100,000 deaths biologically infeasible for most hobbyist beekeepers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7a0d713c-c724-499c-bd7f-c437b3945b97",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:15.530650+00:00"
+    },
+    {
+      "id": "b64d6455-77f7-40ee-8648-0a44d4abf0a3",
+      "text": "Professional beekeepers working with highly valuable colonies, such as those pollinating California almonds, employ meticulous methods to minimize immediate bee loss, suggesting the assumption of 50 killed per routine inspection is artificially inflated.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7a0d713c-c724-499c-bd7f-c437b3945b97",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:15.530676+00:00"
+    },
+    {
+      "id": "df76fc56-6103-4883-add1-d9e33e3bdf71",
+      "text": "Research linking global agricultural neonicotinoid pesticide use (e.g., Imidacloprid) to sublethal effects on bee navigation, immune function, and reproductive failure demonstrates that chemical exposure beyond miticides is a major, non-parasitic stressor for colony health.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8d76cab8-f1b8-4855-bfb5-2ff6fc8afb45",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:16.025140+00:00"
+    },
+    {
+      "id": "d610736a-3ff3-4408-987d-b8cf82c86791",
+      "text": "The deliberate physical installation of prophylactic treatments, such as Apivar or Apistan polymer strips, requires the beekeeper\u2019s specialized intrusion and manipulation of the hive, directly linking chemical exposure to routine physical handling methods.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8d76cab8-f1b8-4855-bfb5-2ff6fc8afb45",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:16.025166+00:00"
+    },
+    {
+      "id": "a9e24ee2-a170-42c5-8a46-2a9ba2fdb0c7",
+      "text": "Standard industrial beekeeping techniques, such as using smoke and careful lifting, minimize bee crushing; mortality rates during professional inspections are often near-zero, not 50 deaths per hive.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "45aad0fe-0ae2-4a01-8a9f-c62b1c3012e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:16.052429+00:00"
+    },
+    {
+      "id": "f1b8045a-1512-4a39-a90a-71c17e2f3ae2",
+      "text": "In northern temperate climates like the US Midwest, the critical 7-10 day inspection period for swarm control typically lasts only 16 weeks, meaning careful beekeepers perform approximately 16 inspections annually, not the calculated 30.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "45aad0fe-0ae2-4a01-8a9f-c62b1c3012e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T11:56:16.052449+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T11:54:22.192303+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T11:54:22.192303+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "7e1fed58-47f9-4232-8469-510074e5f260",
+      "target": "df15eb60-e06c-47e0-959e-e081c36b3378",
+      "type": "objection"
+    },
+    {
+      "source": "7e1fed58-47f9-4232-8469-510074e5f260",
+      "target": "65b3a72a-6e8e-4697-a38a-af76b166d7b9",
+      "type": "objection"
+    },
+    {
+      "source": "bee78d85-d5d7-4c72-9e96-be240f20778f",
+      "target": "763b1bfb-e827-4e85-b6d4-ffa163aef67e",
+      "type": "objection"
+    },
+    {
+      "source": "bee78d85-d5d7-4c72-9e96-be240f20778f",
+      "target": "36f54347-3976-455a-84c4-2e8e7ac43a51",
+      "type": "objection"
+    },
+    {
+      "source": "65f3ca76-f4b5-4d6d-a0d4-0935b6342d15",
+      "target": "4e1a8102-2ce0-458a-8b06-0841cbae53ea",
+      "type": "objection"
+    },
+    {
+      "source": "65f3ca76-f4b5-4d6d-a0d4-0935b6342d15",
+      "target": "65339266-2297-4f89-bc13-34029b31d13a",
+      "type": "objection"
+    },
+    {
+      "source": "0172cbb2-3901-45c9-b210-577687f89619",
+      "target": "c12cf4b2-d4f5-446e-89de-b96ead2ef948",
+      "type": "objection"
+    },
+    {
+      "source": "0172cbb2-3901-45c9-b210-577687f89619",
+      "target": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "type": "objection"
+    },
+    {
+      "source": "0172cbb2-3901-45c9-b210-577687f89619",
+      "target": "1903867a-0ab8-4a03-939e-682d061bff59",
+      "type": "objection"
+    },
+    {
+      "source": "3ef38b85-26d4-43a7-bb90-615ae95ae7f1",
+      "target": "91e30079-a509-4e38-9220-85d64ebe8bc6",
+      "type": "objection"
+    },
+    {
+      "source": "3ef38b85-26d4-43a7-bb90-615ae95ae7f1",
+      "target": "43dff008-caf3-4e35-82ad-2884b381ea82",
+      "type": "objection"
+    },
+    {
+      "source": "1903867a-0ab8-4a03-939e-682d061bff59",
+      "target": "066f8682-ae19-4167-8e6b-8ef00c95c958",
+      "type": "response"
+    },
+    {
+      "source": "1903867a-0ab8-4a03-939e-682d061bff59",
+      "target": "67f96a47-aa0d-4e2b-bfe8-96f884ddeca8",
+      "type": "response"
+    },
+    {
+      "source": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "target": "a1e6918b-569c-4e0a-a024-0043c85d8053",
+      "type": "response"
+    },
+    {
+      "source": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "target": "e2eb8aa3-087d-4e9f-9531-8ca12658aaa8",
+      "type": "response"
+    },
+    {
+      "source": "cb28d057-9aaa-4014-85f8-4247d72c437c",
+      "target": "df48ef4a-7db5-4e47-a3f5-5971e170dd29",
+      "type": "response"
+    },
+    {
+      "source": "763b1bfb-e827-4e85-b6d4-ffa163aef67e",
+      "target": "307a0ac7-52c0-4e42-8de1-3a82c657891e",
+      "type": "response"
+    },
+    {
+      "source": "763b1bfb-e827-4e85-b6d4-ffa163aef67e",
+      "target": "c9f79c01-1b1b-4626-84e7-c5d3cd9c5b71",
+      "type": "response"
+    },
+    {
+      "source": "65339266-2297-4f89-bc13-34029b31d13a",
+      "target": "9e369d40-552b-42f1-8461-7cdd79f3e08a",
+      "type": "response"
+    },
+    {
+      "source": "65339266-2297-4f89-bc13-34029b31d13a",
+      "target": "f6e9321e-1502-4074-ab97-cb4d5695205e",
+      "type": "response"
+    },
+    {
+      "source": "91f6eaa7-9a9b-4f68-960a-411f692e8922",
+      "target": "59f50d30-752b-4512-94f0-e40b43aa438c",
+      "type": "objection"
+    },
+    {
+      "source": "91f6eaa7-9a9b-4f68-960a-411f692e8922",
+      "target": "cda0faeb-98ab-4406-ae46-ddcfe28c9bd2",
+      "type": "objection"
+    },
+    {
+      "source": "36f54347-3976-455a-84c4-2e8e7ac43a51",
+      "target": "adc29910-63dd-4d4f-97dc-c6afc1c16e04",
+      "type": "response"
+    },
+    {
+      "source": "36f54347-3976-455a-84c4-2e8e7ac43a51",
+      "target": "648bd448-b0c1-409c-ae8f-1f224d723b7b",
+      "type": "response"
+    },
+    {
+      "source": "91e30079-a509-4e38-9220-85d64ebe8bc6",
+      "target": "3103506e-481e-433b-a583-14a025f8240d",
+      "type": "response"
+    },
+    {
+      "source": "91e30079-a509-4e38-9220-85d64ebe8bc6",
+      "target": "ea6b925f-c1e6-4b13-830d-6dc70b6b4fd6",
+      "type": "response"
+    },
+    {
+      "source": "65b3a72a-6e8e-4697-a38a-af76b166d7b9",
+      "target": "96911968-bbd8-4433-8eff-28bc6a0be300",
+      "type": "response"
+    },
+    {
+      "source": "65b3a72a-6e8e-4697-a38a-af76b166d7b9",
+      "target": "c396849c-24ae-4887-8cf5-46a153d846a3",
+      "type": "response"
+    },
+    {
+      "source": "43dff008-caf3-4e35-82ad-2884b381ea82",
+      "target": "cbf4fe78-3060-46ff-a2d1-f68d64db1843",
+      "type": "response"
+    },
+    {
+      "source": "43dff008-caf3-4e35-82ad-2884b381ea82",
+      "target": "648e2528-3f39-4502-8c48-ee7a858a4b33",
+      "type": "response"
+    },
+    {
+      "source": "67f96a47-aa0d-4e2b-bfe8-96f884ddeca8",
+      "target": "a2a18fe3-a735-4f9f-bf42-ed1b716dcfa8",
+      "type": "response"
+    },
+    {
+      "source": "f6e9321e-1502-4074-ab97-cb4d5695205e",
+      "target": "a8be15bb-2f7c-4bca-a8fa-19528fa42559",
+      "type": "response"
+    },
+    {
+      "source": "c9f79c01-1b1b-4626-84e7-c5d3cd9c5b71",
+      "target": "b47c1d86-1453-4adb-89d1-ec88c080a7c5",
+      "type": "response"
+    },
+    {
+      "source": "c9f79c01-1b1b-4626-84e7-c5d3cd9c5b71",
+      "target": "1f0dba55-9e6e-4bb0-8b99-de0a0fbb3605",
+      "type": "response"
+    },
+    {
+      "source": "e2eb8aa3-087d-4e9f-9531-8ca12658aaa8",
+      "target": "c0f2c1bf-77a7-48d2-922d-b3416e5d2334",
+      "type": "response"
+    },
+    {
+      "source": "066f8682-ae19-4167-8e6b-8ef00c95c958",
+      "target": "28f127a2-b863-42ad-9a4e-cb2b4b91f9d0",
+      "type": "response"
+    },
+    {
+      "source": "9e369d40-552b-42f1-8461-7cdd79f3e08a",
+      "target": "ba4674de-90bf-4fff-99d6-e5b4d341c5a4",
+      "type": "response"
+    },
+    {
+      "source": "c396849c-24ae-4887-8cf5-46a153d846a3",
+      "target": "cc13b3dc-324f-4ccf-bdf0-7bbbd0957aa3",
+      "type": "response"
+    },
+    {
+      "source": "a1e6918b-569c-4e0a-a024-0043c85d8053",
+      "target": "45f7c441-56f0-48c6-bed1-9cad683d094d",
+      "type": "response"
+    },
+    {
+      "source": "648bd448-b0c1-409c-ae8f-1f224d723b7b",
+      "target": "b86fb77b-8085-43b3-a7cb-8cc8109a3475",
+      "type": "response"
+    },
+    {
+      "source": "307a0ac7-52c0-4e42-8de1-3a82c657891e",
+      "target": "01670377-a178-442f-8472-bce27c2054d3",
+      "type": "response"
+    },
+    {
+      "source": "59f50d30-752b-4512-94f0-e40b43aa438c",
+      "target": "1ceb0014-e353-4ea1-9355-c0e9c26a438a",
+      "type": "response"
+    },
+    {
+      "source": "59f50d30-752b-4512-94f0-e40b43aa438c",
+      "target": "62da6e2a-ecc6-4016-8b80-0b0302defc57",
+      "type": "response"
+    },
+    {
+      "source": "df48ef4a-7db5-4e47-a3f5-5971e170dd29",
+      "target": "a83810a7-5b6a-4e8f-8c31-390b9682ddcf",
+      "type": "response"
+    },
+    {
+      "source": "adc29910-63dd-4d4f-97dc-c6afc1c16e04",
+      "target": "36b627e7-7450-4c1a-b703-89653c27e5f2",
+      "type": "response"
+    },
+    {
+      "source": "96911968-bbd8-4433-8eff-28bc6a0be300",
+      "target": "675d71dd-2957-4825-baa2-c599494a4102",
+      "type": "response"
+    },
+    {
+      "source": "96911968-bbd8-4433-8eff-28bc6a0be300",
+      "target": "fe3de299-020a-495d-890b-cc38031b5aa9",
+      "type": "response"
+    },
+    {
+      "source": "3103506e-481e-433b-a583-14a025f8240d",
+      "target": "b3a6763e-282f-436a-a414-47a6fad5031d",
+      "type": "response"
+    },
+    {
+      "source": "648e2528-3f39-4502-8c48-ee7a858a4b33",
+      "target": "8fb82e51-2fd0-4ad1-a03d-2ddcb2023f74",
+      "type": "response"
+    },
+    {
+      "source": "cbf4fe78-3060-46ff-a2d1-f68d64db1843",
+      "target": "3f2f5755-5c75-441a-a425-c946e446a48a",
+      "type": "response"
+    },
+    {
+      "source": "cbf4fe78-3060-46ff-a2d1-f68d64db1843",
+      "target": "cc9c8a12-a34e-44ea-a40e-cbc0cead64e6",
+      "type": "response"
+    },
+    {
+      "source": "ea6b925f-c1e6-4b13-830d-6dc70b6b4fd6",
+      "target": "a10673ce-ae3d-4f25-a0e0-27876d39b423",
+      "type": "response"
+    },
+    {
+      "source": "1ceb0014-e353-4ea1-9355-c0e9c26a438a",
+      "target": "6dcab447-269d-4d2d-9369-2d99d04e798c",
+      "type": "response"
+    },
+    {
+      "source": "62da6e2a-ecc6-4016-8b80-0b0302defc57",
+      "target": "8fdf3996-5013-4997-a9f6-c5a108c08afc",
+      "type": "response"
+    },
+    {
+      "source": "74a0e16b-87aa-4b7f-9715-5a1160dc0b64",
+      "target": "92eae638-3b4d-4ade-b47c-96b5479ee6c8",
+      "type": "objection"
+    },
+    {
+      "source": "74a0e16b-87aa-4b7f-9715-5a1160dc0b64",
+      "target": "6f67bad3-67d2-4754-adde-5167b09ec2b7",
+      "type": "objection"
+    },
+    {
+      "source": "348f51f4-9ef9-4857-ae63-a5c737932021",
+      "target": "f3f0a95b-c88c-4240-9f3e-6c6df2ee7748",
+      "type": "objection"
+    },
+    {
+      "source": "348f51f4-9ef9-4857-ae63-a5c737932021",
+      "target": "b4f7c99c-7817-4a72-bd97-dff58ba770aa",
+      "type": "objection"
+    },
+    {
+      "source": "518a73fb-a1c5-474b-bbd4-4318725ff71a",
+      "target": "a37ec934-53d0-4134-89aa-94f3c9801a7f",
+      "type": "objection"
+    },
+    {
+      "source": "518a73fb-a1c5-474b-bbd4-4318725ff71a",
+      "target": "a165dbbc-a9e6-4a10-a5dd-e46679516364",
+      "type": "objection"
+    },
+    {
+      "source": "ae871001-163e-4c55-be76-1beec6639b5a",
+      "target": "096269d2-0d2e-4a22-89d5-4523a5fe563e",
+      "type": "objection"
+    },
+    {
+      "source": "ae871001-163e-4c55-be76-1beec6639b5a",
+      "target": "67518178-ace9-4201-92e8-511cf5541bdb",
+      "type": "objection"
+    },
+    {
+      "source": "f0d7abe9-eb69-4ad1-9596-49a19d7cf635",
+      "target": "dee1e708-78fc-4ed4-a330-0478b3d8aa02",
+      "type": "objection"
+    },
+    {
+      "source": "f0d7abe9-eb69-4ad1-9596-49a19d7cf635",
+      "target": "984e45ef-d79a-4d8b-8d8f-e17de92f9b64",
+      "type": "objection"
+    },
+    {
+      "source": "ca99981f-02c6-4ee8-84f9-1ede9940b10c",
+      "target": "94c129ae-fa85-414a-b45f-992a1d07da71",
+      "type": "objection"
+    },
+    {
+      "source": "ca99981f-02c6-4ee8-84f9-1ede9940b10c",
+      "target": "bc12f9d7-d99c-44ba-9dfb-21f05186bbc8",
+      "type": "objection"
+    },
+    {
+      "source": "6f67bad3-67d2-4754-adde-5167b09ec2b7",
+      "target": "a613b73c-c9d4-49a4-9feb-b8eeb611e29b",
+      "type": "response"
+    },
+    {
+      "source": "6f67bad3-67d2-4754-adde-5167b09ec2b7",
+      "target": "fb1ae8d4-67cd-46f4-ab39-4f02ccc536dd",
+      "type": "response"
+    },
+    {
+      "source": "92eae638-3b4d-4ade-b47c-96b5479ee6c8",
+      "target": "3b5cd5b7-a14f-4157-bc9d-99b54d2df130",
+      "type": "response"
+    },
+    {
+      "source": "92eae638-3b4d-4ade-b47c-96b5479ee6c8",
+      "target": "57f5f1a5-e0de-45f6-9e4a-7df8ea9d53f6",
+      "type": "response"
+    },
+    {
+      "source": "67518178-ace9-4201-92e8-511cf5541bdb",
+      "target": "fec358df-6d63-46b4-8b1d-c4df53662674",
+      "type": "response"
+    },
+    {
+      "source": "67518178-ace9-4201-92e8-511cf5541bdb",
+      "target": "d10d758d-65c5-406f-a349-431726e92151",
+      "type": "response"
+    },
+    {
+      "source": "dee1e708-78fc-4ed4-a330-0478b3d8aa02",
+      "target": "f81ebc48-5197-49a5-85b9-3866b8f88f71",
+      "type": "response"
+    },
+    {
+      "source": "dee1e708-78fc-4ed4-a330-0478b3d8aa02",
+      "target": "5958c0a1-924d-4fe4-b2c8-d69be2095b64",
+      "type": "response"
+    },
+    {
+      "source": "a37ec934-53d0-4134-89aa-94f3c9801a7f",
+      "target": "2561eada-18b8-4460-9d43-b21600c9f709",
+      "type": "response"
+    },
+    {
+      "source": "a37ec934-53d0-4134-89aa-94f3c9801a7f",
+      "target": "986e0e0f-50b1-4958-bb53-989da57480df",
+      "type": "response"
+    },
+    {
+      "source": "fb1ae8d4-67cd-46f4-ab39-4f02ccc536dd",
+      "target": "bc603dbf-234b-46ad-adbd-745d34494227",
+      "type": "response"
+    },
+    {
+      "source": "57f5f1a5-e0de-45f6-9e4a-7df8ea9d53f6",
+      "target": "e00ab8a4-e946-4bb5-9377-9841da7f7b41",
+      "type": "response"
+    },
+    {
+      "source": "57f5f1a5-e0de-45f6-9e4a-7df8ea9d53f6",
+      "target": "61e7d35a-d9b2-43bc-bd4b-573146f63b57",
+      "type": "response"
+    },
+    {
+      "source": "a613b73c-c9d4-49a4-9feb-b8eeb611e29b",
+      "target": "af25a5e8-c711-403f-a709-3a0723105ac0",
+      "type": "response"
+    },
+    {
+      "source": "94c129ae-fa85-414a-b45f-992a1d07da71",
+      "target": "7a0d713c-c724-499c-bd7f-c437b3945b97",
+      "type": "response"
+    },
+    {
+      "source": "94c129ae-fa85-414a-b45f-992a1d07da71",
+      "target": "45aad0fe-0ae2-4a01-8a9f-c62b1c3012e7",
+      "type": "response"
+    },
+    {
+      "source": "3b5cd5b7-a14f-4157-bc9d-99b54d2df130",
+      "target": "c4b3f665-29ee-406b-bd6d-0a43911ee39c",
+      "type": "response"
+    },
+    {
+      "source": "bc12f9d7-d99c-44ba-9dfb-21f05186bbc8",
+      "target": "09297583-a84d-4ce3-ac03-d68d7ceead46",
+      "type": "response"
+    },
+    {
+      "source": "bc12f9d7-d99c-44ba-9dfb-21f05186bbc8",
+      "target": "8d76cab8-f1b8-4855-bfb5-2ff6fc8afb45",
+      "type": "response"
+    },
+    {
+      "source": "986e0e0f-50b1-4958-bb53-989da57480df",
+      "target": "d72ac1fc-8d8b-4133-9b84-69992a1276d8",
+      "type": "response"
+    },
+    {
+      "source": "986e0e0f-50b1-4958-bb53-989da57480df",
+      "target": "2a7d5bde-6809-4ecc-be7f-f29e5d367a39",
+      "type": "response"
+    },
+    {
+      "source": "d10d758d-65c5-406f-a349-431726e92151",
+      "target": "ee003495-6d2d-408c-88f4-7bd6ecf83407",
+      "type": "response"
+    },
+    {
+      "source": "fec358df-6d63-46b4-8b1d-c4df53662674",
+      "target": "0169e043-fb25-482b-ae8b-205be2aca747",
+      "type": "response"
+    },
+    {
+      "source": "f81ebc48-5197-49a5-85b9-3866b8f88f71",
+      "target": "05672fa2-7b74-44f6-9bfd-a22193590e28",
+      "type": "response"
+    },
+    {
+      "source": "2561eada-18b8-4460-9d43-b21600c9f709",
+      "target": "cd349004-4df4-4fa7-9f12-835467a5f508",
+      "type": "response"
+    },
+    {
+      "source": "09297583-a84d-4ce3-ac03-d68d7ceead46",
+      "target": "6e944630-65a6-4bfd-a6a2-462452c8c641",
+      "type": "response"
+    },
+    {
+      "source": "09297583-a84d-4ce3-ac03-d68d7ceead46",
+      "target": "76f5170c-213f-46d0-95a1-a6ebefcf936f",
+      "type": "response"
+    },
+    {
+      "source": "5958c0a1-924d-4fe4-b2c8-d69be2095b64",
+      "target": "1531b502-0a82-497e-9921-92c95580f26e",
+      "type": "response"
+    },
+    {
+      "source": "7a0d713c-c724-499c-bd7f-c437b3945b97",
+      "target": "6b4cd345-0deb-438b-af01-2aade2744f99",
+      "type": "response"
+    },
+    {
+      "source": "7a0d713c-c724-499c-bd7f-c437b3945b97",
+      "target": "b64d6455-77f7-40ee-8648-0a44d4abf0a3",
+      "type": "response"
+    },
+    {
+      "source": "8d76cab8-f1b8-4855-bfb5-2ff6fc8afb45",
+      "target": "df76fc56-6103-4883-add1-d9e33e3bdf71",
+      "type": "response"
+    },
+    {
+      "source": "8d76cab8-f1b8-4855-bfb5-2ff6fc8afb45",
+      "target": "d610736a-3ff3-4408-987d-b8cf82c86791",
+      "type": "response"
+    },
+    {
+      "source": "45aad0fe-0ae2-4a01-8a9f-c62b1c3012e7",
+      "target": "a9e24ee2-a170-42c5-8a46-2a9ba2fdb0c7",
+      "type": "response"
+    },
+    {
+      "source": "45aad0fe-0ae2-4a01-8a9f-c62b1c3012e7",
+      "target": "f1b8045a-1512-4a39-a90a-71c17e2f3ae2",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "bee78d85-d5d7-4c72-9e96-be240f20778f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "3ef38b85-26d4-43a7-bb90-615ae95ae7f1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "7e1fed58-47f9-4232-8469-510074e5f260",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "65f3ca76-f4b5-4d6d-a0d4-0935b6342d15",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "91f6eaa7-9a9b-4f68-960a-411f692e8922",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "0172cbb2-3901-45c9-b210-577687f89619",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ae871001-163e-4c55-be76-1beec6639b5a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "f0d7abe9-eb69-4ad1-9596-49a19d7cf635",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ca99981f-02c6-4ee8-84f9-1ede9940b10c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "74a0e16b-87aa-4b7f-9715-5a1160dc0b64",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "348f51f4-9ef9-4857-ae63-a5c737932021",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "518a73fb-a1c5-474b-bbd4-4318725ff71a",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

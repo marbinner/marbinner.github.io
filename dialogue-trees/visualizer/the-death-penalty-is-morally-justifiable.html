@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The death penalty is morally justifiable - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #666;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 1px solid #a2a9b1;
+            transition: right 0.3s;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #72777d;
+        }
+
+        #sidebar h2 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+            padding-right: 30px;
+        }
+
+        #sidebar .node-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #202122;
+        }
+
+        #sidebar .node-meta {
+            font-size: 0.85em;
+            color: #72777d;
+            margin-bottom: 5px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .node.pro circle {
+            fill: #00af89;
+        }
+
+        .node.con circle {
+            fill: #dd5555;
+        }
+
+        /* Depth-based styling */
+        .node circle {
+            opacity: 1;
+        }
+
+        .node.depth-1 circle {
+            opacity: 0.9;
+        }
+
+        .node.depth-2 circle {
+            opacity: 0.8;
+        }
+
+        .node.depth-3 circle {
+            opacity: 0.7;
+        }
+
+        .node.depth-4 circle,
+        .node.depth-5 circle {
+            opacity: 0.6;
+        }
+
+        .node.highlighted circle {
+            stroke: #ffd700;
+            stroke-width: 4px;
+        }
+
+        .node.selected circle {
+            stroke: #0645ad;
+            stroke-width: 4px;
+        }
+
+        /* Adaptive font sizing based on depth */
+        .node.depth-0 text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .node.depth-1 text,
+        .node.depth-2 text {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .node.depth-3 text,
+        .node.depth-4 text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .node.depth-5 text {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #00af89;
+            border-color: #00af89;
+        }
+
+        .node-badge.con {
+            color: #dd5555;
+            border-color: #dd5555;
+        }
+
+        .node-badge.objection {
+            color: #cc6600;
+            border-color: #cc6600;
+        }
+
+        .node-badge.response {
+            color: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.3;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        /* Fisheye zoom effect on hover */
+        .node {
+            transition: transform 0.2s ease;
+        }
+
+        .node:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .node:hover circle {
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.pro {
+            stroke: #00af89;
+            stroke-opacity: 0.4;
+        }
+
+        .link.con {
+            stroke: #dd5555;
+            stroke-opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>The death penalty is morally justifiable</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            29 total nodes • Max depth: 2 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="fitToView()">Fit to View</button>
+
+        <div id="legend">
+            <h3>Statistics</h3>
+            <div style="font-size: 0.85em; color: #72777d; margin-bottom: 10px;">
+                <div style="margin-bottom: 3px;"><strong>Nodes:</strong> 29</div>
+                <div style="margin-bottom: 3px;"><strong>Max Depth:</strong> 2</div>
+                <div style="margin-bottom: 3px;"><strong>Pro:</strong> <span style="color: #00af89;">4</span></div>
+                <div style="margin-bottom: 3px;"><strong>Con:</strong> <span style="color: #dd5555;">4</span></div>
+            </div>
+
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00af89;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dd5555;"></div>
+                <span>Con / Opposing</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "55a792c0-0a4c-4d95-a18d-1a8a0a7c1870",
+      "text": "The moral justification for capital punishment rests on the principle of just retribution, ensuring that the severity of the sanction is proportionate to the exceptional nature of the crime. For perpetrators of mass murder or calculated, heinous acts, the ultimate penalty affirms the moral gravity of the offense and upholds the highest value of the victim's life, a principle maintained in established jurisdictions like Japan and specific states in the United States.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:46.090934"
+    },
+    {
+      "id": "ab5c6012-4d1f-4f4e-b241-2db76f839e46",
+      "text": "Capital punishment provides the only absolute guarantee of permanent incapacitation, definitively safeguarding the general population and correctional officers from future violence. Unlike life imprisonment, which carries inherent, documented risks of parole error, escape, or the murder of staff and inmates, execution ensures the offender poses zero subsequent threat.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:46.091446"
+    },
+    {
+      "id": "4eec7f0d-a3d6-47a6-bf9f-eaa53bc17fe3",
+      "text": "Applying the death penalty is morally justifiable if the penalty serves as a necessary general deterrent that prevents the loss of future innocent lives. The high certainty and finality of the sanction, as employed by nations like Singapore for serious offenses, are intended to signal the state\u2019s absolute resolve against specific capital crimes.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:46.091978"
+    },
+    {
+      "id": "605e0f48-ddb6-4615-9d69-913deb4c0ec3",
+      "text": "The finality of the death penalty provides moral closure to the victims' families and the community, which is a legitimate function of state justice. Ongoing legal appeals and the constant possibility of discretionary release associated with life sentences prolong the trauma, whereas execution offers a definitive legal and psychological resolution that affirms the value of the lives destroyed.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:46.092234"
+    },
+    {
+      "id": "bb2a18b5-38a7-4458-a860-7cb93d0abb3d",
+      "text": "Life Without Parole (LWOP) is frequently deemed a sufficiently severe and proportional sanction that satisfies the principle of just retribution for even the most heinous crimes, eliminating the need to resort to the irreversible ultimate penalty.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "55a792c0-0a4c-4d95-a18d-1a8a0a7c1870",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:56.822233"
+    },
+    {
+      "id": "6273c29b-3418-4918-b8d3-a5348d0c1113",
+      "text": "State-sanctioned killing, even in retribution, contradicts the objective of upholding the highest value of life, as it requires the state itself to commit a definitive act of lethal violence. This principle is codified in the laws of most Western democracies, including all European Union members.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "55a792c0-0a4c-4d95-a18d-1a8a0a7c1870",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:56.822724"
+    },
+    {
+      "id": "614f5547-18dc-4dc9-8786-59426e770dfc",
+      "text": "The necessary premise that the death penalty functions as a superior and necessary general deterrent is empirically unsupported; studies comparing homicide rates in US states with and without capital punishment show no statistically significant difference in murder rates over life imprisonment.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4eec7f0d-a3d6-47a6-bf9f-eaa53bc17fe3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:58.562703"
+    },
+    {
+      "id": "e593b5ab-cc9d-4238-a469-f98a353b117c",
+      "text": "Appealing to the state\u2019s *intent* to signal absolute resolve is a non-sequitur and does not establish the required *effect* of necessary deterrence; many nations, including all European Union members, demonstrate resolve against capital crimes using life imprisonment without needing execution.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4eec7f0d-a3d6-47a6-bf9f-eaa53bc17fe3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:58.564010"
+    },
+    {
+      "id": "03ac103a-949b-4e12-8e49-a813381c3ad7",
+      "text": "Life Without Parole (LWOP) sentencing already guarantees permanent incapacitation against release into the general public, directly eliminating the risk of \"parole error\" cited as a structural failure of non-capital sentences.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ab5c6012-4d1f-4f4e-b241-2db76f839e46",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:00.300424"
+    },
+    {
+      "id": "8cfa11d0-517b-4a83-857a-22cd0d68eec9",
+      "text": "Capital punishment does not provide an immediate or absolute safety guarantee, as condemned inmates spend years or decades on death row, posing a documented, ongoing risk of violence and assault to correctional staff and the prison population prior to execution.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ab5c6012-4d1f-4f4e-b241-2db76f839e46",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:00.301180"
+    },
+    {
+      "id": "00961940-120b-4999-a537-c15c0e81b8a2",
+      "text": "Studies tracking victims' families have found that the execution of a perpetrator does not reliably provide the promised \"psychological resolution,\" and many families report continued or renewed trauma following the event.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "605e0f48-ddb6-4615-9d69-913deb4c0ec3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:04.123563"
+    },
+    {
+      "id": "dac2d0cc-e1c8-4668-8f04-16fa2c71d2f0",
+      "text": "Capital cases involve decades of mandatory, complex litigation, often lasting 15-25 years in the US, which subjects victims' families to prolonged uncertainty and repeated trauma, contrary to the claim that execution offers a definitive and swift resolution.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "605e0f48-ddb6-4615-9d69-913deb4c0ec3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:04.124015"
+    },
+    {
+      "id": "58f3e50d-e7b8-4d40-a644-ef26f7cb0c8b",
+      "text": "State justice functions typically involve punishment and public safety. The assertion that state-sanctioned killing \"affirms the value of the lives destroyed\" is an unsupported moral claim, as executing a prisoner does not restore the victim\u2019s value or life.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "605e0f48-ddb6-4615-9d69-913deb4c0ec3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:04.124285"
+    },
+    {
+      "id": "4904399a-fba2-4705-b18b-c51504bfa051",
+      "text": "Upholding the \"highest value of life\" typically refers to respecting innocent life; legally sanctioned lethal force, such as state execution or necessary police self-defense, is often considered a compatible and proportionate response to a criminal's forfeiture of rights.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6273c29b-3418-4918-b8d3-a5348d0c1113",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:07.970786"
+    },
+    {
+      "id": "b4a08527-54a0-472f-b302-36b9ed736074",
+      "text": "The codification in Western laws is a non-sequitur, as legal status does not confirm inherent moral validity; major democracies, including the United States, Japan, and India, retain the death penalty, demonstrating a widespread lack of consensus on this supposed universal principle.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6273c29b-3418-4918-b8d3-a5348d0c1113",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:07.971574"
+    },
+    {
+      "id": "d222df89-1b91-4ddd-9d6d-e98b682aa26d",
+      "text": "The core principle of just retribution requires a punishment strictly proportional to the offense's moral magnitude, and many retributive philosophies hold that LWOP is categorically insufficient, failing to restore moral balance for the permanent loss of multiple lives.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bb2a18b5-38a7-4458-a860-7cb93d0abb3d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:10.259915"
+    },
+    {
+      "id": "7980a0da-cd2a-4168-9d4a-cb28b18441de",
+      "text": "LWOP fails the strict proportionality test for the \"most heinous crimes\" by treating the punishment for intentional single murder identically to that of mass atrocity, which requires a distinct, higher penalty to be commensurate with the greater moral harm.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bb2a18b5-38a7-4458-a860-7cb93d0abb3d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:10.260680"
+    },
+    {
+      "id": "aea9571d-987d-4b5c-852e-e61e18da3393",
+      "text": "The argument overstates that deterrence is \"empirically unsupported\" by relying only on simple state comparisons; sophisticated econometric studies by proponents have used panel data analysis (e.g., Dezhbakhsh, Mocan) to find a contested, yet statistically significant, marginal deterrent effect per execution.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "614f5547-18dc-4dc9-8786-59426e770dfc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:11.752425"
+    },
+    {
+      "id": "bbd16db7-12eb-4bce-ab5a-ade48415e569",
+      "text": "The internal risk argument is critically flawed because inmates serving Life Without Parole (LWOP) pose an equal or greater institutional safety risk, as they have no remaining incentive (like parole or commutation) to maintain good behavior.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8cfa11d0-517b-4a83-857a-22cd0d68eec9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:12.247281"
+    },
+    {
+      "id": "4bdd332a-3a81-4ebf-ad0c-08fb76f115f2",
+      "text": "The primary function of capital punishment is permanent incapacitation from the general public, fulfilling the \"safety guarantee\" by eliminating the possibility of recidivism or escape, regardless of the temporary internal security risk during appeal processes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8cfa11d0-517b-4a83-857a-22cd0d68eec9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:12.248017"
+    },
+    {
+      "id": "dfc6dc24-bfd7-4d2a-af11-400da946b9b9",
+      "text": "LWOP does not guarantee permanent incapacitation because convicts remain eligible for release via executive clemency (commutation) or successful prison escape, meaning the risk of an offender returning to the general public is reduced but not eliminated.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "03ac103a-949b-4e12-8e49-a813381c3ad7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:14.118278"
+    },
+    {
+      "id": "7f85e314-6462-4548-a84a-1cb54cf4dc47",
+      "text": "The retributive justification for state killing affirms the victim's value by making the punishment proportionally severe relative to the gravity of the crime (loss of life). This proportionality acts as an assertion of moral accountability, independent of the impossibility of literal restoration.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "58f3e50d-e7b8-4d40-a644-ef26f7cb0c8b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:17.729656"
+    },
+    {
+      "id": "e4ac6c6f-da52-4ee1-b81d-2d7414f31dae",
+      "text": "Judicial processes are inherently fallible, making the execution of an innocent person an irreversible injustice. The exoneration of over 190 death row inmates in the United States demonstrates this critical, irreparable risk.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:24.675971"
+    },
+    {
+      "id": "dd887296-e5fa-450c-b22b-3bec3cff2a3f",
+      "text": "Capital punishment violates the fundamental right to life and inherent human dignity, transforming the state into a killer. This moral consensus led the Council of Europe and the European Union to completely abolish the practice.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:24.676746"
+    },
+    {
+      "id": "490cb8e4-c869-442d-9040-613163c56e6a",
+      "text": "The imposition of the death penalty is disproportionately applied based on systemic biases, particularly against marginalized racial and socioeconomic groups. Studies in the United States and elsewhere consistently show racial disparities in sentencing tied to the race of the victim.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:24.677221"
+    },
+    {
+      "id": "97357201-523e-4b73-8c84-cff79bd2f63e",
+      "text": "Capital punishment fails to demonstrate a statistically significant deterrent effect compared to life imprisonment. Countries like Canada experienced no sustained increase in murder rates after abolition, undermining the utilitarian moral justification.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:24.677637"
+    },
+    {
+      "id": "3dfd32ab-f196-402d-896d-57fad754a7fd",
+      "text": "The premise that capital punishment inherently violates dignity is contested, not universally accepted, as many proponents argue that execution for heinous crimes like mass murder is a proportionate consequence that affirms the human dignity of the victims.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dd887296-e5fa-450c-b22b-3bec3cff2a3f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:36.091044"
+    },
+    {
+      "id": "cd1d1fea-942b-41bd-a187-fb2e5084939b",
+      "text": "The citation of the Council of Europe and EU does not reflect a global consensus, as over half the world\u2019s population, including major democracies like India, the US, and Japan, still retains capital punishment. Furthermore, Europe's abolition was driven by political unification goals (Council of Europe Protocol 6) and concerns about executing the innocent, not solely absolute moral agreement.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dd887296-e5fa-450c-b22b-3bec3cff2a3f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:36.091560"
+    },
+    {
+      "id": "1d04a34a-fcc7-4a4f-a333-26075b28cb28",
+      "text": "Utilitarian justification is broader than deterrence, encompassing other metrics like minimizing the economic burden of permanent incarceration and maximizing societal satisfaction through perceived justice (retributive utility). The elimination of deterrence as a factor does not necessarily invalidate these other potential utility calculations.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "97357201-523e-4b73-8c84-cff79bd2f63e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:18:37.310609"
+    }
+  ],
+  "links": [
+    {
+      "source": "55a792c0-0a4c-4d95-a18d-1a8a0a7c1870",
+      "target": "bb2a18b5-38a7-4458-a860-7cb93d0abb3d",
+      "type": "objection"
+    },
+    {
+      "source": "55a792c0-0a4c-4d95-a18d-1a8a0a7c1870",
+      "target": "6273c29b-3418-4918-b8d3-a5348d0c1113",
+      "type": "objection"
+    },
+    {
+      "source": "4eec7f0d-a3d6-47a6-bf9f-eaa53bc17fe3",
+      "target": "614f5547-18dc-4dc9-8786-59426e770dfc",
+      "type": "objection"
+    },
+    {
+      "source": "4eec7f0d-a3d6-47a6-bf9f-eaa53bc17fe3",
+      "target": "e593b5ab-cc9d-4238-a469-f98a353b117c",
+      "type": "objection"
+    },
+    {
+      "source": "ab5c6012-4d1f-4f4e-b241-2db76f839e46",
+      "target": "03ac103a-949b-4e12-8e49-a813381c3ad7",
+      "type": "objection"
+    },
+    {
+      "source": "ab5c6012-4d1f-4f4e-b241-2db76f839e46",
+      "target": "8cfa11d0-517b-4a83-857a-22cd0d68eec9",
+      "type": "objection"
+    },
+    {
+      "source": "605e0f48-ddb6-4615-9d69-913deb4c0ec3",
+      "target": "00961940-120b-4999-a537-c15c0e81b8a2",
+      "type": "objection"
+    },
+    {
+      "source": "605e0f48-ddb6-4615-9d69-913deb4c0ec3",
+      "target": "dac2d0cc-e1c8-4668-8f04-16fa2c71d2f0",
+      "type": "objection"
+    },
+    {
+      "source": "605e0f48-ddb6-4615-9d69-913deb4c0ec3",
+      "target": "58f3e50d-e7b8-4d40-a644-ef26f7cb0c8b",
+      "type": "objection"
+    },
+    {
+      "source": "6273c29b-3418-4918-b8d3-a5348d0c1113",
+      "target": "4904399a-fba2-4705-b18b-c51504bfa051",
+      "type": "response"
+    },
+    {
+      "source": "6273c29b-3418-4918-b8d3-a5348d0c1113",
+      "target": "b4a08527-54a0-472f-b302-36b9ed736074",
+      "type": "response"
+    },
+    {
+      "source": "bb2a18b5-38a7-4458-a860-7cb93d0abb3d",
+      "target": "d222df89-1b91-4ddd-9d6d-e98b682aa26d",
+      "type": "response"
+    },
+    {
+      "source": "bb2a18b5-38a7-4458-a860-7cb93d0abb3d",
+      "target": "7980a0da-cd2a-4168-9d4a-cb28b18441de",
+      "type": "response"
+    },
+    {
+      "source": "614f5547-18dc-4dc9-8786-59426e770dfc",
+      "target": "aea9571d-987d-4b5c-852e-e61e18da3393",
+      "type": "response"
+    },
+    {
+      "source": "8cfa11d0-517b-4a83-857a-22cd0d68eec9",
+      "target": "bbd16db7-12eb-4bce-ab5a-ade48415e569",
+      "type": "response"
+    },
+    {
+      "source": "8cfa11d0-517b-4a83-857a-22cd0d68eec9",
+      "target": "4bdd332a-3a81-4ebf-ad0c-08fb76f115f2",
+      "type": "response"
+    },
+    {
+      "source": "03ac103a-949b-4e12-8e49-a813381c3ad7",
+      "target": "dfc6dc24-bfd7-4d2a-af11-400da946b9b9",
+      "type": "response"
+    },
+    {
+      "source": "58f3e50d-e7b8-4d40-a644-ef26f7cb0c8b",
+      "target": "7f85e314-6462-4548-a84a-1cb54cf4dc47",
+      "type": "response"
+    },
+    {
+      "source": "dd887296-e5fa-450c-b22b-3bec3cff2a3f",
+      "target": "3dfd32ab-f196-402d-896d-57fad754a7fd",
+      "type": "objection"
+    },
+    {
+      "source": "dd887296-e5fa-450c-b22b-3bec3cff2a3f",
+      "target": "cd1d1fea-942b-41bd-a187-fb2e5084939b",
+      "type": "objection"
+    },
+    {
+      "source": "97357201-523e-4b73-8c84-cff79bd2f63e",
+      "target": "1d04a34a-fcc7-4a4f-a333-26075b28cb28",
+      "type": "objection"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Character limits based on depth
+            const limits = {
+                0: 100,  // Root nodes - show more
+                1: 80,
+                2: 60,
+                3: 40,
+                4: 30,
+                5: 25
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            const widths = {
+                0: 180,
+                1: 150,
+                2: 130,
+                3: 100,
+                4: 80,
+                5: 70
+            };
+
+            const heights = {
+                0: 60,
+                1: 50,
+                2: 45,
+                3: 40,
+                4: 35,
+                5: 30
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 70,
+                height: heights[Math.min(d.depth, 5)] || 30
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Create force simulation with improved parameters
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Longer links for deeper nodes
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return 120 + (depth * 20);
+            }))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            });
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes with improved tooltips
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showNodeDetails(d);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation();
+                toggleSubtree(d);
+            })
+            .append("title")
+            .text(d => getTooltipText(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height);
+
+            // Create HTML content with badge and text
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center");
+
+            // Add badge (only for depth 0-1 to avoid clutter)
+            if (d.depth <= 1) {
+                div.append("xhtml:div")
+                    .attr("class", `node-badge ${d.type}`)
+                    .text(d.type);
+            }
+
+            // Add text content
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.depth === 0 ? "13px" : (d.depth <= 2 ? "11px" : "10px"))
+                .style("font-weight", d.depth === 0 ? "600" : "500")
+                .text(displayText);
+        });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebar-content");
+
+            let html = `
+                <h2>Argument Details</h2>
+                <div class="node-text">${d.text}</div>
+                <div class="node-meta"><strong>Type:</strong> ${d.type}</div>
+                <div class="node-meta"><strong>Side:</strong> ${d.side}</div>
+                <div class="node-meta"><strong>Depth:</strong> ${d.depth}</div>
+                <div class="node-meta"><strong>Children:</strong> ${d.children_count}</div>
+                <div class="node-meta"><strong>Source:</strong> ${d.source}</div>
+            `;
+
+            if (d.references && d.references.length > 0) {
+                html += '<div class="node-meta"><strong>References:</strong></div><ul>';
+                d.references.forEach(ref => {
+                    html += `<li style="margin-left: 20px; font-size: 0.85em;"><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+                html += '</ul>';
+            }
+
+            content.innerHTML = html;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset view
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+        }
+
+        // Fit graph to view
+        function fitToView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.9;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

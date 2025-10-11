@@ -1,0 +1,2764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globalization benefits humanity - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Globalization benefits humanity</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            76 total nodes • Max depth: 2 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/globalization-benefits-humanity.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">76</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "fd833544-3a78-4f59-93f1-5eb2c7ab47cf",
+      "text": "Globalization, driven by trade and investment, has dramatically reduced global extreme poverty. The economic integration of populous nations like China and India since the 1990s has lifted over a billion people out of poverty, a transformation documented by the World Bank.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "World Bank data"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:58.797970+00:00"
+    },
+    {
+      "id": "8de7dda4-2608-4028-a9c4-b768af51be9d",
+      "text": "Facilitating the principle of comparative advantage, globalization optimizes the allocation of global resources. This specialization allows countries to maximize efficiency and production, leading to higher overall global GDP and increased availability of goods.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:58.798438+00:00"
+    },
+    {
+      "id": "79abcf86-b9b2-4c9d-a8ce-30d7191657fd",
+      "text": "Globalization accelerates the diffusion of technological innovations and knowledge across borders. This rapid spread has quickly standardized access to life-saving medical advances, like new-generation vaccines, and pervasive tools like mobile internet access globally.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:58.798709+00:00"
+    },
+    {
+      "id": "e69140e2-319f-426e-8e75-68e62b7863d0",
+      "text": "Deep economic integration increases interdependence, historically correlating with reduced incidence of major interstate conflict. The extensive trade ties and shared institutions within entities like the European Union create a powerful disincentive for war among participating economies.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "European Union"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:58.798948+00:00"
+    },
+    {
+      "id": "ff916515-6a96-4fc0-a40c-2ab069b6d744",
+      "text": "Global supply chains and international competition provide consumers with a significantly wider variety of goods and services. Competition among global producers dramatically lowers real prices, substantially enhancing consumer purchasing power in markets worldwide.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:58.799316+00:00"
+    },
+    {
+      "id": "9e18df52-d53c-4e67-afaf-7ecdec68f70a",
+      "text": "Transnational crises, including pandemics and climate change, necessitate coordination mechanisms made possible by globalization. Integrated institutional frameworks, such as the World Health Organization's global disease reporting system, enable essential collaborative responses to shared threats.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "World Health Organization"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:58.799588+00:00"
+    },
+    {
+      "id": "b536d78e-c405-4d29-b16d-cbb6b247c350",
+      "text": "The COVID-19 pandemic demonstrated profound global disparities in access, where wealthy nations secured mRNA vaccines months before lower-income countries, directly contradicting claims of quick, standardized access to medical advances.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "79abcf86-b9b2-4c9d-a8ce-30d7191657fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:07.499174+00:00"
+    },
+    {
+      "id": "fee60f31-b7d2-4ecf-afa5-0eb4a60d9539",
+      "text": "Mobile internet access remains far from standardized; World Bank data consistently shows vast disparities in internet penetration between high-income countries and regions like Sub-Saharan Africa.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "79abcf86-b9b2-4c9d-a8ce-30d7191657fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:07.499597+00:00"
+    },
+    {
+      "id": "c3044cd0-d5c5-45e1-acb8-8dd8301ab73e",
+      "text": "The success of lifting people out of poverty in China and India was fundamentally enabled by major domestic policy shifts, such as China's post-1978 market liberalization and India's targeted social programs. These internal reforms provided the foundation for growth that merely interacted with, rather than being solely driven by, global trade and investment.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fd833544-3a78-4f59-93f1-5eb2c7ab47cf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:08.548283+00:00"
+    },
+    {
+      "id": "3c9a34a5-407b-4eb6-aca4-d10cb33fb26d",
+      "text": "Globalization\u2019s impact on poverty reduction is highly concentrated and geographically uneven, making generalization inaccurate. While Asia demonstrated massive gains, nations in Sub-Saharan Africa and parts of Latin America saw comparatively little reduction in extreme poverty and often experienced increased income inequality during the same globalization period.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fd833544-3a78-4f59-93f1-5eb2c7ab47cf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:08.548785+00:00"
+    },
+    {
+      "id": "b59b3a7b-9e1d-4016-9978-86abcee97d7b",
+      "text": "Global supply chains depress the numerator (income) of the purchasing power equation through domestic wage stagnation and manufacturing job outsourcing. This loss of income often outweighs the marginal savings from lower-priced imported goods, particularly for the working class.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ff916515-6a96-4fc0-a40c-2ab069b6d744",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:09.290146+00:00"
+    },
+    {
+      "id": "8eadd782-a61d-49bd-bf9d-2384d724539f",
+      "text": "The enhancement of purchasing power is highly unevenly distributed; while consumers who retain high-wage jobs benefit greatly, the income losses experienced by displaced manufacturing workers in regions like the US Rust Belt negate any benefit from lower retail prices.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ff916515-6a96-4fc0-a40c-2ab069b6d744",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:09.290859+00:00"
+    },
+    {
+      "id": "db043744-7a51-4bef-a756-be882436b6c0",
+      "text": "The UN system, including the World Health Organization, was established in 1945 prior to the intense wave of modern globalization, showing that essential coordination mechanisms are possible through diplomacy and treaties alone. Agreements like the Geneva Conventions (1864) further prove that sophisticated international frameworks predate deep global economic integration.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9e18df52-d53c-4e67-afaf-7ecdec68f70a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:12.932236+00:00"
+    },
+    {
+      "id": "7f0ecfa2-0380-4f65-824e-2d9f65c35557",
+      "text": "Massive international air travel and globally integrated supply chains, direct results of intense globalization, were primary mechanisms that accelerated the geographic spread of the COVID-19 pandemic across continents. This trade-off suggests globalization contributes to the crises it is then required to solve.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9e18df52-d53c-4e67-afaf-7ecdec68f70a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:12.933193+00:00"
+    },
+    {
+      "id": "f8caddb4-1cb2-40a5-b49d-4b5d657a279b",
+      "text": "Before 1914, Great Britain, France, and Germany were among the most highly integrated economic partners worldwide, yet their dense interdependence failed to prevent the outbreak of World War I.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e69140e2-319f-426e-8e75-68e62b7863d0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:13.262113+00:00"
+    },
+    {
+      "id": "3f9b3858-da00-40f5-9390-2a90be09ed4c",
+      "text": "The sustained peace within the European Union is strongly correlated with the existence of the NATO security umbrella and the shared commitment to liberal democracy among major member states.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e69140e2-319f-426e-8e75-68e62b7863d0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:13.262867+00:00"
+    },
+    {
+      "id": "d29fc8ca-c7b2-41aa-948c-544be91264cb",
+      "text": "China's massive poverty reduction was fundamentally powered by export manufacturing, which was primarily enabled by foreign direct investment and access to Western consumer markets following its 2001 WTO accession, making global trade a critical driver, not a mere interaction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c3044cd0-d5c5-45e1-acb8-8dd8301ab73e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:20.278433+00:00"
+    },
+    {
+      "id": "6abac92b-6e81-4451-a324-2dab36b1b714",
+      "text": "India's \"targeted social programs,\" such as MNREGA, primarily function as crucial safety nets and redistribution measures, not as the foundational economic drivers of wealth creation, which stemmed from the liberalization of its services and technology sectors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c3044cd0-d5c5-45e1-acb8-8dd8301ab73e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:20.278479+00:00"
+    },
+    {
+      "id": "45e2b2a4-986f-4930-bc0b-4953d968869a",
+      "text": "The over-reliance on specialized global supply chains led to widespread shortages of microchips and medical supplies during the COVID-19 pandemic. This systemic fragility increases transaction costs and prevents optimal resource allocation in reality.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8de7dda4-2608-4028-a9c4-b768af51be9d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:22.390505+00:00"
+    },
+    {
+      "id": "225f83ff-2cf5-4c67-904f-aa90b99e14ec",
+      "text": "Globalization's emphasis on long-distance shipping contributes significantly to anthropogenic climate change via massive carbon emissions, an unpriced environmental externality. Furthermore, many OECD countries experienced accelerated domestic income inequality following sustained periods of trade liberalization.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8de7dda4-2608-4028-a9c4-b768af51be9d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:22.390952+00:00"
+    },
+    {
+      "id": "5eed56cc-833b-4f8b-9998-b7efa312d9d8",
+      "text": "The necessary public health controls, such as localized lockdowns, masking mandates, and domestic testing campaigns, were inherently implemented at the national and regional level, demonstrating that effective crisis resolution is not solely dependent on globalized systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7f0ecfa2-0380-4f65-824e-2d9f65c35557",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:23.322862+00:00"
+    },
+    {
+      "id": "f78a0c70-a868-4400-a47a-dee0e4335460",
+      "text": "Globalization's integrated supply chains and scientific collaboration dramatically accelerated the solution via the rapid development and manufacturing scale-up of vaccines (e.g., Pfizer/BioNTech), providing a crucial counterbalancing benefit to the initial viral spread.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7f0ecfa2-0380-4f65-824e-2d9f65c35557",
+      "children_count": 0,
+      "references": [
+        "Pfizer/BioNTech collaboration",
+        "Oxford-AstraZeneca partnership"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:23.322890+00:00"
+    },
+    {
+      "id": "b701a6bf-b859-4d4f-8ccd-6b7487dc969d",
+      "text": "The efficacy of the WHO and UN today depends on global economic and travel integration; for instance, the WHO's ability to mobilize large-scale pandemic responses requires real-time coordination with integrated global supply chains and massive financial transfers, not merely foundational diplomatic agreements.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "db043744-7a51-4bef-a756-be882436b6c0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:24.025202+00:00"
+    },
+    {
+      "id": "303ae250-6727-4a4b-9628-859edf477520",
+      "text": "The Geneva Conventions primarily regulate state behavior in wartime, requiring minimal ongoing operational infrastructure, whereas the contemporary UN system addresses complex global governance issues like climate change and economic development, which demand deep, integrated global financial and technological frameworks.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "db043744-7a51-4bef-a756-be882436b6c0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:24.025256+00:00"
+    },
+    {
+      "id": "2df53d74-d36b-440a-a926-f694ccc2e1b0",
+      "text": "Efficiency derived from global supply chains generates higher-wage jobs in advanced sectors like technology and specialized services in the US and Germany. This labor reallocation provides new income streams that counteract the income depression observed in basic manufacturing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b59b3a7b-9e1d-4016-9978-86abcee97d7b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:25.848530+00:00"
+    },
+    {
+      "id": "dfa6b802-ed59-42dc-a6c3-8b4faa9edc31",
+      "text": "The real prices of essential consumer goods like clothing and electronics have fallen dramatically due to global supply chains, providing a massive purchasing power increase for low-income households. For the lowest income quintiles, these deep price reductions often represent a larger proportional gain in real income than the wage stagnation impacts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b59b3a7b-9e1d-4016-9978-86abcee97d7b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:25.848558+00:00"
+    },
+    {
+      "id": "701bb07a-a1c2-4f32-b23f-59e290b53c10",
+      "text": "Lower retail prices benefit over 330 million US consumers, with the aggregated national consumer surplus quantitatively dwarfing the localized income loss experienced in specific regions like the US Rust Belt.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8eadd782-a61d-49bd-bf9d-2384d724539f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:27.347630+00:00"
+    },
+    {
+      "id": "252c6974-d478-4481-a2da-e5493a2b5e45",
+      "text": "Low-income and middle-class households derive a proportionally greater benefit from low retail prices on necessities, as these price reductions constitute a larger percentage of their total disposable income than they do for high-wage earners.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8eadd782-a61d-49bd-bf9d-2384d724539f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:27.347656+00:00"
+    },
+    {
+      "id": "18069b51-ff7a-4271-ba03-ee5ab6144d64",
+      "text": "The shortages primarily stemmed from unpredictable spikes in global demand and inflexible Just-In-Time (JIT) inventory practices, not economic specialization itself. Specialization allows for economies of scale that efficiently meet consistent demand for complex goods like semiconductors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "45e2b2a4-986f-4930-bc0b-4953d968869a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.526356+00:00"
+    },
+    {
+      "id": "ff3fecb9-2d94-4875-b524-59b68aa3aad4",
+      "text": "Focusing only on crisis costs ignores the massive efficiencies specialization provides that consistently lower transaction costs and prices for consumers. The global availability of inexpensive pharmaceuticals and advanced electronics demonstrates continuous, successful resource allocation under this system.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "45e2b2a4-986f-4930-bc0b-4953d968869a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.526424+00:00"
+    },
+    {
+      "id": "11baa573-1be6-416f-8f6a-0928a182ad72",
+      "text": "Globalization has fueled a dramatic concentration of wealth, evidenced by rising Gini coefficients within major economies like the US, China, and India. This concentration benefits transnational elites and financial centers, exacerbating intra-national inequality even as global poverty decreases.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "World Bank data"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.526629+00:00"
+    },
+    {
+      "id": "764e3b78-8ba7-45b5-9a2f-64826e0e2542",
+      "text": "Highly integrated global financial markets create systemic risk, ensuring that localized failures rapidly cascade worldwide. The 1997 Asian Financial Crisis and the 2008 US subprime mortgage crisis demonstrated how financial interconnectedness instantly transforms national crises into global economic disasters.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "1997 Asian Financial Crisis",
+        "2008 Global Financial Crisis"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.527724+00:00"
+    },
+    {
+      "id": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "text": "Global supply chains encourage a \"race to the bottom\" on environmental regulation, as corporations relocate production to countries with weaker enforcement. This structure drastically increases total carbon emissions due to the massive volume of international shipping required to move goods.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.528388+00:00"
+    },
+    {
+      "id": "639f9b10-f780-4478-ae63-c11e12eb218a",
+      "text": "Globalization erodes national sovereignty by shifting regulatory and economic control from elected governments to unelected bodies like the World Trade Organization. This transfer of power diminishes democratic accountability, as citizens lose leverage over decisions made by opaque international institutions.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "World Trade Organization (WTO)",
+        "International Monetary Fund (IMF)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.528876+00:00"
+    },
+    {
+      "id": "a7c6eb3f-b26f-4925-8511-d7955e09db02",
+      "text": "Capital mobility enables the mass relocation of manufacturing jobs from developed economies, leading to wage stagnation and political polarization in industrial regions like the US Midwest. This reliance on outsourcing often requires severe labor exploitation and substandard working conditions in developing nations to maintain cost competitiveness.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.529313+00:00"
+    },
+    {
+      "id": "65d51595-3992-4341-bb86-18462b0b4064",
+      "text": "Increased international travel and densely connected urban hubs accelerate the speed and scale of infectious disease transmission. The rapid, worldwide spread of both SARS and COVID-19 demonstrates how globalization provides ideal vectors for pathogens to become global pandemics.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "SARS epidemic (2002-2004)",
+        "COVID-19 pandemic"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:34.530076+00:00"
+    },
+    {
+      "id": "22e2cb6f-ac5f-4c71-af2a-381e33d3c995",
+      "text": "The same global connectivity that facilitates disease spread also enables rapid international public health responses, including sharing genetic sequences of pathogens like SARS-CoV-2 and coordinating the unprecedented development and distribution of vaccines within one year.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "65d51595-3992-4341-bb86-18462b0b4064",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:43.715711+00:00"
+    },
+    {
+      "id": "3051f3ba-d420-4f3c-9a3a-74de62d3a2a5",
+      "text": "High population density and urbanization are the fundamental preconditions for pandemics, driving massive disease scale even without modern international travel, as demonstrated by the 1918 Spanish Flu or the historical spread of the Black Death.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "65d51595-3992-4341-bb86-18462b0b4064",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:43.716147+00:00"
+    },
+    {
+      "id": "f861d753-2f20-41fd-a9b0-8d6d3bbab436",
+      "text": "Financial integration provides channels for global risk diversification and rapid capital injection, which can mitigate localized economic shocks that might otherwise lead to deeper national depressions, as seen with international intervention during the 2011 Eurozone debt crisis.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "764e3b78-8ba7-45b5-9a2f-64826e0e2542",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:45.822825+00:00"
+    },
+    {
+      "id": "1a0bf74a-b8a6-48ae-a29d-46ee13903838",
+      "text": "The catastrophic crises cited were rooted in massive domestic regulatory failures and moral hazard (e.g., lax US subprime lending standards), making integration the transmission vector but not the primary cause of the systemic risk.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "764e3b78-8ba7-45b5-9a2f-64826e0e2542",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:45.823463+00:00"
+    },
+    {
+      "id": "7e01889d-3484-410d-aa09-3c3ccfa058e5",
+      "text": "Political polarization in the US Midwest correlates strongly with cultural shifts and media landscape fragmentation, including the rise of partisan news sources, independent of manufacturing job losses.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a7c6eb3f-b26f-4925-8511-d7955e09db02",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:48.154239+00:00"
+    },
+    {
+      "id": "75f7a5e3-f231-4e18-b821-f2f6b7fb0321",
+      "text": "Cost competitiveness in global supply chains is frequently achieved through massive economies of scale, technological efficiency, and favorable exchange rates, without requiring severe labor exploitation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a7c6eb3f-b26f-4925-8511-d7955e09db02",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:48.154682+00:00"
+    },
+    {
+      "id": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "text": "Membership in international organizations is a sovereign, voluntary choice made by elected governments to secure tangible national benefits, such as guaranteed market access through the WTO's dispute settlement system.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "639f9b10-f780-4478-ae63-c11e12eb218a",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:48.228558+00:00"
+    },
+    {
+      "id": "0cdbf648-523d-400b-b846-97cc775218a3",
+      "text": "Purely national regulation is functionally ineffective against highly mobile global capital and multinational corporations (MNCs), meaning participation in international bodies is necessary to regain effective regulatory capacity over transboundary issues.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "639f9b10-f780-4478-ae63-c11e12eb218a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:48.229239+00:00"
+    },
+    {
+      "id": "33afb627-a583-4a32-af3e-b3795eb0ef55",
+      "text": "Technological acceleration, particularly skill-biased automation and the rise of winner-take-all digital platforms, accounts for more wealth concentration than increased trade. For example, US inequality spiked significantly in the 1980s, preceding the deepest recent wave of economic globalization, driven by early computerization.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "11baa573-1be6-416f-8f6a-0928a182ad72",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:48.324885+00:00"
+    },
+    {
+      "id": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "text": "Domestic policy is the primary determinant of internal inequality, regardless of globalization levels. Highly globalized nations like Norway and Denmark maintain exceptionally low Gini coefficients due to robust progressive taxation and comprehensive social welfare systems that effectively redistribute wealth.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "11baa573-1be6-416f-8f6a-0928a182ad72",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:48.325314+00:00"
+    },
+    {
+      "id": "f7dc8bfb-8056-4645-86d2-9ac94f57092a",
+      "text": "Population density is merely an amplifier; the fundamental precondition for a pandemic is the emergence of a novel pathogen with high transmissibility and immune escape, which can originate in non-urban, low-density settings.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3051f3ba-d420-4f3c-9a3a-74de62d3a2a5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:54.393644+00:00"
+    },
+    {
+      "id": "0c80a592-81bd-46bd-900c-4617b3ebb535",
+      "text": "The historical examples cited required extensive pre-modern long-distance connectivity, like the Eurasian Silk Road trade routes for the Black Death and large-scale military movements for the 1918 Flu, to jump between dense population centers.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3051f3ba-d420-4f3c-9a3a-74de62d3a2a5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:54.393692+00:00"
+    },
+    {
+      "id": "6c00a0fb-7fd7-4220-abf8-9682cc0aa300",
+      "text": "Financial integration creates systemic risk and contagion, turning localized failures, like the US subprime crisis, into global economic meltdowns (2008 GFC), fundamentally undermining claims of risk diversification.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f861d753-2f20-41fd-a9b0-8d6d3bbab436",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:56.279184+00:00"
+    },
+    {
+      "id": "36044c98-dcc7-4c93-8a5d-e32938b1e9ce",
+      "text": "The 2011 Eurozone crisis cannot be cited as mitigating success, as the integration led to structural imbalances that created the crisis, requiring slow, severe austerity measures that resulted in prolonged national recessions, particularly in Greece and Portugal.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f861d753-2f20-41fd-a9b0-8d6d3bbab436",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:56.279213+00:00"
+    },
+    {
+      "id": "08723e51-c4f8-4bee-ab6a-474c323f1a6e",
+      "text": "International shipping currently accounts for less than 3% of global CO2 emissions, meaning even a major relative increase in shipping volume generally constitutes only a marginal addition to total global emissions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:58.243571+00:00"
+    },
+    {
+      "id": "c8aa2913-f7e5-46d7-8fed-4c6d66e46756",
+      "text": "Weaker environmental regulations often focus on costly local cleanup of water pollution and toxic waste, meaning corporate relocation shifts localized environmental burdens rather than guaranteeing a global increase in CO2 leakage.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:58.244271+00:00"
+    },
+    {
+      "id": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "text": "Producing goods in locations with specialized resources and labor typically lowers the embodied energy cost per unit, which often offsets the relatively minor energy expenditure involved in modern container shipping.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:40:58.244702+00:00"
+    },
+    {
+      "id": "0ae67757-6ca0-43fd-a0cc-ccb6a623721e",
+      "text": "In low-margin sectors like fast-fashion garment manufacturing and electronics assembly, technological efficiency and scale are industry standards; persistent suppression of wages, often below subsistence levels in places like Bangladesh and Southeast Asia, provides the critical marginal cost advantage for global price leadership.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75f7a5e3-f231-4e18-b821-f2f6b7fb0321",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:00.820848+00:00"
+    },
+    {
+      "id": "94b77337-ccde-4684-8e7a-3fa5321dac53",
+      "text": "Massive economies of scale and favorable exchange rates frequently attract large production facilities to regions where lax labor law enforcement permits systematically low wages, long hours, and poor safety standards, indicating exploitation complements scale rather than being eliminated by it.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75f7a5e3-f231-4e18-b821-f2f6b7fb0321",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:00.820874+00:00"
+    },
+    {
+      "id": "eeca3156-98aa-474c-9242-1ff412511017",
+      "text": "The European Union's General Data Protection Regulation (GDPR) successfully imposes regulatory standards on any multinational corporation handling EU citizen data worldwide through extraterritorial application, achieving effective control without relying on global international bodies.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0cdbf648-523d-400b-b846-97cc775218a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:03.398772+00:00"
+    },
+    {
+      "id": "6ec7535f-bc77-41b1-9959-dfe67652a0aa",
+      "text": "The OECD/G20 spearheaded the initiative for a 15% global minimum corporate tax, imposing a standardized fiscal floor on MNCs through a targeted plurilateral agreement that avoids the slow consensus of universal organizations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0cdbf648-523d-400b-b846-97cc775218a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:03.398802+00:00"
+    },
+    {
+      "id": "77e8c971-6f52-4c9e-9daf-79ebf6785d11",
+      "text": "The US inequality spike in the 1980s saw the federal top marginal tax rate drop from 70% to under 30%, while the rate of private-sector unionization declined, suggesting policy decisions significantly drove wealth concentration alongside automation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "33afb627-a583-4a32-af3e-b3795eb0ef55",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:04.488535+00:00"
+    },
+    {
+      "id": "2940e1b3-be12-4b1f-b2a4-eab23846acb2",
+      "text": "Trade liberalization, particularly China's entrance into the WTO in 2001, caused a massive off-shoring of manufacturing jobs, significantly declining developed-nation labor wages while boosting corporate profits on a global scale.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "33afb627-a583-4a32-af3e-b3795eb0ef55",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:04.488579+00:00"
+    },
+    {
+      "id": "8437190e-adeb-4731-9d74-7adc2cc942f0",
+      "text": "Global financial integration, through complex instruments like Credit Default Swaps (CDS) and synthetic Mortgage-Backed Securities (MBS), ensured that the failure of US subprime created multi-billion-dollar losses for major European banks like RBS and UBS in 2008. This architecture created the systemic vulnerability rather than merely transmitting a localized risk.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1a0bf74a-b8a6-48ae-a29d-46ee13903838",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.064471+00:00"
+    },
+    {
+      "id": "469c216f-cd0b-49f1-b71c-522a6d0aeb13",
+      "text": "Regulatory failures were directly enabled by global integration, as multinational banks used offshore financial centers and cross-border transactions to circumvent domestic capital and reserve requirements. The inability of national regulators to police internationally concentrated risks, such as those held by AIG's London-based Financial Products division, fundamentally undermines domestic oversight.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1a0bf74a-b8a6-48ae-a29d-46ee13903838",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.064541+00:00"
+    },
+    {
+      "id": "6dae1d04-377d-4bf6-905b-f2405921b0ae",
+      "text": "Small, capital-dependent nations frequently must accept IMF and World Bank conditionality, including austerity and privatization, making participation in the global economic system a necessity, not a genuinely voluntary choice.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.139273+00:00"
+    },
+    {
+      "id": "c670e18d-ed9c-4880-8599-d782629542b6",
+      "text": "Numerous powerful members of the UN Security Council and the WTO, including China and Russia, are non-democratic regimes where national leaders are not selected by the free consent of the governed.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.139318+00:00"
+    },
+    {
+      "id": "6a3584de-9577-4860-9dc5-722739bac421",
+      "text": "Membership in organizations like the Council of Europe reinforces adherence to shared human rights norms and judicial alignment, often driven by ideological goals and soft power projection rather than purely tangible economic gain.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.139341+00:00"
+    },
+    {
+      "id": "0247d187-45ab-439c-beb3-2e881876c8ab",
+      "text": "Despite comprehensive domestic policies like the earned income tax credit and extensive unemployment benefits, highly-globalized economies like the US and UK exhibit Gini coefficients close to 0.40, far higher than the 0.25 level of the Nordic nations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.818329+00:00"
+    },
+    {
+      "id": "5e6dd2f1-05da-4a30-956e-2806f40c0617",
+      "text": "Increased trade and capital mobility linked to globalization drive up the market income Gini coefficient in OECD countries, forcing states like Denmark to redistribute nearly 50% of the initial inequality via taxes and transfers to achieve low final Gini scores.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.818360+00:00"
+    },
+    {
+      "id": "bffb46af-2dc0-4752-ac5d-f116e61e2872",
+      "text": "Norway's massive sovereign wealth fund, derived from North Sea oil exports, provides a unique structural basis for funding expansive social programs unavailable to most other globalized, non-resource-rich economies, limiting the model's universality.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:05.818374+00:00"
+    },
+    {
+      "id": "55787c3a-690a-4ec1-a33c-8cc8ef37607e",
+      "text": "Economic insecurity resulting from manufacturing job losses in the Midwest, such as the automotive industry decline in Detroit and Ohio, significantly increases susceptibility to populist and partisan media narratives promising renewed prosperity. This mechanism shows the economic decline is a primary driver, not an independent factor, of the media landscape fragmentation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7e01889d-3484-410d-aa09-3c3ccfa058e5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:08.555803+00:00"
+    },
+    {
+      "id": "b296af7e-604b-438b-bac2-36d1b43293d3",
+      "text": "Political divergence in states like Wisconsin and Michigan correlates strongly with the growing spatial segregation of the population based on educational attainment, which provides a concrete metric explaining the polarization better than vague \"cultural shifts.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7e01889d-3484-410d-aa09-3c3ccfa058e5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:08.555850+00:00"
+    },
+    {
+      "id": "77f4d4ea-2785-4ff8-b764-e082369e5017",
+      "text": "Doubling the current 3% share would add an absolute amount of CO2 (over 1 billion tons annually) that is larger than the total national emissions of Germany or the UK, making it immediately non-marginal for climate goals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "08723e51-c4f8-4bee-ab6a-474c323f1a6e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:11.369540+00:00"
+    },
+    {
+      "id": "a3ee7464-a186-46b6-bbff-98afc47e3b14",
+      "text": "As key sectors like power generation and auto transport are mandated to reduce emissions, any increase in shipping's 3% share ensures it consumes a disproportionately large percentage of the limited remaining global carbon budget necessary to meet the Paris Agreement goals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "08723e51-c4f8-4bee-ab6a-474c323f1a6e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:11.369568+00:00"
+    },
+    {
+      "id": "aef0db79-fee4-485d-8640-bd297c60fd46",
+      "text": "A single round trip from Asia to Europe for an Ultra Large Container Vessel releases millions of kilograms of CO2, demonstrating that accumulated energy costs for maximum-distance shipping are substantial, not relatively minor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:18.388546+00:00"
+    },
+    {
+      "id": "a47046c0-7f0f-42c8-9831-828cb0ef0745",
+      "text": "Calculating the full embodied energy requires factoring in substantial auxiliary logistics energy, including port operations, extensive cold chains for perishables, and inland trucking, which significantly reduces any production-side energy savings.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:18.388603+00:00"
+    },
+    {
+      "id": "f3d80574-e157-4e53-8b11-a29d9885ba7c",
+      "text": "For energy-intensive goods relying on exceptionally dirty local power sources, the embodied energy is lowered; however, for products like basic textiles and simple assembly, the marginal production savings are too small to offset long-distance trans-oceanic shipping energy.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:18.388625+00:00"
+    },
+    {
+      "id": "50b0197e-c555-45b1-bae7-52c2d6ed0972",
+      "text": "Carbon-intensive industries like cement and steel manufacturing relocate specifically to jurisdictions with fewer controls on both local pollutants and energy use, ensuring that relaxed regulations lead to both local burden shifting and global CO2 leakage.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8aa2913-f7e5-46d7-8fed-4c6d66e46756",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:19.769855+00:00"
+    },
+    {
+      "id": "f1784b6d-abeb-4194-b485-dd16d4ca9645",
+      "text": "The relocation of polluting manufacturing from the EU and US to countries like China and Vietnam resulted in measurable increases in global CO2 emissions, demonstrating that carbon leakage is a high-probability consequence, not a merely theoretical risk.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8aa2913-f7e5-46d7-8fed-4c6d66e46756",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:41:19.769885+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:39:58.797908+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:39:58.797908+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "79abcf86-b9b2-4c9d-a8ce-30d7191657fd",
+      "target": "b536d78e-c405-4d29-b16d-cbb6b247c350",
+      "type": "objection"
+    },
+    {
+      "source": "79abcf86-b9b2-4c9d-a8ce-30d7191657fd",
+      "target": "fee60f31-b7d2-4ecf-afa5-0eb4a60d9539",
+      "type": "objection"
+    },
+    {
+      "source": "fd833544-3a78-4f59-93f1-5eb2c7ab47cf",
+      "target": "c3044cd0-d5c5-45e1-acb8-8dd8301ab73e",
+      "type": "objection"
+    },
+    {
+      "source": "fd833544-3a78-4f59-93f1-5eb2c7ab47cf",
+      "target": "3c9a34a5-407b-4eb6-aca4-d10cb33fb26d",
+      "type": "objection"
+    },
+    {
+      "source": "ff916515-6a96-4fc0-a40c-2ab069b6d744",
+      "target": "b59b3a7b-9e1d-4016-9978-86abcee97d7b",
+      "type": "objection"
+    },
+    {
+      "source": "ff916515-6a96-4fc0-a40c-2ab069b6d744",
+      "target": "8eadd782-a61d-49bd-bf9d-2384d724539f",
+      "type": "objection"
+    },
+    {
+      "source": "9e18df52-d53c-4e67-afaf-7ecdec68f70a",
+      "target": "db043744-7a51-4bef-a756-be882436b6c0",
+      "type": "objection"
+    },
+    {
+      "source": "9e18df52-d53c-4e67-afaf-7ecdec68f70a",
+      "target": "7f0ecfa2-0380-4f65-824e-2d9f65c35557",
+      "type": "objection"
+    },
+    {
+      "source": "e69140e2-319f-426e-8e75-68e62b7863d0",
+      "target": "f8caddb4-1cb2-40a5-b49d-4b5d657a279b",
+      "type": "objection"
+    },
+    {
+      "source": "e69140e2-319f-426e-8e75-68e62b7863d0",
+      "target": "3f9b3858-da00-40f5-9390-2a90be09ed4c",
+      "type": "objection"
+    },
+    {
+      "source": "c3044cd0-d5c5-45e1-acb8-8dd8301ab73e",
+      "target": "d29fc8ca-c7b2-41aa-948c-544be91264cb",
+      "type": "response"
+    },
+    {
+      "source": "c3044cd0-d5c5-45e1-acb8-8dd8301ab73e",
+      "target": "6abac92b-6e81-4451-a324-2dab36b1b714",
+      "type": "response"
+    },
+    {
+      "source": "8de7dda4-2608-4028-a9c4-b768af51be9d",
+      "target": "45e2b2a4-986f-4930-bc0b-4953d968869a",
+      "type": "objection"
+    },
+    {
+      "source": "8de7dda4-2608-4028-a9c4-b768af51be9d",
+      "target": "225f83ff-2cf5-4c67-904f-aa90b99e14ec",
+      "type": "objection"
+    },
+    {
+      "source": "7f0ecfa2-0380-4f65-824e-2d9f65c35557",
+      "target": "5eed56cc-833b-4f8b-9998-b7efa312d9d8",
+      "type": "response"
+    },
+    {
+      "source": "7f0ecfa2-0380-4f65-824e-2d9f65c35557",
+      "target": "f78a0c70-a868-4400-a47a-dee0e4335460",
+      "type": "response"
+    },
+    {
+      "source": "db043744-7a51-4bef-a756-be882436b6c0",
+      "target": "b701a6bf-b859-4d4f-8ccd-6b7487dc969d",
+      "type": "response"
+    },
+    {
+      "source": "db043744-7a51-4bef-a756-be882436b6c0",
+      "target": "303ae250-6727-4a4b-9628-859edf477520",
+      "type": "response"
+    },
+    {
+      "source": "b59b3a7b-9e1d-4016-9978-86abcee97d7b",
+      "target": "2df53d74-d36b-440a-a926-f694ccc2e1b0",
+      "type": "response"
+    },
+    {
+      "source": "b59b3a7b-9e1d-4016-9978-86abcee97d7b",
+      "target": "dfa6b802-ed59-42dc-a6c3-8b4faa9edc31",
+      "type": "response"
+    },
+    {
+      "source": "8eadd782-a61d-49bd-bf9d-2384d724539f",
+      "target": "701bb07a-a1c2-4f32-b23f-59e290b53c10",
+      "type": "response"
+    },
+    {
+      "source": "8eadd782-a61d-49bd-bf9d-2384d724539f",
+      "target": "252c6974-d478-4481-a2da-e5493a2b5e45",
+      "type": "response"
+    },
+    {
+      "source": "45e2b2a4-986f-4930-bc0b-4953d968869a",
+      "target": "18069b51-ff7a-4271-ba03-ee5ab6144d64",
+      "type": "response"
+    },
+    {
+      "source": "45e2b2a4-986f-4930-bc0b-4953d968869a",
+      "target": "ff3fecb9-2d94-4875-b524-59b68aa3aad4",
+      "type": "response"
+    },
+    {
+      "source": "65d51595-3992-4341-bb86-18462b0b4064",
+      "target": "22e2cb6f-ac5f-4c71-af2a-381e33d3c995",
+      "type": "objection"
+    },
+    {
+      "source": "65d51595-3992-4341-bb86-18462b0b4064",
+      "target": "3051f3ba-d420-4f3c-9a3a-74de62d3a2a5",
+      "type": "objection"
+    },
+    {
+      "source": "764e3b78-8ba7-45b5-9a2f-64826e0e2542",
+      "target": "f861d753-2f20-41fd-a9b0-8d6d3bbab436",
+      "type": "objection"
+    },
+    {
+      "source": "764e3b78-8ba7-45b5-9a2f-64826e0e2542",
+      "target": "1a0bf74a-b8a6-48ae-a29d-46ee13903838",
+      "type": "objection"
+    },
+    {
+      "source": "a7c6eb3f-b26f-4925-8511-d7955e09db02",
+      "target": "7e01889d-3484-410d-aa09-3c3ccfa058e5",
+      "type": "objection"
+    },
+    {
+      "source": "a7c6eb3f-b26f-4925-8511-d7955e09db02",
+      "target": "75f7a5e3-f231-4e18-b821-f2f6b7fb0321",
+      "type": "objection"
+    },
+    {
+      "source": "639f9b10-f780-4478-ae63-c11e12eb218a",
+      "target": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "type": "objection"
+    },
+    {
+      "source": "639f9b10-f780-4478-ae63-c11e12eb218a",
+      "target": "0cdbf648-523d-400b-b846-97cc775218a3",
+      "type": "objection"
+    },
+    {
+      "source": "11baa573-1be6-416f-8f6a-0928a182ad72",
+      "target": "33afb627-a583-4a32-af3e-b3795eb0ef55",
+      "type": "objection"
+    },
+    {
+      "source": "11baa573-1be6-416f-8f6a-0928a182ad72",
+      "target": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "type": "objection"
+    },
+    {
+      "source": "3051f3ba-d420-4f3c-9a3a-74de62d3a2a5",
+      "target": "f7dc8bfb-8056-4645-86d2-9ac94f57092a",
+      "type": "response"
+    },
+    {
+      "source": "3051f3ba-d420-4f3c-9a3a-74de62d3a2a5",
+      "target": "0c80a592-81bd-46bd-900c-4617b3ebb535",
+      "type": "response"
+    },
+    {
+      "source": "f861d753-2f20-41fd-a9b0-8d6d3bbab436",
+      "target": "6c00a0fb-7fd7-4220-abf8-9682cc0aa300",
+      "type": "response"
+    },
+    {
+      "source": "f861d753-2f20-41fd-a9b0-8d6d3bbab436",
+      "target": "36044c98-dcc7-4c93-8a5d-e32938b1e9ce",
+      "type": "response"
+    },
+    {
+      "source": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "target": "08723e51-c4f8-4bee-ab6a-474c323f1a6e",
+      "type": "objection"
+    },
+    {
+      "source": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "target": "c8aa2913-f7e5-46d7-8fed-4c6d66e46756",
+      "type": "objection"
+    },
+    {
+      "source": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "target": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "type": "objection"
+    },
+    {
+      "source": "75f7a5e3-f231-4e18-b821-f2f6b7fb0321",
+      "target": "0ae67757-6ca0-43fd-a0cc-ccb6a623721e",
+      "type": "response"
+    },
+    {
+      "source": "75f7a5e3-f231-4e18-b821-f2f6b7fb0321",
+      "target": "94b77337-ccde-4684-8e7a-3fa5321dac53",
+      "type": "response"
+    },
+    {
+      "source": "0cdbf648-523d-400b-b846-97cc775218a3",
+      "target": "eeca3156-98aa-474c-9242-1ff412511017",
+      "type": "response"
+    },
+    {
+      "source": "0cdbf648-523d-400b-b846-97cc775218a3",
+      "target": "6ec7535f-bc77-41b1-9959-dfe67652a0aa",
+      "type": "response"
+    },
+    {
+      "source": "33afb627-a583-4a32-af3e-b3795eb0ef55",
+      "target": "77e8c971-6f52-4c9e-9daf-79ebf6785d11",
+      "type": "response"
+    },
+    {
+      "source": "33afb627-a583-4a32-af3e-b3795eb0ef55",
+      "target": "2940e1b3-be12-4b1f-b2a4-eab23846acb2",
+      "type": "response"
+    },
+    {
+      "source": "1a0bf74a-b8a6-48ae-a29d-46ee13903838",
+      "target": "8437190e-adeb-4731-9d74-7adc2cc942f0",
+      "type": "response"
+    },
+    {
+      "source": "1a0bf74a-b8a6-48ae-a29d-46ee13903838",
+      "target": "469c216f-cd0b-49f1-b71c-522a6d0aeb13",
+      "type": "response"
+    },
+    {
+      "source": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "target": "6dae1d04-377d-4bf6-905b-f2405921b0ae",
+      "type": "response"
+    },
+    {
+      "source": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "target": "c670e18d-ed9c-4880-8599-d782629542b6",
+      "type": "response"
+    },
+    {
+      "source": "bd51423c-8002-46df-93aa-d0237dcd97ea",
+      "target": "6a3584de-9577-4860-9dc5-722739bac421",
+      "type": "response"
+    },
+    {
+      "source": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "target": "0247d187-45ab-439c-beb3-2e881876c8ab",
+      "type": "response"
+    },
+    {
+      "source": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "target": "5e6dd2f1-05da-4a30-956e-2806f40c0617",
+      "type": "response"
+    },
+    {
+      "source": "e9d60adf-c4ed-4de5-bac4-21ff9ba2de88",
+      "target": "bffb46af-2dc0-4752-ac5d-f116e61e2872",
+      "type": "response"
+    },
+    {
+      "source": "7e01889d-3484-410d-aa09-3c3ccfa058e5",
+      "target": "55787c3a-690a-4ec1-a33c-8cc8ef37607e",
+      "type": "response"
+    },
+    {
+      "source": "7e01889d-3484-410d-aa09-3c3ccfa058e5",
+      "target": "b296af7e-604b-438b-bac2-36d1b43293d3",
+      "type": "response"
+    },
+    {
+      "source": "08723e51-c4f8-4bee-ab6a-474c323f1a6e",
+      "target": "77f4d4ea-2785-4ff8-b764-e082369e5017",
+      "type": "response"
+    },
+    {
+      "source": "08723e51-c4f8-4bee-ab6a-474c323f1a6e",
+      "target": "a3ee7464-a186-46b6-bbff-98afc47e3b14",
+      "type": "response"
+    },
+    {
+      "source": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "target": "aef0db79-fee4-485d-8640-bd297c60fd46",
+      "type": "response"
+    },
+    {
+      "source": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "target": "a47046c0-7f0f-42c8-9831-828cb0ef0745",
+      "type": "response"
+    },
+    {
+      "source": "76ef4439-6a56-4e17-b770-77ca29305b61",
+      "target": "f3d80574-e157-4e53-8b11-a29d9885ba7c",
+      "type": "response"
+    },
+    {
+      "source": "c8aa2913-f7e5-46d7-8fed-4c6d66e46756",
+      "target": "50b0197e-c555-45b1-bae7-52c2d6ed0972",
+      "type": "response"
+    },
+    {
+      "source": "c8aa2913-f7e5-46d7-8fed-4c6d66e46756",
+      "target": "f1784b6d-abeb-4194-b485-dd16d4ca9645",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "fd833544-3a78-4f59-93f1-5eb2c7ab47cf",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "8de7dda4-2608-4028-a9c4-b768af51be9d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "79abcf86-b9b2-4c9d-a8ce-30d7191657fd",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "e69140e2-319f-426e-8e75-68e62b7863d0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ff916515-6a96-4fc0-a40c-2ab069b6d744",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9e18df52-d53c-4e67-afaf-7ecdec68f70a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "11baa573-1be6-416f-8f6a-0928a182ad72",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "764e3b78-8ba7-45b5-9a2f-64826e0e2542",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "11f6ce1c-57e8-4563-9212-dff26a8b2016",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "639f9b10-f780-4478-ae63-c11e12eb218a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a7c6eb3f-b26f-4925-8511-d7955e09db02",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "65d51595-3992-4341-bb86-18462b0b4064",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

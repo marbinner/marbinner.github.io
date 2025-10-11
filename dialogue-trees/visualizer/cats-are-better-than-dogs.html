@@ -1,0 +1,2606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cats are better than dogs - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Cats are better than dogs</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            67 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/cats-are-better-than-dogs.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">67</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "2d85232b-45b7-42fe-bfc0-e21b8bb1216d",
+      "text": "Cats are ideally suited for dense urban and apartment living due to their small size and minimal activity requirements, a critical advantage in increasingly high-density metropolitan areas like Tokyo or London.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:12.509782+00:00"
+    },
+    {
+      "id": "ff6384a6-63ae-431f-ac92-e2083ecfd538",
+      "text": "The mandatory use of an indoor litter box eliminates the need for owners to schedule mandatory outdoor excursions for waste, providing unparalleled convenience and enhanced public hygiene regardless of weather or time.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:12.510698+00:00"
+    },
+    {
+      "id": "c512f2e5-268b-4917-9b1e-529c97b30187",
+      "text": "Cats are largely self-sufficient, requiring significantly less direct time investment and daily active management than dogs, allowing owners greater flexibility in their work schedules and travel constraints.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:12.511218+00:00"
+    },
+    {
+      "id": "a4ff9b36-5b9e-4889-b33b-684f5d730ecc",
+      "text": "Cats produce negligible noise pollution, lacking the disruptive barking tendency common in nearly all dog breeds, which promotes neighborhood tranquility in shared-wall or high-density housing.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:12.511601+00:00"
+    },
+    {
+      "id": "fab09837-d20b-4548-a7b6-ef4e5fc18409",
+      "text": "The average lifetime financial burden is substantially lower for cats due to reduced food consumption, fewer specialized services like dog walking, and generally lower veterinary care costs.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:12.512063+00:00"
+    },
+    {
+      "id": "45deb09a-9ca1-4f93-b286-944e3db254b8",
+      "text": "Cats possess a demonstrably smaller environmental and carbon footprint because their smaller size and reduced food needs require significantly fewer global resources than large, meat-dependent dog breeds.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:12.512339+00:00"
+    },
+    {
+      "id": "886238d0-954d-40e4-9ca2-ac4c1b6b648a",
+      "text": "Cats frequently yowl loudly and persistently during mating seasons or territorial disputes, generating sustained, high-decibel noise pollution that leads to common neighbor complaints in dense urban areas.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a4ff9b36-5b9e-4889-b33b-684f5d730ecc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:26.550540+00:00"
+    },
+    {
+      "id": "a9fc0d63-a4b3-459c-80ee-7c42dc29839d",
+      "text": "Noise pollution in shared-wall housing includes impact and vibration; cats running, jumping, and scratching walls create non-vocal disruptions similar to the thumping noises made by small dogs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a4ff9b36-5b9e-4889-b33b-684f5d730ecc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:26.551227+00:00"
+    },
+    {
+      "id": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "text": "Cats require continuous, recurring expenses for proprietary clumping litter, averaging over $300 annually per cat; this necessary cost has no direct equivalent in dog ownership expenses.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fab09837-d20b-4548-a7b6-ef4e5fc18409",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:27.326692+00:00"
+    },
+    {
+      "id": "79d632b2-ef6e-401d-b8c9-cb4ef6cbab4b",
+      "text": "Cats typically live 15 to 20 years, often exceeding the lifespan of large dog breeds, which significantly extends the period of required routine and specialized geriatric care. Managing prevalent feline chronic diseases like kidney failure requires continuous expensive prescriptions, blood panels, and fluid therapies costing thousands in the animal's final years.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fab09837-d20b-4548-a7b6-ef4e5fc18409",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:27.327341+00:00"
+    },
+    {
+      "id": "c651e14f-10cd-44fb-a2c6-2db59e2db274",
+      "text": "While cats do not require walks, many indoor cats require substantial, dedicated daily mental stimulation via complex play routines and puzzle feeders to prevent behavioral issues like obesity, aggression, or destructive scratching.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c512f2e5-268b-4917-9b1e-529c97b30187",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:28.051811+00:00"
+    },
+    {
+      "id": "a181e415-d97b-4fcf-9888-875ca8fd7d2c",
+      "text": "Cats are often stressed by travel or boarding, forcing owners to arrange specialized, in-home pet sitters for any absence lasting more than one day, eliminating the claimed flexibility advantage.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c512f2e5-268b-4917-9b1e-529c97b30187",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:28.052258+00:00"
+    },
+    {
+      "id": "efe3f9ed-7df7-43a4-8c5f-f8bc37574f77",
+      "text": "Unattended indoor litter boxes concentrate waste, increasing household exposure to high ammonia vapors and pathogens like *Toxoplasma gondii*, essentially relocating the hygiene concern from the public space to the private living space.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ff6384a6-63ae-431f-ac92-e2083ecfd538",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:31.805007+00:00"
+    },
+    {
+      "id": "cd3466ab-1940-443d-8d09-c59cb63a3dae",
+      "text": "Many cities strictly enforce mandatory cleanup ordinances, such as the widely legislated 'poop scooping' laws in US municipalities, which already ensure effective public containment of pet waste without requiring indoor boxes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ff6384a6-63ae-431f-ac92-e2083ecfd538",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:31.805426+00:00"
+    },
+    {
+      "id": "0f8ce9cd-ed66-481b-a178-21d28de18947",
+      "text": "The requirement for specialized clay cat litter generates a unique environmental cost involving large-scale mining, transportation, and waste disposal, substantially increasing the cat's overall resource footprint beyond food needs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "45deb09a-9ca1-4f93-b286-944e3db254b8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.622147+00:00"
+    },
+    {
+      "id": "1bb3839c-50e2-48f5-82dc-a336ab29781d",
+      "text": "Cats are obligate carnivores, requiring a diet composed almost entirely of high-density animal protein, which has a higher carbon intensity per calorie than the broader, often grain-inclusive diets consumed by many large, omnivorous dog breeds.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "45deb09a-9ca1-4f93-b286-944e3db254b8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.622576+00:00"
+    },
+    {
+      "id": "884b3912-2263-4910-8765-8c3dd4fc9503",
+      "text": "Most aging cats require only routine annual geriatric examinations and standard medications for less severe conditions (e.g., arthritis or hyperthyroidism medication), keeping expenses far below the continuous, specialized 'thousands' cited for critical conditions like late-stage kidney failure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "79d632b2-ef6e-401d-b8c9-cb4ef6cbab4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.638275+00:00"
+    },
+    {
+      "id": "40a0e824-a815-4faa-88ac-63cc8e81e8b1",
+      "text": "The cost burden cited is a function of longevity, not species; extremely long-lived small dog breeds, such as Yorkshire Terriers or Miniature Poodles, routinely live 15-18 years, incurring the same prolonged expenses for geriatric care.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "79d632b2-ef6e-401d-b8c9-cb4ef6cbab4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.638302+00:00"
+    },
+    {
+      "id": "fe25c9d8-87ad-4814-a002-e9ba3704bf7e",
+      "text": "Owners frequently utilize automated feeders, water fountains, and basic drop-in visits that require minimal coordination, reducing the care burden significantly below the cost and effort of specialized, in-home pet sitting.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a181e415-d97b-4fcf-9888-875ca8fd7d2c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.735369+00:00"
+    },
+    {
+      "id": "0374ec91-89c9-4a69-a438-ebd84d25f5eb",
+      "text": "Even when a sitter is hired, a cat requires inherently less intensive attention than a dog, which needs daily walks and multiple scheduled bathroom breaks, thus retaining a flexibility advantage for short trips.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a181e415-d97b-4fcf-9888-875ca8fd7d2c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.735412+00:00"
+    },
+    {
+      "id": "234aa259-44f9-4db9-b001-c684721b2485",
+      "text": "Feline environmental enrichment requires significant vertical space (cat trees, shelving) and horizontal territory for hunting simulation to prevent stress, a need often unmet in the extremely small, single-room apartments common in Tokyo.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2d85232b-45b7-42fe-bfc0-e21b8bb1216d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.742018+00:00"
+    },
+    {
+      "id": "e90897b0-374a-44a1-85ca-fda231ec65e6",
+      "text": "Nocturnal feline vocalizations and the odor from necessary litter box placement often cause significant noise and health violations in the densely packed, shared-air housing commonly found in London.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2d85232b-45b7-42fe-bfc0-e21b8bb1216d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:38.742718+00:00"
+    },
+    {
+      "id": "120f10a4-6dae-4ccf-ad48-e6cbdba71bd6",
+      "text": "Many cat owners successfully use far cheaper options like pine pellet litter or recycled newspaper pellets, which cost significantly less annually than premium proprietary clumping brands.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:41.275678+00:00"
+    },
+    {
+      "id": "334a8bd5-74c0-4147-99e1-19e9b3047857",
+      "text": "The reported national average litter cost of $300 is inconsistent because premium clumping brands often exceed $500 annually in major metropolitan areas, while generic clay litter costs under $100 in rural markets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:41.275727+00:00"
+    },
+    {
+      "id": "c9691808-b666-46bb-9da9-f105f1804fb1",
+      "text": "Dog ownership carries direct, recurring waste management costs for biodegradable waste bags and puppy pads, which for a medium-to-large breed can total over $100 annually in an urban setting.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:41.275750+00:00"
+    },
+    {
+      "id": "ceb46026-f9d3-4cfb-ac85-43b6ad861776",
+      "text": "The lighter mass of a typical house cat (8-10 lbs) imparts significantly less kinetic energy and structural vibration into the floor assembly than a typical small dog (15-25 lbs), meaning the resulting impact noise is less perceptible. Low-frequency impact noise requires sufficient mass to exceed the floor's deflection resistance, a threshold more routinely met by a dog.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9fc0d63-a4b3-459c-80ee-7c42dc29839d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:43.739987+00:00"
+    },
+    {
+      "id": "9590a838-cba0-4fdd-8545-032b43cd9469",
+      "text": "Noise generated by cat scratching is predominantly high-frequency airborne abrasive sound easily absorbed or reflected by standard wall materials like drywall. This contrasts with a dog's low-frequency, structure-borne thumps that bypass typical soundproofing by vibrating the entire floor assembly.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9fc0d63-a4b3-459c-80ee-7c42dc29839d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:43.740014+00:00"
+    },
+    {
+      "id": "eacdfba2-a9a3-4020-927b-a7472cb5dd8e",
+      "text": "Despite mandatory cleanup ordinances, persistent bacterial contamination from pet waste pollutes storm water runoff in many US cities, often leading to mandatory beach closures in areas like Southern California after rain events.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cd3466ab-1940-443d-8d09-c59cb63a3dae",
+      "children_count": 0,
+      "references": [
+        "US Environmental Protection Agency (EPA) reports on nonpoint source pollution"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:47.007166+00:00"
+    },
+    {
+      "id": "61a07eb4-e33f-4c5a-acac-b63ad3079e23",
+      "text": "Public cleanup laws do not regulate the millions of tons of pet waste generated and disposed of on private property each year, which significantly contributes to residential landfill volume and localized groundwater contamination.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cd3466ab-1940-443d-8d09-c59cb63a3dae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:47.007192+00:00"
+    },
+    {
+      "id": "32b0994e-6292-4e4d-9a65-e377e38f6b39",
+      "text": "Standard operating procedures, such as the daily scooping recommended by the American Veterinary Medical Association (AVMA), prevent ammonia from reaching hazardous concentrations. Toxoplasma gondii oocysts are not infectious for 24-48 hours after being shed, meaning daily waste removal eliminates the primary transmission window.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "efe3f9ed-7df7-43a4-8c5f-f8bc37574f77",
+      "children_count": 0,
+      "references": [
+        "American Veterinary Medical Association"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:48.385408+00:00"
+    },
+    {
+      "id": "5b690c41-222a-4cf8-956b-a2f16e09d067",
+      "text": "Allowing cats to roam and defecate outdoors disperses *Toxoplasma gondii* oocysts directly into soil and public water systems through surface runoff. For example, studies in California link high rates of T. gondii infection in sea otters to contaminated freshwater originating from outdoor cat feces.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "efe3f9ed-7df7-43a4-8c5f-f8bc37574f77",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:48.385435+00:00"
+    },
+    {
+      "id": "e646ac80-4e3f-442a-ae3c-7eec27014640",
+      "text": "Local councils in London, such as Southwark and Camden, rarely issue statutory noise or health abatement notices solely for routine domestic pet disturbances; instead, violations require proof of persistent, structural defects or extreme neglect to be considered significant.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e90897b0-374a-44a1-85ca-fda231ec65e6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.785031+00:00"
+    },
+    {
+      "id": "596088c2-b7cb-484e-bac1-0886f02cea46",
+      "text": "Most contemporary and typical Victorian dense housing in London relies on individual mechanical ventilation or passive vents, meaning litter box odors must penetrate sealed fire doors and plasterboard walls rather than traveling through a unified \u201cshared-air\u201d system.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e90897b0-374a-44a1-85ca-fda231ec65e6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.785057+00:00"
+    },
+    {
+      "id": "7e3e0823-8806-4cad-ba8f-be50983806bd",
+      "text": "Vertical housing designs common in high-density areas like Hong Kong and Singapore rely on ceiling-height cat trees and wall systems, successfully satisfying feline needs for vertical territory and hunting simulation regardless of minimal floor area.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "234aa259-44f9-4db9-b001-c684721b2485",
+      "children_count": 0,
+      "references": [
+        "Hong Kong Housing Authority data"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.835841+00:00"
+    },
+    {
+      "id": "5c633976-ddec-4859-9880-c1ef029aa8fd",
+      "text": "Japanese interior design frequently incorporates modular, high-density storage within 2.8 meter ceiling heights, offering suitable anchoring points for floor-to-ceiling cat trees and multi-level wall platforms even in micro-apartments.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "234aa259-44f9-4db9-b001-c684721b2485",
+      "children_count": 0,
+      "references": [
+        "Japanese architectural standards for I-kko-dane housing"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.835867+00:00"
+    },
+    {
+      "id": "0b08fa9d-8308-4e88-98ca-27fab79d9e38",
+      "text": "Dogs possess unique practical utility in roles such as military K-9 units, police detection, and search-and-rescue operations, crucial functions structurally unavailable to cats. This essential, life-saving specialization establishes dogs as superior working partners in critical safety and law enforcement contexts.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.835945+00:00"
+    },
+    {
+      "id": "6e4fef71-6303-4ad8-815b-3a6431e6735b",
+      "text": "Dogs provide superior social companionship and formalized emotional aid, serving as certified service animals (e.g., Guide Dogs) and therapy companions in institutional settings. Their high-pack drive facilitates the intentional human partnership required for these globally recognized forms of assistance.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.836336+00:00"
+    },
+    {
+      "id": "08673204-84b0-4838-884b-14173f50e0e6",
+      "text": "Dogs demonstrate empirically superior trainability, obedience, and responsiveness to complex command structures necessary for safe public behavior. This adaptability allows more seamless integration into diverse settings, such as following protocols on public transit or accompanying handlers as official workplace assistants.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.836633+00:00"
+    },
+    {
+      "id": "d2d7812c-f978-4127-b62e-977da3c2a1d4",
+      "text": "Canine containment via perimeter fencing and leashing effectively minimizes environmental predation risk, aligning with ecological preservation efforts. Free-roaming domestic cats, conversely, are major contributors to native wildlife population declines, demonstrated by consistent data across regions like Australia and the United States.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.836996+00:00"
+    },
+    {
+      "id": "d3f6eccd-31ad-49fd-9a80-83887a64b7fd",
+      "text": "The co-evolutionary partnership between humans and dogs spans tens of thousands of years, offering essential aid in hunting, tracking, and defense during the establishment of early human civilization. This deep, functional utility secured the dog's foundational role in human history, exemplified by their use in cooperative hunts across various indigenous cultures.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.837403+00:00"
+    },
+    {
+      "id": "2ac9f4c5-bde9-4d9d-9683-909a695c9761",
+      "text": "Dog waste management relies on temporary outdoor elimination, avoiding the sustained indoor odor and hygienic burden associated with continuous litter box maintenance. The necessity of perpetually managing indoor fecal matter, along with the potential zoonotic risk from pathogens like Toxoplasma gondii, makes the cat paradigm less desirable for home environment quality.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:38:55.837784+00:00"
+    },
+    {
+      "id": "b5cd6241-167f-4036-917f-575b523bc8d1",
+      "text": "Cats provide measurable psychological benefits, such as reduced stress hormones and decreased blood pressure, a companionship metric similar to dogs, and are the primary companion animal in many parts of Europe and Asia. Horses and dolphins are also successfully certified for physical and emotional assistance roles, like hippotherapy, demonstrating that formalized aid is not unique to dogs.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6e4fef71-6303-4ad8-815b-3a6431e6735b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:10.528236+00:00"
+    },
+    {
+      "id": "0cf83e1c-9748-4378-ac14-c4dc8208f278",
+      "text": "Animals that lack a high-pack drive, such as rabbits, domesticated birds, and certain livestock, maintain global prevalence as companion animals valued for their distinct forms of interaction and low-maintenance requirements. This shows that fulfilling, intentional human partnership is not contingent upon the hierarchical structure intrinsic to a pack drive.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6e4fef71-6303-4ad8-815b-3a6431e6735b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:10.528800+00:00"
+    },
+    {
+      "id": "086b1842-334a-4a48-91d9-4c106e02b28d",
+      "text": "In the Western United States and Appalachian regions, packs of feral or unsupervised canines are documented predators of native wildlife, including ground-nesting birds, deer, and endangered fox species. This heavy predation risk posed by uncontained dogs contradicts the implication that their environmental impact is minimized solely by common containment measures.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d2d7812c-f978-4127-b62e-977da3c2a1d4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:11.396983+00:00"
+    },
+    {
+      "id": "4758b800-5773-468a-bcb6-40db9d9bc755",
+      "text": "Ecological studies on threatened species demonstrate that dogs sometimes pose a greater specific predation and disturbance threat than domestic cats. For example, dogs are identified as the primary non-native predator of critically endangered Hawaiian monk seal pups across several islands.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d2d7812c-f978-4127-b62e-977da3c2a1d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:11.397664+00:00"
+    },
+    {
+      "id": "160cf6ed-fa7e-4044-bbd9-67f8ceb9d037",
+      "text": "The U.S. Americans with Disabilities Act (ADA) explicitly recognizes miniature horses for service work, citing their longer lifespan (up to 30 years) and greater weight-bearing stability, demonstrating comparable or superior utility for specific mobility assistance tasks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "08673204-84b0-4838-884b-14173f50e0e6",
+      "children_count": 0,
+      "references": [
+        "Americans with Disabilities Act (ADA) requirements for service animals"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:13.635455+00:00"
+    },
+    {
+      "id": "8efbae66-e77d-42b4-8d1d-c8f11d39c869",
+      "text": "The necessity of managing dog dander, shedding, and mandatory bio-breaks limits their \"seamless integration\" in sterile laboratory, food preparation, or museum environments, which often rely on other specialized working animals like rodent-patrol cats.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "08673204-84b0-4838-884b-14173f50e0e6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:13.635882+00:00"
+    },
+    {
+      "id": "09438168-4f78-429d-8fe3-4f5cabaeefa0",
+      "text": "Young dogs, elderly dogs, and sick dogs regularly eliminate indoors, requiring chemical management for stains and odors that directly mirrors the continuous indoor hygienic burden claimed to be unique to feline care.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2ac9f4c5-bde9-4d9d-9683-909a695c9761",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:14.128839+00:00"
+    },
+    {
+      "id": "e81010a6-a8af-4167-8574-bfbc29c0771e",
+      "text": "Dog feces carry significant zoonotic risks from parasites like Toxocara canis, which poses a serious public health hazard documented by the World Health Organization regarding soil contamination in public parks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2ac9f4c5-bde9-4d9d-9683-909a695c9761",
+      "children_count": 0,
+      "references": [
+        "World Health Organization"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:14.129367+00:00"
+    },
+    {
+      "id": "805ea732-dabf-451e-9f28-08c1624552a3",
+      "text": "Genetic studies indicate dog domestication likely began through commensalism, where wolves scavenged human waste near encampments, securing an early proximity based on simple food access rather than immediate cooperative tactical utility.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d3f6eccd-31ad-49fd-9a80-83887a64b7fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:14.947423+00:00"
+    },
+    {
+      "id": "b2d0a7ad-bc79-4970-a1a8-6732e2279783",
+      "text": "Many pre-Columbian Mesoamerican civilizations, such as the Aztecs, utilized dogs primarily as a protein source for human consumption or for ritual purposes, demonstrating a foundational role based on consumption rather than labor utility.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d3f6eccd-31ad-49fd-9a80-83887a64b7fd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:14.947841+00:00"
+    },
+    {
+      "id": "e81ada44-ac04-41de-9a43-1ee13b125a47",
+      "text": "Cats provide essential utility in bio-based pest control, protecting infrastructure like grain stores and government facilities, such as the U.K. Cabinet Office's use of Chief Mousers; this discrete role is structurally unavailable to dogs.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0b08fa9d-8308-4e88-98ca-27fab79d9e38",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:21.050793+00:00"
+    },
+    {
+      "id": "f7cbf459-b51c-44da-9c56-c99f1c1c3c1f",
+      "text": "Cats act as certified therapeutic partners, providing essential low-stress emotional support in settings like hospital oncology wards and nursing homes, a critical specialization excluded by focusing only on K-9 and SAR roles.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0b08fa9d-8308-4e88-98ca-27fab79d9e38",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:21.051247+00:00"
+    },
+    {
+      "id": "73fbd295-d480-499b-b37d-177f22e02124",
+      "text": "While domestic popularity is high, cats structurally lack the behavioral capacity and decades of established training protocols necessary for complex functional tasks like guiding the blind or retrieving medication, which invalidates the comparison based purely on an undefined 'companionship metric'.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b5cd6241-167f-4036-917f-575b523bc8d1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:22.462901+00:00"
+    },
+    {
+      "id": "18d8c792-2d8b-4feb-b531-3f3e97eaab86",
+      "text": "Specialized therapeutic animals such as horses (hippotherapy) and dolphins operate in highly controlled, localized clinical environments, fundamentally differing from the requirement that personal assistance animals maintain absolute obedience and public comportment across all uncontrolled public spaces.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b5cd6241-167f-4036-917f-575b523bc8d1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:22.462929+00:00"
+    },
+    {
+      "id": "6a5cc411-e9b0-469c-9aff-48493d93e448",
+      "text": "The argument's comparison is misleading; rodent-patrol cats also shed, produce significant dander, and are generally banned from highly sterile environments like food processing plants and research laboratories.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8efbae66-e77d-42b4-8d1d-c8f11d39c869",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:26.181701+00:00"
+    },
+    {
+      "id": "ddb4e1c5-0473-42ab-8913-413dacba9f0b",
+      "text": "Highly specialized working dogs are used in sensitive environments, such as conservation dogs detecting pests in museum archives and art collections, demonstrating a degree of seamless integration based on mission capability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8efbae66-e77d-42b4-8d1d-c8f11d39c869",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:26.181732+00:00"
+    },
+    {
+      "id": "8fc51ab0-db27-4d32-81c6-f6f49baae0cf",
+      "text": "The global prevalence of many companion animals like chickens, rabbits, and tropical fish is rooted in utilitarian purposes, such as food, fiber, or decorative display, rather than an intentional, fulfilling partnership.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0cf83e1c-9748-4378-ac14-c4dc8208f278",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:30.879486+00:00"
+    },
+    {
+      "id": "b2f5b8ed-0476-479e-8736-3b7057172114",
+      "text": "The pack drive in domesticated dogs enables complex co-working arrangements, such as in herding or as service animals for the blind, which require a level of intentional, task-specific partnership absent in species lacking that cooperative social structure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0cf83e1c-9748-4378-ac14-c4dc8208f278",
+      "children_count": 0,
+      "references": [
+        "Service dogs",
+        "Herding dogs"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:30.879530+00:00"
+    },
+    {
+      "id": "c4d96881-49b6-4ae4-8552-cedaccd2fba5",
+      "text": "Healthy adult dogs, which constitute the majority of the canine population, reliably eliminate waste outdoors after basic training. In contrast, all indoor cats universally require the daily physical removal and disposal of solid and liquid waste from a litter box environment, regardless of age or health status.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "09438168-4f78-429d-8fe3-4f5cabaeefa0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:31.064100+00:00"
+    },
+    {
+      "id": "30f2cb79-8961-4a17-a2f8-5b97b48a87d0",
+      "text": "The continuous burden of typical feline care involves the daily physical task of scooping, disposal, and replenishment of materials. This routine waste management is distinct from the occasional chemical spot-cleaning required only when certain subsets of dogs suffer elimination accidents.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "09438168-4f78-429d-8fe3-4f5cabaeefa0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:31.064141+00:00"
+    },
+    {
+      "id": "504fec59-4612-446c-b0be-35671ff5dff4",
+      "text": "Strict dog containment policies and mandatory licensing across European nations like the Netherlands and Switzerland drastically reduce predation risks to native wildlife within controlled areas, demonstrating containment\u2019s efficacy when enforced.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "086b1842-334a-4a48-91d9-4c106e02b28d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:33.211726+00:00"
+    },
+    {
+      "id": "ce50d591-5d82-4402-a031-22f22654c7ac",
+      "text": "The feral dog populations documented in the Appalachian regions are attributed to stray dogs escaping rural, unfenced yards and lacking reclamation, which signifies a failure of responsible ownership and local animal control management, not the concept of containment itself.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "086b1842-334a-4a48-91d9-4c106e02b28d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:33.211755+00:00"
+    },
+    {
+      "id": "c05a02f7-0243-47b7-a42d-b00998943a34",
+      "text": "Archaeological evidence from the Maya and Zapotec cultures reveals dogs were trained for hunting deer and protecting settlements before consumption, demonstrating that the labor role coexisted with, and was often foundational to, later consumption.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b2d0a7ad-bc79-4970-a1a8-6732e2279783",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:35.372753+00:00"
+    },
+    {
+      "id": "20ec7581-b9bd-487b-a948-11d2bd47ca4a",
+      "text": "The Xoloitzcuintli dog breed was highly valued by the Aztecs and other groups as a companion, a source of warmth for the ill, and a critical spiritual guide for the dead traveling to Mictlan, demonstrating symbolic and therapeutic utility beyond simple protein sourcing.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b2d0a7ad-bc79-4970-a1a8-6732e2279783",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:35.372794+00:00"
+    },
+    {
+      "id": "23b9ea69-28e6-40a2-b80e-b254de61dd8a",
+      "text": "Animal-Assisted Therapy (AAT) programs are typically funded by distinct non-profit organizations or hospital foundations, such as those supporting the Delta Society\u2019s Pet Partners, demonstrating that K-9 and feline programs are not mutually exclusive. Focusing institutional effort on search and rescue dogs (SAR) does not inherently prevent separate, parallel funding streams for therapeutic cat programs in hospitals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f7cbf459-b51c-44da-9c56-c99f1c1c3c1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:37.062339+00:00"
+    },
+    {
+      "id": "2df08609-a768-488d-9dfa-d33813ec3b26",
+      "text": "The certification process for therapy cats often relies on basic temperament tests and owner compliance, unlike the thousands of specialized training hours and rigorous field testing mandated for K-9 public safety roles, such as FEMA search and rescue dogs. This difference in standardization means the term \"certified therapeutic partners\" represents vastly different levels of institutional commitment and public reliance.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f7cbf459-b51c-44da-9c56-c99f1c1c3c1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:39:37.062384+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:38:12.509676+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:38:12.509676+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "a4ff9b36-5b9e-4889-b33b-684f5d730ecc",
+      "target": "886238d0-954d-40e4-9ca2-ac4c1b6b648a",
+      "type": "objection"
+    },
+    {
+      "source": "a4ff9b36-5b9e-4889-b33b-684f5d730ecc",
+      "target": "a9fc0d63-a4b3-459c-80ee-7c42dc29839d",
+      "type": "objection"
+    },
+    {
+      "source": "fab09837-d20b-4548-a7b6-ef4e5fc18409",
+      "target": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "type": "objection"
+    },
+    {
+      "source": "fab09837-d20b-4548-a7b6-ef4e5fc18409",
+      "target": "79d632b2-ef6e-401d-b8c9-cb4ef6cbab4b",
+      "type": "objection"
+    },
+    {
+      "source": "c512f2e5-268b-4917-9b1e-529c97b30187",
+      "target": "c651e14f-10cd-44fb-a2c6-2db59e2db274",
+      "type": "objection"
+    },
+    {
+      "source": "c512f2e5-268b-4917-9b1e-529c97b30187",
+      "target": "a181e415-d97b-4fcf-9888-875ca8fd7d2c",
+      "type": "objection"
+    },
+    {
+      "source": "ff6384a6-63ae-431f-ac92-e2083ecfd538",
+      "target": "efe3f9ed-7df7-43a4-8c5f-f8bc37574f77",
+      "type": "objection"
+    },
+    {
+      "source": "ff6384a6-63ae-431f-ac92-e2083ecfd538",
+      "target": "cd3466ab-1940-443d-8d09-c59cb63a3dae",
+      "type": "objection"
+    },
+    {
+      "source": "45deb09a-9ca1-4f93-b286-944e3db254b8",
+      "target": "0f8ce9cd-ed66-481b-a178-21d28de18947",
+      "type": "objection"
+    },
+    {
+      "source": "45deb09a-9ca1-4f93-b286-944e3db254b8",
+      "target": "1bb3839c-50e2-48f5-82dc-a336ab29781d",
+      "type": "objection"
+    },
+    {
+      "source": "79d632b2-ef6e-401d-b8c9-cb4ef6cbab4b",
+      "target": "884b3912-2263-4910-8765-8c3dd4fc9503",
+      "type": "response"
+    },
+    {
+      "source": "79d632b2-ef6e-401d-b8c9-cb4ef6cbab4b",
+      "target": "40a0e824-a815-4faa-88ac-63cc8e81e8b1",
+      "type": "response"
+    },
+    {
+      "source": "a181e415-d97b-4fcf-9888-875ca8fd7d2c",
+      "target": "fe25c9d8-87ad-4814-a002-e9ba3704bf7e",
+      "type": "response"
+    },
+    {
+      "source": "a181e415-d97b-4fcf-9888-875ca8fd7d2c",
+      "target": "0374ec91-89c9-4a69-a438-ebd84d25f5eb",
+      "type": "response"
+    },
+    {
+      "source": "2d85232b-45b7-42fe-bfc0-e21b8bb1216d",
+      "target": "234aa259-44f9-4db9-b001-c684721b2485",
+      "type": "objection"
+    },
+    {
+      "source": "2d85232b-45b7-42fe-bfc0-e21b8bb1216d",
+      "target": "e90897b0-374a-44a1-85ca-fda231ec65e6",
+      "type": "objection"
+    },
+    {
+      "source": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "target": "120f10a4-6dae-4ccf-ad48-e6cbdba71bd6",
+      "type": "response"
+    },
+    {
+      "source": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "target": "334a8bd5-74c0-4147-99e1-19e9b3047857",
+      "type": "response"
+    },
+    {
+      "source": "53ad44a2-e311-45cd-afdf-7efa7f693b33",
+      "target": "c9691808-b666-46bb-9da9-f105f1804fb1",
+      "type": "response"
+    },
+    {
+      "source": "a9fc0d63-a4b3-459c-80ee-7c42dc29839d",
+      "target": "ceb46026-f9d3-4cfb-ac85-43b6ad861776",
+      "type": "response"
+    },
+    {
+      "source": "a9fc0d63-a4b3-459c-80ee-7c42dc29839d",
+      "target": "9590a838-cba0-4fdd-8545-032b43cd9469",
+      "type": "response"
+    },
+    {
+      "source": "cd3466ab-1940-443d-8d09-c59cb63a3dae",
+      "target": "eacdfba2-a9a3-4020-927b-a7472cb5dd8e",
+      "type": "response"
+    },
+    {
+      "source": "cd3466ab-1940-443d-8d09-c59cb63a3dae",
+      "target": "61a07eb4-e33f-4c5a-acac-b63ad3079e23",
+      "type": "response"
+    },
+    {
+      "source": "efe3f9ed-7df7-43a4-8c5f-f8bc37574f77",
+      "target": "32b0994e-6292-4e4d-9a65-e377e38f6b39",
+      "type": "response"
+    },
+    {
+      "source": "efe3f9ed-7df7-43a4-8c5f-f8bc37574f77",
+      "target": "5b690c41-222a-4cf8-956b-a2f16e09d067",
+      "type": "response"
+    },
+    {
+      "source": "e90897b0-374a-44a1-85ca-fda231ec65e6",
+      "target": "e646ac80-4e3f-442a-ae3c-7eec27014640",
+      "type": "response"
+    },
+    {
+      "source": "e90897b0-374a-44a1-85ca-fda231ec65e6",
+      "target": "596088c2-b7cb-484e-bac1-0886f02cea46",
+      "type": "response"
+    },
+    {
+      "source": "234aa259-44f9-4db9-b001-c684721b2485",
+      "target": "7e3e0823-8806-4cad-ba8f-be50983806bd",
+      "type": "response"
+    },
+    {
+      "source": "234aa259-44f9-4db9-b001-c684721b2485",
+      "target": "5c633976-ddec-4859-9880-c1ef029aa8fd",
+      "type": "response"
+    },
+    {
+      "source": "6e4fef71-6303-4ad8-815b-3a6431e6735b",
+      "target": "b5cd6241-167f-4036-917f-575b523bc8d1",
+      "type": "objection"
+    },
+    {
+      "source": "6e4fef71-6303-4ad8-815b-3a6431e6735b",
+      "target": "0cf83e1c-9748-4378-ac14-c4dc8208f278",
+      "type": "objection"
+    },
+    {
+      "source": "d2d7812c-f978-4127-b62e-977da3c2a1d4",
+      "target": "086b1842-334a-4a48-91d9-4c106e02b28d",
+      "type": "objection"
+    },
+    {
+      "source": "d2d7812c-f978-4127-b62e-977da3c2a1d4",
+      "target": "4758b800-5773-468a-bcb6-40db9d9bc755",
+      "type": "objection"
+    },
+    {
+      "source": "08673204-84b0-4838-884b-14173f50e0e6",
+      "target": "160cf6ed-fa7e-4044-bbd9-67f8ceb9d037",
+      "type": "objection"
+    },
+    {
+      "source": "08673204-84b0-4838-884b-14173f50e0e6",
+      "target": "8efbae66-e77d-42b4-8d1d-c8f11d39c869",
+      "type": "objection"
+    },
+    {
+      "source": "2ac9f4c5-bde9-4d9d-9683-909a695c9761",
+      "target": "09438168-4f78-429d-8fe3-4f5cabaeefa0",
+      "type": "objection"
+    },
+    {
+      "source": "2ac9f4c5-bde9-4d9d-9683-909a695c9761",
+      "target": "e81010a6-a8af-4167-8574-bfbc29c0771e",
+      "type": "objection"
+    },
+    {
+      "source": "d3f6eccd-31ad-49fd-9a80-83887a64b7fd",
+      "target": "805ea732-dabf-451e-9f28-08c1624552a3",
+      "type": "objection"
+    },
+    {
+      "source": "d3f6eccd-31ad-49fd-9a80-83887a64b7fd",
+      "target": "b2d0a7ad-bc79-4970-a1a8-6732e2279783",
+      "type": "objection"
+    },
+    {
+      "source": "0b08fa9d-8308-4e88-98ca-27fab79d9e38",
+      "target": "e81ada44-ac04-41de-9a43-1ee13b125a47",
+      "type": "objection"
+    },
+    {
+      "source": "0b08fa9d-8308-4e88-98ca-27fab79d9e38",
+      "target": "f7cbf459-b51c-44da-9c56-c99f1c1c3c1f",
+      "type": "objection"
+    },
+    {
+      "source": "b5cd6241-167f-4036-917f-575b523bc8d1",
+      "target": "73fbd295-d480-499b-b37d-177f22e02124",
+      "type": "response"
+    },
+    {
+      "source": "b5cd6241-167f-4036-917f-575b523bc8d1",
+      "target": "18d8c792-2d8b-4feb-b531-3f3e97eaab86",
+      "type": "response"
+    },
+    {
+      "source": "8efbae66-e77d-42b4-8d1d-c8f11d39c869",
+      "target": "6a5cc411-e9b0-469c-9aff-48493d93e448",
+      "type": "response"
+    },
+    {
+      "source": "8efbae66-e77d-42b4-8d1d-c8f11d39c869",
+      "target": "ddb4e1c5-0473-42ab-8913-413dacba9f0b",
+      "type": "response"
+    },
+    {
+      "source": "0cf83e1c-9748-4378-ac14-c4dc8208f278",
+      "target": "8fc51ab0-db27-4d32-81c6-f6f49baae0cf",
+      "type": "response"
+    },
+    {
+      "source": "0cf83e1c-9748-4378-ac14-c4dc8208f278",
+      "target": "b2f5b8ed-0476-479e-8736-3b7057172114",
+      "type": "response"
+    },
+    {
+      "source": "09438168-4f78-429d-8fe3-4f5cabaeefa0",
+      "target": "c4d96881-49b6-4ae4-8552-cedaccd2fba5",
+      "type": "response"
+    },
+    {
+      "source": "09438168-4f78-429d-8fe3-4f5cabaeefa0",
+      "target": "30f2cb79-8961-4a17-a2f8-5b97b48a87d0",
+      "type": "response"
+    },
+    {
+      "source": "086b1842-334a-4a48-91d9-4c106e02b28d",
+      "target": "504fec59-4612-446c-b0be-35671ff5dff4",
+      "type": "response"
+    },
+    {
+      "source": "086b1842-334a-4a48-91d9-4c106e02b28d",
+      "target": "ce50d591-5d82-4402-a031-22f22654c7ac",
+      "type": "response"
+    },
+    {
+      "source": "b2d0a7ad-bc79-4970-a1a8-6732e2279783",
+      "target": "c05a02f7-0243-47b7-a42d-b00998943a34",
+      "type": "response"
+    },
+    {
+      "source": "b2d0a7ad-bc79-4970-a1a8-6732e2279783",
+      "target": "20ec7581-b9bd-487b-a948-11d2bd47ca4a",
+      "type": "response"
+    },
+    {
+      "source": "f7cbf459-b51c-44da-9c56-c99f1c1c3c1f",
+      "target": "23b9ea69-28e6-40a2-b80e-b254de61dd8a",
+      "type": "response"
+    },
+    {
+      "source": "f7cbf459-b51c-44da-9c56-c99f1c1c3c1f",
+      "target": "2df08609-a768-488d-9dfa-d33813ec3b26",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "2d85232b-45b7-42fe-bfc0-e21b8bb1216d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ff6384a6-63ae-431f-ac92-e2083ecfd538",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "c512f2e5-268b-4917-9b1e-529c97b30187",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a4ff9b36-5b9e-4889-b33b-684f5d730ecc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "fab09837-d20b-4548-a7b6-ef4e5fc18409",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "45deb09a-9ca1-4f93-b286-944e3db254b8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "0b08fa9d-8308-4e88-98ca-27fab79d9e38",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6e4fef71-6303-4ad8-815b-3a6431e6735b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "08673204-84b0-4838-884b-14173f50e0e6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d2d7812c-f978-4127-b62e-977da3c2a1d4",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d3f6eccd-31ad-49fd-9a80-83887a64b7fd",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2ac9f4c5-bde9-4d9d-9683-909a695c9761",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

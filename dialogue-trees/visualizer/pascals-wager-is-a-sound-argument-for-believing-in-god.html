@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pascal's Wager is a sound argument for believing in God - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Pascal's Wager is a sound argument for believing in God</h1>
+        <div class="meta">
+            3 arguments for • 6 arguments against •
+            60 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/pascals-wager-is-a-sound-argument-for-believing-in-god.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">60</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "text": "When applying Expected Utility Theory, the potential reward of infinite bliss dominates the finite cost of belief, regardless of the low probability assigned to God's existence. This structure is mathematically sound because any finite loss is negligible compared to an infinite gain, making belief the rationally dominant strategy.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:40.322666+00:00"
+    },
+    {
+      "id": "6a62fba9-75fc-4de4-b8e1-5b7e52fd594e",
+      "text": "The Wager serves as a necessary prudential argument for risk management against the infinite loss of eternal damnation. Just as rational agents spend finite resources on low-probability catastrophic insurance or disaster preparedness, an individual is compelled to hedge against the worst-case scenario.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:40.323126+00:00"
+    },
+    {
+      "id": "86208259-4afa-48b0-a0f2-f2a41a9859fc",
+      "text": "The practical cost of a life of faith is often minimal and frequently yields positive pragmatic benefits, such as strong social capital and community support. By generating networks of trust and encouraging virtuous behavior, belief can reduce the finite loss variable, further strengthening the Wager's risk/reward calculation.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:40.323402+00:00"
+    },
+    {
+      "id": "3d6dda3f-136d-4d66-ac10-fb598b012a9f",
+      "text": "The existence of numerous, mutually exclusive theological systems, each offering infinite rewards only to its sincere believers (e.g., Islam, Hinduism, and various Christian denominations), renders the prudential choice mathematically indeterminate, as multiple competing infinite outcomes must be weighed simultaneously.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6a62fba9-75fc-4de4-b8e1-5b7e52fd594e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:59.339719+00:00"
+    },
+    {
+      "id": "53f7f2e8-0e7e-4669-be0e-804da5a70f58",
+      "text": "True, sincere belief is an involuntary cognitive state of conviction, not a voluntary action that can be simply initiated or chosen, unlike the act of purchasing catastrophic insurance or preparing for a disaster.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6a62fba9-75fc-4de4-b8e1-5b7e52fd594e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:59.340261+00:00"
+    },
+    {
+      "id": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "text": "Experiments by neuroscientists, such as the Libet experiments in the 1980s, show that brain processes precede conscious decision by milliseconds, suggesting that genuine intellectual assent is not a voluntary, calculated act of will. Belief is an involuntary cognitive state caused by perceived evidence, making the choice to \"believe\" impossible the moment one wills it.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:59.997679+00:00"
+    },
+    {
+      "id": "ff60a270-1746-464d-a5b3-9d1b989f5901",
+      "text": "Adorning Hades with offerings yields an infinite reward if Hades is the true, infinitely rewarding deity, just as worshiping the Christian version of God does. If every mutually exclusive religion offers a pathway to infinite utility, Expected Utility Theory provides no dominant strategy among options because all choices yield an equal, indeterminate infinite expectation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:59.998189+00:00"
+    },
+    {
+      "id": "833c5ccd-7c0b-43b5-abb4-54eeeaf8f08c",
+      "text": "The mathematical framework of Expected Utility Theory requires utility functions to be bounded; Daniel Bernoulli's resolution of the St. Petersburg Paradox established that standard arithmetic models cannot handle infinite expectations. Introducing infinite utility violates the fundamental prerequisites of classical EUT, rendering the resulting calculations mathematically unsound.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:43:59.998508+00:00"
+    },
+    {
+      "id": "b9b94964-ae32-4e28-b2a8-e0e029404f89",
+      "text": "Committed adherents in groups like Jehovah\u2019s Witnesses or some Hasidic Judaism sects dedicate significant personal income to tithing and face severe social costs through shunning non-believing or apostate family members.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "86208259-4afa-48b0-a0f2-f2a41a9859fc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:01.774876+00:00"
+    },
+    {
+      "id": "bfa5fb44-343f-4ca7-920e-0adf5e64c598",
+      "text": "Highly secularized nations like Norway and Denmark consistently maintain some of the world's highest measured levels of social trust and community cohesion, proving such benefits are not unique products of religious commitment.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "86208259-4afa-48b0-a0f2-f2a41a9859fc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:01.775614+00:00"
+    },
+    {
+      "id": "1d47d8d5-ddb9-4601-acd0-dbaf2f6d9ea2",
+      "text": "The high social cohesion in Nordic countries is arguably an inherited cultural trait, stemming from the institutional legacy of historical state Protestantism (Lutheranism) which promoted literacy and widespread social obligations for centuries.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bfa5fb44-343f-4ca7-920e-0adf5e64c598",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:13.767133+00:00"
+    },
+    {
+      "id": "a4dc40ac-416b-4af0-a259-12f491540869",
+      "text": "The social trust in Norway and Denmark correlates more strongly with their comprehensive social democratic welfare states and high economic equality, suggesting economic factors are the primary cause of cohesion, not secularism itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "bfa5fb44-343f-4ca7-920e-0adf5e64c598",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:13.767181+00:00"
+    },
+    {
+      "id": "26d97e02-0928-4314-8673-5067e1e19bff",
+      "text": "Libet's studies measured the brain's readiness potential for simple, pre-planned motor actions like flexing a wrist, which are not neurophysiologically comparable to the slow, deliberative process of intellectual assent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:16.041867+00:00"
+    },
+    {
+      "id": "d32981e5-a754-4765-b631-28b818782dc0",
+      "text": "Intellectual assent regarding complex propositions, such as adopting a scientific theory or political ideology, is a drawn-out process of reflection lasting days or weeks, incompatible with instantaneous millisecond timing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:16.041925+00:00"
+    },
+    {
+      "id": "a8f2bc50-39ff-48a1-8c0e-7878ceb502d8",
+      "text": "Belief formation involves voluntary, calculated acts, such as critically seeking out specific evidence, applying methodological doubt, or choosing to attend lectures and engage with data.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:16.041952+00:00"
+    },
+    {
+      "id": "223bf607-4818-44f6-ac27-625f8f85de1e",
+      "text": "Individuals engage in practices like Cognitive Behavioral Therapy (CBT), which voluntarily initiates a long-term process of exposure and mental discipline specifically designed to restructure deeply ingrained, involuntary negative core beliefs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "53f7f2e8-0e7e-4669-be0e-804da5a70f58",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:16.192446+00:00"
+    },
+    {
+      "id": "8f34441c-831e-4566-b811-8a49e8c64d24",
+      "text": "The maintenance of sincerely held beliefs often requires voluntary actions like selectively consuming information within ideological echo chambers and actively disregarding evidence that contradicts the conviction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "53f7f2e8-0e7e-4669-be0e-804da5a70f58",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:16.192479+00:00"
+    },
+    {
+      "id": "94a74fe3-6a1d-431a-be18-ca40e038aa5d",
+      "text": "Jehovah's Witnesses do not require tithing; their financial support operates exclusively through voluntary, confidential donations, meaning members have no official obligation to dedicate significant personal income.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b9b94964-ae32-4e28-b2a8-e0e029404f89",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:19.834168+00:00"
+    },
+    {
+      "id": "745a35bd-06c6-40d7-a5cb-9ec84e56b3ac",
+      "text": "The mechanism of shunning in Hasidic communities is a decentralized tool to enforce internal group compliance with religious law (Halakha), differentiating it significantly from the centralized organizational mandate for shunning apostates in Jehovah's Witnesses.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b9b94964-ae32-4e28-b2a8-e0e029404f89",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:19.834214+00:00"
+    },
+    {
+      "id": "1dcd4251-03d3-458a-87b3-2c4fb3e48957",
+      "text": "A complete prudential calculus requires incorporating the infinite damnation or punishment associated with rejecting the correct theology, not just the positive infinite rewards. Failing to account for infinite loss renders any calculation of prudential risk fundamentally incomplete.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3d6dda3f-136d-4d66-ac10-fb598b012a9f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.679209+00:00"
+    },
+    {
+      "id": "c3f1953f-c5b7-48c4-89a7-0dfc224ed67f",
+      "text": "Specific denominations, such as Baptist and Methodist Christianity, share essential criteria for salvation, including faith in Christ. This doctrinal overlap shows that religious systems do not always pose strictly mutually exclusive paths toward infinite reward.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3d6dda3f-136d-4d66-ac10-fb598b012a9f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.679235+00:00"
+    },
+    {
+      "id": "48344568-efb7-4ff4-9649-64e7a81e5a52",
+      "text": "The Wager establishes a false dichotomy because the existence of infinitely many possible theological matrices (e.g., a deity rewarding skepticism) makes the utility calculation unsolvable. The lack of prior probability for any specific deity means the Wager offers no rational guidance on which religion to choose.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.679323+00:00"
+    },
+    {
+      "id": "b76450d8-2fa2-44ab-b784-3cbf793a8c5e",
+      "text": "The Wager undermines epistemic responsibility by advocating that belief be pursued for selfish utility rather than an honest commitment to evidence and truth. Using self-interest to justify belief inherently compromises the intellectual integrity required for genuine conviction.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.679801+00:00"
+    },
+    {
+      "id": "f6a49854-1871-4902-89fa-b29fb829b5c0",
+      "text": "Belief cannot be reliably willed into existence solely through a utility calculation because genuine faith requires internal conviction rather than external self-interested coercion. If the reward requires a sincere state of belief, the Wager's calculated assent is functionally insufficient.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.680074+00:00"
+    },
+    {
+      "id": "af4a284c-eebe-45d3-a0ed-8ee481cd99c7",
+      "text": "The utility calculation fundamentally fails because introducing an infinite reward mathematically dominates the equation, rendering finite probability and finite cost considerations meaningless. This dominance removes the element of reasoned probabilistic choice, transforming the Wager into mere obedience to mathematical infinity.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.680311+00:00"
+    },
+    {
+      "id": "c48efe4e-601a-4991-b611-1fa1ec896de8",
+      "text": "The Wager severely understates the finite cost of believing, which includes opportunity costs, strict adherence to challenging moral codes, and cultural exclusion. Examples like tithing requirements or social pressure to forgo high-paying secular careers demonstrate that the cost of belief is often significant and tangible.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.680540+00:00"
+    },
+    {
+      "id": "2642d025-32ba-4159-995a-4e61b15c8fb4",
+      "text": "A rational and all-knowing theological being would likely foresee and punish belief adopted solely through self-interested utility calculation instead of rewarding it. Such an insincere belief fails to satisfy the sincerity, devotion, or love that a deity ostensibly seeks, reversing the expected utility for the Wagerer.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:26.680939+00:00"
+    },
+    {
+      "id": "0b2197c6-5112-4f54-bc1e-f8e2597583bf",
+      "text": "A perfectly just being might withhold the reward for insincere belief without actively imposing infinite punishment simply for attempting to hedge against a possibility of loss.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2642d025-32ba-4159-995a-4e61b15c8fb4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:40.770884+00:00"
+    },
+    {
+      "id": "f6576bc4-e847-433d-8684-432e67feb346",
+      "text": "Adopting ritual and community participation, even if initially motivated by utility, often serves as the practical pathway in religious traditions for developing genuine, internal devotion over time.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2642d025-32ba-4159-995a-4e61b15c8fb4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:40.771304+00:00"
+    },
+    {
+      "id": "d47ccb13-ddbd-442b-9071-95479dfff441",
+      "text": "Pascal's Wager calculates the expected utility of belief as infinity multiplied by a finite probability, meaning any finite opportunity cost, regardless of its tangible size, remains logically incomparable to the potential infinite gain.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c48efe4e-601a-4991-b611-1fa1ec896de8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:42.604428+00:00"
+    },
+    {
+      "id": "1af43b1e-e2b7-4cfe-8035-67e6201d6dd3",
+      "text": "Belief can take the form of private, intellectual assent or deism, requiring no tithing, institutional membership, or adherence to strict moral codes, thereby negating the high opportunity costs cited.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c48efe4e-601a-4991-b611-1fa1ec896de8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:42.604873+00:00"
+    },
+    {
+      "id": "01a9a5f4-0daa-423b-9d3b-33144e13ad25",
+      "text": "The Wager's logic hinges on the existence of infinite expected utility, where any non-zero probability of an infinite reward still results in an infinite expected value, overriding the need for precise prior probability. The exact calculation of prior probability is therefore irrelevant if the reward is truly infinite.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "48344568-efb7-4ff4-9649-64e7a81e5a52",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:48.793799+00:00"
+    },
+    {
+      "id": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "text": "Pascal's Wager functions as a practical decision theory for those in the 17th-century European context, which realistically considered only the Judeo-Christian God and atheism, not every hypothetical deity. Comparing this specific, culturally relevant choice to atheism still yields an expected infinite utility.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "48344568-efb7-4ff4-9649-64e7a81e5a52",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:48.794403+00:00"
+    },
+    {
+      "id": "450dac93-da45-49f9-b4aa-5996e102522f",
+      "text": "A scientist's self-interested pursuit of funding, reputation, or career advancement consistently leads to the generation of verifiable, evidence-based truths and discoveries. The pursuit of utility and evidence are not mutually exclusive in practice.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b76450d8-2fa2-44ab-b784-3cbf793a8c5e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:48.991515+00:00"
+    },
+    {
+      "id": "9f2a9335-398a-4f6a-b6aa-b460ab3f5ac7",
+      "text": "Individuals often form deeply held psychological convictions based on existential comfort, peace of mind, or social belonging, demonstrating that self-interest is a common and powerful driver of genuine human belief.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b76450d8-2fa2-44ab-b784-3cbf793a8c5e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:48.992188+00:00"
+    },
+    {
+      "id": "16f9dd09-7eb1-4ed7-8dbb-b367c6717cae",
+      "text": "Consistent behavioral commitment, such as habitual prayer or religious attendance, reliably transforms initial calculated assent into genuine personal conviction over time through cognitive dissonance reduction. Studies in social psychology show that actions precede and determine subsequent beliefs, meaning utility-driven practice creates the necessary internal state.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f6a49854-1871-4902-89fa-b29fb829b5c0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:49.410273+00:00"
+    },
+    {
+      "id": "7b6ee50e-6830-47af-b86e-8c7fb2c8db5c",
+      "text": "Many theological systems, notably those emphasizing orthopraxy over orthodoxy, reward righteous actions and commitment to moral law regardless of the initial self-interested motivation. The divine entity rewarding belief might value the lifelong effort and adherence to faith's commandments more than purely subjective, spontaneous internal conviction.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f6a49854-1871-4902-89fa-b29fb829b5c0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:49.410681+00:00"
+    },
+    {
+      "id": "3ec65682-8a34-401c-89aa-7a5797a78f4f",
+      "text": "The \"Many Gods Objection\" shows that if multiple deities offer mutually exclusive infinite rewards, choosing any single belief results in opposing infinite negative utility, eliminating a singular dominant, reasoned choice.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "af4a284c-eebe-45d3-a0ed-8ee481cd99c7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:53.346444+00:00"
+    },
+    {
+      "id": "b134539b-33a0-4417-b46f-1a9c5c4d92d5",
+      "text": "Standard decision theory addresses the dominance problem by employing bounded utility functions, which assign finite values even to outcomes conceptualized as infinite, thereby preserving reasoned choice based on probability weightings.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "af4a284c-eebe-45d3-a0ed-8ee481cd99c7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:53.347109+00:00"
+    },
+    {
+      "id": "c64d8999-a95f-4208-8827-0609eb445552",
+      "text": "The costs cited (tithing and strict adherence codes) apply specifically to institutional religions, meaning the high opportunity costs are not negated for the billions of adherents to faiths like the Catholic Church or Orthodox Judaism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1af43b1e-e2b7-4cfe-8035-67e6201d6dd3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:54.724491+00:00"
+    },
+    {
+      "id": "aaba6f65-3cb9-42a2-87f6-e9975814c909",
+      "text": "Even purely intellectual assent or deism requires a cognitive opportunity cost, as time and mental effort spent on theological consideration are diverted from pursuits like professional skill training or secular education.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1af43b1e-e2b7-4cfe-8035-67e6201d6dd3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:54.724517+00:00"
+    },
+    {
+      "id": "17b67813-5597-4d55-8288-1061e59cf665",
+      "text": "Dissonance reduction can resolve through mere rationalization of the social or pragmatic benefits derived from religious attendance (e.g., community connection, professional networking) without the adoption of genuine theological conviction. This results in maintained instrumental behavior rather than deep internal belief transformation, confounding the reliability claim.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "16f9dd09-7eb1-4ed7-8dbb-b367c6717cae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:59.817616+00:00"
+    },
+    {
+      "id": "e49daa20-2b2d-4528-9c8c-986e763b6003",
+      "text": "The mechanism falsely assumes commitment begins with calculated assent, ignoring the vast number of participants who start from genuine childhood socialization, inherited familial obligation, or sincere pre-existing faith that predates any instrumental practice. In these cases, conviction precedes the consistent behavior, rather than being generated by it.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "16f9dd09-7eb1-4ed7-8dbb-b367c6717cae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:44:59.817659+00:00"
+    },
+    {
+      "id": "437c726d-88d8-42b3-a85d-013871f82b70",
+      "text": "If the probability of the specific proposed deity is zero, the calculation of expected utility results in zero or an indeterminate value, which eliminates the claimed infinite advantage.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d47ccb13-ddbd-442b-9071-95479dfff441",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:02.168639+00:00"
+    },
+    {
+      "id": "0f547596-61eb-40aa-b6e9-432830a321aa",
+      "text": "Competing, mutually exclusive theological possibilities (e.g., a hidden God who rewards atheism or the Hindu Trimurti) all offer infinite utility outcomes, which renders the total decision matrix indeterminate.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d47ccb13-ddbd-442b-9071-95479dfff441",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:02.168689+00:00"
+    },
+    {
+      "id": "6bde9b40-d9a6-4126-9093-2d4ca1ec3217",
+      "text": "Self-interested career pressure leads researchers to commit blatant fraud for publication, exemplified by the widespread data fabrication by Diederik Stapel in social psychology, resulting in non-verifiable findings.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "450dac93-da45-49f9-b4aa-5996e102522f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:04.110303+00:00"
+    },
+    {
+      "id": "515cbe34-9ea9-4d2e-9251-e2bdc1949829",
+      "text": "Studies across major disciplines show that less than 50% of published academic findings can be consistently replicated, demonstrating that self-interested motives often produce unverified results when external institutional checks are insufficient.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "450dac93-da45-49f9-b4aa-5996e102522f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:04.110331+00:00"
+    },
+    {
+      "id": "a24e6b6e-9d16-4557-abda-bc31932cae3b",
+      "text": "The drive for social belonging and existential comfort are fundamental human needs rooted in evolutionary psychology, characterizing these essential biological mechanisms as simple self-interested preferences oversimplifies the survival mechanism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9f2a9335-398a-4f6a-b6aa-b460ab3f5ac7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:04.857928+00:00"
+    },
+    {
+      "id": "0a4c2874-f9c1-4e93-ae27-9bb14641b09b",
+      "text": "Whistleblowers and political dissidents like Edward Snowden adopt beliefs centered on ethical duty or truth, resulting in voluntary social ostracism and severe personal cost, directly opposing peace of mind or belonging.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9f2a9335-398a-4f6a-b6aa-b460ab3f5ac7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:04.857956+00:00"
+    },
+    {
+      "id": "30549201-77c8-4b5a-9c10-506eedfc8a93",
+      "text": "When confronted with an infinite number of mutually exclusive, competing deities, each offering an infinite reward, the Wager fails to provide a unique rational choice since the non-zero probability of one infinite reward cannot be prioritized over another.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "01a9a5f4-0daa-423b-9d3b-33144e13ad25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:05.736933+00:00"
+    },
+    {
+      "id": "4f8bc474-1071-454c-b877-8c3cc55d4705",
+      "text": "Modern decision theory avoids unconstrained infinite utility by requiring bounded utility functions, preventing paradoxes like the St. Petersburg problem where a potential infinite gain justifies any finite cost.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "01a9a5f4-0daa-423b-9d3b-33144e13ad25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:05.736958+00:00"
+    },
+    {
+      "id": "0ad44549-0446-4f66-bdeb-f72767f006bc",
+      "text": "Bounded utility functions are mathematically defined by the requirement that the utility of all outcomes is inherently finite; they do not assign finite values to outcomes truly conceptualized as infinite, which violates the boundedness premise.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b134539b-33a0-4417-b46f-1a9c5c4d92d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:07.036538+00:00"
+    },
+    {
+      "id": "d6f118ce-fdf1-4e99-88c0-afe6df74f8a6",
+      "text": "The classical dominance problem is resolved by basic preference axioms that mandate choosing the superior outcome, which is logically distinct from the St. Petersburg Paradox of infinite expected utility that bounded utility functions solve.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b134539b-33a0-4417-b46f-1a9c5c4d92d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:07.036566+00:00"
+    },
+    {
+      "id": "265f6b4d-1d28-4cea-81ee-a5a93a6637dd",
+      "text": "The 17th century saw widespread cosmopolitan intellectual engagement with Unitarianism, Deism, and various forms of polytheism through trade and scholarship, meaning the choice set was demonstrably larger than just Christianity and atheism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:07.946198+00:00"
+    },
+    {
+      "id": "13e73d58-325c-4d25-9252-5594ee5754a0",
+      "text": "Belief is generally an involuntary state resulting from doxastic commitment to evidence, meaning a rational decision to induce faith solely for expected utility is not a psychologically feasible action.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:07.946228+00:00"
+    },
+    {
+      "id": "a26f61b6-2850-45b0-9f96-d25af56db075",
+      "text": "Christian doctrines frequently condemn hypocrisy and emphasize genuine faith over outward calculation; a perfectly just, omniscient God would likely penalize calculated, insincere belief instead of granting infinite reward.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:07.946240+00:00"
+    },
+    {
+      "id": "fd52d2fe-8dcd-439c-aada-cb61e069244b",
+      "text": "Core tenets of Christianity, emphasizing justification by grace through faith, prioritize internal conviction and sincere repentance over a lifetime of external adherence to codified law.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7b6ee50e-6830-47af-b86e-8c7fb2c8db5c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:08.099522+00:00"
+    },
+    {
+      "id": "cc2bc7db-a5c3-4184-8a8a-1f940f8c7cbd",
+      "text": "Many theological traditions, including Islam and Judaism, require actions to be performed with a pure and specific intention (niyyah/kavvanah) for them to receive full divine value.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7b6ee50e-6830-47af-b86e-8c7fb2c8db5c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:08.099552+00:00"
+    },
+    {
+      "id": "dce6be7f-c46b-403b-9626-f53402b77740",
+      "text": "Standard Bayesian rationality dictates that historical evidence and theological coherency assign vastly unequal probabilities to competing religious claims. Infinite utilities multiplied by near-zero probabilities yield a negligible expected utility, allowing a rational agent to choose the option with the highest probability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3ec65682-8a34-401c-89aa-7a5797a78f4f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:12.395375+00:00"
+    },
+    {
+      "id": "32c7f450-ac1e-4d91-bcb9-06f9e029e09f",
+      "text": "Major theological frameworks, including many forms of Judaism, universalist Christian denominations, and Buddhist traditions, define afterlife consequences as finite purification, reincarnation, or conditional immortality, eliminating the required symmetrical infinite negative utility.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3ec65682-8a34-401c-89aa-7a5797a78f4f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:12.395425+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 3,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:43:40.322618+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:43:40.322618+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "6a62fba9-75fc-4de4-b8e1-5b7e52fd594e",
+      "target": "3d6dda3f-136d-4d66-ac10-fb598b012a9f",
+      "type": "objection"
+    },
+    {
+      "source": "6a62fba9-75fc-4de4-b8e1-5b7e52fd594e",
+      "target": "53f7f2e8-0e7e-4669-be0e-804da5a70f58",
+      "type": "objection"
+    },
+    {
+      "source": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "target": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "type": "objection"
+    },
+    {
+      "source": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "target": "ff60a270-1746-464d-a5b3-9d1b989f5901",
+      "type": "objection"
+    },
+    {
+      "source": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "target": "833c5ccd-7c0b-43b5-abb4-54eeeaf8f08c",
+      "type": "objection"
+    },
+    {
+      "source": "86208259-4afa-48b0-a0f2-f2a41a9859fc",
+      "target": "b9b94964-ae32-4e28-b2a8-e0e029404f89",
+      "type": "objection"
+    },
+    {
+      "source": "86208259-4afa-48b0-a0f2-f2a41a9859fc",
+      "target": "bfa5fb44-343f-4ca7-920e-0adf5e64c598",
+      "type": "objection"
+    },
+    {
+      "source": "bfa5fb44-343f-4ca7-920e-0adf5e64c598",
+      "target": "1d47d8d5-ddb9-4601-acd0-dbaf2f6d9ea2",
+      "type": "response"
+    },
+    {
+      "source": "bfa5fb44-343f-4ca7-920e-0adf5e64c598",
+      "target": "a4dc40ac-416b-4af0-a259-12f491540869",
+      "type": "response"
+    },
+    {
+      "source": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "target": "26d97e02-0928-4314-8673-5067e1e19bff",
+      "type": "response"
+    },
+    {
+      "source": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "target": "d32981e5-a754-4765-b631-28b818782dc0",
+      "type": "response"
+    },
+    {
+      "source": "d4e53b9a-06f0-44dd-a94f-1d00aec1340c",
+      "target": "a8f2bc50-39ff-48a1-8c0e-7878ceb502d8",
+      "type": "response"
+    },
+    {
+      "source": "53f7f2e8-0e7e-4669-be0e-804da5a70f58",
+      "target": "223bf607-4818-44f6-ac27-625f8f85de1e",
+      "type": "response"
+    },
+    {
+      "source": "53f7f2e8-0e7e-4669-be0e-804da5a70f58",
+      "target": "8f34441c-831e-4566-b811-8a49e8c64d24",
+      "type": "response"
+    },
+    {
+      "source": "b9b94964-ae32-4e28-b2a8-e0e029404f89",
+      "target": "94a74fe3-6a1d-431a-be18-ca40e038aa5d",
+      "type": "response"
+    },
+    {
+      "source": "b9b94964-ae32-4e28-b2a8-e0e029404f89",
+      "target": "745a35bd-06c6-40d7-a5cb-9ec84e56b3ac",
+      "type": "response"
+    },
+    {
+      "source": "3d6dda3f-136d-4d66-ac10-fb598b012a9f",
+      "target": "1dcd4251-03d3-458a-87b3-2c4fb3e48957",
+      "type": "response"
+    },
+    {
+      "source": "3d6dda3f-136d-4d66-ac10-fb598b012a9f",
+      "target": "c3f1953f-c5b7-48c4-89a7-0dfc224ed67f",
+      "type": "response"
+    },
+    {
+      "source": "2642d025-32ba-4159-995a-4e61b15c8fb4",
+      "target": "0b2197c6-5112-4f54-bc1e-f8e2597583bf",
+      "type": "objection"
+    },
+    {
+      "source": "2642d025-32ba-4159-995a-4e61b15c8fb4",
+      "target": "f6576bc4-e847-433d-8684-432e67feb346",
+      "type": "objection"
+    },
+    {
+      "source": "c48efe4e-601a-4991-b611-1fa1ec896de8",
+      "target": "d47ccb13-ddbd-442b-9071-95479dfff441",
+      "type": "objection"
+    },
+    {
+      "source": "c48efe4e-601a-4991-b611-1fa1ec896de8",
+      "target": "1af43b1e-e2b7-4cfe-8035-67e6201d6dd3",
+      "type": "objection"
+    },
+    {
+      "source": "48344568-efb7-4ff4-9649-64e7a81e5a52",
+      "target": "01a9a5f4-0daa-423b-9d3b-33144e13ad25",
+      "type": "objection"
+    },
+    {
+      "source": "48344568-efb7-4ff4-9649-64e7a81e5a52",
+      "target": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "type": "objection"
+    },
+    {
+      "source": "b76450d8-2fa2-44ab-b784-3cbf793a8c5e",
+      "target": "450dac93-da45-49f9-b4aa-5996e102522f",
+      "type": "objection"
+    },
+    {
+      "source": "b76450d8-2fa2-44ab-b784-3cbf793a8c5e",
+      "target": "9f2a9335-398a-4f6a-b6aa-b460ab3f5ac7",
+      "type": "objection"
+    },
+    {
+      "source": "f6a49854-1871-4902-89fa-b29fb829b5c0",
+      "target": "16f9dd09-7eb1-4ed7-8dbb-b367c6717cae",
+      "type": "objection"
+    },
+    {
+      "source": "f6a49854-1871-4902-89fa-b29fb829b5c0",
+      "target": "7b6ee50e-6830-47af-b86e-8c7fb2c8db5c",
+      "type": "objection"
+    },
+    {
+      "source": "af4a284c-eebe-45d3-a0ed-8ee481cd99c7",
+      "target": "3ec65682-8a34-401c-89aa-7a5797a78f4f",
+      "type": "objection"
+    },
+    {
+      "source": "af4a284c-eebe-45d3-a0ed-8ee481cd99c7",
+      "target": "b134539b-33a0-4417-b46f-1a9c5c4d92d5",
+      "type": "objection"
+    },
+    {
+      "source": "1af43b1e-e2b7-4cfe-8035-67e6201d6dd3",
+      "target": "c64d8999-a95f-4208-8827-0609eb445552",
+      "type": "response"
+    },
+    {
+      "source": "1af43b1e-e2b7-4cfe-8035-67e6201d6dd3",
+      "target": "aaba6f65-3cb9-42a2-87f6-e9975814c909",
+      "type": "response"
+    },
+    {
+      "source": "16f9dd09-7eb1-4ed7-8dbb-b367c6717cae",
+      "target": "17b67813-5597-4d55-8288-1061e59cf665",
+      "type": "response"
+    },
+    {
+      "source": "16f9dd09-7eb1-4ed7-8dbb-b367c6717cae",
+      "target": "e49daa20-2b2d-4528-9c8c-986e763b6003",
+      "type": "response"
+    },
+    {
+      "source": "d47ccb13-ddbd-442b-9071-95479dfff441",
+      "target": "437c726d-88d8-42b3-a85d-013871f82b70",
+      "type": "response"
+    },
+    {
+      "source": "d47ccb13-ddbd-442b-9071-95479dfff441",
+      "target": "0f547596-61eb-40aa-b6e9-432830a321aa",
+      "type": "response"
+    },
+    {
+      "source": "450dac93-da45-49f9-b4aa-5996e102522f",
+      "target": "6bde9b40-d9a6-4126-9093-2d4ca1ec3217",
+      "type": "response"
+    },
+    {
+      "source": "450dac93-da45-49f9-b4aa-5996e102522f",
+      "target": "515cbe34-9ea9-4d2e-9251-e2bdc1949829",
+      "type": "response"
+    },
+    {
+      "source": "9f2a9335-398a-4f6a-b6aa-b460ab3f5ac7",
+      "target": "a24e6b6e-9d16-4557-abda-bc31932cae3b",
+      "type": "response"
+    },
+    {
+      "source": "9f2a9335-398a-4f6a-b6aa-b460ab3f5ac7",
+      "target": "0a4c2874-f9c1-4e93-ae27-9bb14641b09b",
+      "type": "response"
+    },
+    {
+      "source": "01a9a5f4-0daa-423b-9d3b-33144e13ad25",
+      "target": "30549201-77c8-4b5a-9c10-506eedfc8a93",
+      "type": "response"
+    },
+    {
+      "source": "01a9a5f4-0daa-423b-9d3b-33144e13ad25",
+      "target": "4f8bc474-1071-454c-b877-8c3cc55d4705",
+      "type": "response"
+    },
+    {
+      "source": "b134539b-33a0-4417-b46f-1a9c5c4d92d5",
+      "target": "0ad44549-0446-4f66-bdeb-f72767f006bc",
+      "type": "response"
+    },
+    {
+      "source": "b134539b-33a0-4417-b46f-1a9c5c4d92d5",
+      "target": "d6f118ce-fdf1-4e99-88c0-afe6df74f8a6",
+      "type": "response"
+    },
+    {
+      "source": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "target": "265f6b4d-1d28-4cea-81ee-a5a93a6637dd",
+      "type": "response"
+    },
+    {
+      "source": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "target": "13e73d58-325c-4d25-9252-5594ee5754a0",
+      "type": "response"
+    },
+    {
+      "source": "18f237d6-0f9c-4f85-8235-fe401cd5ed76",
+      "target": "a26f61b6-2850-45b0-9f96-d25af56db075",
+      "type": "response"
+    },
+    {
+      "source": "7b6ee50e-6830-47af-b86e-8c7fb2c8db5c",
+      "target": "fd52d2fe-8dcd-439c-aada-cb61e069244b",
+      "type": "response"
+    },
+    {
+      "source": "7b6ee50e-6830-47af-b86e-8c7fb2c8db5c",
+      "target": "cc2bc7db-a5c3-4184-8a8a-1f940f8c7cbd",
+      "type": "response"
+    },
+    {
+      "source": "3ec65682-8a34-401c-89aa-7a5797a78f4f",
+      "target": "dce6be7f-c46b-403b-9626-f53402b77740",
+      "type": "response"
+    },
+    {
+      "source": "3ec65682-8a34-401c-89aa-7a5797a78f4f",
+      "target": "32c7f450-ac1e-4d91-bcb9-06f9e029e09f",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "82fcf6bb-5bb5-432c-baeb-1e7cf2aee519",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6a62fba9-75fc-4de4-b8e1-5b7e52fd594e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "86208259-4afa-48b0-a0f2-f2a41a9859fc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "48344568-efb7-4ff4-9649-64e7a81e5a52",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b76450d8-2fa2-44ab-b784-3cbf793a8c5e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "f6a49854-1871-4902-89fa-b29fb829b5c0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "af4a284c-eebe-45d3-a0ed-8ee481cd99c7",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "c48efe4e-601a-4991-b611-1fa1ec896de8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2642d025-32ba-4159-995a-4e61b15c8fb4",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

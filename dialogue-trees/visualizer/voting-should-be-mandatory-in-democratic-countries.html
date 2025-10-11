@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting should be mandatory in democratic countries - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Voting should be mandatory in democratic countries</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            42 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/voting-should-be-mandatory-in-democratic-countries.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">42</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "edc97b42-0ed9-42d2-9998-72f20f4c50ba",
+      "text": "High mandatory turnout ensures electoral outcomes more accurately reflect the demographic and socio-economic composition of the entire population, thereby strengthening the democratic legitimacy and mandate of the government.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:10.007391"
+    },
+    {
+      "id": "9e0c2b43-fd1c-4c49-ba9f-82680143a98d",
+      "text": "Guaranteed high turnout compels political entities to campaign on broad, nationally relevant policy issues rather than focusing resources on mobilizing narrow partisan bases or catering to special interest groups.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:10.008568"
+    },
+    {
+      "id": "70d7f2fe-6ef9-4bca-a3c3-53219df9301e",
+      "text": "Participation in elections constitutes an essential civic duty and a minimal obligation required of citizens to sustain the democratic social contract, akin to paying taxes or serving on a jury.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:10.009390"
+    },
+    {
+      "id": "f70fc5c7-80a4-450c-9814-ab88b4a57561",
+      "text": "By requiring participation, mandatory voting incentivizes citizens to obtain a basic level of political literacy regarding candidates and platforms, fostering greater public engagement in civic processes.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:10.009840"
+    },
+    {
+      "id": "8d46e296-a52f-4c75-90c4-ac1204b925a7",
+      "text": "The analogy is flawed because paying taxes and serving on a jury are legally mandated and enforceable coercive duties, while participation in elections is generally a voluntary liberty in non-autocratic states.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "70d7f2fe-6ef9-4bca-a3c3-53219df9301e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:18.374881"
+    },
+    {
+      "id": "f31b828c-e774-427a-8d8a-68757cea78da",
+      "text": "The sustainability of the social contract is maintained by sufficient aggregate participation, not by the strict necessity of every individual citizen fulfilling a minimal obligation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "70d7f2fe-6ef9-4bca-a3c3-53219df9301e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:18.375556"
+    },
+    {
+      "id": "5e5fdd03-2191-4b79-88c8-e71a8741ed89",
+      "text": "High turnout can be driven by intense partisan or identity-based mobilization rather than moderate policy concerns, which leads campaigns to double down on narrow, polarizing appeals to maximize the base vote.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9e0c2b43-fd1c-4c49-ba9f-82680143a98d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:19.131767"
+    },
+    {
+      "id": "6073fbf0-57b7-4f46-899a-a408c8e70839",
+      "text": "Campaigns frequently address broad national issues (e.g., economic growth) while simultaneously proposing specific provisions tailored to mobilize and satisfy key special interest groups, making the two strategies complementary rather than mutually exclusive.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9e0c2b43-fd1c-4c49-ba9f-82680143a98d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:19.132392"
+    },
+    {
+      "id": "152ba720-1fe1-445e-8aac-6715ce0cb0d6",
+      "text": "Mandatory voting is satisfied by casting an intentionally uninformed, blank, or protest ballot, which fulfills the compliance requirement without necessitating any increased effort toward political literacy.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "f70fc5c7-80a4-450c-9814-ab88b4a57561",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:20.462807"
+    },
+    {
+      "id": "39ccc596-f827-43dd-8b01-eb5f8cc35809",
+      "text": "Compulsory participation ensures only compliance, not genuine interest or enthusiasm, meaning mandatory voting is unlikely to translate into broader, voluntary public engagement in other civic processes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "f70fc5c7-80a4-450c-9814-ab88b4a57561",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:20.463407"
+    },
+    {
+      "id": "b11a0ab7-2534-4f03-a388-ea493aa5b6f6",
+      "text": "Mandatory voting may compel uninformed or apathetic citizens to cast random or protest votes solely to avoid fines, meaning the electoral outcome reflects compliance rather than genuine, considered political preferences.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "edc97b42-0ed9-42d2-9998-72f20f4c50ba",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:22.284494"
+    },
+    {
+      "id": "513134bc-ab0b-46b4-ae64-5bd53405ff71",
+      "text": "Democratic legitimacy relies fundamentally on the perceived voluntary nature of political participation; turnout achieved through coercion (fines) can diminish the perceived mandate, despite being demographically representative.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "edc97b42-0ed9-42d2-9998-72f20f4c50ba",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:22.285526"
+    },
+    {
+      "id": "51546f88-263c-43e1-86a2-3c079abe3dad",
+      "text": "Sufficient aggregate participation is meaningless if its objective is actively hostile to or subversive of the contract's fundamental purpose, demonstrating that the quality of participation is the primary factor for sustainability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f31b828c-e774-427a-8d8a-68757cea78da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:29.418125"
+    },
+    {
+      "id": "90e79ea6-06e4-4572-9ca1-e59a303e1cae",
+      "text": "Sufficient aggregate participation systematically fails to achieve political equality because non-voters are disproportionately low-income and young, inevitably leading to policy outcomes biased toward wealthier, older interests.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f31b828c-e774-427a-8d8a-68757cea78da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:29.419165"
+    },
+    {
+      "id": "348beb07-bf9a-46fd-935c-dfb08a5b067d",
+      "text": "Mandating an action often creates familiarity and habituation, which can lower the barrier to future voluntary engagement by making the process routine, regardless of the initial lack of enthusiasm.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "39ccc596-f827-43dd-8b01-eb5f8cc35809",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:31.199158"
+    },
+    {
+      "id": "31fd927f-c186-427f-8edc-6878464d0e5b",
+      "text": "High mandatory turnout increases political legitimacy and forces greater responsiveness from elected officials, making engagement in other voluntary civic processes more impactful and therefore more appealing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "39ccc596-f827-43dd-8b01-eb5f8cc35809",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:31.200227"
+    },
+    {
+      "id": "91d7f26c-9108-4121-92b8-faf566a337bd",
+      "text": "Legitimacy is primarily derived from securing broad, equitable representation of the full electorate, a goal that mandatory voting supports, irrespective of whether participation feels voluntary.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "513134bc-ab0b-46b4-ae64-5bd53405ff71",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:33.864995"
+    },
+    {
+      "id": "8e35a890-6f26-4512-8966-2787a6c8f42a",
+      "text": "Fines for non-voting function as penalties for neglecting a civic duty, similar to other minor penalties, and their existence does not imply that citizens view the act of voting itself as involuntary coercion.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "513134bc-ab0b-46b4-ae64-5bd53405ff71",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:33.866018"
+    },
+    {
+      "id": "dd0b2732-f80d-42f5-9332-9e58e58e941b",
+      "text": "Compliance requires attending the polling place, waiting, and formally casting a ballot, which necessitates a non-zero increase in effort related to time, travel, and logistics compared to not participating.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "152ba720-1fe1-445e-8aac-6715ce0cb0d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:34.236787"
+    },
+    {
+      "id": "bebc35ed-7ad2-4b25-b4cf-b2b2d8f02788",
+      "text": "Nations with mandatory voting systems do not show a systematic increase in invalid or blank ballots compared to voluntary systems, suggesting that compelled voters still cast valid, non-random selections.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b11a0ab7-2534-4f03-a388-ea493aa5b6f6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:37.163375"
+    },
+    {
+      "id": "a305c104-2421-45e2-a25d-3b5f6a579d47",
+      "text": "Mandatory turnout includes many indifferent voters, allowing elected officials to still prioritize specific organized special interests rather than genuinely increasing broad responsiveness or tackling complex issues.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "31fd927f-c186-427f-8edc-6878464d0e5b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:41.455956"
+    },
+    {
+      "id": "0c56ca8b-bcc6-442b-a862-6cd4b91d1db0",
+      "text": "Mandatory participation in one civic duty (voting) can satisfy perceived civic obligations, potentially causing civic fatigue and reducing motivation for engagement in distinct, voluntary civic processes.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "31fd927f-c186-427f-8edc-6878464d0e5b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:41.455995"
+    },
+    {
+      "id": "ea7c7ed5-3664-464f-9eca-742b97702ae1",
+      "text": "Mandatory voting infringes upon the fundamental democratic principle of individual liberty by removing the right to abstain. The freedom to vote implies a corresponding freedom to refrain from participation without penalty or coercion.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:43.598549"
+    },
+    {
+      "id": "6a948e21-a866-4ba4-90ed-3046601bc081",
+      "text": "Compulsory voting introduces a high number of uninformed or indifferent voters, which increases electoral randomness and favors candidates or policies that benefit from low political engagement. This diminishes the quality and deliberative nature of democracy.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:43.599594"
+    },
+    {
+      "id": "43154fe1-c0f7-47ac-90d0-39a9f3e211a0",
+      "text": "Abstention serves as a legitimate and important form of political protest or expression of dissatisfaction with all available candidates or the political system itself. Mandatory participation eliminates this critical signal of popular discontent.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:43.600340"
+    },
+    {
+      "id": "724496fb-fe4c-4720-8d39-a910741ad212",
+      "text": "Implementing and enforcing compulsory voting requires extensive government bureaucracy for tracking non-voters and imposing fines. This enforcement mechanism risks disproportionately penalizing low-income, transient, or marginalized populations.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:43.601038"
+    },
+    {
+      "id": "2aa6adae-e967-4a01-a118-e30cd82570b1",
+      "text": "Democratic societies routinely impose mandatory civic duties, such as jury service or taxation, which limit individual liberty but are not considered violations of fundamental democratic principles, suggesting voting could similarly be treated as a legitimate obligation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ea7c7ed5-3664-464f-9eca-742b97702ae1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:54.282806"
+    },
+    {
+      "id": "7e382224-27fd-40f8-987a-c8c8f0c092e3",
+      "text": "Mandatory voting systems typically allow citizens to submit blank or spoiled ballots, which function as a more direct and quantifiable protest against all candidates or the political system than simple non-participation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "43154fe1-c0f7-47ac-90d0-39a9f3e211a0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:56.284670"
+    },
+    {
+      "id": "05649a14-21af-4f2c-9e10-0baf7946e4fb",
+      "text": "Compulsory voting can be enforced through non-monetary sanctions, such as limitations on public employment or administrative requirements, nullifying the risk of disproportionately penalizing low-income citizens with punitive fines.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "724496fb-fe4c-4720-8d39-a910741ad212",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:33:57.033657"
+    },
+    {
+      "id": "7906758d-94c9-47a5-aa1a-cd4e670c6ece",
+      "text": "Increased electoral randomness from compulsory voting is equally likely to dilute the power of organized special interests and highly motivated partisan blocs, preventing them from dominating the political outcome.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6a948e21-a866-4ba4-90ed-3046601bc081",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:01.540748"
+    },
+    {
+      "id": "efeb5764-4304-4e4a-a343-addcd5e81763",
+      "text": "Democratic quality is substantively enhanced by the maximal political legitimacy achieved when election results represent virtually the entire voting-age population, a direct benefit of compulsory voting laws.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6a948e21-a866-4ba4-90ed-3046601bc081",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:01.541835"
+    },
+    {
+      "id": "3da6a666-8535-4477-80e2-12bc176bf13b",
+      "text": "Mandatory duties like taxation and jury service are foundational for the state's functional existence (funding and rule of law). Voting, however, is primarily an act of political expression, and mandatory participation coerces speech rather than securing basic public resources or state operations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2aa6adae-e967-4a01-a118-e30cd82570b1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:06.435506"
+    },
+    {
+      "id": "ee9b0cf6-c65c-4c1b-be19-a9f641c2cf96",
+      "text": "Non-monetary sanctions are not inherently equitable; restricting public employment removes a critical income source for the working poor, and complex administrative requirements place a disproportionate burden of time and resources on citizens with fewer resources.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "05649a14-21af-4f2c-9e10-0baf7946e4fb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:08.473052"
+    },
+    {
+      "id": "6c440d6c-cbe1-40d8-b9a9-773d952dc777",
+      "text": "Non-participation in a mandatory voting regime constitutes a direct and complete rejection of the legal mandate, whereas submitting a spoiled ballot is partial compliance that accepts the state's authority to compel attendance.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7e382224-27fd-40f8-987a-c8c8f0c092e3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:09.708179"
+    },
+    {
+      "id": "1b7c298b-3b9c-4ed9-bb19-15ee803e79b3",
+      "text": "Compulsory turnout forces purely random or uniformed votes, which inflate participation numbers without lending genuine reflective legitimacy to the electoral mandate.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "efeb5764-4304-4e4a-a343-addcd5e81763",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:12.413673"
+    },
+    {
+      "id": "c9dd6a77-4923-4588-82fc-09783d48c594",
+      "text": "Substantive democratic quality primarily relates to effective governance and the protection of civil liberties, neither of which is automatically improved merely by achieving higher electoral procedural legitimacy.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "efeb5764-4304-4e4a-a343-addcd5e81763",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:12.414249"
+    },
+    {
+      "id": "f4419e6a-79c3-4a1e-b3d8-aa73b4f8d01e",
+      "text": "The power of organized special interests stems from financial resources and access to politicians, which remains largely unaffected by changes in voter participation composition unlike the power of partisan blocs that relies on voter mobilization.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7906758d-94c9-47a5-aa1a-cd4e670c6ece",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:13.485318"
+    },
+    {
+      "id": "3010367f-0caf-4615-ba89-8cb16ae2aa51",
+      "text": "Diluting influence does not guarantee preventing domination, as these groups retain structural control over party platforms, candidate selection, and campaign finance, independent of marginal voter choices.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7906758d-94c9-47a5-aa1a-cd4e670c6ece",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:13.485928"
+    },
+    {
+      "id": "8d070dc9-ff63-4df4-805e-4a59dab588c8",
+      "text": "Mandatory voting does not compel speech or political expression; citizens fulfill the required civic duty by attending the polls, where they are allowed to submit a blank or spoiled ballot.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3da6a666-8535-4477-80e2-12bc176bf13b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:19.634936"
+    },
+    {
+      "id": "b35de4ac-913a-4f1d-8019-1269b9e0894e",
+      "text": "High voter participation is functionally necessary for a state's democratic legitimacy and perceived stability, which is equally foundational to its existence as funding or the rule of law, contradicting the argument's restrictive definition of public operations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3da6a666-8535-4477-80e2-12bc176bf13b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:19.634960"
+    },
+    {
+      "id": "8ffa405c-403c-48f2-85ef-78fbfa55a879",
+      "text": "Special interests exert power by spending millions on targeted voter persuasion and mobilization, meaning their ability to achieve outcomes is fundamentally dependent on manipulating the composition of the current, voluntary electorate.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f4419e6a-79c3-4a1e-b3d8-aa73b4f8d01e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:24.260406"
+    },
+    {
+      "id": "a11bb45a-ea96-4cde-a047-4567197f3215",
+      "text": "The power of major partisan blocs does not rely solely on voter mobilization but also depends heavily on possessing substantial financial resources and privileged access to politicians, undermining the distinct separation made.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f4419e6a-79c3-4a1e-b3d8-aa73b4f8d01e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:34:24.260451"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:33:10.007299"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:33:10.007299"
+    }
+  ],
+  "links": [
+    {
+      "source": "70d7f2fe-6ef9-4bca-a3c3-53219df9301e",
+      "target": "8d46e296-a52f-4c75-90c4-ac1204b925a7",
+      "type": "objection"
+    },
+    {
+      "source": "70d7f2fe-6ef9-4bca-a3c3-53219df9301e",
+      "target": "f31b828c-e774-427a-8d8a-68757cea78da",
+      "type": "objection"
+    },
+    {
+      "source": "9e0c2b43-fd1c-4c49-ba9f-82680143a98d",
+      "target": "5e5fdd03-2191-4b79-88c8-e71a8741ed89",
+      "type": "objection"
+    },
+    {
+      "source": "9e0c2b43-fd1c-4c49-ba9f-82680143a98d",
+      "target": "6073fbf0-57b7-4f46-899a-a408c8e70839",
+      "type": "objection"
+    },
+    {
+      "source": "f70fc5c7-80a4-450c-9814-ab88b4a57561",
+      "target": "152ba720-1fe1-445e-8aac-6715ce0cb0d6",
+      "type": "objection"
+    },
+    {
+      "source": "f70fc5c7-80a4-450c-9814-ab88b4a57561",
+      "target": "39ccc596-f827-43dd-8b01-eb5f8cc35809",
+      "type": "objection"
+    },
+    {
+      "source": "edc97b42-0ed9-42d2-9998-72f20f4c50ba",
+      "target": "b11a0ab7-2534-4f03-a388-ea493aa5b6f6",
+      "type": "objection"
+    },
+    {
+      "source": "edc97b42-0ed9-42d2-9998-72f20f4c50ba",
+      "target": "513134bc-ab0b-46b4-ae64-5bd53405ff71",
+      "type": "objection"
+    },
+    {
+      "source": "f31b828c-e774-427a-8d8a-68757cea78da",
+      "target": "51546f88-263c-43e1-86a2-3c079abe3dad",
+      "type": "response"
+    },
+    {
+      "source": "f31b828c-e774-427a-8d8a-68757cea78da",
+      "target": "90e79ea6-06e4-4572-9ca1-e59a303e1cae",
+      "type": "response"
+    },
+    {
+      "source": "39ccc596-f827-43dd-8b01-eb5f8cc35809",
+      "target": "348beb07-bf9a-46fd-935c-dfb08a5b067d",
+      "type": "response"
+    },
+    {
+      "source": "39ccc596-f827-43dd-8b01-eb5f8cc35809",
+      "target": "31fd927f-c186-427f-8edc-6878464d0e5b",
+      "type": "response"
+    },
+    {
+      "source": "513134bc-ab0b-46b4-ae64-5bd53405ff71",
+      "target": "91d7f26c-9108-4121-92b8-faf566a337bd",
+      "type": "response"
+    },
+    {
+      "source": "513134bc-ab0b-46b4-ae64-5bd53405ff71",
+      "target": "8e35a890-6f26-4512-8966-2787a6c8f42a",
+      "type": "response"
+    },
+    {
+      "source": "152ba720-1fe1-445e-8aac-6715ce0cb0d6",
+      "target": "dd0b2732-f80d-42f5-9332-9e58e58e941b",
+      "type": "response"
+    },
+    {
+      "source": "b11a0ab7-2534-4f03-a388-ea493aa5b6f6",
+      "target": "bebc35ed-7ad2-4b25-b4cf-b2b2d8f02788",
+      "type": "response"
+    },
+    {
+      "source": "31fd927f-c186-427f-8edc-6878464d0e5b",
+      "target": "a305c104-2421-45e2-a25d-3b5f6a579d47",
+      "type": "response"
+    },
+    {
+      "source": "31fd927f-c186-427f-8edc-6878464d0e5b",
+      "target": "0c56ca8b-bcc6-442b-a862-6cd4b91d1db0",
+      "type": "response"
+    },
+    {
+      "source": "ea7c7ed5-3664-464f-9eca-742b97702ae1",
+      "target": "2aa6adae-e967-4a01-a118-e30cd82570b1",
+      "type": "objection"
+    },
+    {
+      "source": "43154fe1-c0f7-47ac-90d0-39a9f3e211a0",
+      "target": "7e382224-27fd-40f8-987a-c8c8f0c092e3",
+      "type": "objection"
+    },
+    {
+      "source": "724496fb-fe4c-4720-8d39-a910741ad212",
+      "target": "05649a14-21af-4f2c-9e10-0baf7946e4fb",
+      "type": "objection"
+    },
+    {
+      "source": "6a948e21-a866-4ba4-90ed-3046601bc081",
+      "target": "7906758d-94c9-47a5-aa1a-cd4e670c6ece",
+      "type": "objection"
+    },
+    {
+      "source": "6a948e21-a866-4ba4-90ed-3046601bc081",
+      "target": "efeb5764-4304-4e4a-a343-addcd5e81763",
+      "type": "objection"
+    },
+    {
+      "source": "2aa6adae-e967-4a01-a118-e30cd82570b1",
+      "target": "3da6a666-8535-4477-80e2-12bc176bf13b",
+      "type": "response"
+    },
+    {
+      "source": "05649a14-21af-4f2c-9e10-0baf7946e4fb",
+      "target": "ee9b0cf6-c65c-4c1b-be19-a9f641c2cf96",
+      "type": "response"
+    },
+    {
+      "source": "7e382224-27fd-40f8-987a-c8c8f0c092e3",
+      "target": "6c440d6c-cbe1-40d8-b9a9-773d952dc777",
+      "type": "response"
+    },
+    {
+      "source": "efeb5764-4304-4e4a-a343-addcd5e81763",
+      "target": "1b7c298b-3b9c-4ed9-bb19-15ee803e79b3",
+      "type": "response"
+    },
+    {
+      "source": "efeb5764-4304-4e4a-a343-addcd5e81763",
+      "target": "c9dd6a77-4923-4588-82fc-09783d48c594",
+      "type": "response"
+    },
+    {
+      "source": "7906758d-94c9-47a5-aa1a-cd4e670c6ece",
+      "target": "f4419e6a-79c3-4a1e-b3d8-aa73b4f8d01e",
+      "type": "response"
+    },
+    {
+      "source": "7906758d-94c9-47a5-aa1a-cd4e670c6ece",
+      "target": "3010367f-0caf-4615-ba89-8cb16ae2aa51",
+      "type": "response"
+    },
+    {
+      "source": "3da6a666-8535-4477-80e2-12bc176bf13b",
+      "target": "8d070dc9-ff63-4df4-805e-4a59dab588c8",
+      "type": "response"
+    },
+    {
+      "source": "3da6a666-8535-4477-80e2-12bc176bf13b",
+      "target": "b35de4ac-913a-4f1d-8019-1269b9e0894e",
+      "type": "response"
+    },
+    {
+      "source": "f4419e6a-79c3-4a1e-b3d8-aa73b4f8d01e",
+      "target": "8ffa405c-403c-48f2-85ef-78fbfa55a879",
+      "type": "response"
+    },
+    {
+      "source": "f4419e6a-79c3-4a1e-b3d8-aa73b4f8d01e",
+      "target": "a11bb45a-ea96-4cde-a047-4567197f3215",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "edc97b42-0ed9-42d2-9998-72f20f4c50ba",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9e0c2b43-fd1c-4c49-ba9f-82680143a98d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "70d7f2fe-6ef9-4bca-a3c3-53219df9301e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "f70fc5c7-80a4-450c-9814-ab88b4a57561",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ea7c7ed5-3664-464f-9eca-742b97702ae1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6a948e21-a866-4ba4-90ed-3046601bc081",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "43154fe1-c0f7-47ac-90d0-39a9f3e211a0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "724496fb-fe4c-4720-8d39-a910741ad212",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

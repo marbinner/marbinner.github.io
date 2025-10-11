@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaccines are safe - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Vaccines are safe</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            54 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/vaccines-are-safe.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">54</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "c0719775-860b-4300-8abb-32ee1cc34d88",
+      "text": "Vaccines undergo multi-phase clinical trials involving tens of thousands of participants before approval. Post-market surveillance systems, such as the US VAERS and the EU EudraVigilance, rapidly monitor billions of doses administered globally, providing continuous, real-time safety verification of approved products.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "FDA",
+        "EMA",
+        "VAERS",
+        "EudraVigilance"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:34.020166+00:00"
+    },
+    {
+      "id": "a4c9be1a-d1bf-42d0-9f94-94876d6fac9b",
+      "text": "Severe adverse events from vaccines are extremely rare when weighed against the high risks of contracting infectious diseases. The net result is an overwhelming safety benefit, eliminating the societal morbidity and mortality historically associated with diseases like measles and poliomyelitis.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:34.020606+00:00"
+    },
+    {
+      "id": "1e1b5895-807f-4300-917c-537a16bab0a0",
+      "text": "Vaccine safety is guaranteed by the redundant oversight of multiple, independent international and national regulatory bodies, including the US FDA and the European Medicines Agency (EMA). These authorities constantly scrutinize safety data and are mandated to proactively halt distribution immediately if clear adverse signals arise.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "FDA",
+        "EMA",
+        "WHO"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:34.020878+00:00"
+    },
+    {
+      "id": "2a280182-e77d-4382-b4f0-ab214e5539ab",
+      "text": "The historical success of global vaccination campaigns demonstrates a powerful long-term safety record essential for population-scale interventions. This safety is validated by the complete global eradication of naturally occurring smallpox and the near-elimination of poliomyelitis across continents.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "smallpox eradication",
+        "polio elimination"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:34.021131+00:00"
+    },
+    {
+      "id": "5e3c0448-fd03-41d8-8b24-ba21f60384c6",
+      "text": "Vaccines are composed of simple, well-known, non-biologically active components such as antigens, adjuvants, and stabilizers. These components are rapidly processed and naturally cleared by the immune system, minimizing prolonged systemic exposure and limiting the potential for long-term side effects.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:34.021376+00:00"
+    },
+    {
+      "id": "0d60f2f9-fe6e-4953-beb2-9f7544b1cef8",
+      "text": "The medical practice of requiring informed consent relies on the foundational ethical premise that health authorities perform rigorous due diligence to verify safety data. This requires regulatory bodies to certify that the intervention is safe and effective before recommendations are made to the public.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:34.021611+00:00"
+    },
+    {
+      "id": "fd0e7ee1-b79e-42e9-964b-77ffec13bb2d",
+      "text": "Regulatory oversight minimizes risk but cannot guarantee absolute safety, as demonstrated by the rare but serious adverse events (like vaccine-induced thrombosis) identified only after the mass deployment of the AstraZeneca COVID-19 vaccine.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1e1b5895-807f-4300-917c-537a16bab0a0",
+      "children_count": 0,
+      "references": [
+        "World Health Organization alerts regarding AstraZeneca vaccine"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:44.514953+00:00"
+    },
+    {
+      "id": "85573d5a-2b64-4b55-bbf4-46985640a68b",
+      "text": "Regulatory independence can be influenced by political pressure during public health crises, exemplified by the rapid FDA Emergency Use Authorizations during the COVID-19 pandemic, which prioritized speed over standard review timelines.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1e1b5895-807f-4300-917c-537a16bab0a0",
+      "children_count": 2,
+      "references": [
+        "US FDA Emergency Use Authorization"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:44.515623+00:00"
+    },
+    {
+      "id": "2ac42950-3544-4863-aa03-5b6105029dd0",
+      "text": "Passive, voluntary reporting systems like VAERS are primarily for signal generation and grossly incomplete due to underreporting, not \"real-time safety verification.\" The system\u2019s design explicitly warns that reports alone do not establish causation, fundamentally challenging the verification claim.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c0719775-860b-4300-8abb-32ee1cc34d88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:44.672944+00:00"
+    },
+    {
+      "id": "cfb6f460-1e2d-4098-ad5c-748c4525c840",
+      "text": "Phase III trials, even with tens of thousands of participants, lack the statistical power to detect adverse events occurring less frequently than 1 in 30,000 doses. Consequently, extremely rare side effects such as the narcolepsy linked to the 2009 H1N1 Pandemrix vaccine only became apparent post-market.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c0719775-860b-4300-8abb-32ee1cc34d88",
+      "children_count": 0,
+      "references": [
+        "Pandemrix vaccine and narcolepsy"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:44.673682+00:00"
+    },
+    {
+      "id": "aa2a505c-dca2-4667-8f01-0ddd41ae73bd",
+      "text": "Measles outbreaks, such as the 2019 cluster in the US, occur when local vaccination rates decline, demonstrating that the societal morbidity associated with the disease is controlled, not yet globally eliminated.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a4c9be1a-d1bf-42d0-9f94-94876d6fac9b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:49.005720+00:00"
+    },
+    {
+      "id": "60ad991a-fc69-42ba-bfd2-5759bcc068cc",
+      "text": "The calculation of \"overwhelming safety benefit\" is contextual, as the risk-benefit ratio for vaccines against diseases with high fatality (e.g., polio) is fundamentally different from vaccines against common, typically mild childhood pathogens.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a4c9be1a-d1bf-42d0-9f94-94876d6fac9b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:49.006158+00:00"
+    },
+    {
+      "id": "39f8baa7-410a-4770-adf4-6062eca87273",
+      "text": "The US FDA grants Emergency Use Authorizations (EUAs) for interventions like COVID-19 vaccines, allowing public recommendations based on due diligence showing known benefits outweigh known risks before full certification is completed.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0d60f2f9-fe6e-4953-beb2-9f7544b1cef8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:49.871798+00:00"
+    },
+    {
+      "id": "9a723688-4a86-4974-860d-34f74dc7e566",
+      "text": "Regulatory bodies like the EMA and FDA approve pharmaceutical interventions when efficacy outweighs known side effects, which is a lower standard than certification for absolute safety and effectiveness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0d60f2f9-fe6e-4953-beb2-9f7544b1cef8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:49.872228+00:00"
+    },
+    {
+      "id": "a26433af-ecfd-4a01-b5b6-795f2623673b",
+      "text": "The Rotashield vaccine was highly effective against rotavirus but was withdrawn in 1999 after real-world surveillance linked it to a significant increase in the risk of bowel obstruction.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a280182-e77d-4382-b4f0-ab214e5539ab",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:50.080004+00:00"
+    },
+    {
+      "id": "74b3c387-7a83-4e01-9ced-0e79db8d7a4b",
+      "text": "The safety profile of newer vaccine platforms is diverse, as demonstrated by the specific, rare risk of thrombosis with thrombocytopenia syndrome identified following deployment of adenovirus vector COVID-19 vaccines.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a280182-e77d-4382-b4f0-ab214e5539ab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:50.080433+00:00"
+    },
+    {
+      "id": "bebfd6d3-0d6a-488b-aecd-fc9d334d4d3e",
+      "text": "Antigens are biologically active components necessary to provoke a specific immune response, and adjuvants like aluminum salts are added precisely for their active role in enhancing immune cell presentation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "5e3c0448-fd03-41d8-8b24-ba21f60384c6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:52.138585+00:00"
+    },
+    {
+      "id": "e7820e22-ccc5-4202-9469-ad131191a69e",
+      "text": "Rapid clearance of vaccine components does not preclude long-term side effects, as an acute biological event, like the initial inflammatory cascade, can trigger rare but irreversible conditions such as Guillain-Barr\u00e9 syndrome or narcolepsy before the components are fully eliminated.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "5e3c0448-fd03-41d8-8b24-ba21f60384c6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:52.139046+00:00"
+    },
+    {
+      "id": "61c1ff1f-e00a-4146-98f9-007b3387051e",
+      "text": "The FDA's Emergency Use Authorization pathway is a legal framework established years prior to the COVID-19 pandemic for necessary rapid deployment of medical countermeasures during declared health emergencies, making its use a standard operational decision stipulated in law.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "85573d5a-2b64-4b55-bbf4-46985640a68b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:59.068227+00:00"
+    },
+    {
+      "id": "ee6de2fe-ac17-4a3a-ac4b-0a6c4d65346a",
+      "text": "The FDA maintained its independence by revoking the Emergency Use Authorization for hydroxychloroquine in June 2020 after reviewing new data, demonstrating that scientific criteria and safety standards outweighed political pressure to keep the drug available.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "85573d5a-2b64-4b55-bbf4-46985640a68b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:59.068253+00:00"
+    },
+    {
+      "id": "ed31e58c-7c51-4008-9ac3-5a9f38b44147",
+      "text": "Demonstrating the supposed \"diverse\" safety profiles of newer vaccine platforms requires comparing the differing effects of at least two technologies, not just mentioning a single, rare risk associated with the adenovirus vector platform.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "74b3c387-7a83-4e01-9ced-0e79db8d7a4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.139074+00:00"
+    },
+    {
+      "id": "e0bfdd0a-950c-4693-a307-54199efdb09e",
+      "text": "The most widely deployed newer platform, the mRNA technology used by Pfizer and Moderna, exhibited a largely homogenous safety profile characterized primarily by transient and mild systemic reactions, thus limiting the claimed severe adverse event diversity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "74b3c387-7a83-4e01-9ced-0e79db8d7a4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.139118+00:00"
+    },
+    {
+      "id": "850acbbe-6f93-4505-b915-c6ef4ed442a4",
+      "text": "Vaccines are not absolutely safe because they necessitate a statistical risk of known severe adverse events, resulting in direct physical harm to the recipient. Examples like myocarditis reported following specific mRNA vaccines, or Guillain-Barr\u00e9 Syndrome linked to other vaccine types, demonstrate that zero risk does not exist.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.139254+00:00"
+    },
+    {
+      "id": "47e779d7-b6d1-408e-b326-952b3db2c6bf",
+      "text": "The full long-term safety profile of many vaccines cannot be definitively proven because multi-decade longitudinal studies are frequently impossible prior to marketing. This methodological limitation means the safety assessment cannot fully guarantee the absence of latent adverse effects that may manifest over many years.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.139902+00:00"
+    },
+    {
+      "id": "2d10dfdb-904b-43fa-87bd-c3b42b9a7075",
+      "text": "Specific vaccines initially deemed safe were later withdrawn from the market following the discovery of unacceptable, unexpected severe side effects post-licensure. The removal of the RotaShield vaccine in 1999 due to an increased risk of intussusception confirms that initial safety assessments can be flawed.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.140311+00:00"
+    },
+    {
+      "id": "2b7c513f-6fb2-45c0-bc49-f5e4b960b7d7",
+      "text": "Vaccine safety is not absolute because individual biological variability means they are unsafe for specific, identifiable subsets of the population. Genetic polymorphisms and idiosyncratic biological responses can heighten the risk of adverse reactions in susceptible individuals, making the product unsafe relative to their physiology.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.140684+00:00"
+    },
+    {
+      "id": "9d778b79-5f3c-4782-93c8-3f5fbdf8194c",
+      "text": "The establishment of government-funded injury compensation programs implies an institutional acknowledgment that vaccines are not completely safe and can cause harm. Programs like the United States' Vaccine Injury Compensation Program (VICP) demonstrate that liability protection is necessary because documented instances of injury exist.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.141101+00:00"
+    },
+    {
+      "id": "0c6ab3c4-bb8f-4285-99ec-3f89feae0aab",
+      "text": "Safety assurance is practically compromised because regulatory agencies receive significant funding and data from the pharmaceutical companies they are tasked with regulating. This relationship, common in agencies like the US FDA and the EMA, creates an inherent conflict of interest that reduces public confidence in the objectivity of safety determinations.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:02.141492+00:00"
+    },
+    {
+      "id": "7a4c9d16-db62-41ef-9d91-c57406df42e1",
+      "text": "The withdrawal of RotaShield confirms the effectiveness of post-licensure surveillance systems (Phase IV), which are explicitly designed to detect extremely rare adverse events, proving the oversight system succeeded, not that the initial assessment failed.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2d10dfdb-904b-43fa-87bd-c3b42b9a7075",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:11.882876+00:00"
+    },
+    {
+      "id": "f8e70265-1784-44f1-82d7-d31c22c355d2",
+      "text": "Even with the RotaShield withdrawal, the overall safety assessment framework proved sound, as subsequent rotavirus vaccines (RotaTeq and Rotarix) successfully reduced thousands of annual rotavirus deaths and hospitalizations globally with minimal risk.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2d10dfdb-904b-43fa-87bd-c3b42b9a7075",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:11.883526+00:00"
+    },
+    {
+      "id": "c0c1be4a-7a05-493f-9ac7-44c0cea33f31",
+      "text": "The US Vaccine Injury Compensation Program was created under the 1986 National Childhood Vaccine Injury Act primarily to stabilize the vaccine supply by shielding manufacturers from financially devastating lawsuits, not solely to acknowledge minimal inherent risks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9d778b79-5f3c-4782-93c8-3f5fbdf8194c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:15.444420+00:00"
+    },
+    {
+      "id": "5c229ade-7157-4197-ba41-5fcd03bf4989",
+      "text": "Liability protection is not necessitated solely by the existence of injury, as virtually all medical procedures and pharmaceuticals carry some documented risk; instead, this protection is a specific policy choice to ensure mass public health access and maintain market supply.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9d778b79-5f3c-4782-93c8-3f5fbdf8194c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:15.445392+00:00"
+    },
+    {
+      "id": "032ebaed-20e3-436f-abc8-6ce74255c2ab",
+      "text": "Major adverse effects resulting from vaccine-induced biological mechanisms, such as autoimmune responses or hypersensitivity, manifest within weeks to months following vaccination, not decades later. Long-term studies spanning 5 to 10 years, which are standard post-market requirements, capture virtually all biologically plausible latent risks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "47e779d7-b6d1-408e-b326-952b3db2c6bf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:18.780374+00:00"
+    },
+    {
+      "id": "2f1b5f89-74fc-4087-942c-94a617e91623",
+      "text": "Global pharmacovigilance systems, such as the EU's EudraVigilance and the US Vaccine Safety Datalink (VSD), actively monitor millions of individuals for decades post-marketing, systematically compensating for the pre-market study limitations. The established long-term safety profiles of the MMR and polio vaccines rely on over 50 years of continuous post-market surveillance data.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "47e779d7-b6d1-408e-b326-952b3db2c6bf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:18.781384+00:00"
+    },
+    {
+      "id": "271925d9-1436-494a-8cd4-3a416ebc3ec4",
+      "text": "The risk of myocarditis following an mRNA vaccine is statistically negligible compared to the 80 to 200-fold higher risk of myocarditis caused by the wild-type SARS-CoV-2 infection.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "850acbbe-6f93-4505-b915-c6ef4ed442a4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:18.964645+00:00"
+    },
+    {
+      "id": "db2350bd-72cf-41c2-82cd-1bcaf9ac0c2c",
+      "text": "Common, life-saving drugs like penicillin and aspirin carry a statistical risk of severe adverse reactions, including anaphylaxis and fatal bleeding, yet they are internationally considered safe due to their immense public health benefits.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "850acbbe-6f93-4505-b915-c6ef4ed442a4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:18.965439+00:00"
+    },
+    {
+      "id": "0c308267-d083-4d3b-897f-89e2d658bd41",
+      "text": "The US FDA utilizes independent scientific advisory committees and frequently rejects or requires withdrawal of products, such as the 2004 recall of Vioxx, confirming the scientific review mechanism remains robust against industry financial pressures.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0c6ab3c4-bb8f-4285-99ec-3f89feae0aab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:19.419015+00:00"
+    },
+    {
+      "id": "8b251979-5e0e-4e07-861b-f7dde40e8f8e",
+      "text": "Declining public trust in regulatory bodies reflects a decades-long erosion of confidence toward all major institutions, including media and government, indicating that the funding structure is not the sole or primary cause of public skepticism.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0c6ab3c4-bb8f-4285-99ec-3f89feae0aab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:19.419435+00:00"
+    },
+    {
+      "id": "740222a5-c3ec-489a-ab59-d63e2a8596e0",
+      "text": "Regulatory bodies like the Food and Drug Administration (FDA) classify products as safe when the benefits for the general population vastly outweigh the known, minute risks for a statistically accepted subset, acknowledging that no medical product is risk-free for every single recipient.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2b7c513f-6fb2-45c0-bc49-f5e4b960b7d7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:20.367227+00:00"
+    },
+    {
+      "id": "ed2876dc-2e15-469b-833d-19b0e91d8e7c",
+      "text": "When specific biological risks, such as the G6PD deficiency causing adverse reactions to certain drugs, are truly identifiable, standard medical practice dictates screening and exclusion, thus maintaining the safety profile for the remaining population.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2b7c513f-6fb2-45c0-bc49-f5e4b960b7d7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:20.368165+00:00"
+    },
+    {
+      "id": "3a3f8eb8-e35b-4881-8dac-2744add52f45",
+      "text": "The initial safety assessment framework definitively failed, demonstrated by the RotaShield vaccine causing intussusception in infants and being withdrawn in 1999 shortly after approval. The subsequent success of RotaTeq/Rotarix only proves the framework was revised and improved, not initially sound.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f8e70265-1784-44f1-82d7-d31c22c355d2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:22.673143+00:00"
+    },
+    {
+      "id": "216ffe6c-24f1-4aa1-ab3b-cb98da64cdfc",
+      "text": "The success of subsequent, redesigned vaccines like RotaTeq and Rotarix is irrelevant to the validity of the *original* assessment framework that approved RotaShield. Subsequent successful products only validate that the system learned from the prior failure and incorporated new risk data into later approvals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f8e70265-1784-44f1-82d7-d31c22c355d2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:22.673171+00:00"
+    },
+    {
+      "id": "e43f1eb0-951b-4b3a-9184-92cee63808d4",
+      "text": "Policy choices for liability protection are often driven by immediate political pressure and fiscal risk management, transferring massive, unpredictable tort costs from corporations to government-run injury compensation schemes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5c229ade-7157-4197-ba41-5fcd03bf4989",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:26.209324+00:00"
+    },
+    {
+      "id": "5369468a-66b2-4458-9663-5af88e49ac70",
+      "text": "Many developed nations, particularly in the European Union, impose strict product liability on pharmaceutical manufacturers yet still achieve high levels of public health access, debunking the necessity claim.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5c229ade-7157-4197-ba41-5fcd03bf4989",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:26.209372+00:00"
+    },
+    {
+      "id": "9dd4f2f8-511b-4531-9d54-354cebeb6efa",
+      "text": "RotaShield caused documented cases of intussusception requiring hospitalization in children before its 1999 withdrawal, demonstrating the critical pre-licensure risk assessment was insufficient to prevent patient harm.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7a4c9d16-db62-41ef-9d91-c57406df42e1",
+      "children_count": 0,
+      "references": [
+        "CDC",
+        "FDA"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:28.684207+00:00"
+    },
+    {
+      "id": "d80dd965-46ae-413b-b537-d3e23abe8412",
+      "text": "Subsequent rotavirus vaccines (Rotarix, RotaTeq) utilized massively expanded Phase III trials involving 60,000 to 70,000 infants, indicating the inadequacy of the initial, smaller pre-licensure assessment standards used for RotaShield.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7a4c9d16-db62-41ef-9d91-c57406df42e1",
+      "children_count": 0,
+      "references": [
+        "WHO"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:28.684234+00:00"
+    },
+    {
+      "id": "898633b8-cb82-4523-ac2a-fd6ecff2be9b",
+      "text": "The 2004 Vioxx recall occurred only after the drug was linked to thousands of cardiovascular deaths while on the market, illustrating a severe deficiency in the initial scientific review process, not its robustness.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0c308267-d083-4d3b-897f-89e2d658bd41",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:29.509753+00:00"
+    },
+    {
+      "id": "c6cd8d12-8c7b-434b-9aba-15e55fb657dc",
+      "text": "FDA advisory committees are not sufficiently independent, as documented reviews frequently show panel members receiving waivers to vote despite having financial ties to the pharmaceutical companies whose products they evaluate.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0c308267-d083-4d3b-897f-89e2d658bd41",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:29.509781+00:00"
+    },
+    {
+      "id": "a02d2ab6-84d2-458d-9e56-58622f6e6601",
+      "text": "The broad decline in institutional trust acts as an underlying condition but does not logically negate the visible conflict of interest resulting from specific funding structures, which remains the primary *proximate* cause for regulator-specific distrust.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8b251979-5e0e-4e07-861b-f7dde40e8f8e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:30.245761+00:00"
+    },
+    {
+      "id": "3d857340-b7a5-4b0d-9b66-f4cb05bdecc6",
+      "text": "Specific events, like the SEC\u2019s failure to prevent the 2008 financial crisis due to regulatory capture and revolving doors, demonstrate a unique loss of confidence specifically tied to the relationship between the regulator and the regulated industry, rather than general societal skepticism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8b251979-5e0e-4e07-861b-f7dde40e8f8e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:30.245818+00:00"
+    },
+    {
+      "id": "de345387-20e8-4ed5-9738-4a655761ce1b",
+      "text": "The comparison relies on aggregate population risk; for high-risk demographic subgroups, such as adolescent males, surveillance data indicate the relative risk differential between vaccination and infection is substantially narrower than 80 to 200-fold.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "271925d9-1436-494a-8cd4-3a416ebc3ec4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:30.447046+00:00"
+    },
+    {
+      "id": "ab8df131-8005-4b64-acc9-007be67c13f1",
+      "text": "Focusing solely on incidence ignores the difference in clinical outcome, as vaccine-induced myocarditis is generally reported to be milder with higher short-term recovery rates, unlike the infection-induced cases associated with higher long-term morbidity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "271925d9-1436-494a-8cd4-3a416ebc3ec4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:30.447080+00:00"
+    },
+    {
+      "id": "38ca38e0-8a3c-4d3b-871b-a6b92c62069d",
+      "text": "Biological mechanisms that promote chronic, slow-onset conditions or are delayed by complex compensatory aging processes, like the 15-20 year delay seen with fetal exposure to diethylstilbestrol (DES), are not necessarily visible within a 10-year window.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "032ebaed-20e3-436f-abc8-6ce74255c2ab",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:33.094407+00:00"
+    },
+    {
+      "id": "0840f750-cd7d-4f28-8779-0a3756726543",
+      "text": "The 5-10 year post-market standard often lacks the statistical power and duration needed to detect extremely rare adverse events (e.g., 1 in 100,000), which may only become apparent through large-scale mass usage and extended pharmacovigilance, as seen with the Pandemrix narcolepsy link.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "032ebaed-20e3-436f-abc8-6ce74255c2ab",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:48:33.094434+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:47:34.020111+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:47:34.020111+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "1e1b5895-807f-4300-917c-537a16bab0a0",
+      "target": "fd0e7ee1-b79e-42e9-964b-77ffec13bb2d",
+      "type": "objection"
+    },
+    {
+      "source": "1e1b5895-807f-4300-917c-537a16bab0a0",
+      "target": "85573d5a-2b64-4b55-bbf4-46985640a68b",
+      "type": "objection"
+    },
+    {
+      "source": "c0719775-860b-4300-8abb-32ee1cc34d88",
+      "target": "2ac42950-3544-4863-aa03-5b6105029dd0",
+      "type": "objection"
+    },
+    {
+      "source": "c0719775-860b-4300-8abb-32ee1cc34d88",
+      "target": "cfb6f460-1e2d-4098-ad5c-748c4525c840",
+      "type": "objection"
+    },
+    {
+      "source": "a4c9be1a-d1bf-42d0-9f94-94876d6fac9b",
+      "target": "aa2a505c-dca2-4667-8f01-0ddd41ae73bd",
+      "type": "objection"
+    },
+    {
+      "source": "a4c9be1a-d1bf-42d0-9f94-94876d6fac9b",
+      "target": "60ad991a-fc69-42ba-bfd2-5759bcc068cc",
+      "type": "objection"
+    },
+    {
+      "source": "0d60f2f9-fe6e-4953-beb2-9f7544b1cef8",
+      "target": "39f8baa7-410a-4770-adf4-6062eca87273",
+      "type": "objection"
+    },
+    {
+      "source": "0d60f2f9-fe6e-4953-beb2-9f7544b1cef8",
+      "target": "9a723688-4a86-4974-860d-34f74dc7e566",
+      "type": "objection"
+    },
+    {
+      "source": "2a280182-e77d-4382-b4f0-ab214e5539ab",
+      "target": "a26433af-ecfd-4a01-b5b6-795f2623673b",
+      "type": "objection"
+    },
+    {
+      "source": "2a280182-e77d-4382-b4f0-ab214e5539ab",
+      "target": "74b3c387-7a83-4e01-9ced-0e79db8d7a4b",
+      "type": "objection"
+    },
+    {
+      "source": "5e3c0448-fd03-41d8-8b24-ba21f60384c6",
+      "target": "bebfd6d3-0d6a-488b-aecd-fc9d334d4d3e",
+      "type": "objection"
+    },
+    {
+      "source": "5e3c0448-fd03-41d8-8b24-ba21f60384c6",
+      "target": "e7820e22-ccc5-4202-9469-ad131191a69e",
+      "type": "objection"
+    },
+    {
+      "source": "85573d5a-2b64-4b55-bbf4-46985640a68b",
+      "target": "61c1ff1f-e00a-4146-98f9-007b3387051e",
+      "type": "response"
+    },
+    {
+      "source": "85573d5a-2b64-4b55-bbf4-46985640a68b",
+      "target": "ee6de2fe-ac17-4a3a-ac4b-0a6c4d65346a",
+      "type": "response"
+    },
+    {
+      "source": "74b3c387-7a83-4e01-9ced-0e79db8d7a4b",
+      "target": "ed31e58c-7c51-4008-9ac3-5a9f38b44147",
+      "type": "response"
+    },
+    {
+      "source": "74b3c387-7a83-4e01-9ced-0e79db8d7a4b",
+      "target": "e0bfdd0a-950c-4693-a307-54199efdb09e",
+      "type": "response"
+    },
+    {
+      "source": "2d10dfdb-904b-43fa-87bd-c3b42b9a7075",
+      "target": "7a4c9d16-db62-41ef-9d91-c57406df42e1",
+      "type": "objection"
+    },
+    {
+      "source": "2d10dfdb-904b-43fa-87bd-c3b42b9a7075",
+      "target": "f8e70265-1784-44f1-82d7-d31c22c355d2",
+      "type": "objection"
+    },
+    {
+      "source": "9d778b79-5f3c-4782-93c8-3f5fbdf8194c",
+      "target": "c0c1be4a-7a05-493f-9ac7-44c0cea33f31",
+      "type": "objection"
+    },
+    {
+      "source": "9d778b79-5f3c-4782-93c8-3f5fbdf8194c",
+      "target": "5c229ade-7157-4197-ba41-5fcd03bf4989",
+      "type": "objection"
+    },
+    {
+      "source": "47e779d7-b6d1-408e-b326-952b3db2c6bf",
+      "target": "032ebaed-20e3-436f-abc8-6ce74255c2ab",
+      "type": "objection"
+    },
+    {
+      "source": "47e779d7-b6d1-408e-b326-952b3db2c6bf",
+      "target": "2f1b5f89-74fc-4087-942c-94a617e91623",
+      "type": "objection"
+    },
+    {
+      "source": "850acbbe-6f93-4505-b915-c6ef4ed442a4",
+      "target": "271925d9-1436-494a-8cd4-3a416ebc3ec4",
+      "type": "objection"
+    },
+    {
+      "source": "850acbbe-6f93-4505-b915-c6ef4ed442a4",
+      "target": "db2350bd-72cf-41c2-82cd-1bcaf9ac0c2c",
+      "type": "objection"
+    },
+    {
+      "source": "0c6ab3c4-bb8f-4285-99ec-3f89feae0aab",
+      "target": "0c308267-d083-4d3b-897f-89e2d658bd41",
+      "type": "objection"
+    },
+    {
+      "source": "0c6ab3c4-bb8f-4285-99ec-3f89feae0aab",
+      "target": "8b251979-5e0e-4e07-861b-f7dde40e8f8e",
+      "type": "objection"
+    },
+    {
+      "source": "2b7c513f-6fb2-45c0-bc49-f5e4b960b7d7",
+      "target": "740222a5-c3ec-489a-ab59-d63e2a8596e0",
+      "type": "objection"
+    },
+    {
+      "source": "2b7c513f-6fb2-45c0-bc49-f5e4b960b7d7",
+      "target": "ed2876dc-2e15-469b-833d-19b0e91d8e7c",
+      "type": "objection"
+    },
+    {
+      "source": "f8e70265-1784-44f1-82d7-d31c22c355d2",
+      "target": "3a3f8eb8-e35b-4881-8dac-2744add52f45",
+      "type": "response"
+    },
+    {
+      "source": "f8e70265-1784-44f1-82d7-d31c22c355d2",
+      "target": "216ffe6c-24f1-4aa1-ab3b-cb98da64cdfc",
+      "type": "response"
+    },
+    {
+      "source": "5c229ade-7157-4197-ba41-5fcd03bf4989",
+      "target": "e43f1eb0-951b-4b3a-9184-92cee63808d4",
+      "type": "response"
+    },
+    {
+      "source": "5c229ade-7157-4197-ba41-5fcd03bf4989",
+      "target": "5369468a-66b2-4458-9663-5af88e49ac70",
+      "type": "response"
+    },
+    {
+      "source": "7a4c9d16-db62-41ef-9d91-c57406df42e1",
+      "target": "9dd4f2f8-511b-4531-9d54-354cebeb6efa",
+      "type": "response"
+    },
+    {
+      "source": "7a4c9d16-db62-41ef-9d91-c57406df42e1",
+      "target": "d80dd965-46ae-413b-b537-d3e23abe8412",
+      "type": "response"
+    },
+    {
+      "source": "0c308267-d083-4d3b-897f-89e2d658bd41",
+      "target": "898633b8-cb82-4523-ac2a-fd6ecff2be9b",
+      "type": "response"
+    },
+    {
+      "source": "0c308267-d083-4d3b-897f-89e2d658bd41",
+      "target": "c6cd8d12-8c7b-434b-9aba-15e55fb657dc",
+      "type": "response"
+    },
+    {
+      "source": "8b251979-5e0e-4e07-861b-f7dde40e8f8e",
+      "target": "a02d2ab6-84d2-458d-9e56-58622f6e6601",
+      "type": "response"
+    },
+    {
+      "source": "8b251979-5e0e-4e07-861b-f7dde40e8f8e",
+      "target": "3d857340-b7a5-4b0d-9b66-f4cb05bdecc6",
+      "type": "response"
+    },
+    {
+      "source": "271925d9-1436-494a-8cd4-3a416ebc3ec4",
+      "target": "de345387-20e8-4ed5-9738-4a655761ce1b",
+      "type": "response"
+    },
+    {
+      "source": "271925d9-1436-494a-8cd4-3a416ebc3ec4",
+      "target": "ab8df131-8005-4b64-acc9-007be67c13f1",
+      "type": "response"
+    },
+    {
+      "source": "032ebaed-20e3-436f-abc8-6ce74255c2ab",
+      "target": "38ca38e0-8a3c-4d3b-871b-a6b92c62069d",
+      "type": "response"
+    },
+    {
+      "source": "032ebaed-20e3-436f-abc8-6ce74255c2ab",
+      "target": "0840f750-cd7d-4f28-8779-0a3756726543",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "c0719775-860b-4300-8abb-32ee1cc34d88",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a4c9be1a-d1bf-42d0-9f94-94876d6fac9b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "1e1b5895-807f-4300-917c-537a16bab0a0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "2a280182-e77d-4382-b4f0-ab214e5539ab",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "5e3c0448-fd03-41d8-8b24-ba21f60384c6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "0d60f2f9-fe6e-4953-beb2-9f7544b1cef8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "850acbbe-6f93-4505-b915-c6ef4ed442a4",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "47e779d7-b6d1-408e-b326-952b3db2c6bf",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2d10dfdb-904b-43fa-87bd-c3b42b9a7075",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2b7c513f-6fb2-45c0-bc49-f5e4b960b7d7",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "9d778b79-5f3c-4782-93c8-3f5fbdf8194c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "0c6ab3c4-bb8f-4285-99ec-3f89feae0aab",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

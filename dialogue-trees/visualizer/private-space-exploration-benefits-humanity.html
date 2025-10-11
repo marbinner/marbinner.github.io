@@ -1,0 +1,3919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private space exploration benefits humanity - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Private space exploration benefits humanity</h1>
+        <div class="meta">
+            6 arguments for • 5 arguments against •
+            145 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/private-space-exploration-benefits-humanity.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">145</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">5</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "6070f0f0-4335-437c-ba73-f445fb3b146b",
+      "text": "Competition in propulsion systems and advanced lightweight materials, driven by private space ventures, generates commercially viable spin-off technologies like advanced composites, data analytics, and miniaturized electronics that improve terrestrial industries.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:14.171549+00:00"
+    },
+    {
+      "id": "2a26d9ca-f3df-4b12-9932-b1beed1ce0c3",
+      "text": "Current market data confirms that commercial providers are dramatically reducing the cost per kilogram to low-Earth orbit, making space significantly more accessible for scientific research, developing nations, and smaller commercial payloads.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:14.172006+00:00"
+    },
+    {
+      "id": "37166187-d67b-424d-9203-17c59e24aacd",
+      "text": "Private investment mobilizes substantial capital and assumes the financial risk for large-scale space infrastructure, relieving state budgets and allowing taxpayers to benefit from expensive space development without bearing the full capital expenditure liability.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:14.172272+00:00"
+    },
+    {
+      "id": "2dd690c2-0404-4d04-b6c5-26d7daffab42",
+      "text": "Establishing economically viable off-world infrastructure, facilitated by lower-cost private access, serves as an essential \"life insurance\" mechanism, protecting human civilization from existential threats like asteroid impacts or global catastrophes.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:14.172512+00:00"
+    },
+    {
+      "id": "0fb9cfad-ba60-4189-acc0-060c18260a26",
+      "text": "The introduction of private competition breaks established government monopolies on launch and satellite deployment, democratizing access to space for international research groups, educational institutions, and smaller nations previously excluded by prohibitive costs.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:14.172871+00:00"
+    },
+    {
+      "id": "fc5e67df-e8b3-4c0e-b7f5-9b00cab65149",
+      "text": "The historical commercialization of major infrastructure sectors, such as aviation and telecommunications, consistently resulted in mass scalability, decreased cost, and widespread public benefit, a trajectory now being followed by the private space sector.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:14.173141+00:00"
+    },
+    {
+      "id": "9bdd937b-e999-4fa4-b964-1f72b3de3ee2",
+      "text": "Despite reduced launch costs (OpEx), developing a functional satellite requires tens of millions of dollars for fabrication, testing, and ground station infrastructure, which poses a capital expenditure barrier far greater than the transportation expense for developing nations.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a26d9ca-f3df-4b12-9932-b1beed1ce0c3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:25.345504+00:00"
+    },
+    {
+      "id": "66fdc720-5f79-4b9b-b8f3-dc787e1915c6",
+      "text": "Accessibility is still limited by technical and regulatory hurdles, as lower launch costs do not solve the complex international licensing, spectrum allocation, and specialized engineering talent required to manage a space payload.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a26d9ca-f3df-4b12-9932-b1beed1ce0c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:25.346221+00:00"
+    },
+    {
+      "id": "742faeb6-83ba-4635-9522-28b5848bd8da",
+      "text": "Many listed 'spin-offs,' such as data analytics and miniaturized electronics, are driven by massive consumer electronics and Big Data sectors, meaning the private space industry primarily adapts and utilizes these existing technologies rather than generating them.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6070f0f0-4335-437c-ba73-f445fb3b146b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:26.476293+00:00"
+    },
+    {
+      "id": "be730b90-9047-4bce-9630-a3d5aa280a3f",
+      "text": "The high cost and extreme reliability requirements for space-grade materials and propulsion components mean genuine private space spin-offs are often too expensive for mass terrestrial adoption, limiting their net economic impact compared to direct R&D.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6070f0f0-4335-437c-ba73-f445fb3b146b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:26.476749+00:00"
+    },
+    {
+      "id": "96ac3305-bd22-4f1b-a9d6-61f3420c5e7c",
+      "text": "Commercialization in essential sectors often leads to market failure, resulting in reduced maintenance, monopolies, and social inequality, notably exemplified by the poor long-term track record of the privatized UK rail network and water utilities.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fc5e67df-e8b3-4c0e-b7f5-9b00cab65149",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:26.660633+00:00"
+    },
+    {
+      "id": "cd234207-efcb-48a4-8ba8-6472d4ba7aaa",
+      "text": "The analogy fails because space infrastructure involves extreme capital investment, lacks an immediate mass consumer base, and faces unique, high-externality problems like managing orbital debris and unestablished international liability frameworks.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fc5e67df-e8b3-4c0e-b7f5-9b00cab65149",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:26.661470+00:00"
+    },
+    {
+      "id": "c33f8c2b-fee2-4b5b-9ea6-1b348e9eee2e",
+      "text": "Cost reductions primarily benefit existing space actors; the absolute cost of accessing space (e.g., millions even for a rideshare) and the required regulatory and infrastructure overhead still excludes the vast majority of international educational institutions and small nations, preventing true \"democratization.\"",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0fb9cfad-ba60-4189-acc0-060c18260a26",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:28.780486+00:00"
+    },
+    {
+      "id": "0b5b524e-f79f-45ae-b1c7-a90f9870baf0",
+      "text": "Private launch firms prioritize high-volume, profit-driven contracts, such as deploying massive commercial constellations like Starlink, which crowds launch schedules and reduces the availability or flexibility of cheaper rideshare options necessary for small, non-commercial research payloads.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0fb9cfad-ba60-4189-acc0-060c18260a26",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:28.781187+00:00"
+    },
+    {
+      "id": "af5b1971-1526-476a-8823-9b1fd9c1d8c5",
+      "text": "The necessary resource commitment for establishing minimal self-sustaining off-world civilizations is estimated to cost trillions of dollars over decades, requiring a massive reallocation of global capital that does not currently exist.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2dd690c2-0404-4d04-b6c5-26d7daffab42",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:30.650279+00:00"
+    },
+    {
+      "id": "cff7064b-a4e3-4d30-a07b-d59e68ba0c30",
+      "text": "Direct terrestrial interventions, such as advancing pandemic response systems or funding global seed banks, provide immediate, proven, and order-of-magnitude cheaper mitigation strategies against global catastrophes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2dd690c2-0404-4d04-b6c5-26d7daffab42",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:30.651074+00:00"
+    },
+    {
+      "id": "1378008a-de2e-4e4b-b5a1-0b2434b69e21",
+      "text": "Governments retain significant financial risk; NASA often provides commercial space transport providers with guaranteed development subsidies (e.g., Commercial Crew) and fixed-price anchor tenancy contracts, transferring substantial capital risk back to the taxpayer.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "37166187-d67b-424d-9203-17c59e24aacd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:30.971737+00:00"
+    },
+    {
+      "id": "5b090006-b16e-48d8-8fb1-e0c5d46aa926",
+      "text": "Large public-private space infrastructure arrangements impose long-term costs; historical examples show taxpayers often pay higher guaranteed minimum procurement prices and operational fees than anticipated government operation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "37166187-d67b-424d-9203-17c59e24aacd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:30.972450+00:00"
+    },
+    {
+      "id": "1487ff41-2dd3-4a14-b379-9521ac63fa93",
+      "text": "Commercialization successfully drives efficiency and innovation in critical global infrastructure; successful international examples, such as the highly regulated multi-operator model in global telecommunications and semi-private ports in Singapore, disprove generalized claims of market failure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "96ac3305-bd22-4f1b-a9d6-61f3420c5e7c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:37.028983+00:00"
+    },
+    {
+      "id": "ddeeb1e8-02ad-4ae0-8955-ad8c8ba0442d",
+      "text": "The poor performance of UK rail and water is often attributed to specific regulatory capture, poor contract enforcement, and insufficient mechanisms for competition, demonstrating a failure of implementation and oversight rather than commercialization inherently.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "96ac3305-bd22-4f1b-a9d6-61f3420c5e7c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:37.029706+00:00"
+    },
+    {
+      "id": "d0fcf182-3b29-423a-806a-3d983ebd3709",
+      "text": "Democratization is a relative measure defined by the expansion of access from centralized superpowers to many new actors, not absolute universal affordability. New capabilities (e.g., reusable rockets and cheap cubesats) have enabled previously excluded nations like Lithuania and Ghana to launch their first national satellites.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c33f8c2b-fee2-4b5b-9ea6-1b348e9eee2e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:40.411404+00:00"
+    },
+    {
+      "id": "4b2f7ab1-71cb-434d-8cdb-f41d3d96dc8b",
+      "text": "Cost reductions primarily enable the *New Space* economy, consisting mainly of thousands of new commercial and institutional actors (e.g., CubeSat start-ups) whose business models require low marginal costs. Existing government actors already funded launch access through massive state budgets and are comparatively secondary beneficiaries.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c33f8c2b-fee2-4b5b-9ea6-1b348e9eee2e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:40.411878+00:00"
+    },
+    {
+      "id": "6b4e8f44-42ef-46f4-8c7d-a69817f3b7b3",
+      "text": "Specialized technologies such as advanced carbon-carbon matrix composites used for re-entry thermal protection and high-efficiency Hall effect plasma thrusters are exclusive hardware innovations driven solely by space-specific operational requirements, not consumer electronics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "742faeb6-83ba-4635-9522-28b5848bd8da",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:41.001796+00:00"
+    },
+    {
+      "id": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "text": "Transforming commercial off-the-shelf (COTS) components into acceptable space-grade hardware requires extensive fundamental research in radiation hardening, thermal resilience, and proprietary packaging techniques, producing new, mission-critical intellectual property.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "742faeb6-83ba-4635-9522-28b5848bd8da",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:41.002250+00:00"
+    },
+    {
+      "id": "93249867-4d69-49c6-89ac-3ccca3d61fc2",
+      "text": "Dedicated LEO constellations require frequent replacement cycles every 3-5 years, making the cumulative launch (OpEx) expense over a 15-year operational period potentially greater than the initial fabrication (CapEx) for numerous smallsats.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9bdd937b-e999-4fa4-b964-1f72b3de3ee2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:42.754260+00:00"
+    },
+    {
+      "id": "aef1ae3a-ebfa-495b-85a2-1195d103f88f",
+      "text": "International aid programs and the standardization of CubeSat technology enable developing nations like Ghana and Kenya to pursue CapEx costs significantly below ten million dollars, mitigating the high initial expenditure barrier.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9bdd937b-e999-4fa4-b964-1f72b3de3ee2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:42.755028+00:00"
+    },
+    {
+      "id": "3b687905-6b3d-4d25-94dd-845263449926",
+      "text": "Fixed-price anchor tenancy contracts intentionally shift the risk of operational cost overruns away from the government, capping the taxpayer's financial exposure to the agreed price, unlike traditional cost-plus contracts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1378008a-de2e-4e4b-b5a1-0b2434b69e21",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:43.489868+00:00"
+    },
+    {
+      "id": "e762246e-bb2e-4adc-a533-4a6457720a1a",
+      "text": "The commercial model reduces the overall financial risk compared to the historical cost-plus approach, where the taxpayer absorbed 100% of development, operational, and schedule overruns (e.g., Space Shuttle program).",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1378008a-de2e-4e4b-b5a1-0b2434b69e21",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:43.490507+00:00"
+    },
+    {
+      "id": "64c6f336-ba48-47db-8d8c-176d042218dd",
+      "text": "GPS technology, initially developed for military and space navigation needs, generates an estimated $1.4 trillion in economic benefits for the US alone through agriculture, logistics, and mapping software.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "be730b90-9047-4bce-9630-a3d5aa280a3f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:43.978050+00:00"
+    },
+    {
+      "id": "e2206fb6-ad29-4677-8801-73f9520184d5",
+      "text": "Studies quantifying the return on public R&D investment, such as NASA's, consistently show an economic multiplier effect ranging from 3:1 to 7:1, demonstrating that space investment is a highly effective form of \"direct R&D.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "be730b90-9047-4bce-9630-a3d5aa280a3f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:43.978678+00:00"
+    },
+    {
+      "id": "93527be2-5af0-4045-af41-12e5ed506099",
+      "text": "Private sector innovations like reusable rockets have dropped launch costs significantly, suggesting current \"trillion dollar\" estimates based purely on linear government spending models are unreliable for future self-sustaining efforts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "af5b1971-1526-476a-8823-9b1fd9c1d8c5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:44.712131+00:00"
+    },
+    {
+      "id": "033fbf8a-46db-43fd-a460-86b8cdea36a4",
+      "text": "Global net personal wealth currently exceeds $450 trillion and annual global military spending is approximately $2.5 trillion, demonstrating that the necessary capital pool for a multi-decade project already exists worldwide.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "af5b1971-1526-476a-8823-9b1fd9c1d8c5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:44.713282+00:00"
+    },
+    {
+      "id": "07b491ff-d910-4c86-bab0-5a19126360e2",
+      "text": "High-volume contracts, particularly those using reusable vehicles like the Falcon 9, establish a consistent monthly launch cadence; this reliable frequency is essential for universities and research groups needing predictable access at scheduled intervals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0b5b524e-f79f-45ae-b1c7-a90f9870baf0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:44.975321+00:00"
+    },
+    {
+      "id": "4f721757-eb65-4b2e-8318-efb24cf6a204",
+      "text": "The steady, high demand from massive constellations drives up overall launch capacity and maximizes economies of scale, resulting in advertised rideshare prices for small payloads dropping dramatically to standardized rates (e.g., $5,000/kg on Falcon 9) unavailable prior to these large commercial contracts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0b5b524e-f79f-45ae-b1c7-a90f9870baf0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:44.975760+00:00"
+    },
+    {
+      "id": "77f7c6d2-a7fb-4e80-9ef4-b7d20586eac6",
+      "text": "The 1918 Spanish Flu pandemic, despite poor response systems, resulted in a global mortality rate of approximately 2-5%, falling far short of the sustained, widespread mortality necessary for human extinction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cff7064b-a4e3-4d30-a07b-d59e68ba0c30",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:45.280623+00:00"
+    },
+    {
+      "id": "47603019-de86-4ea1-93cb-a346f73d7cd4",
+      "text": "Mitigating catastrophic risks from kilometer-scale Near-Earth Objects (NEOs) requires multi-billion dollar kinetic impactor missions, such as the DART project, costs far exceeding \"order-of-magnitude cheaper\" terrestrial funding.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cff7064b-a4e3-4d30-a07b-d59e68ba0c30",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:45.281076+00:00"
+    },
+    {
+      "id": "38f18726-9e39-4e3f-8480-e873ffa4aa48",
+      "text": "Commercial space P3s, such as the SpaceX Falcon 9 development, reduced taxpayer exposure to development risk and achieved operational status faster than government run programs, demonstrating value beyond simple fee comparison.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5b090006-b16e-48d8-8fb1-e0c5d46aa926",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:46.716878+00:00"
+    },
+    {
+      "id": "9d1dc75f-9f93-4a71-882a-4b0f227578cd",
+      "text": "The anticipated cost of government operation is fundamentally misleading because historical data shows major public infrastructure projects routinely experience cost overruns averaging 45% above initial estimates, making the actual public cost significantly higher than the benchmark.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5b090006-b16e-48d8-8fb1-e0c5d46aa926",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:46.717527+00:00"
+    },
+    {
+      "id": "7ba49a5d-c5a3-4497-8a10-1caa8954ea1f",
+      "text": "Commercialization of natural monopolies necessitates complex oversight regimes, making regulatory capture and persistent information asymmetry a structural consequence of the privatization model itself, not merely an incidental failure of implementation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ddeeb1e8-02ad-4ae0-8955-ad8c8ba0442d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:47.724043+00:00"
+    },
+    {
+      "id": "c7cf0496-79b9-48b8-a093-f0ed2a798a6b",
+      "text": "The persistent failure of terrestrial regulators like OFWAT to prevent capture proves that highly leveraged private industries systematically overwhelm oversight. In space, this mechanism predicts that firms essential to national security will similarly use political influence to circumvent FAA safety requirements and monopolize limited orbital resources.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ddeeb1e8-02ad-4ae0-8955-ad8c8ba0442d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:47.724069+00:00"
+    },
+    {
+      "id": "0dcd8c83-1bb6-4066-a099-f147ef763e29",
+      "text": "Commercial space infrastructure, particularly deep-space communication networks and orbital debris management, exhibits characteristics of a natural monopoly due to immense initial investment and limited orbital real estate, making privatization models less efficient than in competitive terrestrial sectors like telecommunications.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1487ff41-2dd3-4a14-b379-9521ac63fa93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.388166+00:00"
+    },
+    {
+      "id": "534366dc-fe7b-40d8-b37d-4ce57897f569",
+      "text": "The alleged efficiency of privatized infrastructure often prioritizes short-term financial returns over long-term public benefit; private space actors may neglect high-cost, high-gain pure science missions (like a dedicated Europa Clipper) essential for universal human knowledge.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1487ff41-2dd3-4a14-b379-9521ac63fa93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.388208+00:00"
+    },
+    {
+      "id": "7f77f4f3-8991-4ef2-945d-e8d91786a144",
+      "text": "COTS transformation primarily involves high-level applied engineering processes, such as qualification testing, up-screening, and redundancy design, rather than \"extensive fundamental research\" into new physics or materials science.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:50.875083+00:00"
+    },
+    {
+      "id": "04923182-036c-4ba1-b43f-f63c619570d0",
+      "text": "Established aerospace protocols, such as NASA's EEE-INST-002 guidelines, allow for COTS utilization through standardized up-screening and qualification methods, negating the requirement for universally extensive research.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:50.875133+00:00"
+    },
+    {
+      "id": "030276ab-a8c5-408b-bb4c-0526bdc85454",
+      "text": "The result of COTS qualification typically yields proprietary process knowledge and test data, which is commercially private, but rarely constitutes novel, patentable, or \"mission-critical intellectual property\" derived from fundamental breakthroughs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:50.875157+00:00"
+    },
+    {
+      "id": "61fd73f7-75f5-4a1a-babc-068e6e4727c8",
+      "text": "Carbon-carbon composites are not exclusive to space, as related matrices are necessary materials for commercial applications requiring high thermal resistance and strength, such as aircraft brake pads and high-performance racing components.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6b4e8f44-42ef-46f4-8c7d-a69817f3b7b3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:51.232551+00:00"
+    },
+    {
+      "id": "7987cf3c-e5a9-42c2-b915-d9700361d94f",
+      "text": "The apparent relative democratization (more nations launching satellites) is fundamentally undercut by the absolute concentration of critical space assets. Private mega-constellations like Starlink and Kuiper are rapidly monopolizing key resources such as spectral bandwidth and prime low-Earth orbital slots, which centralizes global communication infrastructure under a few American corporations.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d0fcf182-3b29-423a-806a-3d983ebd3709",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:51.432939+00:00"
+    },
+    {
+      "id": "571dc777-99bc-40a6-a74e-68fe404d336f",
+      "text": "Government agencies like NASA are primary beneficiaries; reduced launch costs enable them to launch far greater mission volume (e.g., Artemis, science satellites) by converting massive existing budgets into billions in absolute savings and dramatically increased operational capacity, an effect scale-wise unmatched by any single 'New Space' startup.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4b2f7ab1-71cb-434d-8cdb-f41d3d96dc8b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:51.887185+00:00"
+    },
+    {
+      "id": "f33d28c1-c26b-4410-a027-e1e8639315a0",
+      "text": "Traditional \"spin-offs\" like GPS resulted from massive public investment (NASA/DoD) and an open access mandate. Modern private space ventures, focused on proprietary technology for commercial markets (e.g., SpaceX Starship development), concentrate benefits among shareholders rather than generating broad, non-exclusive public goods.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "64c6f336-ba48-47db-8d8c-176d042218dd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:53.256919+00:00"
+    },
+    {
+      "id": "d27722fa-f74a-4483-a21e-acdf36f44179",
+      "text": "While the risk is shifted on paper, severe cost overruns often result in contractor insolvency or failure, requiring the government (NASA/taxpayers) to intervene with additional public funds to ensure continuity of critical missions, thereby nullifying the claimed fiscal cap.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3b687905-6b3d-4d25-94dd-845263449926",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:53.982315+00:00"
+    },
+    {
+      "id": "ec3bdd4d-26ca-4767-9fe6-eb716da351d7",
+      "text": "The initial expenditure barrier for a national space program extends beyond satellite CapEx to essential operational costs, such as ground station infrastructure, staff training, and mission sustainment, which often push total costs significantly above the ten million dollar threshold.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "aef1ae3a-ebfa-495b-85a2-1195d103f88f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:54.524754+00:00"
+    },
+    {
+      "id": "9b0a3ddd-3bc3-40f0-b9a5-e80ef7cc5cb4",
+      "text": "The reliance on international aid programs shifts the financial burden of space infrastructure to external partners, creating structural dependence rather than truly mitigating the high expenditure barrier for domestic, self-sustaining capacity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "aef1ae3a-ebfa-495b-85a2-1195d103f88f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:54.524780+00:00"
+    },
+    {
+      "id": "3feeff6c-4413-4e4a-98d9-db645cbedc31",
+      "text": "Savings from reusable rockets address only the variable cost of mass-to-orbit; the immutable fixed costs of building truly self-sustaining infrastructure\u2014such as complex closed-loop life support and autonomous surface manufacturing (ISRU)\u2014dominate the budget and are not subject to the same rate of reduction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "93527be2-5af0-4045-af41-12e5ed506099",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:54.659616+00:00"
+    },
+    {
+      "id": "8cf9b1b2-578d-477e-8929-76168f70822d",
+      "text": "Many economic impact studies overestimate R&D multipliers by attributing general economic activity or unrelated technological advances solely to specific space investment, failing to establish robust additionality or direct causality.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e2206fb6-ad29-4677-8801-73f9520184d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:55.161588+00:00"
+    },
+    {
+      "id": "530e9702-0a24-46a1-8893-4443d85aa804",
+      "text": "Achieving a 3:1 return does not demonstrate that space R&D is \"highly effective\" without a benchmark; investments in areas like basic public health research or green energy infrastructure R&D frequently yield higher social returns and multipliers, sometimes exceeding 10:1.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e2206fb6-ad29-4677-8801-73f9520184d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:55.161631+00:00"
+    },
+    {
+      "id": "c372bac8-f6ae-4daf-a945-8295c870b904",
+      "text": "The substantial drop in launch prices is primarily enabled by the technological innovation of rapidly reusable launch vehicles, which sharply lower the marginal cost per flight. Economies of scale merely maximize the utilization of this new low-cost capacity, rather than being the fundamental driver of the price decrease.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4f721757-eb65-4b2e-8318-efb24cf6a204",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:55.734043+00:00"
+    },
+    {
+      "id": "7f069ab1-6153-47c1-b5c7-348d3ee25b2c",
+      "text": "The commercial model merely shifts risk; if a critical private provider fails or becomes a monopoly, the government often assumes the cost of failure (e.g., bailouts or developing costly backup systems) to maintain irreplaceable strategic capabilities, thus retaining significant residual financial risk.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e762246e-bb2e-4adc-a533-4a6457720a1a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:56.070452+00:00"
+    },
+    {
+      "id": "8498a808-2e29-41db-941e-5a7939d82d1d",
+      "text": "The comparison selectively uses the Space Shuttle, which was mandated by political goals, ignoring other historical cost-plus programs like the Apollo missions, which successfully achieved their high-risk objectives within acceptable costs given the technological challenges.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e762246e-bb2e-4adc-a533-4a6457720a1a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:56.070479+00:00"
+    },
+    {
+      "id": "c0ea605a-befe-4006-92bf-c78d65753cd9",
+      "text": "The 45% overrun data applies specifically to unique, high-risk capital projects (e.g., dams, high-speed rail) affected by geological unknowns and material volatility, which do not apply to the predictable, recurring administrative spending and transfer payments that constitute the majority of 'government operation.'",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9d1dc75f-9f93-4a71-882a-4b0f227578cd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:59.501523+00:00"
+    },
+    {
+      "id": "4af0c10f-2e5d-423a-8689-635e6d6f1e3b",
+      "text": "Operating LEO constellations for 15 years requires fabricating three to four full replacement generations; these cumulative manufacturing costs (CapEx) are likely to significantly outweigh the cumulative launch costs (OpEx).",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "93249867-4d69-49c6-89ac-3ccca3d61fc2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:59.637134+00:00"
+    },
+    {
+      "id": "08982aa4-12ad-42a9-a2d0-5701e4de2934",
+      "text": "Taxpayer exposure was significant; NASA guaranteed over $4 billion in development contracts through the COTS and Commercial Crew programs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "38f18726-9e39-4e3f-8480-e873ffa4aa48",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:59.722515+00:00"
+    },
+    {
+      "id": "3089962a-ea2a-4e09-8355-796ad49f2aa9",
+      "text": "The Apollo program achieved crewed lunar landing capability in only eight years (1961-1969), illustrating that highly focused, well-funded government programs can achieve novel operational status extremely rapidly.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "38f18726-9e39-4e3f-8480-e873ffa4aa48",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:59.722544+00:00"
+    },
+    {
+      "id": "74a5275d-f348-49ec-a944-6651e641aa79",
+      "text": "Deep space probes and planetary missions typically require specific launch windows occurring every 12 to 26 months. This demonstrates that predictable access does not require a monthly launch cadence for critical scientific research.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "07b491ff-d910-4c86-bab0-5a19126360e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:01.107182+00:00"
+    },
+    {
+      "id": "084e0092-3826-4861-a435-6e9f49d99061",
+      "text": "University cubesats manifested as secondary payloads on high-volume rideshare missions, such as the SpaceX Transporter series, are often subjected to last-minute delays or orbital changes to maximize the primary payload\u2019s mass or needs. This instability makes academic access unpredictable despite the vehicle's high overall flight frequency.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "07b491ff-d910-4c86-bab0-5a19126360e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:01.107226+00:00"
+    },
+    {
+      "id": "8471df0f-b4aa-441d-88e2-577ba8e160fe",
+      "text": "The estimated cost for establishing major, sustained space infrastructure, such as a permanent Martian colony, exceeds $500 billion to $1 trillion over the next few decades, a target requirement not acknowledged by the comparison to overall global wealth.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "033fbf8a-46db-43fd-a460-86b8cdea36a4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:01.424621+00:00"
+    },
+    {
+      "id": "63e859c3-496a-47ee-ab19-58fa3ec27473",
+      "text": "Over 80% of global net personal wealth is tied up in illiquid assets like real estate and structured financial products, making that capital unavailable for spontaneous transfer to a speculative, multi-decade private space venture.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "033fbf8a-46db-43fd-a460-86b8cdea36a4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:01.424719+00:00"
+    },
+    {
+      "id": "57c93e85-386b-4749-9fda-06c66589435f",
+      "text": "The DART mission cost approximately $330 million and successfully impacted the 160-meter asteroid moonlet Dimorphos, demonstrating that asteroid deflection efforts are not necessarily multi-billion dollar missions targeting kilometer-scale objects.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "47603019-de86-4ea1-93cb-a346f73d7cd4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:01.482228+00:00"
+    },
+    {
+      "id": "1f2f07cd-a3c2-4f06-a9c7-74459f24b1ac",
+      "text": "The estimated $1 billion cost of a full kinetic deflection mission is significantly less than major defined terrestrial expenditures, such as the $6.6 billion annual funding needed to eradicate malaria globally, contradicting the extreme relative cost comparison.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "47603019-de86-4ea1-93cb-a346f73d7cd4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:01.482302+00:00"
+    },
+    {
+      "id": "52c70374-87aa-43b0-adaa-697903351440",
+      "text": "Pathogens like the Zaire strain of Ebola have recorded case fatality rates up to 90%, proving that biological agents exist with lethality significantly exceeding the 2-5% mortality threshold of the 1918 flu.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "77f7c6d2-a7fb-4e80-9ef4-b7d20586eac6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:04.984747+00:00"
+    },
+    {
+      "id": "2be6653e-1e13-4ea2-a2a5-243049a26af0",
+      "text": "The high volume of private satellite deployments, such as large LEO constellations, significantly accelerates orbital congestion and the creation of space debris, increasing the collision hazard (Kessler Syndrome) for all future space operators.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:04.984873+00:00"
+    },
+    {
+      "id": "73c26c08-6747-4e3e-838f-2a50b95d39dc",
+      "text": "Private space investment diverts vast amounts of financial capital and elite scientific talent away from addressing immediate existential threats, such as global climate change, pandemic preparedness, and widespread poverty, where resource allocation is arguably more urgent.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:04.985322+00:00"
+    },
+    {
+      "id": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "text": "Commercializing space resources inherently prioritizes shareholder profits, establishing an extractive regime that lacks any functional legal or financial mechanism to ensure the universal sharing of celestial wealth.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:04.985588+00:00"
+    },
+    {
+      "id": "c2179514-5934-4185-b24a-ee677e1d75de",
+      "text": "Effective international legal mechanisms required to enforce accountability for orbital environmental damage, negligence, or resource conflict by private actors currently do not exist, rendering the long-term safe development of space unfeasible.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:04.985850+00:00"
+    },
+    {
+      "id": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "text": "The tangible benefits of current private initiatives, such as space tourism and large LEO satellite networks, disproportionately accrue almost exclusively to the wealthiest nations and individuals, thereby increasing global inequality rather than providing widespread utility to humanity.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:04.986093+00:00"
+    },
+    {
+      "id": "3b6959fc-35a6-4d32-8cee-f78b74562978",
+      "text": "The Outer Space Treaty (OST), ratified by all major space powers, prohibits national appropriation but does not explicitly forbid resource extraction, and the Moon Treaty which uses the \"common heritage\" principle was rejected by most relevant nations.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:15.064051+00:00"
+    },
+    {
+      "id": "d3ba5933-cf84-44cf-9248-9859c38786cc",
+      "text": "The prohibition in the OST targets the assumption of national sovereignty over celestial bodies, while private commercial activity regulated by domestic law does not necessarily equate to a country claiming territory.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:15.065316+00:00"
+    },
+    {
+      "id": "29e5050e-0029-4864-9b8a-69c4d5bc7ed7",
+      "text": "Private resource commercialization drives technological advancement and potentially lower costs for accessing and utilizing materials, generating universal benefits that extend beyond immediate shareholder profit, similar to Earth-based industries.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:15.066213+00:00"
+    },
+    {
+      "id": "0a92fd2d-c20e-4fe9-b2ce-9740d026e55a",
+      "text": "Private investment capital is motivated by profit; if not invested in space, that capital would likely flow into other high-return, non-urgent consumer or technology sectors, not automatically be redirected to public health or climate philanthropy where financial returns are low, invalidating the implicit zero-sum premise.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "73c26c08-6747-4e3e-838f-2a50b95d39dc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.190895+00:00"
+    },
+    {
+      "id": "eafb58d8-1c80-4c53-b2ae-5824d17f6669",
+      "text": "Private investment directly funds the deployment of Earth observation technology, providing the essential data infrastructure required for effective global climate monitoring and climate change mitigation research.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "73c26c08-6747-4e3e-838f-2a50b95d39dc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.191704+00:00"
+    },
+    {
+      "id": "5e2e2d15-1643-4801-afe0-c6c36a9670c7",
+      "text": "Private LEO constellations, specifically those licensed in the U.S., are required to de-orbit within five years of mission completion, effectively limiting their long-term contribution to debris accumulation contrary to the assumption of accelerated congestion.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2be6653e-1e13-4ea2-a2a5-243049a26af0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.560702+00:00"
+    },
+    {
+      "id": "f031cf1f-02e2-47fe-be68-8a295bc75b19",
+      "text": "The highest risk for collision hazard comes from historical fragmentation events and defunct rocket bodies (e.g., the 2007 Fengyun-1C test), which represent over 90% of cataloged debris mass and are not actively managed or maneuverable by private operators.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2be6653e-1e13-4ea2-a2a5-243049a26af0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.561173+00:00"
+    },
+    {
+      "id": "cbecafde-9967-4984-a488-0ebe6f14c12f",
+      "text": "Existing national regulations, such as the US FCC and FAA licensing requirements for debris mitigation and financial liability, already impose enforceable accountability standards on private actors, making international mechanisms non-essential for initial feasibility.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c2179514-5934-4185-b24a-ee677e1d75de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.771557+00:00"
+    },
+    {
+      "id": "0951f1b1-a38c-4c35-972a-09dbe4c34b93",
+      "text": "Past technological revolutions, such as deep-sea resource extraction or early aviation, proceeded and scaled significantly despite lacking comprehensive international enforcement mechanisms; therefore, the current regulatory framework's suboptimality does not equate to \"unfeasibility.\"",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c2179514-5934-4185-b24a-ee677e1d75de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.772292+00:00"
+    },
+    {
+      "id": "369133b2-b501-460f-a0d7-2e7b112a02ef",
+      "text": "LEO satellite constellations like Starlink provide high-speed internet access to unconnected, remote, and disaster-affected regions globally, facilitating education and commerce in areas previously lacking infrastructure.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:22.722914+00:00"
+    },
+    {
+      "id": "b2b9f0df-937e-4b28-84b5-37fbc0f6b6f7",
+      "text": "Functional utility derived from private space assets, such as improved GPS accuracy, global climate monitoring, and high-resolution agricultural remote sensing data, operates as a massive global public good used universally by all nations.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:22.723652+00:00"
+    },
+    {
+      "id": "4051d1cb-bfb0-473e-96dd-68a7b80927e1",
+      "text": "While initial investment accrues in wealthy nations, the resulting global infrastructure and derived data services create substantial new economic sectors and employment worldwide, raising the overall standard of living globally rather than increasing inequality net.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:22.724149+00:00"
+    },
+    {
+      "id": "8f784855-5047-4736-885e-160151a2ceb0",
+      "text": "OST Article II prohibits national appropriation by use or occupation; establishing permanent, exclusive infrastructure necessary for large-scale resource extraction (e.g., lunar mining bases) constitutes de facto appropriation, irrespective of explicit extraction prohibitions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3b6959fc-35a6-4d32-8cee-f78b74562978",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:26.975369+00:00"
+    },
+    {
+      "id": "5acc0bfa-018a-4f10-87e4-166b3fadd585",
+      "text": "The rejection of the Moon Treaty resulted from major powers' opposition to the proposed mandatory international resource management regime (the \"common heritage\" principle), not necessarily an affirmation that the OST permits unrestricted extraction.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3b6959fc-35a6-4d32-8cee-f78b74562978",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:26.975796+00:00"
+    },
+    {
+      "id": "70d9deb0-4260-4c5a-af13-c00d64417265",
+      "text": "National laws only bind domestic actors; entities registered under jurisdictions lacking robust regulation (e.g., emerging space nations or flags of convenience) are left outside these accountability structures, thus creating a global gap that international mechanisms must fill.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cbecafde-9967-4984-a488-0ebe6f14c12f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.256759+00:00"
+    },
+    {
+      "id": "2a5971e3-572a-422b-a997-e73125bee103",
+      "text": "Focusing on \"initial feasibility\" overlooks the critical long-term challenge of managing cumulative space debris and mitigating the cascading Kessler Syndrome, a global environmental risk requiring mandatory, multilateral international agreements.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cbecafde-9967-4984-a488-0ebe6f14c12f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.257196+00:00"
+    },
+    {
+      "id": "b1798214-7845-4e27-a0cf-befbfb7e0778",
+      "text": "The annual budget for NASA's Earth Science division, which runs critical climate satellites, is typically less than 10% of NASA\u2019s total budget, meaning the \"indispensable\" innovation only justifies a small fraction of the overall space investment.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "eafb58d8-1c80-4c53-b2ae-5824d17f6669",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.827197+00:00"
+    },
+    {
+      "id": "32bdb864-fd24-45f9-ac14-42599fcfae51",
+      "text": "Spinoffs and climate data are often achieved more efficiently through dedicated Earth Observation (EO) satellite programs run by specific environmental agencies, rather than relying on the generalized budgets of deep-space exploration and human spaceflight missions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "eafb58d8-1c80-4c53-b2ae-5824d17f6669",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.827620+00:00"
+    },
+    {
+      "id": "8d1df07e-3458-4df1-9d34-53a3f9f8fac2",
+      "text": "The five-year requirement assumes 100% reliability for complex de-orbiting mechanisms; however, even a 5-10% failure rate across thousands of satellites translates into hundreds of non-compliant, non-maneuverable derelict objects remaining in orbit, accelerating debris accumulation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5e2e2d15-1643-4801-afe0-c6c36a9670c7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.973437+00:00"
+    },
+    {
+      "id": "4ebc8ab6-6e6c-45bd-b23e-58720f5327de",
+      "text": "The primary driver of LEO congestion is the collision potential created by thousands of operational satellites, vastly increasing the risk of uncontrolled debris generation long before any planned de-orbit timeline.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5e2e2d15-1643-4801-afe0-c6c36a9670c7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.974107+00:00"
+    },
+    {
+      "id": "208201c6-0c58-4f5a-82e4-b739ba40e214",
+      "text": "OST Article VI explicitly makes States Parties internationally responsible for all non-governmental activities, meaning state regulation of private commerce constitutes continuous national supervision and potential indirect appropriation of resources under international law.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d3ba5933-cf84-44cf-9248-9859c38786cc",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.347844+00:00"
+    },
+    {
+      "id": "0f419749-f639-47e5-91b1-15380a48f19c",
+      "text": "Domestic legislation that grants private entities proprietary rights to extracted space resources, such as the US Commercial Space Launch Competitiveness Act, establishes an exclusive control mechanism functionally equivalent to national appropriation, regardless of a claimed lack of sovereignty.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d3ba5933-cf84-44cf-9248-9859c38786cc",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.348578+00:00"
+    },
+    {
+      "id": "501567c5-630f-4162-818f-4dc0c9f1258a",
+      "text": "Earth-based resource industries often require extensive regulation (e.g., environmental laws, anti-monopoly measures) to ensure universal benefits; these regulatory frameworks are currently absent or inadequate for extraterrestrial mining, making the comparison flawed.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "29e5050e-0029-4864-9b8a-69c4d5bc7ed7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.355469+00:00"
+    },
+    {
+      "id": "b8c84ed8-3696-48d9-9198-5d017cbe034f",
+      "text": "Focusing on lower costs ignores the historical pattern of monopolistic capture in nascent, high-barrier-to-entry resource sectors (e.g., early railroad trusts), where technological gains primarily concentrate profit rather than delivering universal access or benefit.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "29e5050e-0029-4864-9b8a-69c4d5bc7ed7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.356458+00:00"
+    },
+    {
+      "id": "0786fdf9-5ec9-43d2-aa75-f3898b094a83",
+      "text": "Early aviation risk was primarily localized, allowing for reactive national laws (e.g., airspace safety); current technologies like solar geoengineering or wide-scale genetic drive modification pose global, irreversible ecosystem threats that necessitate comprehensive, a priori international enforcement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0951f1b1-a38c-4c35-972a-09dbe4c34b93",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.974892+00:00"
+    },
+    {
+      "id": "1622f557-02bd-4290-9710-aa49e9cc2fae",
+      "text": "The historical pace of technological diffusion (e.g., the decades required for ICAO establishment or Law of the Sea development) is incompatible with the exponential speed at which modern technologies like AI or biotech achieve global scale and impact, rendering reactive regulation inherently insufficient.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0951f1b1-a38c-4c35-972a-09dbe4c34b93",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.975327+00:00"
+    },
+    {
+      "id": "d6e75ba5-a3eb-444d-82a6-a78896b3ac11",
+      "text": "Focusing on debris mass ignores the collision probability generated by massive mega-constellations (e.g., Starlink), which create the vast majority of daily conjunction warnings due to high orbital density in currently utilized LEO bands.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f031cf1f-02e2-47fe-be68-8a295bc75b19",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:31.509517+00:00"
+    },
+    {
+      "id": "46d067d5-1cfb-423a-94d7-ac1b27ef8dcc",
+      "text": "Collision risk is heavily influenced by the large, untracked population of small objects (under 10 cm), which are too numerous and small to be fully cataloged, yet capable of causing catastrophic failure, contradicting the focus on cataloged mass.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f031cf1f-02e2-47fe-be68-8a295bc75b19",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:31.509958+00:00"
+    },
+    {
+      "id": "dc999be1-012b-46cf-97a4-ebd7fe9c1125",
+      "text": "The high initial cost of user terminals ($599+) and ongoing premium subscriptions make LEO service prohibitively expensive for target populations in low-income, unconnected regions, severely limiting the claimed improvement to education and commerce.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "369133b2-b501-460f-a0d7-2e7b112a02ef",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:34.123370+00:00"
+    },
+    {
+      "id": "c6b0d2cb-b49f-4d0f-823b-06a08ac69336",
+      "text": "Foreign LEO constellations cannot provide truly universal global access because major markets needing infrastructure, such as China, Russia, and Turkey, have banned or severely restricted their deployment due to political and regulatory barriers.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "369133b2-b501-460f-a0d7-2e7b112a02ef",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:34.123806+00:00"
+    },
+    {
+      "id": "1aaf2df0-f996-4d04-bb0e-5ef5d4b26e3a",
+      "text": "High-resolution remote sensing data from companies like Maxar and Planet Labs is sold under proprietary licenses, proving these services are excludable and function as commercial club goods rather than universal public goods.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b2b9f0df-937e-4b28-84b5-37fbc0f6b6f7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:35.021633+00:00"
+    },
+    {
+      "id": "a8f5e52c-6ba3-4379-bbe0-30f8afbf69a8",
+      "text": "High-accuracy private space assets, like Real-Time Kinematic (RTK) GPS corrections, remain inaccessible to developing nations due to significant infrastructure deficits and prohibitive licensing fees.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b2b9f0df-937e-4b28-84b5-37fbc0f6b6f7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:35.022383+00:00"
+    },
+    {
+      "id": "6c5e897f-12b5-4d8b-a6ab-96e497430e44",
+      "text": "Venture capital investment in Climate Tech reached $40.5 billion globally in 2022, demonstrating high-return potential in urgent sectors like renewable energy manufacturing and sustainable infrastructure, which directly competes for the same private equity pool as space industry funding.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0a92fd2d-c20e-4fe9-b2ce-9740d026e55a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:35.580182+00:00"
+    },
+    {
+      "id": "3e437a82-facd-4541-bf90-6105d5b47987",
+      "text": "High-profile space exploration projects rely heavily on specialized materials, advanced manufacturing, and AI/ML engineers, which drives up wages and demand for these finite resources. This mechanism draws critical talent and supplies away from equally high-tech terrestrial sectors like advanced biofuels and medical device innovation, demonstrating competition beyond financial capital.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0a92fd2d-c20e-4fe9-b2ce-9740d026e55a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:35.580674+00:00"
+    },
+    {
+      "id": "36ddb33c-fcc2-4be4-ad62-edf61a84b809",
+      "text": "The vast majority of intellectual property and high-value data ownership remains concentrated in a few wealthy nations (e.g., the US and China), ensuring that the overwhelming profits accrue to capital owners there, structurally exacerbating global wealth inequality.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4051d1cb-bfb0-473e-96dd-68a7b80927e1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.669326+00:00"
+    },
+    {
+      "id": "7e2d95f8-f6fa-4b1e-ab69-db9af465206f",
+      "text": "Despite job creation, the wage share of global income has fallen since the 1980s, indicating that the value generated by new digital infrastructure disproportionately benefits capital owners rather than workers, failing to raise the global standard of living sufficiently to offset structural inequality.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4051d1cb-bfb0-473e-96dd-68a7b80927e1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.670367+00:00"
+    },
+    {
+      "id": "43375d82-10a4-481b-94d9-075c96548d9d",
+      "text": "Private industry competition and technological innovation are already yielding effective debris mitigation solutions (e.g., self-deorbiting mechanisms, dedicated debris removal missions like ClearSpace-1), demonstrating that market incentives can supplement purely mandatory international regulation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2a5971e3-572a-422b-a997-e73125bee103",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.778506+00:00"
+    },
+    {
+      "id": "fb0fa171-be84-48f5-a348-877cc5833a92",
+      "text": "The US regulatory framework, particularly export controls (ITAR) and launch licensing (FAA Commercial Space), grants the US extraterritorial jurisdiction over foreign launch activities or technology transfer involving US satellites/components, showing national laws already bind non-domestic actors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "70d9deb0-4260-4c5a-af13-c00d64417265",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:37.507400+00:00"
+    },
+    {
+      "id": "5ca91712-dc1e-4303-9701-d5b00496c82b",
+      "text": "The gap can be filled by leveraging existing liability regimes, such as the UN Registration and Liability Conventions, or by private mandates like compulsory launch insurance requirements for market access, meaning new international mechanisms are not the only necessary solution.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "70d9deb0-4260-4c5a-af13-c00d64417265",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:37.507427+00:00"
+    },
+    {
+      "id": "e14ba00e-ff02-434d-ab26-f707060e5a79",
+      "text": "The United States' Space Resource Exploration and Utilization Act of 2015 unilaterally grants its citizens the right to own and sell space resources (COMET Act), providing a concrete legal affirmation by a major power that the Outer Space Treaty permits unrestricted commercial extraction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5acc0bfa-018a-4f10-87e4-166b3fadd585",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:37.645246+00:00"
+    },
+    {
+      "id": "00bc4b80-8e3a-45d3-bdbe-953649130692",
+      "text": "Private operational zones for resource processing are fundamentally distinct from national appropriation, as they lack the intent of political sovereignty or territorial control. This limited, exclusive presence is the necessary precursor infrastructure required to unlock planetary resources for broad human benefit.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8f784855-5047-4736-885e-160151a2ceb0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:38.101772+00:00"
+    },
+    {
+      "id": "eea3ed44-5a82-4c1d-81a4-e350393f7da7",
+      "text": "Operational lunar bases require exclusive safety zones for life support and power generation; this physical imperative does not constitute the national or political appropriation prohibited by the Outer Space Treaty.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8f784855-5047-4736-885e-160151a2ceb0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:38.101814+00:00"
+    },
+    {
+      "id": "a989f763-967d-40be-94cb-b143c81c4bcf",
+      "text": "The five-year de-orbit standard is established using internationally accepted risk assessment models that incorporate known satellite failure rates, specifically designed to keep the debris growth rate below the critical collision threshold. This systematic removal of 90-95% of new objects prevents the exponential accumulation that leads to the Kessler Syndrome.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8d1df07e-3458-4df1-9d34-53a3f9f8fac2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:38.364851+00:00"
+    },
+    {
+      "id": "86b7fcc5-abae-4608-80d0-551ec0202df1",
+      "text": "While undesirable, the calculated addition of hundreds of derelict objects does not automatically accelerate accumulation into a self-sustaining chain reaction (Kessler Syndrome); this requires breaching a critical density threshold not confirmed by this failure rate.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8d1df07e-3458-4df1-9d34-53a3f9f8fac2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:38.364913+00:00"
+    },
+    {
+      "id": "0a0d934e-ea42-4223-94ca-5e7eb3a9972b",
+      "text": "The critical long-term risk is the onset of Kessler Syndrome\u2014the self-sustaining creation of high-velocity debris following a single catastrophic collision\u2014which is prevented only by strict, mandatory End-of-Life de-orbiting protocols on all new private satellites.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4ebc8ab6-6e6c-45bd-b23e-58720f5327de",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:39.673558+00:00"
+    },
+    {
+      "id": "cf6f85d3-93c9-49af-ae88-fe1c7a3d3522",
+      "text": "Major deep-space missions (like JWST or Voyager) necessitate technological leaps in sensor sensitivity and long-term autonomy; these core technologies (e.g., advanced cryocoolers and high-gain antennas) are then directly transferred, making subsequent dedicated EO missions significantly cheaper and more capable than if those expensive foundational advances had to be funded only by smaller environmental budgets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "32bdb864-fd24-45f9-ac14-42599fcfae51",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:40.046240+00:00"
+    },
+    {
+      "id": "43692871-80b7-41b2-9066-8f858813f710",
+      "text": "Dedicated EO programs rely entirely on essential, high-fixed-cost infrastructure like deep-space communication networks (DSN) and specialized launch facilities (Vandenberg, Kourou) which are maintained and subsidized by the larger, generalized aerospace budgets. Dedicated EO programs would face prohibitively high marginal costs for telemetry and launch if forced to fully fund this non-sharable infrastructure independently.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "32bdb864-fd24-45f9-ac14-42599fcfae51",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:40.046284+00:00"
+    },
+    {
+      "id": "5610bf3c-f852-4c13-a255-07ee19237880",
+      "text": "The remaining 90%+ of NASA\u2019s budget is independently justified by investments in technology transfer, such as the Commercial Crew Program, which funds private innovation, lowers launch costs, and reduces reliance on foreign launch providers for vital national security infrastructure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b1798214-7845-4e27-a0cf-befbfb7e0778",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:40.468138+00:00"
+    },
+    {
+      "id": "a4475f26-6df4-4d18-9bce-0073fb52c7d6",
+      "text": "The comparison is not entirely flawed because the 1967 Outer Space Treaty (OST) mandates that space exploration benefit all countries, establishing a foundational international regulatory floor and non-appropriation principle for resource access. Therefore, essential regulatory concepts are already present, mitigating the gap suggested by the argument.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "501567c5-630f-4162-818f-4dc0c9f1258a",
+      "children_count": 0,
+      "references": [
+        "Outer Space Treaty of 1967"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:40.597075+00:00"
+    },
+    {
+      "id": "fe8d67e5-8df4-4242-afb3-a0560a949ffb",
+      "text": "The Outer Space Treaty prohibits national appropriation of celestial bodies, but granting private ownership over extracted, movable resources (like mined ore) is legally distinct from claiming sovereignty over the territory itself (which is immovable), invalidating the functional equivalence argument.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0f419749-f639-47e5-91b1-15380a48f19c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:41.106493+00:00"
+    },
+    {
+      "id": "31182747-5c45-4f87-a888-f871f69a7d4b",
+      "text": "Private commercial activity requires state authorization and liability tracking (Art. VI) to manage risk, a mechanism that enables space resource utilization and is distinct from the national appropriation of territory prohibited by Article II.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "208201c6-0c58-4f5a-82e4-b739ba40e214",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:41.415714+00:00"
+    },
+    {
+      "id": "df2da51f-113a-4190-8238-4aff6db3e8d2",
+      "text": "Focusing on cataloged mass is a preventative strategy, as collisions involving two large, cataloged objects significantly generate the next generation of numerous, untracked small debris (Kessler Syndrome), making the management of large and small risks complementary, not contradictory.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "46d067d5-1cfb-423a-94d7-ac1b27ef8dcc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:41.976944+00:00"
+    },
+    {
+      "id": "1ae66485-8f57-439a-8c60-580b0d3432fd",
+      "text": "Deployment models often utilize community access points (schools, clinics, internet cafes) or government subsidies to share the high terminal cost among many users, invalidating the assumption of prohibitive individual expense for access to education and commerce.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dc999be1-012b-46cf-97a4-ebd7fe9c1125",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:42.962207+00:00"
+    },
+    {
+      "id": "d516ccf2-27ec-437e-9668-9300e8182388",
+      "text": "Operational data confirms that mega-constellations rely on active collision avoidance systems (ACAS), which successfully execute thousands of corrective maneuvers annually. This continuously high success rate maintains the actual probability of collision at an inherently low level, irrespective of frequent conjunction warnings generated by high traffic density.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d6e75ba5-a3eb-444d-82a6-a78896b3ac11",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:46.932422+00:00"
+    },
+    {
+      "id": "750c387d-5026-40c4-8247-da64e83aa6e7",
+      "text": "The $40.5 billion VC investment in Climate Tech peaked in 2022 before a widespread VC correction and liquidity crisis; high investment volume indicates market hype or subsidy availability, not proven high returns that guarantee successful exits or long-term profitability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "6c5e897f-12b5-4d8b-a6ab-96e497430e44",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.050161+00:00"
+    },
+    {
+      "id": "a37d4b76-e56d-4420-aafa-03158571a2a7",
+      "text": "Capital pools are highly segmented by fund mandate, with mandatory Environmental, Social, and Governance (ESG) criteria restricting large pools of institutional capital (like many European pension funds) only to climate tech, making them unavailable for space ventures regardless of profit forecasts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "6c5e897f-12b5-4d8b-a6ab-96e497430e44",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.050205+00:00"
+    },
+    {
+      "id": "ddc26431-d463-4e42-b8b4-ceb0256a353b",
+      "text": "The rising demand for specialized talent incentivizes vocational and educational expansion, dynamically generating new capacity rather than merely redistributing existing resources. This market response is evident, as the global number of AI researchers has tripled since 2015, proving that advanced sectors proactively create the expertise they require.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3e437a82-facd-4541-bf90-6105d5b47987",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.106899+00:00"
+    },
+    {
+      "id": "6f96ba0f-34bd-40f6-b6c2-ff3f5a85d049",
+      "text": "The competition for AI engineers and specialized materials is inherently a financial mechanism, driven by increased capital bidding up wages and commodity costs. Drawing talent away from medical devices via higher salaries confirms, rather than contradicts, the dominant role of financial capital in resource allocation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3e437a82-facd-4541-bf90-6105d5b47987",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.106948+00:00"
+    },
+    {
+      "id": "bf69f98b-bca0-43d3-b8e0-1be8afc2c16d",
+      "text": "Private space exploration's introduction of reusable launch vehicles (e.g., Falcon 9) fundamentally lowers barriers to entry, democratizing space access regardless of terrestrial political blocks. This benefit allows smaller and developing nations to deploy independent national satellite capabilities for vital services like education and disaster monitoring, bypassing reliance on restrictive foreign infrastructures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c6b0d2cb-b49f-4d0f-823b-06a08ac69336",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.905908+00:00"
+    },
+    {
+      "id": "591d3d79-ec5f-40ef-9a9b-0baa9b609e61",
+      "text": "Private space ventures accelerate technological spinoffs, such as advanced satellite communication and GPS systems, which fundamentally enhance global productivity and resource management, directly raising living standards instead of merely exacerbating inequality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7e2d95f8-f6fa-4b1e-ab69-db9af465206f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:48.122026+00:00"
+    },
+    {
+      "id": "06bb1e71-81b5-4091-a763-469cde72f119",
+      "text": "The private space sector, exemplified by SpaceX's reusable launch technology, has dramatically lowered the cost of deploying global infrastructure (like Starlink), enabling widespread internet access and necessary climate monitoring that substantially improves absolute human welfare worldwide.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7e2d95f8-f6fa-4b1e-ab69-db9af465206f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:48.122076+00:00"
+    },
+    {
+      "id": "dfde5323-d0e9-4232-b300-a18adeaef888",
+      "text": "Private space activities deliver significant non-excludable public utility, such as the timing and navigation signals from privately-launched GNSS satellites, which are non-rivalrous global public goods.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1aaf2df0-f996-4d04-bb0e-5ef5d4b26e3a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:48.812157+00:00"
+    },
+    {
+      "id": "124f4706-c40b-41e9-97bf-930195253cf7",
+      "text": "Excludability is often imposed artificially through proprietary licensing, as the utility derived from the underlying raw data, once analyzed and shared for applications like climate science, is fundamentally non-rivalrous.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1aaf2df0-f996-4d04-bb0e-5ef5d4b26e3a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:48.812195+00:00"
+    },
+    {
+      "id": "bc53989c-2f67-46f1-81c8-9867b67c6929",
+      "text": "Rapid technological gains in high-barrier sectors like telecommunications led to global adoption (mobile phone penetration reached 90% globally by 2020) because modern competition and regulatory frameworks prevented the permanent concentration of benefit seen in 19th-century railroad trusts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b8c84ed8-3696-48d9-9198-5d017cbe034f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.456466+00:00"
+    },
+    {
+      "id": "7466b460-62b1-421c-8da3-da92a82510b6",
+      "text": "Private sector innovation, such as SpaceX developing fully reusable rockets, has reduced the cost of accessing Low Earth Orbit from $65,000/kg to under $3,000/kg, demonstrating that profit-driven cost reduction directly facilitates massive expansion of universal access.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b8c84ed8-3696-48d9-9198-5d017cbe034f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.456527+00:00"
+    },
+    {
+      "id": "81aaf02f-8059-489d-94bc-cc2f5106dc0f",
+      "text": "The European Union activated the General Data Protection Regulation (GDPR) in 2018, establishing a de facto global standard and altering data handling practices worldwide within two years of final drafting, demonstrating that multi-jurisdictional regulation can react rapidly to technology shifts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1622f557-02bd-4290-9710-aa49e9cc2fae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.554773+00:00"
+    },
+    {
+      "id": "ed229b77-d468-434d-abf5-36ddd8ffa6d1",
+      "text": "The spread of purportedly exponential technologies like advanced gene-editing (CRISPR) or self-driving vehicles is significantly constrained by fragmented national safety protocols (e.g., US FDA) and high infrastructure costs, preventing truly instantaneous global diffusion.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1622f557-02bd-4290-9710-aa49e9cc2fae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.554800+00:00"
+    },
+    {
+      "id": "098b66ab-b255-4437-b2ff-9d6a5df3ff6f",
+      "text": "Private satellite constellations like Starlink provide global high-speed internet access at competitive rates, enabling digital economies and data access in previously unconnected developing nations. This infrastructural benefit counters the assumption that new space capital will only deepen the existing concentration of data and IP wealth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "36ddb33c-fcc2-4be4-ad62-edf61a84b809",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:50.328227+00:00"
+    },
+    {
+      "id": "048fd85f-20c9-401e-a895-f6626fd197cc",
+      "text": "The Montreal Protocol successfully phased out ozone-depleting substances, a global environmental threat, using decentralized national phase-out schedules and funding based on shared consensus, demonstrating global risks do not necessitate comprehensive, a priori international enforcement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0786fdf9-5ec9-43d2-aa75-f3898b094a83",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:50.935489+00:00"
+    },
+    {
+      "id": "bdc42c17-7664-4deb-9b79-b0eca6e4338f",
+      "text": "The effects of major proposed solar geoengineering methods, such as stratospheric aerosol injection, are not irreversible; global temperature changes revert substantially to baseline levels within months of stopping further aerosol deployment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0786fdf9-5ec9-43d2-aa75-f3898b094a83",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:50.935532+00:00"
+    },
+    {
+      "id": "2e37720e-a0be-422b-8f7f-044e3e830efb",
+      "text": "Global Navigation Satellite Systems (GNSS) signals from infrastructure like the US GPS and Russian GLONASS provide continuous, free, sub-meter accuracy positioning across the entire globe. This base utility is used universally for time synchronization in banking, aviation navigation, and global logistics, independent of a country's financial capacity for specialized RTK corrections.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a8f5e52c-6ba3-4379-bbe0-30f8afbf69a8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:51.761065+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:06:14.171496+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 5,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:06:14.171496+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "2a26d9ca-f3df-4b12-9932-b1beed1ce0c3",
+      "target": "9bdd937b-e999-4fa4-b964-1f72b3de3ee2",
+      "type": "objection"
+    },
+    {
+      "source": "2a26d9ca-f3df-4b12-9932-b1beed1ce0c3",
+      "target": "66fdc720-5f79-4b9b-b8f3-dc787e1915c6",
+      "type": "objection"
+    },
+    {
+      "source": "6070f0f0-4335-437c-ba73-f445fb3b146b",
+      "target": "742faeb6-83ba-4635-9522-28b5848bd8da",
+      "type": "objection"
+    },
+    {
+      "source": "6070f0f0-4335-437c-ba73-f445fb3b146b",
+      "target": "be730b90-9047-4bce-9630-a3d5aa280a3f",
+      "type": "objection"
+    },
+    {
+      "source": "fc5e67df-e8b3-4c0e-b7f5-9b00cab65149",
+      "target": "96ac3305-bd22-4f1b-a9d6-61f3420c5e7c",
+      "type": "objection"
+    },
+    {
+      "source": "fc5e67df-e8b3-4c0e-b7f5-9b00cab65149",
+      "target": "cd234207-efcb-48a4-8ba8-6472d4ba7aaa",
+      "type": "objection"
+    },
+    {
+      "source": "0fb9cfad-ba60-4189-acc0-060c18260a26",
+      "target": "c33f8c2b-fee2-4b5b-9ea6-1b348e9eee2e",
+      "type": "objection"
+    },
+    {
+      "source": "0fb9cfad-ba60-4189-acc0-060c18260a26",
+      "target": "0b5b524e-f79f-45ae-b1c7-a90f9870baf0",
+      "type": "objection"
+    },
+    {
+      "source": "2dd690c2-0404-4d04-b6c5-26d7daffab42",
+      "target": "af5b1971-1526-476a-8823-9b1fd9c1d8c5",
+      "type": "objection"
+    },
+    {
+      "source": "2dd690c2-0404-4d04-b6c5-26d7daffab42",
+      "target": "cff7064b-a4e3-4d30-a07b-d59e68ba0c30",
+      "type": "objection"
+    },
+    {
+      "source": "37166187-d67b-424d-9203-17c59e24aacd",
+      "target": "1378008a-de2e-4e4b-b5a1-0b2434b69e21",
+      "type": "objection"
+    },
+    {
+      "source": "37166187-d67b-424d-9203-17c59e24aacd",
+      "target": "5b090006-b16e-48d8-8fb1-e0c5d46aa926",
+      "type": "objection"
+    },
+    {
+      "source": "96ac3305-bd22-4f1b-a9d6-61f3420c5e7c",
+      "target": "1487ff41-2dd3-4a14-b379-9521ac63fa93",
+      "type": "response"
+    },
+    {
+      "source": "96ac3305-bd22-4f1b-a9d6-61f3420c5e7c",
+      "target": "ddeeb1e8-02ad-4ae0-8955-ad8c8ba0442d",
+      "type": "response"
+    },
+    {
+      "source": "c33f8c2b-fee2-4b5b-9ea6-1b348e9eee2e",
+      "target": "d0fcf182-3b29-423a-806a-3d983ebd3709",
+      "type": "response"
+    },
+    {
+      "source": "c33f8c2b-fee2-4b5b-9ea6-1b348e9eee2e",
+      "target": "4b2f7ab1-71cb-434d-8cdb-f41d3d96dc8b",
+      "type": "response"
+    },
+    {
+      "source": "742faeb6-83ba-4635-9522-28b5848bd8da",
+      "target": "6b4e8f44-42ef-46f4-8c7d-a69817f3b7b3",
+      "type": "response"
+    },
+    {
+      "source": "742faeb6-83ba-4635-9522-28b5848bd8da",
+      "target": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "type": "response"
+    },
+    {
+      "source": "9bdd937b-e999-4fa4-b964-1f72b3de3ee2",
+      "target": "93249867-4d69-49c6-89ac-3ccca3d61fc2",
+      "type": "response"
+    },
+    {
+      "source": "9bdd937b-e999-4fa4-b964-1f72b3de3ee2",
+      "target": "aef1ae3a-ebfa-495b-85a2-1195d103f88f",
+      "type": "response"
+    },
+    {
+      "source": "1378008a-de2e-4e4b-b5a1-0b2434b69e21",
+      "target": "3b687905-6b3d-4d25-94dd-845263449926",
+      "type": "response"
+    },
+    {
+      "source": "1378008a-de2e-4e4b-b5a1-0b2434b69e21",
+      "target": "e762246e-bb2e-4adc-a533-4a6457720a1a",
+      "type": "response"
+    },
+    {
+      "source": "be730b90-9047-4bce-9630-a3d5aa280a3f",
+      "target": "64c6f336-ba48-47db-8d8c-176d042218dd",
+      "type": "response"
+    },
+    {
+      "source": "be730b90-9047-4bce-9630-a3d5aa280a3f",
+      "target": "e2206fb6-ad29-4677-8801-73f9520184d5",
+      "type": "response"
+    },
+    {
+      "source": "af5b1971-1526-476a-8823-9b1fd9c1d8c5",
+      "target": "93527be2-5af0-4045-af41-12e5ed506099",
+      "type": "response"
+    },
+    {
+      "source": "af5b1971-1526-476a-8823-9b1fd9c1d8c5",
+      "target": "033fbf8a-46db-43fd-a460-86b8cdea36a4",
+      "type": "response"
+    },
+    {
+      "source": "0b5b524e-f79f-45ae-b1c7-a90f9870baf0",
+      "target": "07b491ff-d910-4c86-bab0-5a19126360e2",
+      "type": "response"
+    },
+    {
+      "source": "0b5b524e-f79f-45ae-b1c7-a90f9870baf0",
+      "target": "4f721757-eb65-4b2e-8318-efb24cf6a204",
+      "type": "response"
+    },
+    {
+      "source": "cff7064b-a4e3-4d30-a07b-d59e68ba0c30",
+      "target": "77f7c6d2-a7fb-4e80-9ef4-b7d20586eac6",
+      "type": "response"
+    },
+    {
+      "source": "cff7064b-a4e3-4d30-a07b-d59e68ba0c30",
+      "target": "47603019-de86-4ea1-93cb-a346f73d7cd4",
+      "type": "response"
+    },
+    {
+      "source": "5b090006-b16e-48d8-8fb1-e0c5d46aa926",
+      "target": "38f18726-9e39-4e3f-8480-e873ffa4aa48",
+      "type": "response"
+    },
+    {
+      "source": "5b090006-b16e-48d8-8fb1-e0c5d46aa926",
+      "target": "9d1dc75f-9f93-4a71-882a-4b0f227578cd",
+      "type": "response"
+    },
+    {
+      "source": "ddeeb1e8-02ad-4ae0-8955-ad8c8ba0442d",
+      "target": "7ba49a5d-c5a3-4497-8a10-1caa8954ea1f",
+      "type": "response"
+    },
+    {
+      "source": "ddeeb1e8-02ad-4ae0-8955-ad8c8ba0442d",
+      "target": "c7cf0496-79b9-48b8-a093-f0ed2a798a6b",
+      "type": "response"
+    },
+    {
+      "source": "1487ff41-2dd3-4a14-b379-9521ac63fa93",
+      "target": "0dcd8c83-1bb6-4066-a099-f147ef763e29",
+      "type": "response"
+    },
+    {
+      "source": "1487ff41-2dd3-4a14-b379-9521ac63fa93",
+      "target": "534366dc-fe7b-40d8-b37d-4ce57897f569",
+      "type": "response"
+    },
+    {
+      "source": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "target": "7f77f4f3-8991-4ef2-945d-e8d91786a144",
+      "type": "response"
+    },
+    {
+      "source": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "target": "04923182-036c-4ba1-b43f-f63c619570d0",
+      "type": "response"
+    },
+    {
+      "source": "d35714c7-edbf-4d27-858f-6e633a892f8f",
+      "target": "030276ab-a8c5-408b-bb4c-0526bdc85454",
+      "type": "response"
+    },
+    {
+      "source": "6b4e8f44-42ef-46f4-8c7d-a69817f3b7b3",
+      "target": "61fd73f7-75f5-4a1a-babc-068e6e4727c8",
+      "type": "response"
+    },
+    {
+      "source": "d0fcf182-3b29-423a-806a-3d983ebd3709",
+      "target": "7987cf3c-e5a9-42c2-b915-d9700361d94f",
+      "type": "response"
+    },
+    {
+      "source": "4b2f7ab1-71cb-434d-8cdb-f41d3d96dc8b",
+      "target": "571dc777-99bc-40a6-a74e-68fe404d336f",
+      "type": "response"
+    },
+    {
+      "source": "64c6f336-ba48-47db-8d8c-176d042218dd",
+      "target": "f33d28c1-c26b-4410-a027-e1e8639315a0",
+      "type": "response"
+    },
+    {
+      "source": "3b687905-6b3d-4d25-94dd-845263449926",
+      "target": "d27722fa-f74a-4483-a21e-acdf36f44179",
+      "type": "response"
+    },
+    {
+      "source": "aef1ae3a-ebfa-495b-85a2-1195d103f88f",
+      "target": "ec3bdd4d-26ca-4767-9fe6-eb716da351d7",
+      "type": "response"
+    },
+    {
+      "source": "aef1ae3a-ebfa-495b-85a2-1195d103f88f",
+      "target": "9b0a3ddd-3bc3-40f0-b9a5-e80ef7cc5cb4",
+      "type": "response"
+    },
+    {
+      "source": "93527be2-5af0-4045-af41-12e5ed506099",
+      "target": "3feeff6c-4413-4e4a-98d9-db645cbedc31",
+      "type": "response"
+    },
+    {
+      "source": "e2206fb6-ad29-4677-8801-73f9520184d5",
+      "target": "8cf9b1b2-578d-477e-8929-76168f70822d",
+      "type": "response"
+    },
+    {
+      "source": "e2206fb6-ad29-4677-8801-73f9520184d5",
+      "target": "530e9702-0a24-46a1-8893-4443d85aa804",
+      "type": "response"
+    },
+    {
+      "source": "4f721757-eb65-4b2e-8318-efb24cf6a204",
+      "target": "c372bac8-f6ae-4daf-a945-8295c870b904",
+      "type": "response"
+    },
+    {
+      "source": "e762246e-bb2e-4adc-a533-4a6457720a1a",
+      "target": "7f069ab1-6153-47c1-b5c7-348d3ee25b2c",
+      "type": "response"
+    },
+    {
+      "source": "e762246e-bb2e-4adc-a533-4a6457720a1a",
+      "target": "8498a808-2e29-41db-941e-5a7939d82d1d",
+      "type": "response"
+    },
+    {
+      "source": "9d1dc75f-9f93-4a71-882a-4b0f227578cd",
+      "target": "c0ea605a-befe-4006-92bf-c78d65753cd9",
+      "type": "response"
+    },
+    {
+      "source": "93249867-4d69-49c6-89ac-3ccca3d61fc2",
+      "target": "4af0c10f-2e5d-423a-8689-635e6d6f1e3b",
+      "type": "response"
+    },
+    {
+      "source": "38f18726-9e39-4e3f-8480-e873ffa4aa48",
+      "target": "08982aa4-12ad-42a9-a2d0-5701e4de2934",
+      "type": "response"
+    },
+    {
+      "source": "38f18726-9e39-4e3f-8480-e873ffa4aa48",
+      "target": "3089962a-ea2a-4e09-8355-796ad49f2aa9",
+      "type": "response"
+    },
+    {
+      "source": "07b491ff-d910-4c86-bab0-5a19126360e2",
+      "target": "74a5275d-f348-49ec-a944-6651e641aa79",
+      "type": "response"
+    },
+    {
+      "source": "07b491ff-d910-4c86-bab0-5a19126360e2",
+      "target": "084e0092-3826-4861-a435-6e9f49d99061",
+      "type": "response"
+    },
+    {
+      "source": "033fbf8a-46db-43fd-a460-86b8cdea36a4",
+      "target": "8471df0f-b4aa-441d-88e2-577ba8e160fe",
+      "type": "response"
+    },
+    {
+      "source": "033fbf8a-46db-43fd-a460-86b8cdea36a4",
+      "target": "63e859c3-496a-47ee-ab19-58fa3ec27473",
+      "type": "response"
+    },
+    {
+      "source": "47603019-de86-4ea1-93cb-a346f73d7cd4",
+      "target": "57c93e85-386b-4749-9fda-06c66589435f",
+      "type": "response"
+    },
+    {
+      "source": "47603019-de86-4ea1-93cb-a346f73d7cd4",
+      "target": "1f2f07cd-a3c2-4f06-a9c7-74459f24b1ac",
+      "type": "response"
+    },
+    {
+      "source": "77f7c6d2-a7fb-4e80-9ef4-b7d20586eac6",
+      "target": "52c70374-87aa-43b0-adaa-697903351440",
+      "type": "response"
+    },
+    {
+      "source": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "target": "3b6959fc-35a6-4d32-8cee-f78b74562978",
+      "type": "objection"
+    },
+    {
+      "source": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "target": "d3ba5933-cf84-44cf-9248-9859c38786cc",
+      "type": "objection"
+    },
+    {
+      "source": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "target": "29e5050e-0029-4864-9b8a-69c4d5bc7ed7",
+      "type": "objection"
+    },
+    {
+      "source": "73c26c08-6747-4e3e-838f-2a50b95d39dc",
+      "target": "0a92fd2d-c20e-4fe9-b2ce-9740d026e55a",
+      "type": "objection"
+    },
+    {
+      "source": "73c26c08-6747-4e3e-838f-2a50b95d39dc",
+      "target": "eafb58d8-1c80-4c53-b2ae-5824d17f6669",
+      "type": "objection"
+    },
+    {
+      "source": "2be6653e-1e13-4ea2-a2a5-243049a26af0",
+      "target": "5e2e2d15-1643-4801-afe0-c6c36a9670c7",
+      "type": "objection"
+    },
+    {
+      "source": "2be6653e-1e13-4ea2-a2a5-243049a26af0",
+      "target": "f031cf1f-02e2-47fe-be68-8a295bc75b19",
+      "type": "objection"
+    },
+    {
+      "source": "c2179514-5934-4185-b24a-ee677e1d75de",
+      "target": "cbecafde-9967-4984-a488-0ebe6f14c12f",
+      "type": "objection"
+    },
+    {
+      "source": "c2179514-5934-4185-b24a-ee677e1d75de",
+      "target": "0951f1b1-a38c-4c35-972a-09dbe4c34b93",
+      "type": "objection"
+    },
+    {
+      "source": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "target": "369133b2-b501-460f-a0d7-2e7b112a02ef",
+      "type": "objection"
+    },
+    {
+      "source": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "target": "b2b9f0df-937e-4b28-84b5-37fbc0f6b6f7",
+      "type": "objection"
+    },
+    {
+      "source": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "target": "4051d1cb-bfb0-473e-96dd-68a7b80927e1",
+      "type": "objection"
+    },
+    {
+      "source": "3b6959fc-35a6-4d32-8cee-f78b74562978",
+      "target": "8f784855-5047-4736-885e-160151a2ceb0",
+      "type": "response"
+    },
+    {
+      "source": "3b6959fc-35a6-4d32-8cee-f78b74562978",
+      "target": "5acc0bfa-018a-4f10-87e4-166b3fadd585",
+      "type": "response"
+    },
+    {
+      "source": "cbecafde-9967-4984-a488-0ebe6f14c12f",
+      "target": "70d9deb0-4260-4c5a-af13-c00d64417265",
+      "type": "response"
+    },
+    {
+      "source": "cbecafde-9967-4984-a488-0ebe6f14c12f",
+      "target": "2a5971e3-572a-422b-a997-e73125bee103",
+      "type": "response"
+    },
+    {
+      "source": "eafb58d8-1c80-4c53-b2ae-5824d17f6669",
+      "target": "b1798214-7845-4e27-a0cf-befbfb7e0778",
+      "type": "response"
+    },
+    {
+      "source": "eafb58d8-1c80-4c53-b2ae-5824d17f6669",
+      "target": "32bdb864-fd24-45f9-ac14-42599fcfae51",
+      "type": "response"
+    },
+    {
+      "source": "5e2e2d15-1643-4801-afe0-c6c36a9670c7",
+      "target": "8d1df07e-3458-4df1-9d34-53a3f9f8fac2",
+      "type": "response"
+    },
+    {
+      "source": "5e2e2d15-1643-4801-afe0-c6c36a9670c7",
+      "target": "4ebc8ab6-6e6c-45bd-b23e-58720f5327de",
+      "type": "response"
+    },
+    {
+      "source": "d3ba5933-cf84-44cf-9248-9859c38786cc",
+      "target": "208201c6-0c58-4f5a-82e4-b739ba40e214",
+      "type": "response"
+    },
+    {
+      "source": "d3ba5933-cf84-44cf-9248-9859c38786cc",
+      "target": "0f419749-f639-47e5-91b1-15380a48f19c",
+      "type": "response"
+    },
+    {
+      "source": "29e5050e-0029-4864-9b8a-69c4d5bc7ed7",
+      "target": "501567c5-630f-4162-818f-4dc0c9f1258a",
+      "type": "response"
+    },
+    {
+      "source": "29e5050e-0029-4864-9b8a-69c4d5bc7ed7",
+      "target": "b8c84ed8-3696-48d9-9198-5d017cbe034f",
+      "type": "response"
+    },
+    {
+      "source": "0951f1b1-a38c-4c35-972a-09dbe4c34b93",
+      "target": "0786fdf9-5ec9-43d2-aa75-f3898b094a83",
+      "type": "response"
+    },
+    {
+      "source": "0951f1b1-a38c-4c35-972a-09dbe4c34b93",
+      "target": "1622f557-02bd-4290-9710-aa49e9cc2fae",
+      "type": "response"
+    },
+    {
+      "source": "f031cf1f-02e2-47fe-be68-8a295bc75b19",
+      "target": "d6e75ba5-a3eb-444d-82a6-a78896b3ac11",
+      "type": "response"
+    },
+    {
+      "source": "f031cf1f-02e2-47fe-be68-8a295bc75b19",
+      "target": "46d067d5-1cfb-423a-94d7-ac1b27ef8dcc",
+      "type": "response"
+    },
+    {
+      "source": "369133b2-b501-460f-a0d7-2e7b112a02ef",
+      "target": "dc999be1-012b-46cf-97a4-ebd7fe9c1125",
+      "type": "response"
+    },
+    {
+      "source": "369133b2-b501-460f-a0d7-2e7b112a02ef",
+      "target": "c6b0d2cb-b49f-4d0f-823b-06a08ac69336",
+      "type": "response"
+    },
+    {
+      "source": "b2b9f0df-937e-4b28-84b5-37fbc0f6b6f7",
+      "target": "1aaf2df0-f996-4d04-bb0e-5ef5d4b26e3a",
+      "type": "response"
+    },
+    {
+      "source": "b2b9f0df-937e-4b28-84b5-37fbc0f6b6f7",
+      "target": "a8f5e52c-6ba3-4379-bbe0-30f8afbf69a8",
+      "type": "response"
+    },
+    {
+      "source": "0a92fd2d-c20e-4fe9-b2ce-9740d026e55a",
+      "target": "6c5e897f-12b5-4d8b-a6ab-96e497430e44",
+      "type": "response"
+    },
+    {
+      "source": "0a92fd2d-c20e-4fe9-b2ce-9740d026e55a",
+      "target": "3e437a82-facd-4541-bf90-6105d5b47987",
+      "type": "response"
+    },
+    {
+      "source": "4051d1cb-bfb0-473e-96dd-68a7b80927e1",
+      "target": "36ddb33c-fcc2-4be4-ad62-edf61a84b809",
+      "type": "response"
+    },
+    {
+      "source": "4051d1cb-bfb0-473e-96dd-68a7b80927e1",
+      "target": "7e2d95f8-f6fa-4b1e-ab69-db9af465206f",
+      "type": "response"
+    },
+    {
+      "source": "2a5971e3-572a-422b-a997-e73125bee103",
+      "target": "43375d82-10a4-481b-94d9-075c96548d9d",
+      "type": "response"
+    },
+    {
+      "source": "70d9deb0-4260-4c5a-af13-c00d64417265",
+      "target": "fb0fa171-be84-48f5-a348-877cc5833a92",
+      "type": "response"
+    },
+    {
+      "source": "70d9deb0-4260-4c5a-af13-c00d64417265",
+      "target": "5ca91712-dc1e-4303-9701-d5b00496c82b",
+      "type": "response"
+    },
+    {
+      "source": "5acc0bfa-018a-4f10-87e4-166b3fadd585",
+      "target": "e14ba00e-ff02-434d-ab26-f707060e5a79",
+      "type": "response"
+    },
+    {
+      "source": "8f784855-5047-4736-885e-160151a2ceb0",
+      "target": "00bc4b80-8e3a-45d3-bdbe-953649130692",
+      "type": "response"
+    },
+    {
+      "source": "8f784855-5047-4736-885e-160151a2ceb0",
+      "target": "eea3ed44-5a82-4c1d-81a4-e350393f7da7",
+      "type": "response"
+    },
+    {
+      "source": "8d1df07e-3458-4df1-9d34-53a3f9f8fac2",
+      "target": "a989f763-967d-40be-94cb-b143c81c4bcf",
+      "type": "response"
+    },
+    {
+      "source": "8d1df07e-3458-4df1-9d34-53a3f9f8fac2",
+      "target": "86b7fcc5-abae-4608-80d0-551ec0202df1",
+      "type": "response"
+    },
+    {
+      "source": "4ebc8ab6-6e6c-45bd-b23e-58720f5327de",
+      "target": "0a0d934e-ea42-4223-94ca-5e7eb3a9972b",
+      "type": "response"
+    },
+    {
+      "source": "32bdb864-fd24-45f9-ac14-42599fcfae51",
+      "target": "cf6f85d3-93c9-49af-ae88-fe1c7a3d3522",
+      "type": "response"
+    },
+    {
+      "source": "32bdb864-fd24-45f9-ac14-42599fcfae51",
+      "target": "43692871-80b7-41b2-9066-8f858813f710",
+      "type": "response"
+    },
+    {
+      "source": "b1798214-7845-4e27-a0cf-befbfb7e0778",
+      "target": "5610bf3c-f852-4c13-a255-07ee19237880",
+      "type": "response"
+    },
+    {
+      "source": "501567c5-630f-4162-818f-4dc0c9f1258a",
+      "target": "a4475f26-6df4-4d18-9bce-0073fb52c7d6",
+      "type": "response"
+    },
+    {
+      "source": "0f419749-f639-47e5-91b1-15380a48f19c",
+      "target": "fe8d67e5-8df4-4242-afb3-a0560a949ffb",
+      "type": "response"
+    },
+    {
+      "source": "208201c6-0c58-4f5a-82e4-b739ba40e214",
+      "target": "31182747-5c45-4f87-a888-f871f69a7d4b",
+      "type": "response"
+    },
+    {
+      "source": "46d067d5-1cfb-423a-94d7-ac1b27ef8dcc",
+      "target": "df2da51f-113a-4190-8238-4aff6db3e8d2",
+      "type": "response"
+    },
+    {
+      "source": "dc999be1-012b-46cf-97a4-ebd7fe9c1125",
+      "target": "1ae66485-8f57-439a-8c60-580b0d3432fd",
+      "type": "response"
+    },
+    {
+      "source": "d6e75ba5-a3eb-444d-82a6-a78896b3ac11",
+      "target": "d516ccf2-27ec-437e-9668-9300e8182388",
+      "type": "response"
+    },
+    {
+      "source": "6c5e897f-12b5-4d8b-a6ab-96e497430e44",
+      "target": "750c387d-5026-40c4-8247-da64e83aa6e7",
+      "type": "response"
+    },
+    {
+      "source": "6c5e897f-12b5-4d8b-a6ab-96e497430e44",
+      "target": "a37d4b76-e56d-4420-aafa-03158571a2a7",
+      "type": "response"
+    },
+    {
+      "source": "3e437a82-facd-4541-bf90-6105d5b47987",
+      "target": "ddc26431-d463-4e42-b8b4-ceb0256a353b",
+      "type": "response"
+    },
+    {
+      "source": "3e437a82-facd-4541-bf90-6105d5b47987",
+      "target": "6f96ba0f-34bd-40f6-b6c2-ff3f5a85d049",
+      "type": "response"
+    },
+    {
+      "source": "c6b0d2cb-b49f-4d0f-823b-06a08ac69336",
+      "target": "bf69f98b-bca0-43d3-b8e0-1be8afc2c16d",
+      "type": "response"
+    },
+    {
+      "source": "7e2d95f8-f6fa-4b1e-ab69-db9af465206f",
+      "target": "591d3d79-ec5f-40ef-9a9b-0baa9b609e61",
+      "type": "response"
+    },
+    {
+      "source": "7e2d95f8-f6fa-4b1e-ab69-db9af465206f",
+      "target": "06bb1e71-81b5-4091-a763-469cde72f119",
+      "type": "response"
+    },
+    {
+      "source": "1aaf2df0-f996-4d04-bb0e-5ef5d4b26e3a",
+      "target": "dfde5323-d0e9-4232-b300-a18adeaef888",
+      "type": "response"
+    },
+    {
+      "source": "1aaf2df0-f996-4d04-bb0e-5ef5d4b26e3a",
+      "target": "124f4706-c40b-41e9-97bf-930195253cf7",
+      "type": "response"
+    },
+    {
+      "source": "b8c84ed8-3696-48d9-9198-5d017cbe034f",
+      "target": "bc53989c-2f67-46f1-81c8-9867b67c6929",
+      "type": "response"
+    },
+    {
+      "source": "b8c84ed8-3696-48d9-9198-5d017cbe034f",
+      "target": "7466b460-62b1-421c-8da3-da92a82510b6",
+      "type": "response"
+    },
+    {
+      "source": "1622f557-02bd-4290-9710-aa49e9cc2fae",
+      "target": "81aaf02f-8059-489d-94bc-cc2f5106dc0f",
+      "type": "response"
+    },
+    {
+      "source": "1622f557-02bd-4290-9710-aa49e9cc2fae",
+      "target": "ed229b77-d468-434d-abf5-36ddd8ffa6d1",
+      "type": "response"
+    },
+    {
+      "source": "36ddb33c-fcc2-4be4-ad62-edf61a84b809",
+      "target": "098b66ab-b255-4437-b2ff-9d6a5df3ff6f",
+      "type": "response"
+    },
+    {
+      "source": "0786fdf9-5ec9-43d2-aa75-f3898b094a83",
+      "target": "048fd85f-20c9-401e-a895-f6626fd197cc",
+      "type": "response"
+    },
+    {
+      "source": "0786fdf9-5ec9-43d2-aa75-f3898b094a83",
+      "target": "bdc42c17-7664-4deb-9b79-b0eca6e4338f",
+      "type": "response"
+    },
+    {
+      "source": "a8f5e52c-6ba3-4379-bbe0-30f8afbf69a8",
+      "target": "2e37720e-a0be-422b-8f7f-044e3e830efb",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6070f0f0-4335-437c-ba73-f445fb3b146b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "2a26d9ca-f3df-4b12-9932-b1beed1ce0c3",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "37166187-d67b-424d-9203-17c59e24aacd",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "2dd690c2-0404-4d04-b6c5-26d7daffab42",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "0fb9cfad-ba60-4189-acc0-060c18260a26",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "fc5e67df-e8b3-4c0e-b7f5-9b00cab65149",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2be6653e-1e13-4ea2-a2a5-243049a26af0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "73c26c08-6747-4e3e-838f-2a50b95d39dc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "499f44d8-d631-4924-98c3-712cb12bb8a8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "c2179514-5934-4185-b24a-ee677e1d75de",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "38254491-3ab7-4450-a07d-0e1160ee036f",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

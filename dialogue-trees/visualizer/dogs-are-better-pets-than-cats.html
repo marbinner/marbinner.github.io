@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dogs are better pets than cats - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #666;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 1px solid #a2a9b1;
+            transition: right 0.3s;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #72777d;
+        }
+
+        #sidebar h2 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+            padding-right: 30px;
+        }
+
+        #sidebar .node-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #202122;
+        }
+
+        #sidebar .node-meta {
+            font-size: 0.85em;
+            color: #72777d;
+            margin-bottom: 5px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .node.pro circle {
+            fill: #00af89;
+        }
+
+        .node.con circle {
+            fill: #dd5555;
+        }
+
+        /* Depth-based styling */
+        .node circle {
+            opacity: 1;
+        }
+
+        .node.depth-1 circle {
+            opacity: 0.9;
+        }
+
+        .node.depth-2 circle {
+            opacity: 0.8;
+        }
+
+        .node.depth-3 circle {
+            opacity: 0.7;
+        }
+
+        .node.depth-4 circle,
+        .node.depth-5 circle {
+            opacity: 0.6;
+        }
+
+        .node.highlighted circle {
+            stroke: #ffd700;
+            stroke-width: 4px;
+        }
+
+        .node.selected circle {
+            stroke: #0645ad;
+            stroke-width: 4px;
+        }
+
+        /* Adaptive font sizing based on depth */
+        .node.depth-0 text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .node.depth-1 text,
+        .node.depth-2 text {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .node.depth-3 text,
+        .node.depth-4 text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .node.depth-5 text {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #00af89;
+            border-color: #00af89;
+        }
+
+        .node-badge.con {
+            color: #dd5555;
+            border-color: #dd5555;
+        }
+
+        .node-badge.objection {
+            color: #cc6600;
+            border-color: #cc6600;
+        }
+
+        .node-badge.response {
+            color: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.3;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        /* Fisheye zoom effect on hover */
+        .node {
+            transition: transform 0.2s ease;
+        }
+
+        .node:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .node:hover circle {
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.pro {
+            stroke: #00af89;
+            stroke-opacity: 0.4;
+        }
+
+        .link.con {
+            stroke: #dd5555;
+            stroke-opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Dogs are better pets than cats</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            76 total nodes • Max depth: 2 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="fitToView()">Fit to View</button>
+
+        <div id="legend">
+            <h3>Statistics</h3>
+            <div style="font-size: 0.85em; color: #72777d; margin-bottom: 10px;">
+                <div style="margin-bottom: 3px;"><strong>Nodes:</strong> 76</div>
+                <div style="margin-bottom: 3px;"><strong>Max Depth:</strong> 2</div>
+                <div style="margin-bottom: 3px;"><strong>Pro:</strong> <span style="color: #00af89;">6</span></div>
+                <div style="margin-bottom: 3px;"><strong>Con:</strong> <span style="color: #dd5555;">6</span></div>
+            </div>
+
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00af89;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dd5555;"></div>
+                <span>Con / Opposing</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "2a14d8c9-dd94-466d-ab7f-8612575e3b6a",
+      "text": "Dog ownership mandates regular walks and exercise, which systematically increases physical activity and is consistently correlated in scientific studies with demonstrably improved cardiovascular health and longevity outcomes in humans.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:26.570225"
+    },
+    {
+      "id": "f15902b8-3142-4695-a1b6-5a9f29c6192d",
+      "text": "Dogs provide superior functional utility, capable of performing crucial, life-saving services like guide work for the visually impaired, medical detection, security, and search-and-rescue, functions cats are generally unable to fulfill.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:26.571084"
+    },
+    {
+      "id": "d34a57c8-743f-4c6e-8b78-51a601b644ee",
+      "text": "Dogs are more easily integrated into an active and mobile human lifestyle due to their broader acceptance in diverse public spaces, including non-home environments, parks, and various forms of public transportation.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:26.571897"
+    },
+    {
+      "id": "7c3068fb-2cca-46ac-8196-3d0be8fb61e2",
+      "text": "Dogs' inherent pack mentality and greater capacity for obedience and complex training allow them to be easily integrated into human household hierarchies, resulting in more reliable and predictable behaviors than those of independent-minded cats.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:26.572484"
+    },
+    {
+      "id": "900548dd-16f8-4b41-b6ee-31f5dcf87200",
+      "text": "The high demands of caring for a dog necessitate active daily mutual engagement in feeding, training, and exercise, fostering a deeper, more participatory, and actively rewarding owner-pet relationship built on shared experiences.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:26.573533"
+    },
+    {
+      "id": "12ad9cbe-063f-4392-8dba-1aab712dee2b",
+      "text": "Dogs have a long and essential historical record as working partners in tasks like hunting, herding, and guarding, demonstrating an unparalleled level of cooperative value that is fundamental to the historical development of human civilization.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:26.574283"
+    },
+    {
+      "id": "5a1499f4-7bed-4049-bfda-56cd4962b8a3",
+      "text": "The cooperative value of dogs is paralleled or even surpassed by draft animals like horses (transport, warfare) and oxen/cattle (plowing, sustained labor), whose contributions were demonstrably larger in agricultural expansion and material production.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "12ad9cbe-063f-4392-8dba-1aab712dee2b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:35.717094"
+    },
+    {
+      "id": "15c6e197-c7c8-4586-a8c5-93d48abfcea1",
+      "text": "The necessary prerequisites for human civilizational development were the domestication of grain and large-hoofed livestock during the Neolithic Revolution, which enabled settled life independently of dog companionship or working roles.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "12ad9cbe-063f-4392-8dba-1aab712dee2b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:35.717991"
+    },
+    {
+      "id": "aa98d95a-d2a3-4f36-81f0-30a4ca77db0b",
+      "text": "Dog ownership does not mandate the owner physically perform the walking; delegation to professional services or family members, or the selection of extremely low-activity breeds, bypasses the expected increase in the owner's personal physical activity level.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a14d8c9-dd94-466d-ab7f-8612575e3b6a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:37.678592"
+    },
+    {
+      "id": "8a9047d9-c9f4-4526-9a86-64b8400e49ba",
+      "text": "The assumed cardiovascular benefit relies on sustained moderate-to-vigorous physical activity (MVPA); however, the typical stop-and-start, low-intensity pace of dog walking often fails to meet the intensity thresholds required for significant, clinically measured longevity gains.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a14d8c9-dd94-466d-ab7f-8612575e3b6a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:37.679039"
+    },
+    {
+      "id": "ed7b7297-f1a4-445c-8dc2-fa6babd8b2e5",
+      "text": "Non-service dogs face widespread prohibition in critical infrastructure necessary for true mobility, such as most international air travel, hotels outside pet-friendly chains, and many retail/dining establishments, severely limiting integration.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d34a57c8-743f-4c6e-8b78-51a601b644ee",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:42.583711"
+    },
+    {
+      "id": "76f2386a-2c94-4abd-9be8-a451191d0b68",
+      "text": "The requirement for daily intense exercise, frequent mandatory outdoor access, and the greater size of most dogs creates significant basic logistical restraints that inherently limit the spontaneity and long-distance travel capabilities of the owner.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d34a57c8-743f-4c6e-8b78-51a601b644ee",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:42.584490"
+    },
+    {
+      "id": "bd22f292-ea34-4fd4-a0c4-0a88a984b90f",
+      "text": "Modern canine ethology largely rejects the \"pack mentality\" and dominance hierarchy premises, showing that domestic dogs integrate through social attachment and selective breeding for compliance, not by seeking a position in a rigid household hierarchy.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7c3068fb-2cca-46ac-8196-3d0be8fb61e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:44.256488"
+    },
+    {
+      "id": "2dc16d65-b9e4-4cce-9c52-ecb7850fd8ba",
+      "text": "Cats consistently exhibit highly reliable, ingrained behaviors, such as immediate and exclusive litter box usage, which is independent of human dominance or obedience training. This shows predictability is context-dependent, not tied solely to a capacity for obedience.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7c3068fb-2cca-46ac-8196-3d0be8fb61e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:44.257147"
+    },
+    {
+      "id": "93d94603-86b2-4796-99c4-88fd5ecc7f35",
+      "text": "Cats offer unique functional utility as low-demand emotional support animals, demonstrably reducing owner anxiety and stress without requiring the intensive daily exercise, feeding, and training commitment necessary for dogs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "f15902b8-3142-4695-a1b6-5a9f29c6192d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:46.172689"
+    },
+    {
+      "id": "a9844fbc-19fe-497c-b4da-a640a9891f29",
+      "text": "Cats excel in practical utility functions such as high-efficiency, natural vermin control in agricultural settings and urban spaces, which is a crucial health and sanitation benefit dogs do not provide.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "f15902b8-3142-4695-a1b6-5a9f29c6192d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:46.173127"
+    },
+    {
+      "id": "2e4b4b54-7d33-4e33-9dd6-cfba2516c1f8",
+      "text": "The comparison is non-parallel because dogs' primary cooperative value emerged in specialized hunting, tracking, and providing advanced warning for nomadic groups 15,000+ years ago, roles that draft animals were inherently incapable of performing for early human survival.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5a1499f4-7bed-4049-bfda-56cd4962b8a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:46.789186"
+    },
+    {
+      "id": "8e8f881d-ecb4-4354-a4b9-6ba95723c013",
+      "text": "Draft animals are incapable of high-level cooperative cognitive tasks such as managing dynamic flocks (herding), search-and-rescue operations, or providing sophisticated psychological and therapeutic support, which represent domains where dogs offer irreplaceable, non-material value.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5a1499f4-7bed-4049-bfda-56cd4962b8a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:46.789213"
+    },
+    {
+      "id": "2bb0bab9-32c5-4f9e-9bf2-8058e5079a64",
+      "text": "The continuous, high time commitment required for rigorous dog training and exercise often leads to owner burnout, inadequate care, or the dog being surrendered to a shelter, which proves high demand does not guarantee a rewarding relationship.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "900548dd-16f8-4b41-b6ee-31f5dcf87200",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:47.924576"
+    },
+    {
+      "id": "48539566-196d-4c5d-a512-c5aa5249932d",
+      "text": "Deep owner-pet bonds are frequently established through non-demanding companionship activities, such as passive presence, resting proximity, and petting, demonstrating that the bond's depth is not strictly contingent on daily demanding chores like feeding and exercise.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "900548dd-16f8-4b41-b6ee-31f5dcf87200",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:47.925319"
+    },
+    {
+      "id": "04f4e8ca-86cc-43e3-b9b8-f9474d43e3dc",
+      "text": "Mesoamerican civilizations (e.g., Aztec, Maya, Inca) established advanced sedentary societies, massive architecture, and large-scale grain agriculture without domesticating any large-hoofed livestock for work or transport.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "15c6e197-c7c8-4586-a8c5-93d48abfcea1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:50.048521"
+    },
+    {
+      "id": "d13330e5-a350-4a07-8cbe-520edae662af",
+      "text": "Agricultural settled life is entirely dependent on complex working roles, including specialized labor for irrigation, storage, defense, and long-term crop management, contradicting the claim of independence from such roles.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "15c6e197-c7c8-4586-a8c5-93d48abfcea1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:50.048573"
+    },
+    {
+      "id": "351afc50-982b-48f9-8dee-e6dfd809a266",
+      "text": "Daily maintenance tasks, such as cleaning up accidental waste, managing food preparation, and minor physical handling, require the owner to bend, lift, or move, constituting an increase in physical activity that cannot be fully delegated.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "aa98d95a-d2a3-4f36-81f0-30a4ca77db0b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:51.482628"
+    },
+    {
+      "id": "7288ab5b-87bb-48a9-aabd-46fa632f7f78",
+      "text": "To maintain a dog's mental health and curb destructive behavior, owners must engage in active training or play sessions regardless of breed, which requires physical exertion like squatting, throwing, and running indoors, thus increasing owner activity beyond walking.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "aa98d95a-d2a3-4f36-81f0-30a4ca77db0b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:51.482686"
+    },
+    {
+      "id": "bb05ac97-51fe-4a86-97c2-21a9aedcd0d4",
+      "text": "Dog walking intensity is highly variable, with studies showing owners regularly reach MVPA levels when walking large or energetic breeds, navigating hills, or maintaining a sustained brisk pace above 4 mph, directly meeting fitness thresholds.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a9047d9-c9f4-4526-9a86-64b8400e49ba",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:52.604779"
+    },
+    {
+      "id": "521d26ab-b35b-43be-b37e-b39248677e64",
+      "text": "Replacing sedentary time with light-intensity physical activity (LPA), such as stop-and-start walking, significantly reduces the risk of all-cause mortality and improves metabolic health, providing clinically measurable gains even below the MVPA threshold.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a9047d9-c9f4-4526-9a86-64b8400e49ba",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:52.604847"
+    },
+    {
+      "id": "c7f99514-7a0f-414a-b4d6-ff8e5f89298f",
+      "text": "The claim of \"unique functional utility\" is undermined by other low-maintenance pets, as small caged mammals like hamsters or guinea pigs require significantly less daily engagement and also demonstrate stress-reducing benefits, challenging the necessity of a cat.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "93d94603-86b2-4796-99c4-88fd5ecc7f35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:57.732080"
+    },
+    {
+      "id": "ad7a71f4-dd30-46ae-a1c8-5622588b69f1",
+      "text": "While requiring less physical exercise, cats often demand comparable commitment in areas like managing specific behavioral issues (e.g., house soiling), providing complex environmental enrichment (vertical space), and managing specialized veterinary care for common feline illnesses (e.g., FLUTD).",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "93d94603-86b2-4796-99c4-88fd5ecc7f35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:30:57.732121"
+    },
+    {
+      "id": "fffa22a4-ef40-4156-99ec-c5d74b4047d9",
+      "text": "Many popular companion breeds like French Bulldogs, Cavalier King Charles Spaniels, and older dogs require only moderate daily walking, directly contradicting the premise that \\",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "76f2386a-2c94-4abd-9be8-a451191d0b68",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:03.086763"
+    },
+    {
+      "id": "4506f4b5-7eaa-4399-a47a-41eb8d7ecfd1",
+      "text": "Logistical limitations on spontaneity and long-distance travel are not inherent, as owners routinely utilize commercial pet-sitting services, in-home care, and boarding facilities to maintain their dog\u2019s routine during travel.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "76f2386a-2c94-4abd-9be8-a451191d0b68",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:03.086787"
+    },
+    {
+      "id": "c8f01880-b438-403e-8a26-178863966d5a",
+      "text": "A pet bond is fundamentally contingent on the survival and health of the animal, which requires the consistent performance of demanding activities like feeding, sanitation, and veterinary care; neglecting these necessary tasks will terminate the relationship, regardless of emotional closeness established through passive presence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "48539566-196d-4c5d-a512-c5aa5249932d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:03.955618"
+    },
+    {
+      "id": "443b17bc-5d1f-42ef-9e16-60bae10b74b0",
+      "text": "Demanding activities like training during exercise and structured feeding routines are critical for establishing trust, routine, and reciprocal communication, which are foundational elements for a secure and deep attachment beyond mere passive companionship.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "48539566-196d-4c5d-a512-c5aa5249932d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:03.955665"
+    },
+    {
+      "id": "1093d958-c39e-4ee2-a928-ff0551845096",
+      "text": "Several dog breeds, including various terriers and dachshunds, were historically and are currently employed specifically for high-efficiency vermin control (ratting and badgering), directly contradicting the claim that dogs offer no such benefit.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9844fbc-19fe-497c-b4da-a640a9891f29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:04.971880"
+    },
+    {
+      "id": "adff108f-a0d5-429d-a03c-569a2ad38a87",
+      "text": "Scientific studies show that cats typically kill only small numbers of rodents and preferentially prey on native wildlife; therefore, their impact on reducing high-density urban or agricultural vermin populations is negligible.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9844fbc-19fe-497c-b4da-a640a9891f29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:04.971909"
+    },
+    {
+      "id": "fb420b7a-709e-410e-bd9b-d0db5fe53966",
+      "text": "Essential critical infrastructure includes public necessities like roads, public transit hubs, and utilities; proprietary commercial services like specific high-end hotel chains and most retail stores do not qualify as infrastructure necessary for mobility.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ed7b7297-f1a4-445c-8dc2-fa6babd8b2e5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.828116"
+    },
+    {
+      "id": "7c9d3e00-1f1f-431a-81cb-d0b4e3132200",
+      "text": "Mobility is not severely limited, as thousands of accessible pet-friendly hotels (e.g., Motel 6, Kimpton) and numerous regional transport options accommodate non-service animals, demonstrating a limitation of preference, not fundamental access.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ed7b7297-f1a4-445c-8dc2-fa6babd8b2e5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.828164"
+    },
+    {
+      "id": "a34170dc-0f6c-4e1f-b602-faf38985d23d",
+      "text": "Cat ownership requires significantly less time commitment and physical stamina, as scheduled walks and intensive obedience training are generally not necessary, making them ideal pets for busy professionals or less mobile owners.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.828332"
+    },
+    {
+      "id": "31320b31-f487-44b7-832c-6543ce84c8de",
+      "text": "Cats are uniquely suited to small apartments and dense urban living, as they thrive purely indoors without dedicated outdoor access, unlike most dog breeds that require substantially more space and daily outside exercise.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.829148"
+    },
+    {
+      "id": "0da7c488-5f1c-4a6c-aaf8-c16265c0cee6",
+      "text": "Cats provide affectionate companionship without the high-demand, constant interaction characteristic of dogs, a dynamic highly valued by owners who prefer a more independent and solitude-respecting relationship.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.829715"
+    },
+    {
+      "id": "106cda52-6dd3-4867-8cf4-d7b69ba29d82",
+      "text": "Cats are generally quiet and do not create disruptive noises like persistent barking or whining, which significantly reduces potential neighborhood disputes and makes them better suited for high-density residential areas.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.830178"
+    },
+    {
+      "id": "15271d77-65ba-4879-8a78-80735be1380a",
+      "text": "The total lifetime monetary cost, including food, routine healthcare, and necessary accessories, is empirically lower for cat ownership than for dog ownership, making them a more financially accessible companion pet.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.830604"
+    },
+    {
+      "id": "f00478c7-9710-4b53-977f-14116672143c",
+      "text": "Cats' ability to use a contained litter box eliminates the unpleasant and sometimes impractical daily chore of manually collecting and disposing of outdoor waste, a necessity for dog owners regardless of weather or location.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:07.831037"
+    },
+    {
+      "id": "adf6ea24-7b8d-447a-8a66-45956854524b",
+      "text": "The suitability of cats in high-density areas is undermined by their tendency to roam outdoors, causing neighborhood disputes by trespassing on private property, marking territory, and preying indiscriminately on urban wildlife.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "106cda52-6dd3-4867-8cf4-d7b69ba29d82",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:18.443926"
+    },
+    {
+      "id": "f6d12c5c-8955-4f81-bcf8-68b71503f56c",
+      "text": "In dense residential settings, poor litter box maintenance generates strong, pervasive odors that can travel through shared ventilation or hallways, causing significant hygienic disputes that are often harder to resolve than noise complaints.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "106cda52-6dd3-4867-8cf4-d7b69ba29d82",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:18.444355"
+    },
+    {
+      "id": "76521575-6438-44cb-85d3-9329ecc34144",
+      "text": "The claim of being \\u201cuniquely suited\\u201d is false, as many other small pets like rabbits, hamsters, and fish require less overall utility space and thrive purely indoors without the same behavioral needs for vertical territory and enrichment that cats require.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "31320b31-f487-44b7-832c-6543ce84c8de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:19.598435"
+    },
+    {
+      "id": "fc1b6f4a-efd5-4dcf-b386-a8199706f248",
+      "text": "Many small, low-activity dog breeds, such as the Maltese or Pug, are highly suitable for apartments and require less strenuous daily exercise compared to high-energy cat breeds like the Savannah or Bengal.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "31320b31-f487-44b7-832c-6543ce84c8de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:19.599531"
+    },
+    {
+      "id": "94557f98-2b15-490d-913f-d3e6134df76f",
+      "text": "The analysis omits necessary, non-routine costs such as professional obedience training (often required for dog adoption) and municipal licensing fees, which significantly raise the total financial barrier for dog ownership but are negligible or nonexistent for cats.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "15271d77-65ba-4879-8a78-80735be1380a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:19.997862"
+    },
+    {
+      "id": "ac1748dc-c270-4013-902a-0f617c3289e4",
+      "text": "The scope ignores the cost of comprehensive pet insurance and emergency highly specialized care; larger dogs disproportionately incur very high-cost orthopedic and critical medical procedures, potentially exceeding the total lifetime savings on routine cat care.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "15271d77-65ba-4879-8a78-80735be1380a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:19.998289"
+    },
+    {
+      "id": "ac6f0d39-ac43-43b6-9e3c-ecab8334e2b1",
+      "text": "Cat litter boxes require daily scooping and periodic deep cleaning to maintain hygiene and control odor, meaning the chore of handling pet waste is merely transferred indoors, not eliminated.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f00478c7-9710-4b53-977f-14116672143c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:23.030556"
+    },
+    {
+      "id": "84bc3bbf-43ee-4df2-8d89-61c248719278",
+      "text": "Disposing of cat waste involves purchasing, transporting, and managing specialized heavy litter material, which replaces the simple biodegradable bagging system used for most dog waste.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f00478c7-9710-4b53-977f-14116672143c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:23.030999"
+    },
+    {
+      "id": "8860b2d4-242d-436f-b19e-97eb26640c6c",
+      "text": "Daily maintenance for cats, including scooping litter boxes and providing focused enrichment play sessions, is physically necessary and takes dedicated time, contrary to the claim of significantly less time commitment.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a34170dc-0f6c-4e1f-b602-faf38985d23d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:26.390986"
+    },
+    {
+      "id": "4673ce5f-54e8-4f70-a467-ce5eccb37a3d",
+      "text": "Cats are not universally ideal pets, as they can require high and unpredictable costs for emergency veterinary care, specifically for common issues like urinary blockages or chronic kidney disease, which are often expensive and critical.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a34170dc-0f6c-4e1f-b602-faf38985d23d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:26.391400"
+    },
+    {
+      "id": "1a77f5f5-aa51-4eca-bd88-2162ef659ca5",
+      "text": "Highly social cat breeds like the Siamese, Sphynx, and Bengal frequently exhibit strong vocal demands and separation anxiety, requiring constant interaction which completely contradicts the claim of low-demand companionship.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0da7c488-5f1c-4a6c-aaf8-c16265c0cee6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:26.767220"
+    },
+    {
+      "id": "20d22b8b-4f16-43a4-aab4-2d7a3d380571",
+      "text": "Many dog breeds, particularly Livestock Guardian Dogs (LGD) or primitive breeds like the Shiba Inu and Akita, are highly independent and require minimal direct owner interaction, functioning as solitude-respecting companions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0da7c488-5f1c-4a6c-aaf8-c16265c0cee6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:26.767960"
+    },
+    {
+      "id": "b170e4b0-aee0-4fa7-b9af-e5652d07ebe1",
+      "text": "The assumption that professional obedience training is a necessary financial barrier is false, as many dog owners conduct effective self-training using free resources or adopt from sources that do not mandate external training, bypassing this expense entirely.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "94557f98-2b15-490d-913f-d3e6134df76f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:30.515830"
+    },
+    {
+      "id": "ee690c25-3fad-4ec3-8996-9de442c140d4",
+      "text": "Asserting that one-time municipal documentation fees and initial training significantly raise the total barrier is unsubstantiated, as these costs are typically minimal compared to the recurring, baseline annual expenses for quality food, routine vet care, and preventative medications over the pet's 10-15 year lifespan.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "94557f98-2b15-490d-913f-d3e6134df76f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:30.515870"
+    },
+    {
+      "id": "fac93602-0579-4376-a001-5a16cb96fc3b",
+      "text": "Noise complaints are often easier to resolve because they relate to intermittent, subjective behaviors protected by reasonable use laws, whereas odors stem from quantifiable maintenance failures that legally require immediate remediation under sanitation covenants.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f6d12c5c-8955-4f81-bcf8-68b71503f56c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:30.938934"
+    },
+    {
+      "id": "c8554e21-d983-4c7d-a915-9929936e6718",
+      "text": "Modern high-density construction standards, such as those concerning sealed drywall and independent HVAC systems required by contemporary building codes, severely limit air exchange between units, preventing strong odors from becoming truly \"pervasive\" through shared ventilation or infrastructure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f6d12c5c-8955-4f81-bcf8-68b71503f56c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:30.938958"
+    },
+    {
+      "id": "ace0d735-6b7b-44ec-94fb-df19b4881de5",
+      "text": "Specialized medical fields like feline oncology and cardiology routinely treat conditions (e.g., kidney failure, HCM) that incur costs comparable to canine orthopedic surgery, invalidating the argument's selective focus on dog expenditures.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ac1748dc-c270-4013-902a-0f617c3289e4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:31.022772"
+    },
+    {
+      "id": "a6167180-4dad-4a08-9f97-a3cd2b252d70",
+      "text": "Focusing on the rare potential for extremely high-cost procedures overstates average lifetime costs, as the majority of dogs do not require multi-thousand dollar critical interventions; probability, not maximum potential, dictates expected expenses.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ac1748dc-c270-4013-902a-0f617c3289e4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:31.022811"
+    },
+    {
+      "id": "092bde45-70bc-41fa-9c42-dd7b7964ad5e",
+      "text": "The comparison is structurally flawed by cherry-picking the least demanding dogs (Pug, Maltese) against the most demanding, large cat breeds (Savannah, Bengal). A fair comparison between a typical domestic cat and an average dog reveals the dog generally necessitates a larger and more consistent daily time commitment from the owner.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fc1b6f4a-efd5-4dcf-b386-a8199706f248",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:31.738878"
+    },
+    {
+      "id": "c7c48812-faef-4369-9926-4d9d1cbd716d",
+      "text": "Even low-activity dog breeds necessitate mandatory, structured daily walks outdoors for elimination, socialization, and behavioral health, which is a consistent time investment not required for cats. This compulsory outdoor activity makes the care for virtually any dog breed more strenuous than the indoor play requirements of high-energy cat breeds.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fc1b6f4a-efd5-4dcf-b386-a8199706f248",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:31.738929"
+    },
+    {
+      "id": "49f6ccfd-35e9-4f45-be58-47ce6ce0b089",
+      "text": "The transfer of the chore indoors fundamentally changes its nature by decoupling waste management from external factors like weather and darkness, simplifying the task compared to mandatory, time-sensitive outdoor trips required for many other pets.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ac6f0d39-ac43-43b6-9e3c-ecab8334e2b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:33.586329"
+    },
+    {
+      "id": "8b6d5853-7167-4940-86f7-ec236dfc455d",
+      "text": "The argument overlooks the difference in time commitment, as daily litter scooping is a brief, concentrated task (typically under five minutes), whereas managing dog waste often necessitates multiple, lengthier walks or yard supervision sessions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ac6f0d39-ac43-43b6-9e3c-ecab8334e2b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:33.586356"
+    },
+    {
+      "id": "d1bace5b-f0c4-4c29-9292-632b57a6279e",
+      "text": "The vast majority of the global cat population are domestic mixed-breeds (DSH/DMH) whose moderate independence supports the general claim of low-demand companionship, making the selected purebred examples unrepresentative exceptions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1a77f5f5-aa51-4eca-bd88-2162ef659ca5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:37.306156"
+    },
+    {
+      "id": "c469972b-389c-41e1-bc13-072188b4c574",
+      "text": "Even highly social cat breeds still require far less intensive training, constant physical exercise, or supervised outdoor time than most dog breeds, maintaining their classification as comparatively \"low-demand\" companions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1a77f5f5-aa51-4eca-bd88-2162ef659ca5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:37.306200"
+    },
+    {
+      "id": "06b2d5f7-276f-4c7c-980e-0e25bcee79c1",
+      "text": "Cats provide significant cognitive stimulation and emotional companionship on par with dogs, which is a primary criterion for desirable pet ownership completely absent in solitary species like hamsters or fish.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "76521575-6438-44cb-85d3-9329ecc34144",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:37.686593"
+    },
+    {
+      "id": "a1a9ddbb-a2c5-4f7b-8cab-a415d0e4d1e9",
+      "text": "House rabbits, especially bonded pairs, require an eight-by-ten-foot or larger protected floor area for daily exercise and housing, demanding more dedicated, low-utility floor space than a single, vertically-accommodated indoor cat.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "76521575-6438-44cb-85d3-9329ecc34144",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:37.686677"
+    },
+    {
+      "id": "b4feaa08-bf4a-4a76-a5f2-1de6e5cc4db1",
+      "text": "The necessary time commitment for cats remains significantly less than the common baseline comparison (dogs), where dogs require 45-60 minutes of daily walking, outdoor potty breaks, and more intensive training, tasks cats do not need.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8860b2d4-242d-436f-b19e-97eb26640c6c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:37.950754"
+    },
+    {
+      "id": "8fbb7f85-c832-4ece-896a-3e7b3dbefd3d",
+      "text": "The physical necessity of daily human labor is negated by modern automation; self-cleaning litter boxes eliminate the daily scooping task, reducing the total required human maintenance time to mere minutes for feeding and minimal interaction.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8860b2d4-242d-436f-b19e-97eb26640c6c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:37.950797"
+    },
+    {
+      "id": "f2e7691c-10db-4d59-9314-d0696f5110db",
+      "text": "Breeds defined by independence and function, such as LGDs (Great Pyrenees), require extensive skilled socialization, specialized training, and management to safely navigate domestic life and control protective instincts. This high demand for dedicated, competent owner interaction contradicts the claim of requiring minimal engagement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "20d22b8b-4f16-43a4-aab4-2d7a3d380571",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:38.282769"
+    },
+    {
+      "id": "992c76f4-8aa1-4c70-ab3f-123136c8dc8d",
+      "text": "Primitive breeds like the Shiba Inu and Akita often exhibit low food/praise motivation and strong prey drives, demanding persistent high-level structural management, secure perimeters, and specialized recall training. This required vigilance and structure is the opposite of minimal owner interaction.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "20d22b8b-4f16-43a4-aab4-2d7a3d380571",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:38.282812"
+    },
+    {
+      "id": "d6ddcf78-d8c9-4857-8722-7e5121f6eb6f",
+      "text": "Cats confined entirely indoors, a standard practice in densely populated regions like the Canadian Greater Toronto Area, do not contribute to disputes via trespassing, scent marking, or wildlife predation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "adf6ea24-7b8d-447a-8a66-45956854524b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:38.782869"
+    },
+    {
+      "id": "15385941-4262-4f35-93ff-9db904fd8d3c",
+      "text": "Studies indicate that municipal legislation in many high-density areas mandates strict licensing and spay/neuter requirements, which significantly mitigates excessive territorial marking and population growth linked to roaming disputes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "adf6ea24-7b8d-447a-8a66-45956854524b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:38.782910"
+    },
+    {
+      "id": "99e95666-30b4-430a-997d-38f96a7f84df",
+      "text": "Cat owners frequently use lightweight alternatives such as silica gel crystals or recycled paper litters, which require managing substantially less mass than traditional clay, directly contradicting the premise that all disposal involves specialized heavy material.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "84bc3bbf-43ee-4df2-8d89-61c248719278",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:44.576989"
+    },
+    {
+      "id": "496aeadf-c84f-4d5a-8601-a0a35aff824a",
+      "text": "Dog waste disposal systems still require manually collecting and transporting the bagged fecal matter, often using non-recyclable plastic bags, meaning the logistical burden extends far beyond a \u201csimple biodegradable bagging\u201d step.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "84bc3bbf-43ee-4df2-8d89-61c248719278",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:31:44.577018"
+    }
+  ],
+  "links": [
+    {
+      "source": "12ad9cbe-063f-4392-8dba-1aab712dee2b",
+      "target": "5a1499f4-7bed-4049-bfda-56cd4962b8a3",
+      "type": "objection"
+    },
+    {
+      "source": "12ad9cbe-063f-4392-8dba-1aab712dee2b",
+      "target": "15c6e197-c7c8-4586-a8c5-93d48abfcea1",
+      "type": "objection"
+    },
+    {
+      "source": "2a14d8c9-dd94-466d-ab7f-8612575e3b6a",
+      "target": "aa98d95a-d2a3-4f36-81f0-30a4ca77db0b",
+      "type": "objection"
+    },
+    {
+      "source": "2a14d8c9-dd94-466d-ab7f-8612575e3b6a",
+      "target": "8a9047d9-c9f4-4526-9a86-64b8400e49ba",
+      "type": "objection"
+    },
+    {
+      "source": "d34a57c8-743f-4c6e-8b78-51a601b644ee",
+      "target": "ed7b7297-f1a4-445c-8dc2-fa6babd8b2e5",
+      "type": "objection"
+    },
+    {
+      "source": "d34a57c8-743f-4c6e-8b78-51a601b644ee",
+      "target": "76f2386a-2c94-4abd-9be8-a451191d0b68",
+      "type": "objection"
+    },
+    {
+      "source": "7c3068fb-2cca-46ac-8196-3d0be8fb61e2",
+      "target": "bd22f292-ea34-4fd4-a0c4-0a88a984b90f",
+      "type": "objection"
+    },
+    {
+      "source": "7c3068fb-2cca-46ac-8196-3d0be8fb61e2",
+      "target": "2dc16d65-b9e4-4cce-9c52-ecb7850fd8ba",
+      "type": "objection"
+    },
+    {
+      "source": "f15902b8-3142-4695-a1b6-5a9f29c6192d",
+      "target": "93d94603-86b2-4796-99c4-88fd5ecc7f35",
+      "type": "objection"
+    },
+    {
+      "source": "f15902b8-3142-4695-a1b6-5a9f29c6192d",
+      "target": "a9844fbc-19fe-497c-b4da-a640a9891f29",
+      "type": "objection"
+    },
+    {
+      "source": "5a1499f4-7bed-4049-bfda-56cd4962b8a3",
+      "target": "2e4b4b54-7d33-4e33-9dd6-cfba2516c1f8",
+      "type": "response"
+    },
+    {
+      "source": "5a1499f4-7bed-4049-bfda-56cd4962b8a3",
+      "target": "8e8f881d-ecb4-4354-a4b9-6ba95723c013",
+      "type": "response"
+    },
+    {
+      "source": "900548dd-16f8-4b41-b6ee-31f5dcf87200",
+      "target": "2bb0bab9-32c5-4f9e-9bf2-8058e5079a64",
+      "type": "objection"
+    },
+    {
+      "source": "900548dd-16f8-4b41-b6ee-31f5dcf87200",
+      "target": "48539566-196d-4c5d-a512-c5aa5249932d",
+      "type": "objection"
+    },
+    {
+      "source": "15c6e197-c7c8-4586-a8c5-93d48abfcea1",
+      "target": "04f4e8ca-86cc-43e3-b9b8-f9474d43e3dc",
+      "type": "response"
+    },
+    {
+      "source": "15c6e197-c7c8-4586-a8c5-93d48abfcea1",
+      "target": "d13330e5-a350-4a07-8cbe-520edae662af",
+      "type": "response"
+    },
+    {
+      "source": "aa98d95a-d2a3-4f36-81f0-30a4ca77db0b",
+      "target": "351afc50-982b-48f9-8dee-e6dfd809a266",
+      "type": "response"
+    },
+    {
+      "source": "aa98d95a-d2a3-4f36-81f0-30a4ca77db0b",
+      "target": "7288ab5b-87bb-48a9-aabd-46fa632f7f78",
+      "type": "response"
+    },
+    {
+      "source": "8a9047d9-c9f4-4526-9a86-64b8400e49ba",
+      "target": "bb05ac97-51fe-4a86-97c2-21a9aedcd0d4",
+      "type": "response"
+    },
+    {
+      "source": "8a9047d9-c9f4-4526-9a86-64b8400e49ba",
+      "target": "521d26ab-b35b-43be-b37e-b39248677e64",
+      "type": "response"
+    },
+    {
+      "source": "93d94603-86b2-4796-99c4-88fd5ecc7f35",
+      "target": "c7f99514-7a0f-414a-b4d6-ff8e5f89298f",
+      "type": "response"
+    },
+    {
+      "source": "93d94603-86b2-4796-99c4-88fd5ecc7f35",
+      "target": "ad7a71f4-dd30-46ae-a1c8-5622588b69f1",
+      "type": "response"
+    },
+    {
+      "source": "76f2386a-2c94-4abd-9be8-a451191d0b68",
+      "target": "fffa22a4-ef40-4156-99ec-c5d74b4047d9",
+      "type": "response"
+    },
+    {
+      "source": "76f2386a-2c94-4abd-9be8-a451191d0b68",
+      "target": "4506f4b5-7eaa-4399-a47a-41eb8d7ecfd1",
+      "type": "response"
+    },
+    {
+      "source": "48539566-196d-4c5d-a512-c5aa5249932d",
+      "target": "c8f01880-b438-403e-8a26-178863966d5a",
+      "type": "response"
+    },
+    {
+      "source": "48539566-196d-4c5d-a512-c5aa5249932d",
+      "target": "443b17bc-5d1f-42ef-9e16-60bae10b74b0",
+      "type": "response"
+    },
+    {
+      "source": "a9844fbc-19fe-497c-b4da-a640a9891f29",
+      "target": "1093d958-c39e-4ee2-a928-ff0551845096",
+      "type": "response"
+    },
+    {
+      "source": "a9844fbc-19fe-497c-b4da-a640a9891f29",
+      "target": "adff108f-a0d5-429d-a03c-569a2ad38a87",
+      "type": "response"
+    },
+    {
+      "source": "ed7b7297-f1a4-445c-8dc2-fa6babd8b2e5",
+      "target": "fb420b7a-709e-410e-bd9b-d0db5fe53966",
+      "type": "response"
+    },
+    {
+      "source": "ed7b7297-f1a4-445c-8dc2-fa6babd8b2e5",
+      "target": "7c9d3e00-1f1f-431a-81cb-d0b4e3132200",
+      "type": "response"
+    },
+    {
+      "source": "106cda52-6dd3-4867-8cf4-d7b69ba29d82",
+      "target": "adf6ea24-7b8d-447a-8a66-45956854524b",
+      "type": "objection"
+    },
+    {
+      "source": "106cda52-6dd3-4867-8cf4-d7b69ba29d82",
+      "target": "f6d12c5c-8955-4f81-bcf8-68b71503f56c",
+      "type": "objection"
+    },
+    {
+      "source": "31320b31-f487-44b7-832c-6543ce84c8de",
+      "target": "76521575-6438-44cb-85d3-9329ecc34144",
+      "type": "objection"
+    },
+    {
+      "source": "31320b31-f487-44b7-832c-6543ce84c8de",
+      "target": "fc1b6f4a-efd5-4dcf-b386-a8199706f248",
+      "type": "objection"
+    },
+    {
+      "source": "15271d77-65ba-4879-8a78-80735be1380a",
+      "target": "94557f98-2b15-490d-913f-d3e6134df76f",
+      "type": "objection"
+    },
+    {
+      "source": "15271d77-65ba-4879-8a78-80735be1380a",
+      "target": "ac1748dc-c270-4013-902a-0f617c3289e4",
+      "type": "objection"
+    },
+    {
+      "source": "f00478c7-9710-4b53-977f-14116672143c",
+      "target": "ac6f0d39-ac43-43b6-9e3c-ecab8334e2b1",
+      "type": "objection"
+    },
+    {
+      "source": "f00478c7-9710-4b53-977f-14116672143c",
+      "target": "84bc3bbf-43ee-4df2-8d89-61c248719278",
+      "type": "objection"
+    },
+    {
+      "source": "a34170dc-0f6c-4e1f-b602-faf38985d23d",
+      "target": "8860b2d4-242d-436f-b19e-97eb26640c6c",
+      "type": "objection"
+    },
+    {
+      "source": "a34170dc-0f6c-4e1f-b602-faf38985d23d",
+      "target": "4673ce5f-54e8-4f70-a467-ce5eccb37a3d",
+      "type": "objection"
+    },
+    {
+      "source": "0da7c488-5f1c-4a6c-aaf8-c16265c0cee6",
+      "target": "1a77f5f5-aa51-4eca-bd88-2162ef659ca5",
+      "type": "objection"
+    },
+    {
+      "source": "0da7c488-5f1c-4a6c-aaf8-c16265c0cee6",
+      "target": "20d22b8b-4f16-43a4-aab4-2d7a3d380571",
+      "type": "objection"
+    },
+    {
+      "source": "94557f98-2b15-490d-913f-d3e6134df76f",
+      "target": "b170e4b0-aee0-4fa7-b9af-e5652d07ebe1",
+      "type": "response"
+    },
+    {
+      "source": "94557f98-2b15-490d-913f-d3e6134df76f",
+      "target": "ee690c25-3fad-4ec3-8996-9de442c140d4",
+      "type": "response"
+    },
+    {
+      "source": "f6d12c5c-8955-4f81-bcf8-68b71503f56c",
+      "target": "fac93602-0579-4376-a001-5a16cb96fc3b",
+      "type": "response"
+    },
+    {
+      "source": "f6d12c5c-8955-4f81-bcf8-68b71503f56c",
+      "target": "c8554e21-d983-4c7d-a915-9929936e6718",
+      "type": "response"
+    },
+    {
+      "source": "ac1748dc-c270-4013-902a-0f617c3289e4",
+      "target": "ace0d735-6b7b-44ec-94fb-df19b4881de5",
+      "type": "response"
+    },
+    {
+      "source": "ac1748dc-c270-4013-902a-0f617c3289e4",
+      "target": "a6167180-4dad-4a08-9f97-a3cd2b252d70",
+      "type": "response"
+    },
+    {
+      "source": "fc1b6f4a-efd5-4dcf-b386-a8199706f248",
+      "target": "092bde45-70bc-41fa-9c42-dd7b7964ad5e",
+      "type": "response"
+    },
+    {
+      "source": "fc1b6f4a-efd5-4dcf-b386-a8199706f248",
+      "target": "c7c48812-faef-4369-9926-4d9d1cbd716d",
+      "type": "response"
+    },
+    {
+      "source": "ac6f0d39-ac43-43b6-9e3c-ecab8334e2b1",
+      "target": "49f6ccfd-35e9-4f45-be58-47ce6ce0b089",
+      "type": "response"
+    },
+    {
+      "source": "ac6f0d39-ac43-43b6-9e3c-ecab8334e2b1",
+      "target": "8b6d5853-7167-4940-86f7-ec236dfc455d",
+      "type": "response"
+    },
+    {
+      "source": "1a77f5f5-aa51-4eca-bd88-2162ef659ca5",
+      "target": "d1bace5b-f0c4-4c29-9292-632b57a6279e",
+      "type": "response"
+    },
+    {
+      "source": "1a77f5f5-aa51-4eca-bd88-2162ef659ca5",
+      "target": "c469972b-389c-41e1-bc13-072188b4c574",
+      "type": "response"
+    },
+    {
+      "source": "76521575-6438-44cb-85d3-9329ecc34144",
+      "target": "06b2d5f7-276f-4c7c-980e-0e25bcee79c1",
+      "type": "response"
+    },
+    {
+      "source": "76521575-6438-44cb-85d3-9329ecc34144",
+      "target": "a1a9ddbb-a2c5-4f7b-8cab-a415d0e4d1e9",
+      "type": "response"
+    },
+    {
+      "source": "8860b2d4-242d-436f-b19e-97eb26640c6c",
+      "target": "b4feaa08-bf4a-4a76-a5f2-1de6e5cc4db1",
+      "type": "response"
+    },
+    {
+      "source": "8860b2d4-242d-436f-b19e-97eb26640c6c",
+      "target": "8fbb7f85-c832-4ece-896a-3e7b3dbefd3d",
+      "type": "response"
+    },
+    {
+      "source": "20d22b8b-4f16-43a4-aab4-2d7a3d380571",
+      "target": "f2e7691c-10db-4d59-9314-d0696f5110db",
+      "type": "response"
+    },
+    {
+      "source": "20d22b8b-4f16-43a4-aab4-2d7a3d380571",
+      "target": "992c76f4-8aa1-4c70-ab3f-123136c8dc8d",
+      "type": "response"
+    },
+    {
+      "source": "adf6ea24-7b8d-447a-8a66-45956854524b",
+      "target": "d6ddcf78-d8c9-4857-8722-7e5121f6eb6f",
+      "type": "response"
+    },
+    {
+      "source": "adf6ea24-7b8d-447a-8a66-45956854524b",
+      "target": "15385941-4262-4f35-93ff-9db904fd8d3c",
+      "type": "response"
+    },
+    {
+      "source": "84bc3bbf-43ee-4df2-8d89-61c248719278",
+      "target": "99e95666-30b4-430a-997d-38f96a7f84df",
+      "type": "response"
+    },
+    {
+      "source": "84bc3bbf-43ee-4df2-8d89-61c248719278",
+      "target": "496aeadf-c84f-4d5a-8601-a0a35aff824a",
+      "type": "response"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Character limits based on depth
+            const limits = {
+                0: 100,  // Root nodes - show more
+                1: 80,
+                2: 60,
+                3: 40,
+                4: 30,
+                5: 25
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            const widths = {
+                0: 180,
+                1: 150,
+                2: 130,
+                3: 100,
+                4: 80,
+                5: 70
+            };
+
+            const heights = {
+                0: 60,
+                1: 50,
+                2: 45,
+                3: 40,
+                4: 35,
+                5: 30
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 70,
+                height: heights[Math.min(d.depth, 5)] || 30
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Create force simulation with improved parameters
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Longer links for deeper nodes
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return 120 + (depth * 20);
+            }))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            });
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes with improved tooltips
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showNodeDetails(d);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation();
+                toggleSubtree(d);
+            })
+            .append("title")
+            .text(d => getTooltipText(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height);
+
+            // Create HTML content with badge and text
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center");
+
+            // Add badge (only for depth 0-1 to avoid clutter)
+            if (d.depth <= 1) {
+                div.append("xhtml:div")
+                    .attr("class", `node-badge ${d.type}`)
+                    .text(d.type);
+            }
+
+            // Add text content
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.depth === 0 ? "13px" : (d.depth <= 2 ? "11px" : "10px"))
+                .style("font-weight", d.depth === 0 ? "600" : "500")
+                .text(displayText);
+        });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebar-content");
+
+            let html = `
+                <h2>Argument Details</h2>
+                <div class="node-text">${d.text}</div>
+                <div class="node-meta"><strong>Type:</strong> ${d.type}</div>
+                <div class="node-meta"><strong>Side:</strong> ${d.side}</div>
+                <div class="node-meta"><strong>Depth:</strong> ${d.depth}</div>
+                <div class="node-meta"><strong>Children:</strong> ${d.children_count}</div>
+                <div class="node-meta"><strong>Source:</strong> ${d.source}</div>
+            `;
+
+            if (d.references && d.references.length > 0) {
+                html += '<div class="node-meta"><strong>References:</strong></div><ul>';
+                d.references.forEach(ref => {
+                    html += `<li style="margin-left: 20px; font-size: 0.85em;"><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+                html += '</ul>';
+            }
+
+            content.innerHTML = html;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset view
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+        }
+
+        // Fit graph to view
+        function fitToView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.9;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

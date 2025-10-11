@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee is better than tea - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #666;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 1px solid #a2a9b1;
+            transition: right 0.3s;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #72777d;
+        }
+
+        #sidebar h2 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+            padding-right: 30px;
+        }
+
+        #sidebar .node-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #202122;
+        }
+
+        #sidebar .node-meta {
+            font-size: 0.85em;
+            color: #72777d;
+            margin-bottom: 5px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .node.pro circle {
+            fill: #00af89;
+        }
+
+        .node.con circle {
+            fill: #dd5555;
+        }
+
+        /* Depth-based styling */
+        .node circle {
+            opacity: 1;
+        }
+
+        .node.depth-1 circle {
+            opacity: 0.9;
+        }
+
+        .node.depth-2 circle {
+            opacity: 0.8;
+        }
+
+        .node.depth-3 circle {
+            opacity: 0.7;
+        }
+
+        .node.depth-4 circle,
+        .node.depth-5 circle {
+            opacity: 0.6;
+        }
+
+        .node.highlighted circle {
+            stroke: #ffd700;
+            stroke-width: 4px;
+        }
+
+        .node.selected circle {
+            stroke: #0645ad;
+            stroke-width: 4px;
+        }
+
+        /* Adaptive font sizing based on depth */
+        .node.depth-0 text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .node.depth-1 text,
+        .node.depth-2 text {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .node.depth-3 text,
+        .node.depth-4 text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .node.depth-5 text {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #00af89;
+            border-color: #00af89;
+        }
+
+        .node-badge.con {
+            color: #dd5555;
+            border-color: #dd5555;
+        }
+
+        .node-badge.objection {
+            color: #cc6600;
+            border-color: #cc6600;
+        }
+
+        .node-badge.response {
+            color: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.3;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        /* Fisheye zoom effect on hover */
+        .node {
+            transition: transform 0.2s ease;
+        }
+
+        .node:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .node:hover circle {
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.pro {
+            stroke: #00af89;
+            stroke-opacity: 0.4;
+        }
+
+        .link.con {
+            stroke: #dd5555;
+            stroke-opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Coffee is better than tea</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            25 total nodes • Max depth: 1 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="fitToView()">Fit to View</button>
+
+        <div id="legend">
+            <h3>Statistics</h3>
+            <div style="font-size: 0.85em; color: #72777d; margin-bottom: 10px;">
+                <div style="margin-bottom: 3px;"><strong>Nodes:</strong> 25</div>
+                <div style="margin-bottom: 3px;"><strong>Max Depth:</strong> 1</div>
+                <div style="margin-bottom: 3px;"><strong>Pro:</strong> <span style="color: #00af89;">4</span></div>
+                <div style="margin-bottom: 3px;"><strong>Con:</strong> <span style="color: #dd5555;">4</span></div>
+            </div>
+
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00af89;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dd5555;"></div>
+                <span>Con / Opposing</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "89999f1c-6e5f-4449-8143-d3a94615e3c8",
+      "text": "Coffee contains significantly higher doses of caffeine (up to 200mg vs. 60mg average in tea), making it a superior and faster-acting ergogenic aid for immediate cognitive enhancement and increased alertness.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:40.229459"
+    },
+    {
+      "id": "7d22fc76-f3da-4db1-9be8-afba9667df03",
+      "text": "Modern instant and single-serve coffee technologies (e.g., pods) allow for rapid, functionally high-quality beverage preparation with minimal effort. This maximizes convenience and speed, often surpassing the steep time and temperature precision required for optimal flavor extraction in high-quality tea.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:40.229962"
+    },
+    {
+      "id": "fb9010da-2768-4f65-bd56-b3821e08514b",
+      "text": "Coffee's potent, dark roast flavor profile is highly adaptable and complements a wider and more popular variety of culinary applications. It serves as a superior flavor base for common desserts (like tiramisu and mocha) and crafted cocktails compared to the subtle palate of most teas.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:40.230245"
+    },
+    {
+      "id": "a8387e35-67c8-40dc-81d1-4c9d201744b0",
+      "text": "Intensive processing techniques, such as various fermentation and precise roasting methods, allow specialty coffee to express a vastly richer spectrum of flavor notes than standard tea varieties. This depth yields a quantitatively wider array of discernible single-origin terroir effects, establishing a superior standard for flavor complexity.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:40.230488"
+    },
+    {
+      "id": "ecf7a422-2293-4e56-96fe-68305e72da05",
+      "text": "Doses exceeding 200mg of caffeine, common in strong coffee, frequently cause adverse effects like anxiety, jitters, and loss of fine motor control, potentially making the higher dose counterproductive to optimal cognitive function.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "89999f1c-6e5f-4449-8143-d3a94615e3c8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:50.652510"
+    },
+    {
+      "id": "a028bffa-8c02-46a4-aac5-54150b0318ba",
+      "text": "The claim that high dosage means \"faster-acting\" is flawed; the rate of action depends on absorption speed, and tea's lower acidity and simpler chemistry can lead to quicker gastric emptying and faster peak alertness in some individuals.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "89999f1c-6e5f-4449-8143-d3a94615e3c8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:50.652546"
+    },
+    {
+      "id": "cb76b66b-1bc0-4978-a1ac-7084d281fb4c",
+      "text": "The comparison ignores synergistic cognitive effects, as the L-Theanine present in tea works with caffeine to promote sustained, focused attention by increasing alpha brain waves while mitigating the negative anxiety effects of caffeine.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "89999f1c-6e5f-4449-8143-d3a94615e3c8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:50.652559"
+    },
+    {
+      "id": "1366304f-4304-4679-83a7-91844a30e7c3",
+      "text": "Teabags and instant tea powders offer preparation speeds identical to coffee pods, requiring only hot water and a brief steep, which contradicts the premise that coffee technology inherently holds a convenience advantage over standardized tea preparation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7d22fc76-f3da-4db1-9be8-afba9667df03",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:51.410827"
+    },
+    {
+      "id": "32435b2d-7215-4ece-8558-d128dc2ad827",
+      "text": "High-quality coffee preparations, such as manual pour-over or technical espresso extraction, require precise measurements, grinding, and multi-minute dedicated attention, demanding more effort and precision than simply steeping high-quality loose leaf tea.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7d22fc76-f3da-4db1-9be8-afba9667df03",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:51.410851"
+    },
+    {
+      "id": "f2875afc-55ec-4bed-b475-fe2d2af18162",
+      "text": "Comparing specialty coffee to high-grade specialty teas (e.g., aged Pu-erh or precise Taiwanese high-mountain Oolongs) reveals similar flavor complexity derived from specific varietals and nuanced oxidation, a parallel unfairly omitted by pitting coffee's peak against standard tea.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a8387e35-67c8-40dc-81d1-4c9d201744b0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:51.923287"
+    },
+    {
+      "id": "7b759884-fa11-497a-bc7a-f27b72df3cbd",
+      "text": "Intensive processing techniques like deep roasting and heavy fermentation primarily introduce process-derived Maillard and pyrolysis compounds, which often actively obscure the subtle, single-origin terroir characteristics instead of yielding a quantitatively wider array of them.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a8387e35-67c8-40dc-81d1-4c9d201744b0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:51.923314"
+    },
+    {
+      "id": "5825d368-2b79-4628-b4b8-7c27fed81a59",
+      "text": "The claim of coffee's inherently wider or more popular culinary application is unsubstantiated; tea is globally foundational to numerous applications, such as the intense, earthy flavor of ground matcha in Japanese desserts and the widespread use of heavily spiced black chai in Indian cuisine.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fb9010da-2768-4f65-bd56-b3821e08514b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:52.403814"
+    },
+    {
+      "id": "a58c1132-3ffa-416c-ac8b-db96e6c8e808",
+      "text": "The comparison is flawed as it contrasts potent dark roast coffee only with \"subtle\" teas, ignoring strong, adaptable profiles like heavily oxidized Assam or smoked Lapsang Souchong, which possess equally robust and complex flavor bases.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fb9010da-2768-4f65-bd56-b3821e08514b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:52.403853"
+    },
+    {
+      "id": "affa471d-c36c-4d9a-8e1e-dd7f2f302914",
+      "text": "Tea's cultural significance spans millennia, originating in China and becoming central to global trade, diplomacy, and social rituals (e.g., Japanese tea ceremonies, British traditions), establishing a deeper, more foundational global importance than coffee's more recent historical prominence.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Historical records of global trade and cultural practices"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:52.403946"
+    },
+    {
+      "id": "67bf6933-f685-449e-84d1-0d43528ee64d",
+      "text": "Tea is associated with a wider range of long-term health benefits, utilizing powerful antioxidants for cardiovascular protection and its lower acidity to minimize the digestive discomfort and potential for high-dose side effects often linked to coffee.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Studies on beverage acidity and effects on digestion, meta-analyses on cardiovascular health"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:52.404579"
+    },
+    {
+      "id": "abab9c0e-8cf6-4f29-9530-71e673b9f5be",
+      "text": "The natural synergy of caffeine and L-theanine in tea promotes a state of \"wakeful relaxation,\" delivering sustained energy and enhanced focus without the disruptive jitters or rapid energy crash stemming from the higher, unbuffered caffeine found in coffee.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Neuroscientific studies on L-theanine and caffeine synergy"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:52.405010"
+    },
+    {
+      "id": "69d67639-fa28-4581-b98b-7dcc64cf9a16",
+      "text": "Quality loose-leaf tea is demonstrably more economical for regular consumption, as the leaves yield multiple strong infusions from a single measured dose, making the cost per cup lower than that of comparable quality roasted coffee beans.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Cost analysis comparing high-quality tea leaves and roasted coffee beans"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:03:52.405419"
+    },
+    {
+      "id": "8f807dc7-8ccb-49bd-a4d3-0d6d849484ea",
+      "text": "Coffee, despite its later introduction, became a cornerstone commodity whose production and trade fundamentally reshaped the national economies and land-use practices of numerous Global South nations (e.g., Brazil, Colombia, Vietnam), asserting an equally foundational geopolitical importance that is distinct from tea\u2019s primary consumption-based cultural significance.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "affa471d-c36c-4d9a-8e1e-dd7f2f302914",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:03.290656"
+    },
+    {
+      "id": "84f38519-f519-4b05-b008-7cb1d3812217",
+      "text": "Coffee's prominence is not merely \\",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "affa471d-c36c-4d9a-8e1e-dd7f2f302914",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:03.290682"
+    },
+    {
+      "id": "cadbdb5f-88ce-416f-846a-849db85e4d43",
+      "text": "The occurrence of jitters and crashes is highly dose-dependent and subject to individual metabolism (CYP1A2 enzyme activity); many individuals consume moderate coffee dosages or metabolize caffeine quickly enough to negate these universally negative effects.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "abab9c0e-8cf6-4f29-9530-71e673b9f5be",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:03.491329"
+    },
+    {
+      "id": "2a9b125f-6406-4ea6-9745-8933e052f9f8",
+      "text": "The concentration of L-theanine in a standard cup of tea (typically 5-25 mg) is often too low to reliably buffer the effects of its highly variable caffeine content, meaning the subjective feeling of \"wakeful relaxation\" is not universally guaranteed.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "abab9c0e-8cf6-4f29-9530-71e673b9f5be",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:03.491354"
+    },
+    {
+      "id": "e217d6a9-8de7-477c-9162-7795c273d1f2",
+      "text": "The claim of a lower cost per cup relies upon subsequent tea infusions maintaining \"comparable quality,\" which is false since the flavor strength, chemical components, and complexity of the beverage dramatically degrade after the first two brews.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "69d67639-fa28-4581-b98b-7dcc64cf9a16",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:05.030503"
+    },
+    {
+      "id": "34b05d49-10bf-41c2-b3eb-f77ca890e349",
+      "text": "The argument overlooks that high-quality roasted coffee beans often have a lower cost per kilogram than comparable quality loose-leaf tea, meaning the initial cost comparison required for demonstrating economy is incomplete without factoring in the price gap and the substantial difference in required dosage weight.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "69d67639-fa28-4581-b98b-7dcc64cf9a16",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:05.030527"
+    },
+    {
+      "id": "7d429a91-5e4b-40ef-8c07-a2d27599def7",
+      "text": "Coffee consumption is factually linked to a reduced long-term risk of developing Type 2 diabetes, certain cancers like liver and colorectal, and neurodegenerative diseases such as Parkinson's and Alzheimer's, representing a comparable breadth of systemic health benefits.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "67bf6933-f685-449e-84d1-0d43528ee64d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:07.263032"
+    },
+    {
+      "id": "4f3cce4b-2ed7-494f-96cb-d16424f94537",
+      "text": "Systemic side effects from high-dose consumption, such as anxiety, tremors, and tachycardia, are solely related to the pharmacological effects of excess caffeine, meaning the beverage\u2019s lower acid content does not minimize them.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "67bf6933-f685-449e-84d1-0d43528ee64d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:04:07.263056"
+    }
+  ],
+  "links": [
+    {
+      "source": "89999f1c-6e5f-4449-8143-d3a94615e3c8",
+      "target": "ecf7a422-2293-4e56-96fe-68305e72da05",
+      "type": "objection"
+    },
+    {
+      "source": "89999f1c-6e5f-4449-8143-d3a94615e3c8",
+      "target": "a028bffa-8c02-46a4-aac5-54150b0318ba",
+      "type": "objection"
+    },
+    {
+      "source": "89999f1c-6e5f-4449-8143-d3a94615e3c8",
+      "target": "cb76b66b-1bc0-4978-a1ac-7084d281fb4c",
+      "type": "objection"
+    },
+    {
+      "source": "7d22fc76-f3da-4db1-9be8-afba9667df03",
+      "target": "1366304f-4304-4679-83a7-91844a30e7c3",
+      "type": "objection"
+    },
+    {
+      "source": "7d22fc76-f3da-4db1-9be8-afba9667df03",
+      "target": "32435b2d-7215-4ece-8558-d128dc2ad827",
+      "type": "objection"
+    },
+    {
+      "source": "a8387e35-67c8-40dc-81d1-4c9d201744b0",
+      "target": "f2875afc-55ec-4bed-b475-fe2d2af18162",
+      "type": "objection"
+    },
+    {
+      "source": "a8387e35-67c8-40dc-81d1-4c9d201744b0",
+      "target": "7b759884-fa11-497a-bc7a-f27b72df3cbd",
+      "type": "objection"
+    },
+    {
+      "source": "fb9010da-2768-4f65-bd56-b3821e08514b",
+      "target": "5825d368-2b79-4628-b4b8-7c27fed81a59",
+      "type": "objection"
+    },
+    {
+      "source": "fb9010da-2768-4f65-bd56-b3821e08514b",
+      "target": "a58c1132-3ffa-416c-ac8b-db96e6c8e808",
+      "type": "objection"
+    },
+    {
+      "source": "affa471d-c36c-4d9a-8e1e-dd7f2f302914",
+      "target": "8f807dc7-8ccb-49bd-a4d3-0d6d849484ea",
+      "type": "objection"
+    },
+    {
+      "source": "affa471d-c36c-4d9a-8e1e-dd7f2f302914",
+      "target": "84f38519-f519-4b05-b008-7cb1d3812217",
+      "type": "objection"
+    },
+    {
+      "source": "abab9c0e-8cf6-4f29-9530-71e673b9f5be",
+      "target": "cadbdb5f-88ce-416f-846a-849db85e4d43",
+      "type": "objection"
+    },
+    {
+      "source": "abab9c0e-8cf6-4f29-9530-71e673b9f5be",
+      "target": "2a9b125f-6406-4ea6-9745-8933e052f9f8",
+      "type": "objection"
+    },
+    {
+      "source": "69d67639-fa28-4581-b98b-7dcc64cf9a16",
+      "target": "e217d6a9-8de7-477c-9162-7795c273d1f2",
+      "type": "objection"
+    },
+    {
+      "source": "69d67639-fa28-4581-b98b-7dcc64cf9a16",
+      "target": "34b05d49-10bf-41c2-b3eb-f77ca890e349",
+      "type": "objection"
+    },
+    {
+      "source": "67bf6933-f685-449e-84d1-0d43528ee64d",
+      "target": "7d429a91-5e4b-40ef-8c07-a2d27599def7",
+      "type": "objection"
+    },
+    {
+      "source": "67bf6933-f685-449e-84d1-0d43528ee64d",
+      "target": "4f3cce4b-2ed7-494f-96cb-d16424f94537",
+      "type": "objection"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Character limits based on depth
+            const limits = {
+                0: 100,  // Root nodes - show more
+                1: 80,
+                2: 60,
+                3: 40,
+                4: 30,
+                5: 25
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            const widths = {
+                0: 180,
+                1: 150,
+                2: 130,
+                3: 100,
+                4: 80,
+                5: 70
+            };
+
+            const heights = {
+                0: 60,
+                1: 50,
+                2: 45,
+                3: 40,
+                4: 35,
+                5: 30
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 70,
+                height: heights[Math.min(d.depth, 5)] || 30
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Create force simulation with improved parameters
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Longer links for deeper nodes
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return 120 + (depth * 20);
+            }))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            });
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes with improved tooltips
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showNodeDetails(d);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation();
+                toggleSubtree(d);
+            })
+            .append("title")
+            .text(d => getTooltipText(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height);
+
+            // Create HTML content with badge and text
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center");
+
+            // Add badge (only for depth 0-1 to avoid clutter)
+            if (d.depth <= 1) {
+                div.append("xhtml:div")
+                    .attr("class", `node-badge ${d.type}`)
+                    .text(d.type);
+            }
+
+            // Add text content
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.depth === 0 ? "13px" : (d.depth <= 2 ? "11px" : "10px"))
+                .style("font-weight", d.depth === 0 ? "600" : "500")
+                .text(displayText);
+        });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebar-content");
+
+            let html = `
+                <h2>Argument Details</h2>
+                <div class="node-text">${d.text}</div>
+                <div class="node-meta"><strong>Type:</strong> ${d.type}</div>
+                <div class="node-meta"><strong>Side:</strong> ${d.side}</div>
+                <div class="node-meta"><strong>Depth:</strong> ${d.depth}</div>
+                <div class="node-meta"><strong>Children:</strong> ${d.children_count}</div>
+                <div class="node-meta"><strong>Source:</strong> ${d.source}</div>
+            `;
+
+            if (d.references && d.references.length > 0) {
+                html += '<div class="node-meta"><strong>References:</strong></div><ul>';
+                d.references.forEach(ref => {
+                    html += `<li style="margin-left: 20px; font-size: 0.85em;"><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+                html += '</ul>';
+            }
+
+            content.innerHTML = html;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset view
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+        }
+
+        // Fit graph to view
+        function fitToView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.9;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

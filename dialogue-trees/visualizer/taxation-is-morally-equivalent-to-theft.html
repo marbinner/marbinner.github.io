@@ -1,0 +1,2812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxation is morally equivalent to theft - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Taxation is morally equivalent to theft</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            80 total nodes • Max depth: 4 •
+            Version 4
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/taxation-is-morally-equivalent-to-theft.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">80</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "text": "Taxation involves the compulsory appropriation of justly acquired wealth without the owner's explicit and specific consent. The non-consensual taking of property, irrespective of the taker's stated goals or administrative structure, constitutes the core moral act of theft.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:30.072564"
+    },
+    {
+      "id": "51905edb-ed3f-49fe-97d9-8c934a3e584b",
+      "text": "The state enforces tax collection through the threat of violence, including imprisonment, fines, or seizure of assets, if payment is resisted. Acquiring property through direct or implicit coercion is morally equivalent to robbery, which is theft accomplished through force.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:30.073271"
+    },
+    {
+      "id": "16126433-649f-4e24-972e-9728f7307f03",
+      "text": "Since all income results from individual labor and voluntary exchange, taxation is a forced extraction that constitutes the partial expropriation and redistribution of justly acquired property.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:30.073717"
+    },
+    {
+      "id": "b112f5fb-ab1a-4e3a-8a30-ab37aa7af34d",
+      "text": "Taxation extracts funds universally, operating as a one-sided transfer where the taxpayer does not enter into a voluntary, specific exchange of value. Theft is defined by this same characteristic: the taking of value absent a voluntary agreement or compensation valued by the dispossessed party.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:30.074125"
+    },
+    {
+      "id": "f2faa015-150d-4254-91e4-a0106e503538",
+      "text": "Taxation is not a one-sided transfer because the funds are used to provide public goods, such as defense and infrastructure, which provide a real, though non-specific and collective, compensation to the taxpayer.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b112f5fb-ab1a-4e3a-8a30-ab37aa7af34d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:39.122771"
+    },
+    {
+      "id": "e6435917-e41f-4331-9c5c-7d6813ca69e9",
+      "text": "Taxation is an authorized levy established by law and administered by a constitutionally legitimate governing body, which fundamentally distinguishes it from theft, which is an unauthorized and illegal taking of property.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b112f5fb-ab1a-4e3a-8a30-ab37aa7af34d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:39.124016"
+    },
+    {
+      "id": "2c2e5755-b6c0-4461-bb8b-1b11c1418c35",
+      "text": "Property rights are legal constructs defined and enforced by the state, requiring resources derived from taxation; wealth is thus acquired conditionally, not absolutely prior to the tax obligation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:41.712827"
+    },
+    {
+      "id": "665c8a58-321a-4db7-8c3b-150fd28e4f57",
+      "text": "The demand for \"explicit and specific consent\" ignores the legal structure of representative governance, where citizens give political consent to the taxing authority through their elected representatives.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:41.713915"
+    },
+    {
+      "id": "00c9d344-8247-4592-b057-2dff25b223f8",
+      "text": "The comparison ignores the legal definition of theft, which involves appropriation without lawful authority, a condition categorically distinct from state taxation enacted through a legitimate legislative process.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:41.714770"
+    },
+    {
+      "id": "095b9517-7bcd-43e8-89f7-4e63ae167ced",
+      "text": "Property rights are established and enforced by the legal framework of a governing state, implying that ownership is conditional on supporting the maintenance costs of that system through taxation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "16126433-649f-4e24-972e-9728f7307f03",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:41.740136"
+    },
+    {
+      "id": "1f95b844-ad6f-4b2c-b644-0463c2e890b9",
+      "text": "The ability to engage in \"labor and voluntary exchange\" and secure the product of that labor depends entirely on the existence of publicly funded infrastructure, defense, and contract enforcement.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "16126433-649f-4e24-972e-9728f7307f03",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:41.740798"
+    },
+    {
+      "id": "c45884c1-8979-45e4-9771-96c427b4b5b5",
+      "text": "State taxation is inherently different from robbery because funds are allocated to provide essential collective goods and services (e.g., defense, infrastructure), establishing a reciprocal relationship with the payer that is entirely absent in private criminal theft. Robbery is a unilateral act of taking for private, non-consensual gain, lacking the foundational legal authority and public purpose that characterizes state tax collection.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "51905edb-ed3f-49fe-97d9-8c934a3e584b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:42.019712"
+    },
+    {
+      "id": "2da41383-2bda-4114-8755-28baacecaece",
+      "text": "The majority of collected tax revenue funds specific transfer payments, targeted subsidies, and interest on existing national debt, none of which provide collective, universal compensation to the general taxpayer.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f2faa015-150d-4254-91e4-a0106e503538",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:51.446752"
+    },
+    {
+      "id": "257b6ef0-9178-45c5-bda8-c177124fbf6a",
+      "text": "Since taxation is levied under legal compulsion, the initial transfer of funds remains involuntary regardless of how the revenue is subsequently utilized, classifying the extraction itself as one-sided in execution.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f2faa015-150d-4254-91e4-a0106e503538",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:51.447499"
+    },
+    {
+      "id": "6596cf65-985e-40a3-abbb-7a385f783be6",
+      "text": "Property rights are revoked only upon specific legal criteria, such as tax liens or forfeiture due to misuse, not merely by failing to pay one's proportional share of the state's general maintenance costs. An individual can legally minimize or be exempt from taxation without relinquishing ownership, demonstrating that the right is not strictly conditional on financial support.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "095b9517-7bcd-43e8-89f7-4e63ae167ced",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:53.284276"
+    },
+    {
+      "id": "45d2210d-5a66-4850-a51c-cd47ccad7084",
+      "text": "The necessary components of defense, infrastructure, and contract enforcement do not inherently require public funding; effective provision can be achieved through private enterprise, communal organizations, or mutual aid societies.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1f95b844-ad6f-4b2c-b644-0463c2e890b9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:53.535283"
+    },
+    {
+      "id": "5a394880-7208-493a-b08a-9d28554d6763",
+      "text": "Basic labor, family production, and local bartering are fundamentally social activities maintained by community cooperation and localized agreements, requiring no complex, nationally funded legal or defense infrastructure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1f95b844-ad6f-4b2c-b644-0463c2e890b9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:53.535981"
+    },
+    {
+      "id": "f3ffb2b9-bba1-4467-893c-8b17a624259d",
+      "text": "Electoral consent is a general authorization to govern, not a specific, explicit mandate for every individual tax measure required by the demanded standard of consent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "665c8a58-321a-4db7-8c3b-150fd28e4f57",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:54.303112"
+    },
+    {
+      "id": "7cc20a19-6f35-4d8a-94fa-1369279b4ede",
+      "text": "Appealing to the current legal structure only demonstrates what is legally allowed, not whether that existing mechanism is sufficient to meet the normative standard of true political legitimacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "665c8a58-321a-4db7-8c3b-150fd28e4f57",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:54.303731"
+    },
+    {
+      "id": "7b46f670-07d1-49d5-90a5-595910815144",
+      "text": "Property rights are arguably natural or pre-political rights, derived from labor or self-ownership, meaning the acquisition of wealth is inherently absolute and exists prior to state recognition or taxation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2c2e5755-b6c0-4461-bb8b-1b11c1418c35",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:56.138869"
+    },
+    {
+      "id": "cb7217db-9354-4f0c-9aed-027b094f0037",
+      "text": "While property rights require state enforcement and funding (taxation), the cost of securing wealth does not retroactively make the initial acquisition conditional upon the tax system itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2c2e5755-b6c0-4461-bb8b-1b11c1418c35",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:56.139529"
+    },
+    {
+      "id": "c23951ad-6da5-41bd-a8e1-4499aaba3ba8",
+      "text": "The reciprocal relationship described is an idealized basis, as large portions of actual tax revenue fund specific private subsidies, ideological initiatives, or bureaucratic inefficiency, meaning the monetary taking remains unilateral and lacks any tangible collective or essential benefit for the payer.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c45884c1-8979-45e4-9771-96c427b4b5b5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:12:58.487524"
+    },
+    {
+      "id": "48000ae0-a866-4210-803a-2ed3c9d0834a",
+      "text": "The presence of non-compensatory or inefficient tax expenditure only indicates that compensation is *imperfect*, not that essential, universal public goods like defense or laws do not function as compensation at all.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2da41383-2bda-4114-8755-28baacecaece",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:02.806783"
+    },
+    {
+      "id": "beded00b-7978-4b33-8036-017b17ac3d39",
+      "text": "Foreign aid and specific programs can yield collective, indirect benefits for the general taxpayer, such as stabilized international markets, enhanced national security, or market-creating research and development.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2da41383-2bda-4114-8755-28baacecaece",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:02.807843"
+    },
+    {
+      "id": "3477066c-19c9-44f1-a088-3fcf4a20eefb",
+      "text": "Non-excludable public goods like generalized defense and contract enforcement generate the free-rider problem, ensuring that voluntary private or communal provision inevitably leads to chronic under-supply and unreliability at the societal level.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "45d2210d-5a66-4850-a51c-cd47ccad7084",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:03.665970"
+    },
+    {
+      "id": "973d33cf-0c8b-4f21-9c3f-a1f4d1d4034c",
+      "text": "Simple local bartering and production cannot sustain the specialization, dense populations, and scaled resource distribution required by a modern, large-scale society.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a394880-7208-493a-b08a-9d28554d6763",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:04.639594"
+    },
+    {
+      "id": "8d4ec69b-ff3f-49ac-9714-71050c747d93",
+      "text": "Localized security and legal structures are consistently incapable of enforcing contracts across jurisdictions or defending against organized threats that necessitate national-level defense and police forces.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a394880-7208-493a-b08a-9d28554d6763",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:04.640346"
+    },
+    {
+      "id": "1cebc1db-8f5f-4680-8531-b8b01b0b46b2",
+      "text": "The pre-political nature of a right does not imply its absolute immunity from taxation; like other natural rights, such as liberty or self-defense, property rights are typically subject to social regulation for the common good.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7b46f670-07d1-49d5-90a5-595910815144",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:08.973871"
+    },
+    {
+      "id": "b8f18daf-646b-476f-9244-1b4606071f4b",
+      "text": "Wealth creation beyond initial acquisition fundamentally relies on state-provided infrastructure, legal systems, and secure markets, meaning modern property requires ongoing political mechanisms which taxation funds.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7b46f670-07d1-49d5-90a5-595910815144",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:08.975003"
+    },
+    {
+      "id": "a44c0323-0469-4418-ad3a-961b2dd4e63a",
+      "text": "Concluding that the entire monetary taking lacks \\emph{any} benefit ignores critical non-wasted portions of the budget funding public infrastructure, defense, and collective security, which provide established tangible benefits essential for civil society.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c23951ad-6da5-41bd-a8e1-4499aaba3ba8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:10.501846"
+    },
+    {
+      "id": "794e0dcc-c538-4889-aab1-e80ad7a5497d",
+      "text": "Public investments in basic research and public health initiatives generate positive externalities accessible to the entire population, meaning the tax revenue is exchanged for widespread community value rather than being a unilateral taking.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c23951ad-6da5-41bd-a8e1-4499aaba3ba8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:10.503113"
+    },
+    {
+      "id": "5f2b277f-6754-43f9-8262-7e0b1775e2b7",
+      "text": "Reputation, social shaming, and repeated interaction demonstrably counter the free-rider problem in communal settings, proving that voluntary provision can secure shared goods without necessitating the coercive force of mandatory taxation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "3477066c-19c9-44f1-a088-3fcf4a20eefb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:15.804919"
+    },
+    {
+      "id": "b4e768bb-b86a-4bd6-94e8-a79a5b51ebdc",
+      "text": "The analogy fails because regulating liberty or self-defense restricts the *conduct* or *action* derived from the right, whereas taxation constitutes a mandatory appropriation that *diminishes the substance* (value) of the property right itself. The state restricting use is conceptually different from the state reducing ownership, undermining the comparison used to justify permanent wealth transfer.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "1cebc1db-8f5f-4680-8531-b8b01b0b46b2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:20.932603"
+    },
+    {
+      "id": "79ac6b3b-2857-4934-82f1-b68f7e4dc2c9",
+      "text": "Government inefficiency ensures that the portion of mandated tax payments wasted on administrative bloat and cost overruns is indistinguishable from money stolen without providing service.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a44c0323-0469-4418-ad3a-961b2dd4e63a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:20.968772"
+    },
+    {
+      "id": "29d2b617-4901-49cf-a0e6-32f91fe2312e",
+      "text": "Taxation is authorized by representative government and established constitutional law, distinguishing it fundamentally from theft, which is a criminal act involving unauthorized taking.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:21.342912"
+    },
+    {
+      "id": "6de2f2c3-8c7f-41ce-b477-7d04f0052ca7",
+      "text": "Tax revenue funds essential public goods, such as defense, infrastructure, and a functioning legal system, which collectively secure property rights and enable economic activity for the taxpayer.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:21.344039"
+    },
+    {
+      "id": "bc3d0ae5-4d07-41a9-8267-7708506ae210",
+      "text": "Theft violates the established legal framework and is punishable; taxation is the framework itself, a legally binding requirement that confers judicial protection upon compliance.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:21.344891"
+    },
+    {
+      "id": "7a1149cf-2194-4541-9b98-16cfb08f77b2",
+      "text": "Taxation is the necessary mechanism for funding the social structures required to define, enforce, and protect property rights, whereas theft fundamentally undermines those rights.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:21.345635"
+    },
+    {
+      "id": "409b93da-8a4e-47e9-8db0-b900ee0d9d77",
+      "text": "Justifying the minimal taxation required solely for property protection does not logically justify the far higher tax rates used today for funding expansive social programs unrelated to security or property enforcement.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7a1149cf-2194-4541-9b98-16cfb08f77b2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:33.353527"
+    },
+    {
+      "id": "2d8d58e8-6a6f-499b-864a-1856ab2625d8",
+      "text": "Property rights protection can be financed through voluntary association fees, private insurance, or user-funded courts, demonstrating non-coercive mechanisms exist for these essential services.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7a1149cf-2194-4541-9b98-16cfb08f77b2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:33.354519"
+    },
+    {
+      "id": "ebee8efb-fa7d-4bd8-b76b-9ae6697bc420",
+      "text": "Arguments comparing taxation to theft question the moral legitimacy of coercive appropriation, a concern that is not resolved by merely asserting that the appropriation is legally established.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bc3d0ae5-4d07-41a9-8267-7708506ae210",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:33.989839"
+    },
+    {
+      "id": "b6f03288-dea2-4b58-a33c-0e100cfe3e8e",
+      "text": "Taxation is a specific policy mandated by law for resource collection, which remains definitionally distinct from the foundational legal guarantee of property rights the framework establishes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bc3d0ae5-4d07-41a9-8267-7708506ae210",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:33.990435"
+    },
+    {
+      "id": "f87faf64-e758-4f2d-9721-15287be295b1",
+      "text": "Taxation is the involuntary seizure of private property enforced by the state's threat of violence (imprisonment or asset seizure), paralleling the coercive mechanism essential to theft.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "29d2b617-4901-49cf-a0e6-32f91fe2312e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:34.145894"
+    },
+    {
+      "id": "47e07133-969f-4487-8822-65cd2e160198",
+      "text": "Voluntary funding mechanisms are prone to the free-rider problem when applied to non-excludable public goods like national defense, inherently requiring coercion (taxation) to ensure necessary universal contribution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2d8d58e8-6a6f-499b-864a-1856ab2625d8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:43.608282"
+    },
+    {
+      "id": "fe7dc82c-c900-4059-baeb-07f100953d70",
+      "text": "The constitutional authority to levy taxes is a defining attribute of state sovereignty, making the power to tax a critical component of foundational law, not merely a mutable policy mechanism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b6f03288-dea2-4b58-a33c-0e100cfe3e8e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:44.229475"
+    },
+    {
+      "id": "c8c976d6-2303-4ef7-9cf4-915cd437fb42",
+      "text": "Social stability is a necessary condition for effective property enforcement, and high rates of poverty and inequality directly undermine that stability through increased crime and unrest. Thus, taxes funding social programs that address these issues may be indirectly required for the long-term maintenance of security and property rights.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "409b93da-8a4e-47e9-8db0-b900ee0d9d77",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:44.298016"
+    },
+    {
+      "id": "e4835c5c-c5be-4b1a-a46d-dd0d53155084",
+      "text": "Taxation is the democratically mediated public cost of providing essential collective services like security and infrastructure, fundamentally separating it from private, zero-sum theft.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f87faf64-e758-4f2d-9721-15287be295b1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:45.576981"
+    },
+    {
+      "id": "9363eac0-0f9d-48dd-8462-95360768453c",
+      "text": "The constitutional authority establishes the *power* to tax, but the actual exercise of that power\u2014the rates, exemptions, and structure\u2014are legislative choices that *define* mutable policy mechanisms. Therefore, the power necessarily serves both foundational and policy roles concurrently.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fe7dc82c-c900-4059-baeb-07f100953d70",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:54.108190"
+    },
+    {
+      "id": "22fdc210-42f6-4cee-ba29-b53ae14c6fde",
+      "text": "The philosophical justification of taxation (social contract or democratic consent) only establishes its legitimacy, but does not remove the coercive apparatus of fines, seizure, or imprisonment, which renders the individual act of payment fundamentally involuntary.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e4835c5c-c5be-4b1a-a46d-dd0d53155084",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:13:55.496282"
+    },
+    {
+      "id": "ac0726bd-cfb3-489c-adf4-8ce42943a0c3",
+      "text": "The choice to pay taxes, when viewed through the lens of prior democratic consent or accepted social contract, is an exercise of agency to fulfill a legal obligation and avoid greater, justifiable consequences, distinguishing it from literal compulsion.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "22fdc210-42f6-4cee-ba29-b53ae14c6fde",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:14:07.625537"
+    },
+    {
+      "id": "78bcf0a3-eae5-4fbc-93f6-d66747efbbd4",
+      "text": "The moral status of an action is independent of its legal authorization; historical injustices like legally sanctioned slavery or totalitarian property confiscations demonstrate that lawful taking can still be morally equivalent to theft.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e6435917-e41f-4331-9c5c-7d6813ca69e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:04:52.676989+00:00"
+    },
+    {
+      "id": "70aba8b2-db8a-4807-a674-51f9fc289e9c",
+      "text": "The mechanism of taxation relies on the implicit or explicit threat of state violence, such as asset seizure or imprisonment, against non-compliance, meaning the transfer of property remains fundamentally coercive and functionally parallels theft.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e6435917-e41f-4331-9c5c-7d6813ca69e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:04:52.677017+00:00"
+    },
+    {
+      "id": "266bbf85-535a-484e-8087-496b4ec52eed",
+      "text": "Laws enabling chattel slavery in the antebellum United States were enacted through established legislative processes but are universally recognized as morally reprehensible. Whether taxation is morally equivalent to theft depends on the antecedent moral right to earned income, not the state's legal procedure for appropriation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "00c9d344-8247-4592-b057-2dff25b223f8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:05:20.735030+00:00"
+    },
+    {
+      "id": "1d91317f-cd4c-4f61-9a7c-362e4af1bcaf",
+      "text": "Libertarian philosopher Murray Rothbard described taxation as compulsory confiscation because the state uses the direct threat of imprisonment to enforce payment. This underlying coercive mechanism aligns the moral situation with private theft backed by force, regardless of the tax law's legality under the US Internal Revenue Code.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "00c9d344-8247-4592-b057-2dff25b223f8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:05:20.735053+00:00"
+    },
+    {
+      "id": "26553b67-5d2f-4178-be2e-acb1aedb0cdb",
+      "text": "Private security firms and arbitration services in the United States secure property and resolve commercial disputes effectively based on user fees, demonstrating that the function of securing property rights does not necessitate collective funding via universal taxation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6de2f2c3-8c7f-41ce-b477-7d04f0052ca7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:05:33.022317+00:00"
+    },
+    {
+      "id": "4dac25a2-2492-4eae-aae1-bc45efd68ec8",
+      "text": "In Western industrialized nations, such as the United States, less than 20% of federal spending funds essential public goods like defense and infrastructure; the vast majority funds non-essential social transfers like welfare and subsidies, which are purely redistributive transfers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6de2f2c3-8c7f-41ce-b477-7d04f0052ca7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:05:33.022340+00:00"
+    },
+    {
+      "id": "e3a7161c-879a-4894-b8e5-d8c37364c679",
+      "text": "Taxation is derived from the principle of social contract, where electorates grant governments the power to appropriate funds for collective benefit via democratic processes. Therefore, the legal establishment of taxation reflects a formalized moral agreement that private theft inherently lacks.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ebee8efb-fa7d-4bd8-b76b-9ae6697bc420",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:05:37.938147+00:00"
+    },
+    {
+      "id": "17993292-e94d-4d05-a55a-342c5dd8f5da",
+      "text": "Taxation is the mechanism required to fund the rule of law and public infrastructure, which are necessary preconditions for establishing, protecting, and generating all private wealth. This vital symbiotic function separates the appropriation of taxes morally from simple theft, which provides no reciprocal value.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ebee8efb-fa7d-4bd8-b76b-9ae6697bc420",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:05:37.938171+00:00"
+    },
+    {
+      "id": "1a5fbbdc-a345-422d-bac7-20381b19869d",
+      "text": "The legal compulsion for taxation simultaneously funds the property rights and contractual enforcement (e.g., patent law or financial regulation) required to generate the income, meaning the transfer is structurally bilateral, not one-sided.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "257b6ef0-9178-45c5-bda8-c177124fbf6a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:05:50.430664+00:00"
+    },
+    {
+      "id": "1098578e-6aa3-4507-ac48-8132687a1a9b",
+      "text": "Taxes are legally compulsory transfers enforced through penalties like prison or property seizure, which distinguishes them fundamentally from voluntary, bilateral market exchanges even if the state provides utility.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "1a5fbbdc-a345-422d-bac7-20381b19869d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:00.364586+00:00"
+    },
+    {
+      "id": "065f8ed8-51fe-4e17-a40e-3b8ec82125a8",
+      "text": "A significant portion of tax revenue funds mandatory social programs, such as universal healthcare in Canada and the UK, or foreign aid, meaning this expenditure is not exclusively a transaction for services required to generate income.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "1a5fbbdc-a345-422d-bac7-20381b19869d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:00.364612+00:00"
+    },
+    {
+      "id": "e897fdc4-d7ad-46c1-af49-282fb8cc7829",
+      "text": "US municipalities routinely seize and auction residential properties through tax liens when annual property taxes are unpaid, proving that a specific tax, related to the property's maintenance services, is a direct condition of ownership.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6596cf65-985e-40a3-abbb-7a385f783be6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:19.472196+00:00"
+    },
+    {
+      "id": "0737708b-868a-49f8-8522-81071e19816c",
+      "text": "The legal stability of property defined by the UN Declaration of Human Rights depends entirely on state-funded institutions like land registries, courts, and police forces, which are conditional on mandatory tax revenue.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6596cf65-985e-40a3-abbb-7a385f783be6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:19.472629+00:00"
+    },
+    {
+      "id": "076c5a19-5b55-447e-ae93-d4ebf4babcb8",
+      "text": "Essential property-securing institutions can be funded by non-tax sources, such as Norway\u2019s public services relying heavily on revenue from the state-owned petroleum industry, demonstrating that stable property rights are not entirely conditional on mandatory taxation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "0737708b-868a-49f8-8522-81071e19816c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:31.283886+00:00"
+    },
+    {
+      "id": "2346d79a-b2f4-4d40-a473-4e2e52e1d2dd",
+      "text": "Banks utilize foreclosure to seize residential property for unpaid mortgage debts, a mechanism identical to tax liens, yet this legal enforcement process does not imply the lending institution held ultimate ownership over the property.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "e897fdc4-d7ad-46c1-af49-282fb8cc7829",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:41.287936+00:00"
+    },
+    {
+      "id": "0d782637-9c5e-438b-8511-cdc28f09817c",
+      "text": "Property tax revenue across the US, such as in Texas or New York, funds general government expenses like public schools, police, and social services, showing the tax is conditional upon residence within the jurisdiction, not specific property maintenance services.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "e897fdc4-d7ad-46c1-af49-282fb8cc7829",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:41.287962+00:00"
+    },
+    {
+      "id": "0ed634df-3eeb-4459-bb85-531198a73d28",
+      "text": "In the European Union, specific tax standards, such as Value Added Tax (VAT) directives, are proposed by the unelected European Commission and mandated to member states. This process means citizens' property is directly affected by specific, non-nationally-elected authorities, undermining the moral justification of general electoral consent for all fiscal measures.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f3ffb2b9-bba1-4467-893c-8b17a624259d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:06:55.887307+00:00"
+    },
+    {
+      "id": "8cb4878d-9644-4d6e-b10b-95e323be5f33",
+      "text": "EU tax directives, including VAT standards, require unanimous consent from the Council of the European Union, whose members are ministers from nationally elected governments like the German Bundestag or the French Assembl\u00e9e. The Commission only proposes directives; national, accountable politicians must actively ratify them.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "0ed634df-3eeb-4459-bb85-531198a73d28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:07:16.873100+00:00"
+    },
+    {
+      "id": "f2c13a46-3cd3-467a-a170-1036c3cf320a",
+      "text": "Fiscal authority delegation is standard in democratic systems; for instance, US state legislatures delegate property tax assessment and collection details to locally appointed county officials. This delegation does not invalidate the moral foundation of property taxes so long as elected officials retain the power to repeal or restructure the delegation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "0ed634df-3eeb-4459-bb85-531198a73d28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:07:16.873140+00:00"
+    },
+    {
+      "id": "54eb019d-aafa-4919-b2ad-5c188b111154",
+      "text": "In modern constitutional democracies, the legal structure (representation, voting, constitutional review) is the agreed-upon mechanism for conferring political legitimacy. Therefore, widespread voluntary compliance and the electoral acceptance of tax laws in countries like Denmark or New Zealand demonstrate sufficient practical legitimacy, regardless of abstract theoretical standards.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7cc20a19-6f35-4d8a-94fa-1369279b4ede",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:07:27.814526+00:00"
+    },
+    {
+      "id": "a719116e-29e9-4694-bd65-b3a5775317d9",
+      "text": "Voter compliance under the Soviet regime was nearly 100% and acceptance of state policy was mandatory, demonstrating that widespread adherence can result from coercion rather than moral legitimacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "54eb019d-aafa-4919-b2ad-5c188b111154",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:07:46.248932+00:00"
+    },
+    {
+      "id": "1ee475f6-5b4b-406c-b3a9-16ac8d433419",
+      "text": "The tax and legal structures of Apartheid South Africa were functional and derived high compliance from the enfranchised population, but these structures are universally judged by external ethical standards to be fundamentally illegitimate and unjust.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "54eb019d-aafa-4919-b2ad-5c188b111154",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:07:46.248958+00:00"
+    },
+    {
+      "id": "ada77a6d-2338-40f7-a332-bd415850c266",
+      "text": "Property acquisition is fundamentally conditional on tax-funded state institutions like contract law, land registries, and courts, which define legitimate titles and transfers. Without this state apparatus defining and legitimizing ownership, the purported \"initial acquisition\" of recognized property rights is legally impossible.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "cb7217db-9354-4f0c-9aed-027b094f0037",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:07:57.572507+00:00"
+    },
+    {
+      "id": "fc46ea8b-df18-4a14-8709-56d0bd6d8cc9",
+      "text": "Before the rise of the modern nation-state, the Lex Mercatoria (Law Merchant) established universally recognized and enforced property titles and contracts across Europe via decentralized private merchant courts, demonstrating that functional systems of legitimate property transfer do not inherently require state-mandated taxation or institutional origin.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ada77a6d-2338-40f7-a332-bd415850c266",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:08:14.210035+00:00"
+    },
+    {
+      "id": "f9744e20-3b43-4f0c-bef2-0e9940ad4e73",
+      "text": "The historical example of merchant guilds in medieval Europe demonstrates that large-scale security, a non-excludable public good, was funded effectively through voluntary association fees and localized commercial levies, rather than universal coercive state taxation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "47e07133-969f-4487-8822-65cd2e160198",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:08:30.894196+00:00"
+    },
+    {
+      "id": "bf627183-9a49-4f89-a3bb-b38a2cc5a570",
+      "text": "Guild security was a localized club good protecting only members' trade and property, failing to provide the universal territorial defense, judiciary, and internal stability required for true large-scale, non-excludable public security.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "f9744e20-3b43-4f0c-bef2-0e9940ad4e73",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:08:41.133147+00:00"
+    },
+    {
+      "id": "8ad14455-b624-42a1-a354-bf5c8b30bb1d",
+      "text": "The required fees were quasi-coercive because membership in dominant guilds was a necessary condition for participating in lucrative medieval commerce, meaning exclusion acted as a commercial tax on non-members.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "f9744e20-3b43-4f0c-bef2-0e9940ad4e73",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:08:41.133174+00:00"
+    },
+    {
+      "id": "f4dfcbb9-c2a1-48d2-8a8e-c284a4602000",
+      "text": "Singapore and various Gulf states maintain world-leading property rights enforcement and absolute social stability through strict legal penalties and robust police mechanisms, even with high wealth inequality, showing that stability is not solely dependent on social program funding.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c8c976d6-2303-4ef7-9cf4-915cd437fb42",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:08:55.366465+00:00"
+    },
+    {
+      "id": "d8e886bb-c549-430f-9e76-e7bb6e0967be",
+      "text": "Singapore's stability relies heavily on massive state intervention, including providing public housing for 80% of the population and maintaining the mandatory Central Provident Fund, which acts as a powerful mechanism for social wealth distribution.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "f4dfcbb9-c2a1-48d2-8a8e-c284a4602000",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:11.546419+00:00"
+    },
+    {
+      "id": "ac84d8ee-6b1c-479f-b596-61f66abc22a1",
+      "text": "The \"absolute social stability\" cited in Gulf states like the UAE is a consequence of mechanisms of political control, such as banning independent labor unions and political parties, thereby suppressing visible dissent rather than achieving true social consensus.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "f4dfcbb9-c2a1-48d2-8a8e-c284a4602000",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:11.546447+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:12:30.072510"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:12:30.072510"
+    }
+  ],
+  "links": [
+    {
+      "source": "b112f5fb-ab1a-4e3a-8a30-ab37aa7af34d",
+      "target": "f2faa015-150d-4254-91e4-a0106e503538",
+      "type": "objection"
+    },
+    {
+      "source": "b112f5fb-ab1a-4e3a-8a30-ab37aa7af34d",
+      "target": "e6435917-e41f-4331-9c5c-7d6813ca69e9",
+      "type": "objection"
+    },
+    {
+      "source": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "target": "2c2e5755-b6c0-4461-bb8b-1b11c1418c35",
+      "type": "objection"
+    },
+    {
+      "source": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "target": "665c8a58-321a-4db7-8c3b-150fd28e4f57",
+      "type": "objection"
+    },
+    {
+      "source": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "target": "00c9d344-8247-4592-b057-2dff25b223f8",
+      "type": "objection"
+    },
+    {
+      "source": "16126433-649f-4e24-972e-9728f7307f03",
+      "target": "095b9517-7bcd-43e8-89f7-4e63ae167ced",
+      "type": "objection"
+    },
+    {
+      "source": "16126433-649f-4e24-972e-9728f7307f03",
+      "target": "1f95b844-ad6f-4b2c-b644-0463c2e890b9",
+      "type": "objection"
+    },
+    {
+      "source": "51905edb-ed3f-49fe-97d9-8c934a3e584b",
+      "target": "c45884c1-8979-45e4-9771-96c427b4b5b5",
+      "type": "objection"
+    },
+    {
+      "source": "f2faa015-150d-4254-91e4-a0106e503538",
+      "target": "2da41383-2bda-4114-8755-28baacecaece",
+      "type": "response"
+    },
+    {
+      "source": "f2faa015-150d-4254-91e4-a0106e503538",
+      "target": "257b6ef0-9178-45c5-bda8-c177124fbf6a",
+      "type": "response"
+    },
+    {
+      "source": "095b9517-7bcd-43e8-89f7-4e63ae167ced",
+      "target": "6596cf65-985e-40a3-abbb-7a385f783be6",
+      "type": "response"
+    },
+    {
+      "source": "1f95b844-ad6f-4b2c-b644-0463c2e890b9",
+      "target": "45d2210d-5a66-4850-a51c-cd47ccad7084",
+      "type": "response"
+    },
+    {
+      "source": "1f95b844-ad6f-4b2c-b644-0463c2e890b9",
+      "target": "5a394880-7208-493a-b08a-9d28554d6763",
+      "type": "response"
+    },
+    {
+      "source": "665c8a58-321a-4db7-8c3b-150fd28e4f57",
+      "target": "f3ffb2b9-bba1-4467-893c-8b17a624259d",
+      "type": "response"
+    },
+    {
+      "source": "665c8a58-321a-4db7-8c3b-150fd28e4f57",
+      "target": "7cc20a19-6f35-4d8a-94fa-1369279b4ede",
+      "type": "response"
+    },
+    {
+      "source": "2c2e5755-b6c0-4461-bb8b-1b11c1418c35",
+      "target": "7b46f670-07d1-49d5-90a5-595910815144",
+      "type": "response"
+    },
+    {
+      "source": "2c2e5755-b6c0-4461-bb8b-1b11c1418c35",
+      "target": "cb7217db-9354-4f0c-9aed-027b094f0037",
+      "type": "response"
+    },
+    {
+      "source": "c45884c1-8979-45e4-9771-96c427b4b5b5",
+      "target": "c23951ad-6da5-41bd-a8e1-4499aaba3ba8",
+      "type": "response"
+    },
+    {
+      "source": "2da41383-2bda-4114-8755-28baacecaece",
+      "target": "48000ae0-a866-4210-803a-2ed3c9d0834a",
+      "type": "response"
+    },
+    {
+      "source": "2da41383-2bda-4114-8755-28baacecaece",
+      "target": "beded00b-7978-4b33-8036-017b17ac3d39",
+      "type": "response"
+    },
+    {
+      "source": "45d2210d-5a66-4850-a51c-cd47ccad7084",
+      "target": "3477066c-19c9-44f1-a088-3fcf4a20eefb",
+      "type": "response"
+    },
+    {
+      "source": "5a394880-7208-493a-b08a-9d28554d6763",
+      "target": "973d33cf-0c8b-4f21-9c3f-a1f4d1d4034c",
+      "type": "response"
+    },
+    {
+      "source": "5a394880-7208-493a-b08a-9d28554d6763",
+      "target": "8d4ec69b-ff3f-49ac-9714-71050c747d93",
+      "type": "response"
+    },
+    {
+      "source": "7b46f670-07d1-49d5-90a5-595910815144",
+      "target": "1cebc1db-8f5f-4680-8531-b8b01b0b46b2",
+      "type": "response"
+    },
+    {
+      "source": "7b46f670-07d1-49d5-90a5-595910815144",
+      "target": "b8f18daf-646b-476f-9244-1b4606071f4b",
+      "type": "response"
+    },
+    {
+      "source": "c23951ad-6da5-41bd-a8e1-4499aaba3ba8",
+      "target": "a44c0323-0469-4418-ad3a-961b2dd4e63a",
+      "type": "response"
+    },
+    {
+      "source": "c23951ad-6da5-41bd-a8e1-4499aaba3ba8",
+      "target": "794e0dcc-c538-4889-aab1-e80ad7a5497d",
+      "type": "response"
+    },
+    {
+      "source": "3477066c-19c9-44f1-a088-3fcf4a20eefb",
+      "target": "5f2b277f-6754-43f9-8262-7e0b1775e2b7",
+      "type": "response"
+    },
+    {
+      "source": "1cebc1db-8f5f-4680-8531-b8b01b0b46b2",
+      "target": "b4e768bb-b86a-4bd6-94e8-a79a5b51ebdc",
+      "type": "response"
+    },
+    {
+      "source": "a44c0323-0469-4418-ad3a-961b2dd4e63a",
+      "target": "79ac6b3b-2857-4934-82f1-b68f7e4dc2c9",
+      "type": "response"
+    },
+    {
+      "source": "7a1149cf-2194-4541-9b98-16cfb08f77b2",
+      "target": "409b93da-8a4e-47e9-8db0-b900ee0d9d77",
+      "type": "objection"
+    },
+    {
+      "source": "7a1149cf-2194-4541-9b98-16cfb08f77b2",
+      "target": "2d8d58e8-6a6f-499b-864a-1856ab2625d8",
+      "type": "objection"
+    },
+    {
+      "source": "bc3d0ae5-4d07-41a9-8267-7708506ae210",
+      "target": "ebee8efb-fa7d-4bd8-b76b-9ae6697bc420",
+      "type": "objection"
+    },
+    {
+      "source": "bc3d0ae5-4d07-41a9-8267-7708506ae210",
+      "target": "b6f03288-dea2-4b58-a33c-0e100cfe3e8e",
+      "type": "objection"
+    },
+    {
+      "source": "29d2b617-4901-49cf-a0e6-32f91fe2312e",
+      "target": "f87faf64-e758-4f2d-9721-15287be295b1",
+      "type": "objection"
+    },
+    {
+      "source": "2d8d58e8-6a6f-499b-864a-1856ab2625d8",
+      "target": "47e07133-969f-4487-8822-65cd2e160198",
+      "type": "response"
+    },
+    {
+      "source": "b6f03288-dea2-4b58-a33c-0e100cfe3e8e",
+      "target": "fe7dc82c-c900-4059-baeb-07f100953d70",
+      "type": "response"
+    },
+    {
+      "source": "409b93da-8a4e-47e9-8db0-b900ee0d9d77",
+      "target": "c8c976d6-2303-4ef7-9cf4-915cd437fb42",
+      "type": "response"
+    },
+    {
+      "source": "f87faf64-e758-4f2d-9721-15287be295b1",
+      "target": "e4835c5c-c5be-4b1a-a46d-dd0d53155084",
+      "type": "response"
+    },
+    {
+      "source": "fe7dc82c-c900-4059-baeb-07f100953d70",
+      "target": "9363eac0-0f9d-48dd-8462-95360768453c",
+      "type": "response"
+    },
+    {
+      "source": "e4835c5c-c5be-4b1a-a46d-dd0d53155084",
+      "target": "22fdc210-42f6-4cee-ba29-b53ae14c6fde",
+      "type": "response"
+    },
+    {
+      "source": "22fdc210-42f6-4cee-ba29-b53ae14c6fde",
+      "target": "ac0726bd-cfb3-489c-adf4-8ce42943a0c3",
+      "type": "response"
+    },
+    {
+      "source": "e6435917-e41f-4331-9c5c-7d6813ca69e9",
+      "target": "78bcf0a3-eae5-4fbc-93f6-d66747efbbd4",
+      "type": "response"
+    },
+    {
+      "source": "e6435917-e41f-4331-9c5c-7d6813ca69e9",
+      "target": "70aba8b2-db8a-4807-a674-51f9fc289e9c",
+      "type": "response"
+    },
+    {
+      "source": "00c9d344-8247-4592-b057-2dff25b223f8",
+      "target": "266bbf85-535a-484e-8087-496b4ec52eed",
+      "type": "response"
+    },
+    {
+      "source": "00c9d344-8247-4592-b057-2dff25b223f8",
+      "target": "1d91317f-cd4c-4f61-9a7c-362e4af1bcaf",
+      "type": "response"
+    },
+    {
+      "source": "6de2f2c3-8c7f-41ce-b477-7d04f0052ca7",
+      "target": "26553b67-5d2f-4178-be2e-acb1aedb0cdb",
+      "type": "response"
+    },
+    {
+      "source": "6de2f2c3-8c7f-41ce-b477-7d04f0052ca7",
+      "target": "4dac25a2-2492-4eae-aae1-bc45efd68ec8",
+      "type": "response"
+    },
+    {
+      "source": "ebee8efb-fa7d-4bd8-b76b-9ae6697bc420",
+      "target": "e3a7161c-879a-4894-b8e5-d8c37364c679",
+      "type": "response"
+    },
+    {
+      "source": "ebee8efb-fa7d-4bd8-b76b-9ae6697bc420",
+      "target": "17993292-e94d-4d05-a55a-342c5dd8f5da",
+      "type": "response"
+    },
+    {
+      "source": "257b6ef0-9178-45c5-bda8-c177124fbf6a",
+      "target": "1a5fbbdc-a345-422d-bac7-20381b19869d",
+      "type": "response"
+    },
+    {
+      "source": "1a5fbbdc-a345-422d-bac7-20381b19869d",
+      "target": "1098578e-6aa3-4507-ac48-8132687a1a9b",
+      "type": "response"
+    },
+    {
+      "source": "1a5fbbdc-a345-422d-bac7-20381b19869d",
+      "target": "065f8ed8-51fe-4e17-a40e-3b8ec82125a8",
+      "type": "response"
+    },
+    {
+      "source": "6596cf65-985e-40a3-abbb-7a385f783be6",
+      "target": "e897fdc4-d7ad-46c1-af49-282fb8cc7829",
+      "type": "response"
+    },
+    {
+      "source": "6596cf65-985e-40a3-abbb-7a385f783be6",
+      "target": "0737708b-868a-49f8-8522-81071e19816c",
+      "type": "response"
+    },
+    {
+      "source": "0737708b-868a-49f8-8522-81071e19816c",
+      "target": "076c5a19-5b55-447e-ae93-d4ebf4babcb8",
+      "type": "response"
+    },
+    {
+      "source": "e897fdc4-d7ad-46c1-af49-282fb8cc7829",
+      "target": "2346d79a-b2f4-4d40-a473-4e2e52e1d2dd",
+      "type": "response"
+    },
+    {
+      "source": "e897fdc4-d7ad-46c1-af49-282fb8cc7829",
+      "target": "0d782637-9c5e-438b-8511-cdc28f09817c",
+      "type": "response"
+    },
+    {
+      "source": "f3ffb2b9-bba1-4467-893c-8b17a624259d",
+      "target": "0ed634df-3eeb-4459-bb85-531198a73d28",
+      "type": "response"
+    },
+    {
+      "source": "0ed634df-3eeb-4459-bb85-531198a73d28",
+      "target": "8cb4878d-9644-4d6e-b10b-95e323be5f33",
+      "type": "response"
+    },
+    {
+      "source": "0ed634df-3eeb-4459-bb85-531198a73d28",
+      "target": "f2c13a46-3cd3-467a-a170-1036c3cf320a",
+      "type": "response"
+    },
+    {
+      "source": "7cc20a19-6f35-4d8a-94fa-1369279b4ede",
+      "target": "54eb019d-aafa-4919-b2ad-5c188b111154",
+      "type": "response"
+    },
+    {
+      "source": "54eb019d-aafa-4919-b2ad-5c188b111154",
+      "target": "a719116e-29e9-4694-bd65-b3a5775317d9",
+      "type": "response"
+    },
+    {
+      "source": "54eb019d-aafa-4919-b2ad-5c188b111154",
+      "target": "1ee475f6-5b4b-406c-b3a9-16ac8d433419",
+      "type": "response"
+    },
+    {
+      "source": "cb7217db-9354-4f0c-9aed-027b094f0037",
+      "target": "ada77a6d-2338-40f7-a332-bd415850c266",
+      "type": "response"
+    },
+    {
+      "source": "ada77a6d-2338-40f7-a332-bd415850c266",
+      "target": "fc46ea8b-df18-4a14-8709-56d0bd6d8cc9",
+      "type": "response"
+    },
+    {
+      "source": "47e07133-969f-4487-8822-65cd2e160198",
+      "target": "f9744e20-3b43-4f0c-bef2-0e9940ad4e73",
+      "type": "response"
+    },
+    {
+      "source": "f9744e20-3b43-4f0c-bef2-0e9940ad4e73",
+      "target": "bf627183-9a49-4f89-a3bb-b38a2cc5a570",
+      "type": "response"
+    },
+    {
+      "source": "f9744e20-3b43-4f0c-bef2-0e9940ad4e73",
+      "target": "8ad14455-b624-42a1-a354-bf5c8b30bb1d",
+      "type": "response"
+    },
+    {
+      "source": "c8c976d6-2303-4ef7-9cf4-915cd437fb42",
+      "target": "f4dfcbb9-c2a1-48d2-8a8e-c284a4602000",
+      "type": "response"
+    },
+    {
+      "source": "f4dfcbb9-c2a1-48d2-8a8e-c284a4602000",
+      "target": "d8e886bb-c549-430f-9e76-e7bb6e0967be",
+      "type": "response"
+    },
+    {
+      "source": "f4dfcbb9-c2a1-48d2-8a8e-c284a4602000",
+      "target": "ac84d8ee-6b1c-479f-b596-61f66abc22a1",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ae6aa8bd-6e0c-409f-a9fe-1f3b0c88f8c4",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "51905edb-ed3f-49fe-97d9-8c934a3e584b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "16126433-649f-4e24-972e-9728f7307f03",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b112f5fb-ab1a-4e3a-8a30-ab37aa7af34d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "29d2b617-4901-49cf-a0e6-32f91fe2312e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6de2f2c3-8c7f-41ce-b477-7d04f0052ca7",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "bc3d0ae5-4d07-41a9-8267-7708506ae210",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "7a1149cf-2194-4541-9b98-16cfb08f77b2",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

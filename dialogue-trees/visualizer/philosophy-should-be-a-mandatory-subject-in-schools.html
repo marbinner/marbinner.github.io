@@ -1,0 +1,2322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philosophy should be a mandatory subject in schools - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Philosophy should be a mandatory subject in schools</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            51 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/philosophy-should-be-a-mandatory-subject-in-schools.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">51</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "01a09dc1-c588-47bb-b209-53bd43365e34",
+      "text": "Mandatory philosophy, particularly applied ethics and logic training, demonstrably strengthens core cognitive skills; programs like the UK\u2019s Philosophy for Children (P4C) and similar initiatives in Australia report significant boosts in student literacy and numeracy scores.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:46.163172"
+    },
+    {
+      "id": "28ab3e51-4816-4ef6-9e10-8e13af467973",
+      "text": "Philosophy is essential for fostering informed civic engagement by equipping students with the tools to analyze complex political, social, and ethical arguments necessary for democratic participation, as evidenced by its long-standing role in the mandatory French *Baccalaur\u00e9at* curriculum.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:46.164157"
+    },
+    {
+      "id": "3a79ab3a-90e8-412a-a1ce-ea974f1bdd6b",
+      "text": "The formal study of logic and critical epistemology provides essential media literacy skills by training students to identify common logical fallacies, cognitive biases, and unreliable knowledge claims, crucial for navigating the exponential growth of online misinformation.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:46.164749"
+    },
+    {
+      "id": "a8bc6ce9-5604-4d2a-a097-b67c19040190",
+      "text": "Philosophy offers practical life skills by introducing students to diverse frameworks\u2014such as Stoicism or virtue ethics\u2014that promote emotional regulation, critical self-reflection, and greater resilience toward the existential and ethical complexities of life.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:46.165249"
+    },
+    {
+      "id": "e6154335-bb45-4040-9cb7-4c848c2f3951",
+      "text": "Empirical research on transfer of learning suggests that formal instruction in abstract logical principles often fails to improve students' ability to recognize fallacies and biases in real-world, context-rich environments like social media, requiring specialized training focused on practical media content.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3a79ab3a-90e8-412a-a1ce-ea974f1bdd6b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:55.213804"
+    },
+    {
+      "id": "3f93cc63-a9ac-487c-b9ea-63662ad422c7",
+      "text": "Many core topics in philosophy, such as formal logic, analytic metaphysics, and philosophy of science, offer minimal direct guidance on emotional regulation or resilience, limiting the practical life-skill benefit alleged for the entire discipline.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a8bc6ce9-5604-4d2a-a097-b67c19040190",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:55.455753"
+    },
+    {
+      "id": "ecd8d52f-a9f5-474b-8b2d-4cd4ea4e00bb",
+      "text": "Academic study only provides theoretical knowledge; achieving practical life skills like emotional regulation and resilience requires dedicated behavioral practice, psychological intervention, or clinical application, not merely exposure to philosophical concepts.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a8bc6ce9-5604-4d2a-a097-b67c19040190",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:55.456186"
+    },
+    {
+      "id": "6d9ce552-bbb4-48fe-8a98-14e21ec957a5",
+      "text": "The cited P4C evidence focuses on a specific, dialogue-based pedagogical method for primary schools, which is distinct from a mandatory high school curriculum in formal symbolic logic or applied ethics. The success of a specific teaching method does not justify the mandatory implementation of a particular academic subject.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "01a09dc1-c588-47bb-b209-53bd43365e34",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:57.874042"
+    },
+    {
+      "id": "f1ce6d37-d341-43c1-aec1-f6f419787e3f",
+      "text": "P4C studies often lack rigorous control groups and fail to isolate philosophy as the causal factor; improvements in student scores may be due to non-specific variables like intensive teacher training or the Hawthorne effect rather than the content itself.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "01a09dc1-c588-47bb-b209-53bd43365e34",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:57.875029"
+    },
+    {
+      "id": "ac54773e-40ca-4bcd-a263-f39c5f775b5f",
+      "text": "Core democratic nations like Germany and Finland achieve high levels of civic engagement without mandating philosophy for all secondary students, proving that philosophy is not a universally essential requirement.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "28ab3e51-4816-4ef6-9e10-8e13af467973",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:58.680593"
+    },
+    {
+      "id": "231e77fb-5fcb-4838-af16-befd458c046c",
+      "text": "Civic engagement in France is likely driven by dedicated mandatory civics education (*\u00e9ducation civique, juridique et sociale*) that teaches democratic institutions throughout high school, rather than the philosophy course alone.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "28ab3e51-4816-4ef6-9e10-8e13af467973",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:58.681042"
+    },
+    {
+      "id": "01f6b199-fcb7-4079-85ae-40f4f6b35461",
+      "text": "The failure of abstract instruction does not logically necessitate the *requirement* for specialized media training; it only proves the original method's insufficiency. Alternative pedagogical approaches, such as integrating practical, context-rich examples directly into formal logic coursework, could solve the transfer failure without requiring entirely new, specialized curricula.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e6154335-bb45-4040-9cb7-4c848c2f3951",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:06.250568"
+    },
+    {
+      "id": "5e7f5f93-f1e4-4799-a877-b0d4b3b871f8",
+      "text": "Philosophical traditions like Stoicism and applied ethics directly provide practical behavioral frameworks for emotional regulation and resilience that require intellectual and applied ethical practice, not solely clinical intervention.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ecd8d52f-a9f5-474b-8b2d-4cd4ea4e00bb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:06.476998"
+    },
+    {
+      "id": "bf8906db-5e7b-4df0-9cef-ce7d539b6d7c",
+      "text": "The \"psychological intervention\" and \"clinical application\" cited are structured, evidence-based methods (e.g., CBT, DBT) that originate from and are continually developed through rigorous academic research in behavioral science, establishing an inherent dependency between study and practice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ecd8d52f-a9f5-474b-8b2d-4cd4ea4e00bb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:06.478382"
+    },
+    {
+      "id": "d9c684e4-1f2e-4ba1-8966-d976266e1851",
+      "text": "Stoicism and Existentialism provide comprehensive, direct frameworks for emotional regulation and psychological resilience, demonstrating that practical life-skill benefits are central to key philosophical doctrines.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3f93cc63-a9ac-487c-b9ea-63662ad422c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:08.444790"
+    },
+    {
+      "id": "8173db04-e241-4f7a-8f95-cbdc703c2c1e",
+      "text": "The practical benefit derived from formal logic and philosophy of science is the cultivation of structured critical thinking, rational decision-making, and advanced argumentative skills, which are fundamental professional and civic competencies outside of emotional regulation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3f93cc63-a9ac-487c-b9ea-63662ad422c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:08.445231"
+    },
+    {
+      "id": "1bb677d6-8a85-4e99-b437-6d5706603f6f",
+      "text": "Philosophy's value in education is intellectual, providing structured methods for analyzing logical fallacies and resolving moral paradoxes, which are foundational competencies independent of immediate national civic outcomes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ac54773e-40ca-4bcd-a263-f39c5f775b5f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:11.628098"
+    },
+    {
+      "id": "feca4d3d-adb6-4627-8625-69ff10c98ae5",
+      "text": "Studies tracking civic knowledge show that socio-economic background and parental political socialization are consistently stronger predictors of political participation in France than specific high school civics coursework.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "231e77fb-5fcb-4838-af16-befd458c046c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:12.847200"
+    },
+    {
+      "id": "e9736a73-68b0-4b4e-8c8d-5350ee6ad529",
+      "text": "Major institutional factors better explain France's high civic engagement, such as strong, centralized labor unions and a national culture that historically validates and mobilizes public political demonstration and collective strike action.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "231e77fb-5fcb-4838-af16-befd458c046c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:12.847985"
+    },
+    {
+      "id": "388afd83-cbf4-477d-9232-36d23dfc869a",
+      "text": "Mandatory philosophy increases curriculum load, displacing vocational or core STEM subjects critical for economic competitiveness, particularly in education systems like Singapore that prioritize global performance rankings.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:20.377048"
+    },
+    {
+      "id": "5844abc5-4c2e-4136-a9a9-97fe2e2f4351",
+      "text": "Many students benefit most from immediate, practical skills development. Introducing mandatory philosophy reduces instructional time for clear vocational pathways, differing from effective apprenticeship models used in countries like Germany and Switzerland.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:20.377856"
+    },
+    {
+      "id": "060e73bd-982a-460c-89e2-41393289b93a",
+      "text": "A global shortage of specialized secondary school teachers prevents widespread quality implementation. Mandating philosophy would require hiring teachers who often lack the specific training to teach complex, non-standardized philosophical concepts effectively across diverse school districts.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:20.378390"
+    },
+    {
+      "id": "f82f8452-8937-4be2-9074-1cde8dab0c6c",
+      "text": "Mandatory, high-stakes testing only incentivizes student memorization of historical figures and theories, directly contradicting philosophy\u2019s core goal of developing independent, unstandardizable critical reasoning.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:20.378875"
+    },
+    {
+      "id": "4f0dc0e2-c8fa-45f8-abd7-ae487da2d597",
+      "text": "Philosophy typically replaces non-essential electives (e.g., non-core languages or humanities) rather than mandatory core STEM or vocational subjects, which are globally protected due to their established position in national curricula.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "388afd83-cbf4-477d-9232-36d23dfc869a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:29.482068"
+    },
+    {
+      "id": "dace381e-341d-4e8e-a14b-01c35ec1521a",
+      "text": "Critical thinking, complex problem-solving, and ethical reasoning\u2014skills taught effectively by philosophy\u2014are increasingly cited by organizations like the OECD as key drivers of innovation and high-value economic competitiveness, not a detriment.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "388afd83-cbf4-477d-9232-36d23dfc869a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:29.482585"
+    },
+    {
+      "id": "ecb5dd92-3fef-43a2-8929-bb4a3286c5f3",
+      "text": "Philosophy cultivates immediate, practical skills such as structured problem-solving, logical argumentation, and ethical decision-making, which are crucial for success in complex vocational fields requiring critical analysis and professional communication.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5844abc5-4c2e-4136-a9a9-97fe2e2f4351",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:31.330972"
+    },
+    {
+      "id": "66d54c00-e3e9-4641-b6ea-c02a5e1d2424",
+      "text": "The success of German and Swiss apprenticeship models is primarily due to strong legal frameworks mandating industry participation, dual-system funding parity, and cultural prioritization of trades, showing no evidence that the absence of mandatory philosophy is a causal factor.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5844abc5-4c2e-4136-a9a9-97fe2e2f4351",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:31.331408"
+    },
+    {
+      "id": "03530980-95d7-4003-a380-60e7959a58c7",
+      "text": "Philosophy contains objective elements\u2014formal logic, identifying fallacies, and structural analysis\u2014that are routinely and successfully measured by standardized tests like the LSAT.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f82f8452-8937-4be2-9074-1cde8dab0c6c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:32.076898"
+    },
+    {
+      "id": "38c9faad-1696-41fc-971f-b9dba881b753",
+      "text": "Standardization does not inherently lead to the reduction of a subject to rote memorization of facts. Educational frameworks like the International Baccalaureate (IB) specifically design philosophy assessments that require students to construct and defend novel arguments, proving that standardization can effectively measure abstract critical thinking.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f82f8452-8937-4be2-9074-1cde8dab0c6c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:32.077666"
+    },
+    {
+      "id": "1b7a2f40-fc51-4866-b6f3-0af3ed5da7e8",
+      "text": "Specialized teacher training for mandatory philosophy is not hypothetical; countries like France and Italy maintain established, state-funded training tracks that produce certified secondary school instructors prepared for standardized national curricula.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "060e73bd-982a-460c-89e2-41393289b93a",
+      "children_count": 1,
+      "references": [
+        "https://philarchive.org/archive/JANKAP-4",
+        "https://www.jstor.org/stable/2108581"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:34.631481"
+    },
+    {
+      "id": "fb5283ad-855d-4111-bfa7-1bb090dc985d",
+      "text": "The current global teacher shortage is a temporary logistical problem that a mandate is designed to overcome, not an insurmountable structural barrier. New government mandates inherently justify the necessary resource reallocation for recruitment, stipends, and alternative training pipelines, a practice commonly used to rapidly expand required subjects like computer science or foreign languages.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "060e73bd-982a-460c-89e2-41393289b93a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:34.632366"
+    },
+    {
+      "id": "6dfec741-a474-4727-ab61-ef6d492b2eca",
+      "text": "While philosophy teaches valuable skills, disciplines like engineering and computer science integrate critical thinking directly with technical knowledge, providing a more immediate and measurable path to economic innovation and competitiveness than purely abstract philosophical or ethical inquiry.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "dace381e-341d-4e8e-a14b-01c35ec1521a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:41.047539"
+    },
+    {
+      "id": "755d29ba-c145-48c2-aaaf-80218110d9c3",
+      "text": "Curricular reorganization frequently involves reducing mandatory core STEM time; for instance, many UK school systems have replaced separate mandated science subjects with combined science, effectively reducing specialist instruction hours upon becoming compulsory, contradicting the idea that core subjects are \"globally protected.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4f0dc0e2-c8fa-45f8-abd7-ae487da2d597",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:42.354053"
+    },
+    {
+      "id": "20585b37-b16a-43d0-9782-eca28637f230",
+      "text": "The inclusion of philosophy often necessitates cutting instructional hours from established, compulsory core humanities; systems like those in Italy and France mandate philosophy by reducing required time in subjects like literature, history, or core language instruction, not just non-essential electives.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4f0dc0e2-c8fa-45f8-abd7-ae487da2d597",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:42.354788"
+    },
+    {
+      "id": "803457f3-8ff2-4889-91ad-84732091317d",
+      "text": "Structured problem-solving and rigorous ethical analysis are taught more directly and contextually within vocational programs and STEM fields (e.g., Engineering Ethics, algorithm design), offering a more efficient path to acquiring the job-crucial skills than general philosophical study.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ecb5dd92-3fef-43a2-8929-bb4a3286c5f3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:43.208899"
+    },
+    {
+      "id": "5ee6f71d-17a0-4287-bf45-5c52bebe56c2",
+      "text": "The assumption of a direct benefit for vocational success is empirically weak; data from the AAC&U and Payscale demonstrates that while philosophy majors surpass some humanities, they show lower mid-career earnings and slower professional advancement compared to majors in technical subjects such as Finance or Computer Science.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ecb5dd92-3fef-43a2-8929-bb4a3286c5f3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:43.209327"
+    },
+    {
+      "id": "450f5071-22eb-42e2-a87c-f4bcd26e40be",
+      "text": "Standardized tests only measure formal deduction and fallacy identification, ignoring the core philosophical tasks of conceptual creativity, generating novel arguments, and synthesizing complex, ambiguous texts, which remain resistant to standardized assessment.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "03530980-95d7-4003-a380-60e7959a58c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:44.276703"
+    },
+    {
+      "id": "47d944c2-8b51-46c0-a524-09b93e0c3ed8",
+      "text": "Teacher shortages are strongly structural, driven by unsustainable attrition (e.g., 40% of US teachers leave within five years) and chronically low compensation, showing the problem is not a temporary logistical issue addressable merely by recruitment mandates.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fb5283ad-855d-4111-bfa7-1bb090dc985d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:45.757749"
+    },
+    {
+      "id": "d05c3b59-d31a-497e-b423-825c91796fc1",
+      "text": "A government mandate does not inherently guarantee sufficient resource reallocation; mandates often fail due to being unfunded, such as the US No Child Left Behind Act, which placed burdens on states without providing adequate federal financial support.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fb5283ad-855d-4111-bfa7-1bb090dc985d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:45.758460"
+    },
+    {
+      "id": "e4736e01-c6fc-4301-9651-47772409d78b",
+      "text": "The IB is a high-cost, low-volume model that relies on extensive resource allocation for subjective grading, unlike mass standardization efforts (e.g., PISA, national achievement tests) which prioritize cost-effective, quick-graded formats, inevitably pushing instruction toward rote memorization.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "38c9faad-1696-41fc-971f-b9dba881b753",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:45.848752"
+    },
+    {
+      "id": "5b4bf01b-6ba4-4871-84ed-78b4060b9d12",
+      "text": "Designing an assessment to require critical thinking does not ensure effective measurement; standardization requires fixed grading rubrics that create predictable reward patterns, causing teachers to coach students toward conforming to the criteria rather than developing true abstract critical thought.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "38c9faad-1696-41fc-971f-b9dba881b753",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:45.849968"
+    },
+    {
+      "id": "9cc70995-dcc4-4c29-957c-710f1fe3e272",
+      "text": "Standardized school systems inherently distort philosophy by reducing it to a historical survey requiring content mastery, fundamentally replacing open-ended critical inquiry with fact-based objective assessment.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1b7a2f40-fc51-4866-b6f3-0af3ed5da7e8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:46.105086"
+    },
+    {
+      "id": "7e8b9fb8-932d-4dca-9c78-17ea60b5c133",
+      "text": "The success of the German and Swiss dual systems inherently depends on strictly limiting time for general education subjects like philosophy to maximize workplace relevance, making the structural de-emphasis of generalized theory a measurable, causal component of the model's effectiveness, not an irrelevant factor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "66d54c00-e3e9-4641-b6ea-c02a5e1d2424",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:47.309018"
+    },
+    {
+      "id": "a412b56a-04cf-4093-9f91-8cc8555870eb",
+      "text": "Long-term economic competitiveness and sustained innovation depend fundamentally on stable political systems and fair regulatory frameworks, which are designed through applied political and legal philosophy, not technical knowledge alone.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "6dfec741-a474-4727-ab61-ef6d492b2eca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:56.280134"
+    },
+    {
+      "id": "8a627acd-8a3f-47ce-86ff-4501fdb28999",
+      "text": "Philosophical inquiry into fields like ethics in AI and intellectual property directly guides technological development and market readiness, making it a critical and measurable input for modern economic innovation alongside engineering and computer science.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "6dfec741-a474-4727-ab61-ef6d492b2eca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:56.280157"
+    },
+    {
+      "id": "c5bb799f-eeac-4afc-89ac-7da026eb4b69",
+      "text": "Contextual modules like Engineering Ethics often focus on compliance with existing codes and regulatory frameworks, which fails to equip students with the foundational meta-ethical tools needed for complex moral innovation or navigating unforeseen ethical crises driven by emerging technologies like AI.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "803457f3-8ff2-4889-91ad-84732091317d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:58.544597"
+    },
+    {
+      "id": "859a3fd1-eb19-459d-af81-0dfae9abdc79",
+      "text": "General philosophical study develops superior *transferable* skills, such as sophisticated critical thinking and logical analysis, which are widely cited in employer surveys as the most significant non-technical deficiencies limiting mid-career professional advancement across diverse industries.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "803457f3-8ff2-4889-91ad-84732091317d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:22:58.544639"
+    },
+    {
+      "id": "7bef6149-3e23-49dd-b49e-aff92da6d689",
+      "text": "The success of the German and Swiss dual systems is predominantly attributed to strong institutional factors, such as mandatory employer participation, government-mandated standardized curricula, and labor market coordination, rather than the minor time allocation differences away from general education subjects.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7e8b9fb8-932d-4dca-9c78-17ea60b5c133",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:23:00.382459"
+    },
+    {
+      "id": "d618198a-88f9-4bac-9796-7969f1f9b1c7",
+      "text": "Defining the dual system's effectiveness purely by short-term \"workplace relevance\" ignores the economic reality that generalized theory fosters critical thinking and adaptability, which are essential for long-term career resilience and for navigating rapid technological change in the modern economy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7e8b9fb8-932d-4dca-9c78-17ea60b5c133",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:23:00.382485"
+    },
+    {
+      "id": "ef6aa66f-1d9c-47b1-a965-39ab81c8f352",
+      "text": "The curriculum in countries like Germany and Spain integrates required philosophy or ethics instruction by moderately extending the school year or reallocating hours from non-academic compulsory subjects, not mandating deep cuts to core humanities.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "20585b37-b16a-43d0-9782-eca28637f230",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:23:02.727981"
+    },
+    {
+      "id": "cfa65683-3d5a-4c57-a96a-364c70571851",
+      "text": "Many school systems, including those in the United States that pilot philosophy programs, gain necessary instructional hours by reducing time dedicated to administrative homeroom periods, student assemblies, or standardized testing preparation, not core academic classes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "20585b37-b16a-43d0-9782-eca28637f230",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:23:02.728041"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:21:46.163086"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:21:46.163086"
+    }
+  ],
+  "links": [
+    {
+      "source": "3a79ab3a-90e8-412a-a1ce-ea974f1bdd6b",
+      "target": "e6154335-bb45-4040-9cb7-4c848c2f3951",
+      "type": "objection"
+    },
+    {
+      "source": "a8bc6ce9-5604-4d2a-a097-b67c19040190",
+      "target": "3f93cc63-a9ac-487c-b9ea-63662ad422c7",
+      "type": "objection"
+    },
+    {
+      "source": "a8bc6ce9-5604-4d2a-a097-b67c19040190",
+      "target": "ecd8d52f-a9f5-474b-8b2d-4cd4ea4e00bb",
+      "type": "objection"
+    },
+    {
+      "source": "01a09dc1-c588-47bb-b209-53bd43365e34",
+      "target": "6d9ce552-bbb4-48fe-8a98-14e21ec957a5",
+      "type": "objection"
+    },
+    {
+      "source": "01a09dc1-c588-47bb-b209-53bd43365e34",
+      "target": "f1ce6d37-d341-43c1-aec1-f6f419787e3f",
+      "type": "objection"
+    },
+    {
+      "source": "28ab3e51-4816-4ef6-9e10-8e13af467973",
+      "target": "ac54773e-40ca-4bcd-a263-f39c5f775b5f",
+      "type": "objection"
+    },
+    {
+      "source": "28ab3e51-4816-4ef6-9e10-8e13af467973",
+      "target": "231e77fb-5fcb-4838-af16-befd458c046c",
+      "type": "objection"
+    },
+    {
+      "source": "e6154335-bb45-4040-9cb7-4c848c2f3951",
+      "target": "01f6b199-fcb7-4079-85ae-40f4f6b35461",
+      "type": "response"
+    },
+    {
+      "source": "ecd8d52f-a9f5-474b-8b2d-4cd4ea4e00bb",
+      "target": "5e7f5f93-f1e4-4799-a877-b0d4b3b871f8",
+      "type": "response"
+    },
+    {
+      "source": "ecd8d52f-a9f5-474b-8b2d-4cd4ea4e00bb",
+      "target": "bf8906db-5e7b-4df0-9cef-ce7d539b6d7c",
+      "type": "response"
+    },
+    {
+      "source": "3f93cc63-a9ac-487c-b9ea-63662ad422c7",
+      "target": "d9c684e4-1f2e-4ba1-8966-d976266e1851",
+      "type": "response"
+    },
+    {
+      "source": "3f93cc63-a9ac-487c-b9ea-63662ad422c7",
+      "target": "8173db04-e241-4f7a-8f95-cbdc703c2c1e",
+      "type": "response"
+    },
+    {
+      "source": "ac54773e-40ca-4bcd-a263-f39c5f775b5f",
+      "target": "1bb677d6-8a85-4e99-b437-6d5706603f6f",
+      "type": "response"
+    },
+    {
+      "source": "231e77fb-5fcb-4838-af16-befd458c046c",
+      "target": "feca4d3d-adb6-4627-8625-69ff10c98ae5",
+      "type": "response"
+    },
+    {
+      "source": "231e77fb-5fcb-4838-af16-befd458c046c",
+      "target": "e9736a73-68b0-4b4e-8c8d-5350ee6ad529",
+      "type": "response"
+    },
+    {
+      "source": "388afd83-cbf4-477d-9232-36d23dfc869a",
+      "target": "4f0dc0e2-c8fa-45f8-abd7-ae487da2d597",
+      "type": "objection"
+    },
+    {
+      "source": "388afd83-cbf4-477d-9232-36d23dfc869a",
+      "target": "dace381e-341d-4e8e-a14b-01c35ec1521a",
+      "type": "objection"
+    },
+    {
+      "source": "5844abc5-4c2e-4136-a9a9-97fe2e2f4351",
+      "target": "ecb5dd92-3fef-43a2-8929-bb4a3286c5f3",
+      "type": "objection"
+    },
+    {
+      "source": "5844abc5-4c2e-4136-a9a9-97fe2e2f4351",
+      "target": "66d54c00-e3e9-4641-b6ea-c02a5e1d2424",
+      "type": "objection"
+    },
+    {
+      "source": "f82f8452-8937-4be2-9074-1cde8dab0c6c",
+      "target": "03530980-95d7-4003-a380-60e7959a58c7",
+      "type": "objection"
+    },
+    {
+      "source": "f82f8452-8937-4be2-9074-1cde8dab0c6c",
+      "target": "38c9faad-1696-41fc-971f-b9dba881b753",
+      "type": "objection"
+    },
+    {
+      "source": "060e73bd-982a-460c-89e2-41393289b93a",
+      "target": "1b7a2f40-fc51-4866-b6f3-0af3ed5da7e8",
+      "type": "objection"
+    },
+    {
+      "source": "060e73bd-982a-460c-89e2-41393289b93a",
+      "target": "fb5283ad-855d-4111-bfa7-1bb090dc985d",
+      "type": "objection"
+    },
+    {
+      "source": "dace381e-341d-4e8e-a14b-01c35ec1521a",
+      "target": "6dfec741-a474-4727-ab61-ef6d492b2eca",
+      "type": "response"
+    },
+    {
+      "source": "4f0dc0e2-c8fa-45f8-abd7-ae487da2d597",
+      "target": "755d29ba-c145-48c2-aaaf-80218110d9c3",
+      "type": "response"
+    },
+    {
+      "source": "4f0dc0e2-c8fa-45f8-abd7-ae487da2d597",
+      "target": "20585b37-b16a-43d0-9782-eca28637f230",
+      "type": "response"
+    },
+    {
+      "source": "ecb5dd92-3fef-43a2-8929-bb4a3286c5f3",
+      "target": "803457f3-8ff2-4889-91ad-84732091317d",
+      "type": "response"
+    },
+    {
+      "source": "ecb5dd92-3fef-43a2-8929-bb4a3286c5f3",
+      "target": "5ee6f71d-17a0-4287-bf45-5c52bebe56c2",
+      "type": "response"
+    },
+    {
+      "source": "03530980-95d7-4003-a380-60e7959a58c7",
+      "target": "450f5071-22eb-42e2-a87c-f4bcd26e40be",
+      "type": "response"
+    },
+    {
+      "source": "fb5283ad-855d-4111-bfa7-1bb090dc985d",
+      "target": "47d944c2-8b51-46c0-a524-09b93e0c3ed8",
+      "type": "response"
+    },
+    {
+      "source": "fb5283ad-855d-4111-bfa7-1bb090dc985d",
+      "target": "d05c3b59-d31a-497e-b423-825c91796fc1",
+      "type": "response"
+    },
+    {
+      "source": "38c9faad-1696-41fc-971f-b9dba881b753",
+      "target": "e4736e01-c6fc-4301-9651-47772409d78b",
+      "type": "response"
+    },
+    {
+      "source": "38c9faad-1696-41fc-971f-b9dba881b753",
+      "target": "5b4bf01b-6ba4-4871-84ed-78b4060b9d12",
+      "type": "response"
+    },
+    {
+      "source": "1b7a2f40-fc51-4866-b6f3-0af3ed5da7e8",
+      "target": "9cc70995-dcc4-4c29-957c-710f1fe3e272",
+      "type": "response"
+    },
+    {
+      "source": "66d54c00-e3e9-4641-b6ea-c02a5e1d2424",
+      "target": "7e8b9fb8-932d-4dca-9c78-17ea60b5c133",
+      "type": "response"
+    },
+    {
+      "source": "6dfec741-a474-4727-ab61-ef6d492b2eca",
+      "target": "a412b56a-04cf-4093-9f91-8cc8555870eb",
+      "type": "response"
+    },
+    {
+      "source": "6dfec741-a474-4727-ab61-ef6d492b2eca",
+      "target": "8a627acd-8a3f-47ce-86ff-4501fdb28999",
+      "type": "response"
+    },
+    {
+      "source": "803457f3-8ff2-4889-91ad-84732091317d",
+      "target": "c5bb799f-eeac-4afc-89ac-7da026eb4b69",
+      "type": "response"
+    },
+    {
+      "source": "803457f3-8ff2-4889-91ad-84732091317d",
+      "target": "859a3fd1-eb19-459d-af81-0dfae9abdc79",
+      "type": "response"
+    },
+    {
+      "source": "7e8b9fb8-932d-4dca-9c78-17ea60b5c133",
+      "target": "7bef6149-3e23-49dd-b49e-aff92da6d689",
+      "type": "response"
+    },
+    {
+      "source": "7e8b9fb8-932d-4dca-9c78-17ea60b5c133",
+      "target": "d618198a-88f9-4bac-9796-7969f1f9b1c7",
+      "type": "response"
+    },
+    {
+      "source": "20585b37-b16a-43d0-9782-eca28637f230",
+      "target": "ef6aa66f-1d9c-47b1-a965-39ab81c8f352",
+      "type": "response"
+    },
+    {
+      "source": "20585b37-b16a-43d0-9782-eca28637f230",
+      "target": "cfa65683-3d5a-4c57-a96a-364c70571851",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "01a09dc1-c588-47bb-b209-53bd43365e34",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "28ab3e51-4816-4ef6-9e10-8e13af467973",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "3a79ab3a-90e8-412a-a1ce-ea974f1bdd6b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a8bc6ce9-5604-4d2a-a097-b67c19040190",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "388afd83-cbf4-477d-9232-36d23dfc869a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5844abc5-4c2e-4136-a9a9-97fe2e2f4351",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "060e73bd-982a-460c-89e2-41393289b93a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "f82f8452-8937-4be2-9074-1cde8dab0c6c",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

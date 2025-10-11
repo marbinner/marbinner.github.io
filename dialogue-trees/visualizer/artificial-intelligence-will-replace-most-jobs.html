@@ -1,0 +1,3480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artificial intelligence will replace most jobs - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #666;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 1px solid #a2a9b1;
+            transition: right 0.3s;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #72777d;
+        }
+
+        #sidebar h2 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+            padding-right: 30px;
+        }
+
+        #sidebar .node-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #202122;
+        }
+
+        #sidebar .node-meta {
+            font-size: 0.85em;
+            color: #72777d;
+            margin-bottom: 5px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .node.pro circle {
+            fill: #00af89;
+        }
+
+        .node.con circle {
+            fill: #dd5555;
+        }
+
+        /* Depth-based styling */
+        .node circle {
+            opacity: 1;
+        }
+
+        .node.depth-1 circle {
+            opacity: 0.9;
+        }
+
+        .node.depth-2 circle {
+            opacity: 0.8;
+        }
+
+        .node.depth-3 circle {
+            opacity: 0.7;
+        }
+
+        .node.depth-4 circle,
+        .node.depth-5 circle {
+            opacity: 0.6;
+        }
+
+        .node.highlighted circle {
+            stroke: #ffd700;
+            stroke-width: 4px;
+        }
+
+        .node.selected circle {
+            stroke: #0645ad;
+            stroke-width: 4px;
+        }
+
+        /* Adaptive font sizing based on depth */
+        .node.depth-0 text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .node.depth-1 text,
+        .node.depth-2 text {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .node.depth-3 text,
+        .node.depth-4 text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .node.depth-5 text {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #00af89;
+            border-color: #00af89;
+        }
+
+        .node-badge.con {
+            color: #dd5555;
+            border-color: #dd5555;
+        }
+
+        .node-badge.objection {
+            color: #cc6600;
+            border-color: #cc6600;
+        }
+
+        .node-badge.response {
+            color: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.3;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        /* Fisheye zoom effect on hover */
+        .node {
+            transition: transform 0.2s ease;
+        }
+
+        .node:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .node:hover circle {
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.pro {
+            stroke: #00af89;
+            stroke-opacity: 0.4;
+        }
+
+        .link.con {
+            stroke: #dd5555;
+            stroke-opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Artificial intelligence will replace most jobs</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            164 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="fitToView()">Fit to View</button>
+
+        <div id="legend">
+            <h3>Statistics</h3>
+            <div style="font-size: 0.85em; color: #72777d; margin-bottom: 10px;">
+                <div style="margin-bottom: 3px;"><strong>Nodes:</strong> 164</div>
+                <div style="margin-bottom: 3px;"><strong>Max Depth:</strong> 3</div>
+                <div style="margin-bottom: 3px;"><strong>Pro:</strong> <span style="color: #00af89;">6</span></div>
+                <div style="margin-bottom: 3px;"><strong>Con:</strong> <span style="color: #dd5555;">6</span></div>
+            </div>
+
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00af89;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dd5555;"></div>
+                <span>Con / Opposing</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "e463368c-6616-4ba2-baf3-c4f4f8ff2106",
+      "text": "The fundamental economic incentive for corporations is the maximization of profit, which guarantees a relentless drive to replace costly, wage-dependent human labor with cheaper, operationally contained AI systems that work 24/7.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:42.105260+00:00"
+    },
+    {
+      "id": "28734644-78f9-42bd-89a5-9299ede001df",
+      "text": "Contemporary AI systems, such as large language models, demonstrate capabilities that have expanded far beyond routine physical tasks into complex, non-routine cognitive domains, obsoleting high-skill jobs like legal discovery, medical diagnosis, and software development.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:42.105937+00:00"
+    },
+    {
+      "id": "b8e8ebac-fe06-40bd-af55-3dda511d14b1",
+      "text": "AI systems improve exponentially due to Moore's Law scaling of computation and continuous data feedback loops, ensuring that the performance gap between machines and linear human skill development will continuously grow, making human workers increasingly obsolete.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:42.106338+00:00"
+    },
+    {
+      "id": "e4fe7ff6-e030-4036-b9f3-2766f67877b4",
+      "text": "Unlike previous technological shifts that primarily replaced specialized physical labor, AI's breadth allows it to displace both blue-collar and high-skill white-collar work simultaneously, at a speed that outpaces the rate at which replacement, specialized human job roles can be generated.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:42.106751+00:00"
+    },
+    {
+      "id": "4fdfd79c-20fc-4d33-8272-45c7ded0b140",
+      "text": "AI systems provide perfect consistency, infinite scalability, and zero fatigue, an efficiency standard that fundamentally alters product quality expectations; competitive markets will mandate this level of performance, making natural human variation and error commercially unacceptable.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:42.107346+00:00"
+    },
+    {
+      "id": "c8bd7aa3-a6f9-49fc-a374-0142ae537892",
+      "text": "Global technological competition mandates the rapid adoption of labor-replacing AI; failure by any nation or major corporation to integrate these systems results in a massive competitive cost and efficiency disadvantage, forcing universal deployment.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:42.107769+00:00"
+    },
+    {
+      "id": "8a05e683-821b-40d0-b484-e9e8cd6ca331",
+      "text": "Implementing labor-replacing AI involves significant capital expenditure, complex integration, and high failure rates\u2014studies show many large-scale IT transformations fail to deliver anticipated value\u2014meaning the cost of adoption often negates the competitive advantage.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c8bd7aa3-a6f9-49fc-a374-0142ae537892",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:51.227722+00:00"
+    },
+    {
+      "id": "365da031-7f6c-4b40-8d58-392b1541a818",
+      "text": "Regulatory frameworks like the EU AI Act and strong labor resistance in certain nations impose specific legal and ethical constraints on deployment, preventing the \"universal\" and \"rapid\" adoption mandated solely by competitive necessity.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c8bd7aa3-a6f9-49fc-a374-0142ae537892",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:51.228411+00:00"
+    },
+    {
+      "id": "13274da0-0502-47d9-9d6a-4b08e12fe11e",
+      "text": "AI systems are not perfectly consistent; current models suffer from data drift, catastrophic forgetting, and inherent biases, requiring continuous, non-scalable human oversight and costly retraining.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4fdfd79c-20fc-4d33-8272-45c7ded0b140",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:53.542916+00:00"
+    },
+    {
+      "id": "18be4c36-94df-4f52-9001-ef4545b8db2d",
+      "text": "Competitive markets demonstrably value human factors like unique artistry, bespoke personalization, and authentic human interaction in sectors like luxury goods, fine dining, and creative arts, where mechanical \"consistency\" is often viewed as a detriment.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4fdfd79c-20fc-4d33-8272-45c7ded0b140",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:53.543354+00:00"
+    },
+    {
+      "id": "b509221c-764d-4a99-98e9-387a8a42862c",
+      "text": "The conclusion overgeneralizes by ignoring professions where inherent human attributes\u2014like ethical judgment, emotional nuance, and uncodified tacit knowledge\u2014are the non-negotiable value proposition and cannot be replaced by current AI.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4fdfd79c-20fc-4d33-8272-45c7ded0b140",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:53.543611+00:00"
+    },
+    {
+      "id": "9778288a-3680-41dd-aa17-c59e66a9f2e0",
+      "text": "AI often cannot efficiently replace human labor in high-value tasks requiring complex emotional intelligence, nuanced adaptation, or client trust (e.g., advanced therapy or high-end sales). Furthermore, consumer demand for authentic human interaction limits the profitable deployment of AI in many service sectors.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e463368c-6616-4ba2-baf3-c4f4f8ff2106",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:54.383791+00:00"
+    },
+    {
+      "id": "49e7ca09-ea2e-481f-90e9-bfa460bf13a4",
+      "text": "AI systems have significant fixed non-wage operational costs, including massive energy consumption for large models, rapid hardware obsolescence, specialized maintenance contracts, and high capital expenditure. This Total Cost of Ownership often exceeds the flexible, scalable cost of human wages.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e463368c-6616-4ba2-baf3-c4f4f8ff2106",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:54.384501+00:00"
+    },
+    {
+      "id": "55a36340-9f98-442d-b22a-db12aa2b733a",
+      "text": "Physical limitations like power density, heat dissipation, and memory bandwidth are causing Moore's Law scaling to decelerate, meaning the assumed continuous, cost-effective exponential improvement in AI computation may soon plateau.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b8e8ebac-fe06-40bd-af55-3dda511d14b1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:54.903353+00:00"
+    },
+    {
+      "id": "c675c1c6-0368-4b0c-b5b1-c81f6ed6b4a2",
+      "text": "Human skill development is non-linear; workers adapt by learning to leverage new AI tools (human-in-the-loop systems) to increase their own marginal productivity, focusing on uniquely human, non-algorithmic skills like management and complex coordination.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b8e8ebac-fe06-40bd-af55-3dda511d14b1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:54.903792+00:00"
+    },
+    {
+      "id": "ec33f716-9b31-4d41-a3db-b176995cf46f",
+      "text": "Historically, improved machine performance (e.g., manufacturing automation, computing) led primarily to job transformation and creation in new sectors requiring human oversight and judgment, rather than mass workforce elimination or complete human worker obsoletion.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b8e8ebac-fe06-40bd-af55-3dda511d14b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:03:54.904065+00:00"
+    },
+    {
+      "id": "64c0d304-2b99-4eec-97d2-520a99517718",
+      "text": "Legal discovery and medical diagnosis require non-routine human judgment for synthesizing contradictory evidence, managing liability, and adapting to novel patient conditions, none of which AI currently handles universally or ethically.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "28734644-78f9-42bd-89a5-9299ede001df",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:00.196215+00:00"
+    },
+    {
+      "id": "dd3db75c-de16-44a5-8126-7a80772eea37",
+      "text": "The U.S. Bureau of Labor Statistics projects continued job growth for software developers (14%) and data scientists (35%) through 2032, demonstrating that contemporary AI is augmenting, rather than obsoleting, high-skill cognitive professions.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "28734644-78f9-42bd-89a5-9299ede001df",
+      "children_count": 2,
+      "references": [
+        "U.S. Bureau of Labor Statistics Occupational Outlook Handbook"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:00.196668+00:00"
+    },
+    {
+      "id": "95d407ff-7bce-4fd1-9e5d-2288180a5a1a",
+      "text": "The introduction of technologies like the electric typewriter and early mainframe computing in the mid-20th century automated large-scale clerical roles in banking and insurance, resulting in significant specialized white-collar displacement.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e4fe7ff6-e030-4036-b9f3-2766f67877b4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:01.798225+00:00"
+    },
+    {
+      "id": "8b5d6548-1b26-46df-b4ff-eaff81fc328c",
+      "text": "Technological breakthroughs, such as the internet and mobile technology, historically generated entire sectors of new specialized jobs (e.g., app development, data science) that were previously unconceivable, suggesting the speed of job creation in response to AI may be highly elastic.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e4fe7ff6-e030-4036-b9f3-2766f67877b4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:01.798704+00:00"
+    },
+    {
+      "id": "a2d26996-2380-4204-9f62-c29862dd58f5",
+      "text": "The argument incorrectly generalizes failure rates from \"large-scale IT transformations,\" which often fail due to organizational or requirements drift, to targeted AI implementations that have distinct, measurable success metrics and clearer ROI in specific areas like process automation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a05e683-821b-40d0-b484-e9e8cd6ca331",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:02.235332+00:00"
+    },
+    {
+      "id": "153b002a-7a66-4ce1-a360-5645f320c682",
+      "text": "Even significant capital expenditure and integration risk do not \"negate\" the competitive advantage when that advantage is measured in orders of magnitude, such as achieving near-zero marginal labor cost and rapid market domination.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a05e683-821b-40d0-b484-e9e8cd6ca331",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:02.235782+00:00"
+    },
+    {
+      "id": "1c2abadb-a62b-4538-91e6-7253a741ab3a",
+      "text": "Major regulated industries (e.g., banking, nuclear energy) consistently prioritize compliance and safety measures over maximizing speed of deployment, demonstrating that competitive necessity mandates *sufficient* adoption, not necessarily *universal and rapid* timelines.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "365da031-7f6c-4b40-8d58-392b1541a818",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:05.458749+00:00"
+    },
+    {
+      "id": "0c36bf8a-2040-49d2-8a41-9e6b2b4f2e12",
+      "text": "Strict regulatory environments, such as GDPR in the EU, frequently lead technology companies to accelerate the development and deployment of parallel, less-compliant systems in non-EU markets (e.g., US, China), thereby achieving rapid overall global penetration.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "365da031-7f6c-4b40-8d58-392b1541a818",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:05.459187+00:00"
+    },
+    {
+      "id": "97a612fb-4ef7-437c-9c29-3ac6076ec538",
+      "text": "Advanced AI algorithms are rapidly demonstrating competency in complex coordination (e.g., optimizing supply chains, automated resource allocation) and basic managerial tasks like synthesized reporting, challenging the assumption that these areas will remain perpetually non-algorithmic and uniquely human.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c675c1c6-0368-4b0c-b5b1-c81f6ed6b4a2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:05.905331+00:00"
+    },
+    {
+      "id": "857f01c8-863b-4f4f-b6d8-12d2b6e91654",
+      "text": "Management and complex coordination roles are fundamentally scarce and organizationally limited, making it logistically and economically impossible to move the majority of displaced computational workers into these positions. This adaptation gap leads to competition for lower-wage service roles rather than universal marginal productivity gains.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c675c1c6-0368-4b0c-b5b1-c81f6ed6b4a2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:05.906150+00:00"
+    },
+    {
+      "id": "71b66383-5d88-43d2-a880-390a6788d002",
+      "text": "The high TCO for AI is amortized across immense scale; one sophisticated AI deployment can replace thousands of human-hours of labor (e.g., in automated customer service or fraud detection), making its per-unit cost of output vastly lower than aggregate human wages.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "49e7ca09-ea2e-481f-90e9-bfa460bf13a4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:07.308290+00:00"
+    },
+    {
+      "id": "3bb6b391-98dd-49e0-b9be-87d04191fc78",
+      "text": "The analysis fails to incorporate the full Total Cost of Employment (TCE) for humans, which includes significant mandatory costs like healthcare benefits, payroll taxes, mandated training, and management overhead, often increasing the true cost by 30-50% over base wages.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "49e7ca09-ea2e-481f-90e9-bfa460bf13a4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:07.309022+00:00"
+    },
+    {
+      "id": "bf0ae857-d460-43a9-9e79-d44614caff88",
+      "text": "In high-volume service sectors like retail banking and travel booking, customer usage data shows automated interfaces are chosen over human assistance in over 70% of transactions, demonstrating that efficiency and cost reduction override any inherent demand for \"authentic human interaction.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9778288a-3680-41dd-aa17-c59e66a9f2e0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:10.102697+00:00"
+    },
+    {
+      "id": "6149c1dc-b28d-4787-8834-7da9ec096e70",
+      "text": "The deployment of advanced AI in tasks such as insurance claims adjustment and junior legal discovery already replaces human labor in complex, data-intensive roles requiring nuanced adaptation and judgment, proving AI efficiency extends beyond simple automation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9778288a-3680-41dd-aa17-c59e66a9f2e0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:10.103176+00:00"
+    },
+    {
+      "id": "18d16801-37a4-4bac-8c91-ae2f6348de85",
+      "text": "The effective computation for state-of-the-art AI accelerators, such as NVIDIA's H100 GPUs and Google's TPUs, has historically doubled every 6-12 months due to massive parallelism and specialized architecture, significantly outpacing the two-year cycle of classical Moore's Law for general-purpose CPUs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "55a36340-9f98-442d-b22a-db12aa2b733a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:10.488174+00:00"
+    },
+    {
+      "id": "57ea8372-bcaa-43dc-91d4-5d13678b0582",
+      "text": "Algorithmic and architectural breakthroughs like extreme neural network sparsification and low-bit quantization (e.g., 4-bit inference) have historically provided order-of-magnitude reductions in the raw compute required for training and inference, securing exponential improvements independent of physical semiconductor scaling.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "55a36340-9f98-442d-b22a-db12aa2b733a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:10.488594+00:00"
+    },
+    {
+      "id": "0919bae6-be42-48f5-b8ce-0add26e2aa91",
+      "text": "AI systems are already deployed for complex ethical decision-making, such as automating triage in emergency medicine or dynamically optimizing liability scenarios in autonomous vehicle systems, demonstrating partial codification of \"judgment.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b509221c-764d-4a99-98e9-387a8a42862c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:11.223171+00:00"
+    },
+    {
+      "id": "93b50b79-fafc-4a7e-a814-5434d002812b",
+      "text": "Automated customer service software functionally replaces human empathy in transactional roles because the cost savings drastically outweigh the slight reduction in service quality, eliminating the need for perfect emotional or tacit equivalence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b509221c-764d-4a99-98e9-387a8a42862c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:11.223598+00:00"
+    },
+    {
+      "id": "a23fdf61-560f-4a0e-b4b9-157d2f960844",
+      "text": "MLOps platforms provide automated alerts for input distribution shifts and performance degradation, allowing human engineers to focus only on flagged issues rather than monitoring all continuous outputs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "13274da0-0502-47d9-9d6a-4b08e12fe11e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:11.849108+00:00"
+    },
+    {
+      "id": "5a0f6331-4b59-4d47-949a-941e8ba1f1aa",
+      "text": "Techniques such as Elastic Weight Consolidation (EWC) and parameter-efficient fine-tuning (PEFT/LoRA) allow large AI models to incorporate new data and resolve data drift with minimal computational cost compared to full, continuous retraining.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "13274da0-0502-47d9-9d6a-4b08e12fe11e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:11.849890+00:00"
+    },
+    {
+      "id": "22df94c5-55b8-4858-a75a-7dbc6cecb9a7",
+      "text": "Unlike the internet and mobile technology, which primarily augmented human capabilities and information flow, AI is uniquely capable of automating complex cognitive tasks (e.g., coding, legal research). This eliminates the very high-value, specialized jobs (like programming and data analysis) that past breakthroughs historically created.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8b5d6548-1b26-46df-b4ff-eaff81fc328c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:12.059711+00:00"
+    },
+    {
+      "id": "8d04c0ac-213f-42b1-827a-e967352c152f",
+      "text": "Past technological disruptions incrementally affected single sectors, allowing time for labor transition. AI is a general-purpose technology that rapidly displaces tasks across nearly all white-collar industries concurrently, meaning the rate of wide-scale job destruction will be faster than historical job creation can absorb.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8b5d6548-1b26-46df-b4ff-eaff81fc328c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:12.060183+00:00"
+    },
+    {
+      "id": "37ea33fc-6d29-4dd5-8102-540e9dd70008",
+      "text": "While specific clerical roles were automated, the lowered operational costs enabled rapid expansion in banking and insurance services during the mid-20th century, leading to a net *increase* in total white-collar employment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "95d407ff-7bce-4fd1-9e5d-2288180a5a1a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:13.192232+00:00"
+    },
+    {
+      "id": "836ed388-5f30-4e20-b3b9-010056ba1840",
+      "text": "The introduction of early mainframes created new, complex white-collar occupations, such as computer programmers, data processors, and IT maintenance staff, shifting the composition of the workforce rather than reducing its size.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "95d407ff-7bce-4fd1-9e5d-2288180a5a1a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:13.192675+00:00"
+    },
+    {
+      "id": "ee8a3464-7a65-43f3-9a12-20e7af4d9416",
+      "text": "Targeted AI initiatives frequently fail due to reliance on high-quality, structured data and inter-departmental cooperation, which are often undermined by poor data governance and business unit resistance\u2014classic forms of organizational drift.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a2d26996-2380-4204-9f62-c29862dd58f5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:14.367219+00:00"
+    },
+    {
+      "id": "7eaa15d1-c032-49d9-8f07-3bbd18a421fd",
+      "text": "Unlike standard process automation, AI implementations involve inherent model uncertainty and operational drift, meaning performance degrades over time, introducing continuous re-training costs that invalidate initial, seemingly clear ROI metrics.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a2d26996-2380-4204-9f62-c29862dd58f5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:14.367258+00:00"
+    },
+    {
+      "id": "f3253733-5881-4f9b-8f67-599bc438dce8",
+      "text": "The safety-first prioritization cited applies to industries facing catastrophic public risk (like nuclear) and is driven by government mandates, not general market dynamics. For non-regulated sectors like retail, logistics, and customer service, intense cost competition mandates the *fastest* possible adoption of AI to optimize efficiency and maintain profitability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1c2abadb-a62b-4538-91e6-7253a741ab3a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:15.826316+00:00"
+    },
+    {
+      "id": "7603798a-1e86-4b99-ad47-2b761cbbeb45",
+      "text": "The high projected job growth only reflects massive and concurrent industry digitalization and demand for new AI system implementation, not solely augmentation. Displacement of specific tasks and entry-level roles can still be occurring, masked by overwhelming net demand in the short term.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dd3db75c-de16-44a5-8126-7a80772eea37",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:16.121730+00:00"
+    },
+    {
+      "id": "f16fdde0-eb5e-4d7e-bec1-28350b38ac70",
+      "text": "BLS projections are based on linear extrapolations of current trends and fail to account for the non-linear, exponential scaling of generative AI capabilities (e.g., AGI advancements). A 10-year forecast ignores the possibility of structural obsolescence and paradigm shifts occurring beyond 2032.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dd3db75c-de16-44a5-8126-7a80772eea37",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:16.122172+00:00"
+    },
+    {
+      "id": "05f4db5f-8929-4fa2-aea1-5915542fc512",
+      "text": "AI systems in medical research, such as AlphaFold, demonstrate superior ability to synthesize vast and contradictory structural data to predict protein models. Liability assignment is a distinct regulatory function unrelated to the technical capacity for evidence synthesis.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "64c0d304-2b99-4eec-97d2-520a99517718",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:16.793357+00:00"
+    },
+    {
+      "id": "a204e808-0e2b-4380-a218-069d0a557166",
+      "text": "AI-assisted e-discovery tools consistently recall over 90% of relevant documents in complex legal cases, and diagnostic AI models already outperform human physicians in routine tasks like analyzing mammograms. Partial, functional solutions are standard practice in both professions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "64c0d304-2b99-4eec-97d2-520a99517718",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:16.794012+00:00"
+    },
+    {
+      "id": "ac66d626-4334-442f-a3a3-ed33bb4b1cf8",
+      "text": "Managerial roles require human judgment for resolving ethical dilemmas, navigating novel market disruptions (e.g., the 2008 financial crisis), and motivating diverse human teams, none of which are addressed by AI's capacity for optimization or synthesized reporting.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "97a612fb-4ef7-437c-9c29-3ac6076ec538",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:18.410433+00:00"
+    },
+    {
+      "id": "8e490d7e-ddab-4792-91fa-f227a8f5f6fc",
+      "text": "The $300 million capital expenditure by Google on Project Aura (Google Glass) resulted in market withdrawal and corporate restructuring within two years, demonstrating how significant investment risk can negate potential competitive advantage entirely.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "153b002a-7a66-4ce1-a360-5645f320c682",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:18.892108+00:00"
+    },
+    {
+      "id": "267b96cb-d656-464d-bcd4-49f01108a996",
+      "text": "Only after dominant companies achieve market domination and near-zero marginal cost is the initial high risk viewed as justified; for the 90% of heavily-funded technology startups that fail, the capital expenditure proves non-justifying.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "153b002a-7a66-4ce1-a360-5645f320c682",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:18.892151+00:00"
+    },
+    {
+      "id": "e11d9065-81a2-4c3f-86d2-abd6bf734d78",
+      "text": "Many small-to-medium enterprises (SMEs) implementing AI solutions cannot achieve the immense operational scale of large tech companies; therefore, the fixed costs of specialized model training and infrastructure maintenance often exceed the cost of the few employees replaced.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "71b66383-5d88-43d2-a880-390a6788d002",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:19.464690+00:00"
+    },
+    {
+      "id": "d750d604-5c92-43f6-985d-26025d585987",
+      "text": "AI systems in high-stakes fields require continuous human oversight for monitoring 'drift,' correcting hallucinations, and validating outputs, as seen in financial compliance or autonomous driving systems, which adds substantial, non-scalable operational expenditure (OpEx) that is often ignored.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "71b66383-5d88-43d2-a880-390a6788d002",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:19.464735+00:00"
+    },
+    {
+      "id": "9c137dfa-e225-4d6d-a321-e42894f52bd4",
+      "text": "AI systems incur a steep Total Cost of Ownership (TCO) including mandatory specialized hardware (GPUs), continuous data curation and labeling, rigorous regulatory compliance audits, and frequent model retraining, which are often comparable to the 30-50% labor overhead.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3bb6b391-98dd-49e0-b9be-87d04191fc78",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:20.469719+00:00"
+    },
+    {
+      "id": "4351b9b9-cec4-4d90-b27e-5e7aff598ca2",
+      "text": "Algorithmic breakthroughs like quantization and sparsification face hard mathematical limits, such as 1-bit precision or minimal functional weight sets. These finite constraints prevent these specific architectural changes from being sources of sustained, continuous exponential compute efficiency improvement.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "57ea8372-bcaa-43dc-91d4-5d13678b0582",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:20.865881+00:00"
+    },
+    {
+      "id": "345f9608-3360-4a2b-a7c1-550a5afa3862",
+      "text": "MLOps automated alerts require continuous maintenance, tuning, and monitoring for false negatives (silent failures), meaning engineers must dedicate significant time to validating the health of the alerting system itself, contradicting the claim they focus *only* on flagged issues.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a23fdf61-560f-4a0e-b4b9-157d2f960844",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:21.113791+00:00"
+    },
+    {
+      "id": "52abee2d-8cdc-40e1-98c3-110898ebb664",
+      "text": "The 70% figure applies only to low-consequence, repetitive tasks; high-stakes interactions, such as serious medical diagnoses, complex legal defense, or personalized therapeutic care, show no comparable shift and maintain an overwhelming demand for human expertise.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bf0ae857-d460-43a9-9e79-d44614caff88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:21.300919+00:00"
+    },
+    {
+      "id": "b4b32560-34dc-4618-9ac1-d840d465f540",
+      "text": "The customer choice of automation often reflects the demand for speed and 24/7 self-service convenience rather than a true rejection of human interaction. When automated systems fail or non-standard issues arise, customers rapidly escalate the demand for costly human intervention, indicating latent preference.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bf0ae857-d460-43a9-9e79-d44614caff88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:21.300964+00:00"
+    },
+    {
+      "id": "cae46ec2-407b-414e-a42b-3f4188ef3266",
+      "text": "The systems cited (triage algorithms, liability optimization) execute pre-programmed utilitarian rules or legal frameworks defined by humans, demonstrating mathematical optimization of human values, not independent ethical reasoning or complex judgment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0919bae6-be42-48f5-b8ce-0add26e2aa91",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:22.489960+00:00"
+    },
+    {
+      "id": "79c4822d-b67d-4a42-aa54-462b1d7d0b8a",
+      "text": "Core professional judgment relies on non-codifiable tacit knowledge, empathy, and accountability to stakeholders, which are crucial for navigating unforeseen moral dilemmas and cannot be reduced to algorithmic rule execution.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0919bae6-be42-48f5-b8ce-0add26e2aa91",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:22.490001+00:00"
+    },
+    {
+      "id": "af02083e-3969-4b40-a541-531e76ec2747",
+      "text": "AI systems used in insurance adjustment and junior legal discovery perform sophisticated statistical pattern matching\u2014identifying relevant documents or fraudulent claims\u2014which is a mechanism of high-level automation, not proof of replacing human strategic judgment or nuanced adaptation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6149c1dc-b28d-4787-8834-7da9ec096e70",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.219156+00:00"
+    },
+    {
+      "id": "ebd0e267-1c7b-4646-9e4a-09098ba272ce",
+      "text": "These AI deployments automate high-volume sub-tasks (e.g., initial evidence review) but still require human oversight and a final decision-maker to handle ambiguous cases and apply the non-codifiable, nuanced judgment necessary for liability assessment and negotiation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6149c1dc-b28d-4787-8834-7da9ec096e70",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.219212+00:00"
+    },
+    {
+      "id": "217ab630-66b4-4871-a618-8f59711f06d4",
+      "text": "The historical introduction of standardized computing eliminated many programming and data entry roles in the 1990s, yet generated vast new non-managerial technical domains such as network architecture, cloud maintenance, and specialized cybersecurity roles. These high-skill, technical fields absorb displaced computational workers, rather than forcing them into low-wage services.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "857f01c8-863b-4f4f-b6d8-12d2b6e91654",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.276681+00:00"
+    },
+    {
+      "id": "6c83a95b-6bda-4784-a70e-3b0d729a24d2",
+      "text": "The rise of early mainframe computing in the 1960s and 70s led to massive displacement of clerical and administrative staff, particularly in banking and insurance, resulting in net job losses that reduced the workforce size in these sectors, despite the creation of new IT roles.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "836ed388-5f30-4e20-b3b9-010056ba1840",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.679900+00:00"
+    },
+    {
+      "id": "5f00ccf0-c00a-4dcb-8ccd-f57a74293d29",
+      "text": "Previous technologies, such as enterprise resource planning (ERP) systems and desktop publishing software, also automated complex, high-value tasks like inventory management and typesetting, leading to the elimination of many skilled clerical and production roles.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "22df94c5-55b8-4858-a75a-7dbc6cecb9a7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.680396+00:00"
+    },
+    {
+      "id": "958678eb-94c1-4a0a-a42c-1a1aa9f0b673",
+      "text": "Historically, the automation of specialized cognitive tasks often shifts human labor to higher-level roles focused on oversight, integration, and synthesis, such as the transition from manual draftsmanship to CAD architects. Demand for higher-level problem-solving roles (data scientists, specialized programmers) is more likely to be transformed than eliminated.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "22df94c5-55b8-4858-a75a-7dbc6cecb9a7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.680413+00:00"
+    },
+    {
+      "id": "a026b62f-e382-4abd-a519-9cad0bf19c35",
+      "text": "The reported 6-12 month doubling rate aggregates sustainable hardware gains with non-sustainable software and algorithmic efficiencies (e.g., model sparsity, network architecture), misleadingly suggesting continuous, accelerating hardware growth. Raw transistor density scaling, the foundation of classical Moore's Law, has observably slowed to a pace closer to a 3-year doubling cycle since the 7nm node.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "18d16801-37a4-4bac-8c91-ae2f6348de85",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.691251+00:00"
+    },
+    {
+      "id": "e3d0fd35-3302-45bc-965c-3be3c729e626",
+      "text": "The comparison between specialized AI accelerators and general-purpose CPUs is flawed because the massive speedup only applies to highly parallelizable linear algebra tasks like model training. This metric ignores the sequential, non-parallelized computational bottlenecks that characterize many general industrial and administrative processes AI must solve to replace most jobs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "18d16801-37a4-4bac-8c91-ae2f6348de85",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.691282+00:00"
+    },
+    {
+      "id": "402fd8a3-7ee2-43e2-93cb-7534213412c2",
+      "text": "Customer churn rates often spike immediately following the replacement of human service agents with automation, demonstrating that the cost of lost loyalty drastically outweighs the perceived short-term savings, especially for complex or high-value transactions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "93b50b79-fafc-4a7e-a814-5434d002812b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.793922+00:00"
+    },
+    {
+      "id": "fc4eb54e-6a94-4506-8fe6-763f6d7f174f",
+      "text": "The inability of current automated systems to perform effective emotional de-escalation during service failures (e.g., airline cancellations, large financial errors) necessitates immediate high-cost human intervention for exceptions, proving a crucial transactional function remains unreplaced.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "93b50b79-fafc-4a7e-a814-5434d002812b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:23.793949+00:00"
+    },
+    {
+      "id": "570d7ba5-76a6-4537-9b79-030dc3f635ff",
+      "text": "Minimal computational cost often implies lower overall adaptation efficacy; fine-tuning techniques primarily mitigate catastrophic forgetting of old knowledge rather than achieving the full performance gain and robustness on new data that full retraining provides.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a0f6331-4b59-4d47-949a-941e8ba1f1aa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:24.602436+00:00"
+    },
+    {
+      "id": "13ffb1a2-eb82-4148-be6d-059314ec46f1",
+      "text": "EWC is a technique specifically for mitigating catastrophic forgetting between sequential tasks, while PEFT (LoRA) is strictly a computational efficiency method; conflating these distinct mechanisms ignores that effective continual learning requires solutions addressing both parameter efficiency and memory retention.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a0f6331-4b59-4d47-949a-941e8ba1f1aa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:24.602467+00:00"
+    },
+    {
+      "id": "5be10c4d-7a38-4cfe-a248-f65ebe531736",
+      "text": "Financial white-collar job growth during the 1950s and 60s was primarily fueled by the post-WWII economic expansion, including mass suburban home ownership and consumer credit demand, making external market growth, not internal cost savings, the main driver of expansion.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "37ea33fc-6d29-4dd5-8102-540e9dd70008",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:26.902916+00:00"
+    },
+    {
+      "id": "f0ae8932-08f1-4ae7-8e32-7d434c59448e",
+      "text": "Unlike previous mechanical automation, specialized AI systems (like Large Language Models applied to legal e-discovery or medical pre-authorization) eliminate entire middle layers of skilled cognitive work, meaning efficiency gains do not currently trigger proportional demand growth.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "37ea33fc-6d29-4dd5-8102-540e9dd70008",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:26.902943+00:00"
+    },
+    {
+      "id": "e8fd4bab-5476-41b7-90f6-ab0405e176e4",
+      "text": "The superior technical complexity of AI, known as the \"black box\" problem, makes definitive liability assignment fundamentally dependent on tracing the system's technical failure (e.g., a misdiagnosis) back to a human actor or data flaw. This contradicts the assertion that technical capacity is unrelated to achieving the regulatory function of liability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "05f4db5f-8929-4fa2-aea1-5915542fc512",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:27.878860+00:00"
+    },
+    {
+      "id": "ccbdd05f-a501-41ae-93c3-ca3e92f2ccd8",
+      "text": "The 90% recall rate for e-discovery tools typically comes from controlled benchmark studies with defined document sets, failing to account for the diminished performance and increased false positives common in real-world complex litigation involving highly unstructured, ambiguous, and specialized data.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a204e808-0e2b-4380-a218-069d0a557166",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:28.596600+00:00"
+    },
+    {
+      "id": "5e1995f0-8800-4828-b573-1d9051db4cd7",
+      "text": "Narrow AI excelling at algorithmic tasks like image analysis or document correlation does not constitute job replacement, as professional roles fundamentally require holistic synthesis, ethical judgment, and complex communication, functions where current AI remains non-functional.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a204e808-0e2b-4380-a218-069d0a557166",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:28.596628+00:00"
+    },
+    {
+      "id": "aec068fd-e706-46ae-8a10-13fb30e817af",
+      "text": "General Purpose Technologies like electricity and the automobile rapidly and concurrently displaced labor across agriculture, manufacturing, and local transportation between 1890 and 1930. This historical shift of 40% of the U.S. workforce from agriculture proves previous disruptions were not incremental or limited to single sectors.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8d04c0ac-213f-42b1-827a-e967352c152f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:31.365450+00:00"
+    },
+    {
+      "id": "d8a349be-3c24-4261-b0ab-508b26886213",
+      "text": "AI's core function is to dramatically lower the cost and time required for both product development and market analysis, which accelerates the creation of new businesses and novel consumer demands. This simultaneous acceleration in the creation of entirely new service lines and industries fundamentally alters and potentially increases the historical rate of labor absorption.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8d04c0ac-213f-42b1-827a-e967352c152f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:31.365476+00:00"
+    },
+    {
+      "id": "a835e725-68e0-4855-8b8b-7a470fe51df2",
+      "text": "BLS employment projections are derived from input-output economic models and structural regression analysis that integrate demographic shifts and distinct productivity assumptions for over 250 sectors. This operational complexity contradicts the description of national forecasts as based on mere linear extrapolations of current trends.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f16fdde0-eb5e-4d7e-bec1-28350b38ac70",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:32.445767+00:00"
+    },
+    {
+      "id": "ee71a8ca-9b84-48cf-81af-a2bd79745149",
+      "text": "Major technological leaps, such as the deployment of automated teller machines (ATMs) starting in the 1970s, increased bank teller employment until the early 2000s by enabling branch expansion. This history demonstrates that technological introduction often shifts job roles rather than immediately causing structural obsolescence.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f16fdde0-eb5e-4d7e-bec1-28350b38ac70",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:32.445810+00:00"
+    },
+    {
+      "id": "61d371f6-6287-47aa-92e5-f20db208d1ed",
+      "text": "Major technology platforms like Google and Microsoft often implement strict standards like GDPR globally, adopting the highest regulatory bar worldwide to minimize operational complexity and long-term legal risk, contradicting the necessity of parallel, less-compliant systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0c36bf8a-2040-49d2-8a41-9e6b2b4f2e12",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:38.194764+00:00"
+    },
+    {
+      "id": "52f1b3cb-3f81-4461-bf72-934beea35fa7",
+      "text": "Managing two separate, parallel regulatory regimes (e.g., GDPR-compliant versus non-compliant codebases) significantly increases engineering overhead and technical debt, functionally slowing the rate of development and deployment across all markets.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0c36bf8a-2040-49d2-8a41-9e6b2b4f2e12",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:38.194795+00:00"
+    },
+    {
+      "id": "a9f6c5ef-8306-4f6d-9b70-02e2283e1cb3",
+      "text": "McKinsey Global Institute data shows 54% of AI's economic value comes from performance uplift and augmentation of existing roles, proving that increased worker productivity is a major, concurrent driver of job growth, not just demand for new system implementation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7603798a-1e86-4b99-ad47-2b761cbbeb45",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.679884+00:00"
+    },
+    {
+      "id": "cd65cc2e-a7ff-4f07-993d-49c5a51e8a68",
+      "text": "Foundational technological shifts, such as the commercialization of the internet in the 1990s, led to two decades of sustained creation of entirely new service and infrastructure sectors, indicating current high net demand reflects a long-term restructuring, not a short-term spike.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7603798a-1e86-4b99-ad47-2b761cbbeb45",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.679928+00:00"
+    },
+    {
+      "id": "c7cf552e-7c26-4c73-9d5a-88748a24795f",
+      "text": "Historical precedent, observed across the Industrial Revolution and the rise of computing, shows technological advancement consistently leads to job transformation and the creation of entirely new economic sectors, not mass, permanent unemployment.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.680118+00:00"
+    },
+    {
+      "id": "34fa9422-3ce7-45b5-aa05-daa5c96be7e9",
+      "text": "Artificial intelligence functions primarily as a tool for augmentation, increasing human productivity and capability, thereby leading to the formation of hybrid roles focused on managing AI systems, interpreting their output, and specializing complex decisions.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.680803+00:00"
+    },
+    {
+      "id": "a76d5dde-ebf1-4b03-b16f-5c98d865e190",
+      "text": "AI-driven robotics severely struggles with complex, unstructured physical tasks and high-variability dexterity, empirically limiting its ability to replace human labor in essential manual sectors such as construction, facility maintenance, and personalized elder care services.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.681309+00:00"
+    },
+    {
+      "id": "6ce4e404-e229-4746-a8cc-cba85fa5c52f",
+      "text": "Widespread job replacement is constrained by regulatory requirements and the need for human accountability in high-stakes, safety-critical sectors (e.g., medicine, law, aviation), where current AI cannot legally or ethically bear liability for failure.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.681739+00:00"
+    },
+    {
+      "id": "635ca079-1a61-4e86-ad4c-d0e90e335729",
+      "text": "Many essential high-value roles necessitate non-algorithmic human judgment, ethical reasoning, deep political or social context negotiation, and empathy, functions currently outside the capacity of AI lacking true consciousness or emotional intelligence.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.682199+00:00"
+    },
+    {
+      "id": "b711d366-377c-42d5-95f3-dd8276282720",
+      "text": "Automation creates entirely new, complex job categories within emerging industries, such as AI development, prompt engineering, specialized system maintenance, and ethical oversight, thereby offsetting job losses incurred in traditional, routine sectors.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:40.682615+00:00"
+    },
+    {
+      "id": "52811bee-9180-4e4e-8d9e-be8e1b878abb",
+      "text": "The generalization fails because the vast majority of jobs (e.g., low-stakes clerical work, customer service, and data processing) are not safety-critical and can be widely replaced by AI without requiring human legal liability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6ce4e404-e229-4746-a8cc-cba85fa5c52f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.196480+00:00"
+    },
+    {
+      "id": "bbdf6bf2-243c-4592-9012-805becea3c07",
+      "text": "The argument relies on a static view of law, but regulatory bodies (like the EU with its AI Act) are actively proposing legal frameworks to assign liability to AI developers or deployers, not the human user, thus eroding the necessity of human accountability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6ce4e404-e229-4746-a8cc-cba85fa5c52f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.197142+00:00"
+    },
+    {
+      "id": "35f0f9b5-eda7-48b2-a16c-6099773e5cd7",
+      "text": "The argument incorrectly assumes a static technological state; rapid, recent advances in reinforcement learning and general-purpose robotic models (e.g., PaLM-E, RT-2) suggest the current severe struggles with unstructured tasks may be resolved within the next decade, undermining the long-term limitation claim.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a76d5dde-ebf1-4b03-b16f-5c98d865e190",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.220576+00:00"
+    },
+    {
+      "id": "279824e3-9160-4d1c-82b5-12e143652407",
+      "text": "Economic displacement does not require full human replacement; automating repetitive, high-volume subtasks within complex jobs (e.g., basic lifting in construction, monitoring in elder care) drastically reduces the total demand for human labor, even if the most complex dexterity tasks remain manual.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a76d5dde-ebf1-4b03-b16f-5c98d865e190",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.220977+00:00"
+    },
+    {
+      "id": "6dd7b1e3-83c5-46fb-a0ea-696e5dc7a10b",
+      "text": "AI replaces cognitive functions (e.g., code generation and specialized diagnostics) previously thought uniquely human, unlike historical mechanization which primarily replaced physical labor during past waves. This qualitative difference suggests AI may dislocate highly educated, white-collar sectors that previously adapted successfully.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c7cf552e-7c26-4c73-9d5a-88748a24795f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.376367+00:00"
+    },
+    {
+      "id": "109f6d48-5873-47a2-9b39-30fc768b8291",
+      "text": "The historical precedent overlooks the severe localized and prolonged economic hardship caused by transitions; for instance, the decline of US manufacturing from the 1970s onward resulted in decades of significant regional mass unemployment, even if national employment recovered.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c7cf552e-7c26-4c73-9d5a-88748a24795f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.376691+00:00"
+    },
+    {
+      "id": "be2c59c1-ff2d-4c38-b048-b4e32610c54b",
+      "text": "AI systems already facilitate the complete automation of routine cognitive tasks (e.g., data entry, basic legal discovery, customer service), resulting in outright job displacement rather than augmentation into hybrid roles.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "34fa9422-3ce7-45b5-aa05-daa5c96be7e9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.380265+00:00"
+    },
+    {
+      "id": "8b3003cb-8ad0-4970-8400-f64cc9697714",
+      "text": "Since automation primarily targets routine labor, the new \"hybrid roles\" requiring specialized AI management skills represent a small fraction of the displaced workforce, leading to structural unemployment rather than universal augmentation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "34fa9422-3ce7-45b5-aa05-daa5c96be7e9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:54.380582+00:00"
+    },
+    {
+      "id": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "text": "Highly automated sectors like manufacturing and retail logistics shed millions of routine jobs annually, while complex new fields like AI ethics and prompt engineering generate only a few thousand specialized roles internationally, resulting in net employment decline rather than an offset.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b711d366-377c-42d5-95f3-dd8276282720",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:58.804309+00:00"
+    },
+    {
+      "id": "058de928-b27a-4308-8672-2f7634cd046e",
+      "text": "The new roles created\u2014requiring specialized degrees in computer science, systems engineering, or deep ethical training\u2014are fundamentally inaccessible to the majority of workers displaced from low-skill, routine tasks, preventing effective cross-sector employment transitions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b711d366-377c-42d5-95f3-dd8276282720",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:58.804736+00:00"
+    },
+    {
+      "id": "97bc96e5-7241-4c2a-b263-40309a61d8f0",
+      "text": "Large Language Models consistently demonstrate high proficiency in simulating ethical judgment for complex legal and medical scenarios and can pass professional ethics examinations, showing that functional reasoning does not require sentience.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "635ca079-1a61-4e86-ad4c-d0e90e335729",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:59.521311+00:00"
+    },
+    {
+      "id": "ae9e294c-9868-42ea-828a-1ab59badb923",
+      "text": "AI systems like AlphaFold solved the complex protein folding problem, previously requiring deep scientific intuition, and deep learning algorithms now consistently outperform humans in diagnosing certain medical images and identifying financial fraud, suggesting current limitations are algorithmic rather than fundamental.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "635ca079-1a61-4e86-ad4c-d0e90e335729",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:04:59.521984+00:00"
+    },
+    {
+      "id": "5bb400c2-4cdf-445a-96bb-4b2c6471435f",
+      "text": "Progress in tasks like general robotics relies on successful transfer learning across vast domain shifts, a challenge where increasing model size alone has consistently shown diminishing returns, contradicting the assumption of rapid \"resolution\" within a short timeframe.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "35f0f9b5-eda7-48b2-a16c-6099773e5cd7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:04.538611+00:00"
+    },
+    {
+      "id": "37d68127-46b7-476f-ae1f-fc2b0cd4c268",
+      "text": "The cited systems (e.g., RT-2) perform limited tasks in constrained laboratory settings; solving truly unstructured, novel tasks requires general planning and error recovery capabilities that remain fundamentally unsolved by current architectures, undermining the decade-long certainty.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "35f0f9b5-eda7-48b2-a16c-6099773e5cd7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:04.539327+00:00"
+    },
+    {
+      "id": "c851df57-d580-48eb-bba9-e1650ea8b443",
+      "text": "Efficiency gains from automation often lower operational costs, increasing market demand and scaling production volumes, which can create new jobs in maintenance, management, and downstream service sectors that counteract the reduction in routine labor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "279824e3-9160-4d1c-82b5-12e143652407",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:05.897668+00:00"
+    },
+    {
+      "id": "e2ee7998-c717-4bdd-83ab-012eda1f3735",
+      "text": "Automating repetitive subtasks tends to increase the economic value and demand for uniquely human complementary labor\u2014such as complex judgment, personalized service, and system troubleshooting\u2014thereby shifting the labor mix rather than drastically reducing total human hours.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "279824e3-9160-4d1c-82b5-12e143652407",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:05.898086+00:00"
+    },
+    {
+      "id": "94c4930d-fbf7-4b7c-ac71-acd5d044ea1f",
+      "text": "Studies show AI adoption frequently leads to partial task displacement (automation of routine work) and simultaneous augmentation (requiring new skills for supervision and complex problem-solving) within the same job description, invalidating the strict binary choice of displacement \\u201crather than\\u201d augmentation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "be2c59c1-ff2d-4c38-b048-b4e32610c54b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:07.406404+00:00"
+    },
+    {
+      "id": "9a0653b1-214f-421e-9283-7f300442ad6a",
+      "text": "The introduction of AI tools in specialized fields like radiology and legal review often creates new hybrid roles\\u2014such as AI verification specialists and legal prompt engineers\\u2014where human judgment is augmented to increase efficiency, contradicting the assertion of outright job displacement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "be2c59c1-ff2d-4c38-b048-b4e32610c54b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:07.407255+00:00"
+    },
+    {
+      "id": "96827d04-f7f0-45a8-8d89-46263e2c0179",
+      "text": "AI systems performing low-stakes clerical tasks, such as automating bank transfers or calculating financial liabilities, can commit errors causing substantial financial loss, necessitating a legally responsible entity for damages and restitution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "52811bee-9180-4e4e-8d9e-be8e1b878abb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:08.036441+00:00"
+    },
+    {
+      "id": "913f7fc4-349e-4549-9280-dd9a358c9450",
+      "text": "Data privacy regulations like GDPR mandate penalties up to 4% of global revenue for consumer data breaches, meaning AI systems handling customer service or data processing still require a designated legal entity responsible for regulatory adherence and fines.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "52811bee-9180-4e4e-8d9e-be8e1b878abb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:08.037081+00:00"
+    },
+    {
+      "id": "1d9809d1-3b47-4b74-b5ee-8dc389944e5b",
+      "text": "Over 60% of new US jobs created in the last 25 years are in fields that barely existed in 1995 (e.g., app development, data analysis), demonstrating that technological displacement typically creates entirely new, large sectors, not just specialized niche roles.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8b3003cb-8ad0-4970-8400-f64cc9697714",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:08.280818+00:00"
+    },
+    {
+      "id": "d02ee691-3670-4d8a-8775-8873f37dc485",
+      "text": "Generative AI tools are now implemented across routine service and knowledge jobs, such as customer support and paralegal work, enhancing core worker productivity and creating augmented roles rather than requiring a dedicated specialized AI manager.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8b3003cb-8ad0-4970-8400-f64cc9697714",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:08.281460+00:00"
+    },
+    {
+      "id": "845710e0-ad0b-41f6-8590-6c404e1035cf",
+      "text": "AI success in pattern recognition (AlphaFold, image diagnostics) relies on massive, labeled datasets in constrained fields, which does not address fundamental limitations in abstract reasoning, embodied cognition, or integrating common sense knowledge necessary for AGI.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ae9e294c-9868-42ea-828a-1ab59badb923",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:09.659742+00:00"
+    },
+    {
+      "id": "5b5452b8-73c2-4315-be99-f1defc673065",
+      "text": "Current state-of-the-art models are brittle and inherently fail Out-of-Distribution (OOD) tasks because their reliance on statistical correlation lacks the causal understanding required to generalize to novel, unrepresented data reliably.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ae9e294c-9868-42ea-828a-1ab59badb923",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:09.660265+00:00"
+    },
+    {
+      "id": "93cb14cd-62f6-406e-bbd6-7946c8e64173",
+      "text": "Punched card systems and calculating machines introduced in the late 19th century replaced thousands of white-collar \"human computers\" and clerks performing calculation and record-keeping, showing historical mechanization often targeted non-physical cognitive labor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6dd7b1e3-83c5-46fb-a0ea-696e5dc7a10b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:12.013669+00:00"
+    },
+    {
+      "id": "be012dba-40c1-4ec7-816c-0fb371de663a",
+      "text": "Studies of AI implementation in fields like medicine and law show that while core analysis is automated, demand increases for specialized human roles focused on managing, customizing, and ethically applying the AI's output, allowing for successful labor adaptation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6dd7b1e3-83c5-46fb-a0ea-696e5dc7a10b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:12.014083+00:00"
+    },
+    {
+      "id": "716e6c42-b8c8-43ce-a09a-3d77b8cd4231",
+      "text": "The cost of maximum penalties (e.g., 4% of revenue) can be modeled as a permissible operating expense if the efficiency gains from the fully autonomous system yield a competitive advantage that outweighs the probable fine amount, thereby failing to mandate genuine human regulatory adherence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "913f7fc4-349e-4549-9280-dd9a358c9450",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:17.698918+00:00"
+    },
+    {
+      "id": "e7496de6-900b-48c1-85a7-48af3df2211f",
+      "text": "Progress in AI is often driven by architectural breakthroughs\u2014like the introduction and scaling of the Transformer architecture since 2017\u2014which lead to massive functional leaps unrelated to mere linear model scaling, undermining the focus on diminishing returns.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5bb400c2-4cdf-445a-96bb-4b2c6471435f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:18.390307+00:00"
+    },
+    {
+      "id": "7ac20787-6089-468e-a388-3a4d1c49ea7a",
+      "text": "The argument sets an impossibly high and undefined bar (\"general robotics\" and \"vast domain shifts\"), ignoring that rapid job replacement is occurring through narrow AI systems automating specific tasks (e.g., LLMs automating drafting and back-office functions) within a short timeframe.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5bb400c2-4cdf-445a-96bb-4b2c6471435f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:18.390334+00:00"
+    },
+    {
+      "id": "752d9125-a35e-4f58-9ec1-d2d8c4bb9e7a",
+      "text": "The growth of the data economy creates massive demand for middle-skill positions like data annotation, quality assurance testing, and technical support, which require technical certification and leverage transferable skills, not deep ethical or computer science degrees.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "058de928-b27a-4308-8672-2f7634cd046e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:25.552673+00:00"
+    },
+    {
+      "id": "7bda83a5-76d9-4111-825d-085d07177caf",
+      "text": "Accelerated retraining models, such as Singapore's SkillsFuture and EU initiatives, prove that customized certification pathways can successfully transition displaced workers from low-skill roles into technical support and advanced manufacturing positions within six to twelve months.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "058de928-b27a-4308-8672-2f7634cd046e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:25.553398+00:00"
+    },
+    {
+      "id": "0c3713c8-0b39-457b-9556-ee36424e33f6",
+      "text": "The economic incentive structure pushes companies toward continually improving AI until full job displacement is possible, not stable long-term partial augmentation, because eliminating human labor entirely maximizes cost efficiency.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "94c4930d-fbf7-4b7c-ac71-acd5d044ea1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:28.278060+00:00"
+    },
+    {
+      "id": "1416d2c9-4528-4b38-a450-a1e689ba4372",
+      "text": "The limitation is not architectural but practical; the scaling of large transformer models (e.g., GPT-4) has already resulted in emergent capabilities for complex planning and zero-shot generalization (Chain-of-Thought reasoning), suggesting that generalized problem-solving is attainable through current scaling methodology.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "37d68127-46b7-476f-ae1f-fc2b0cd4c268",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:30.070099+00:00"
+    },
+    {
+      "id": "f19cd821-b12a-4f0d-b9f8-d927df059804",
+      "text": "The argument severely restricts the scope of new job creation by focusing only on specialized roles like AI ethics; it ignores the hundreds of thousands of necessary adjacent jobs in data labeling, cybersecurity, infrastructure maintenance, and MRO technicians.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:32.154801+00:00"
+    },
+    {
+      "id": "cbc63942-2475-4553-901f-7c99ae74c1b7",
+      "text": "Automation significantly expands technical employment in fields necessary to build and manage the systems themselves, such as software development, industrial automation controls, and cloud infrastructure engineering, far surpassing \"a few thousand specialized roles.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:32.155240+00:00"
+    },
+    {
+      "id": "3127b632-522e-48e2-924d-aab6933a9951",
+      "text": "Historical data shows productivity gains from automation lower consumer costs, which effectively frees up capital that generates massive job growth in non-automated, high-touch service sectors like healthcare, entertainment, and specialized education.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:32.155504+00:00"
+    },
+    {
+      "id": "2deeed83-5494-439c-a8ae-e3fd04b2c7ae",
+      "text": "Efficiency improvements often lead to a high imbalance where one newly created \"AI verification specialist\" replaces the output of five or more specialized workers, resulting in significant net employment loss across a specialized field.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9a0653b1-214f-421e-9283-7f300442ad6a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:32.726950+00:00"
+    },
+    {
+      "id": "d1d9fde0-1a7a-467f-a9cf-f0558d9e13ab",
+      "text": "The cited augmentation, which increases efficiency, is the direct mechanism of job displacement because it rapidly lowers the total labor hours required to maintain the same volume of work, forcing layoffs even as output increases.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9a0653b1-214f-421e-9283-7f300442ad6a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:32.726984+00:00"
+    },
+    {
+      "id": "b14feced-385d-4773-afd1-15ff4f4ae583",
+      "text": "Human workers performing these tasks introduce non-systemic errors that are often harder to detect and audit than algorithmic flaws; thus, the drive for job replacement is often predicated on the massive reduction in overall financial loss achieved by highly consistent automation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "96827d04-f7f0-45a8-8d89-46263e2c0179",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:34.473972+00:00"
+    },
+    {
+      "id": "699453a8-a4aa-49c2-b421-200224919e26",
+      "text": "LLMs succeed by statistical association and retrieving pre-existing ethical resolutions from training data, which constitutes sophisticated mimicry rather than genuine application of principles necessary for reasoning through truly novel ethical dilemmas where existing precedent is absent.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "97bc96e5-7241-4c2a-b263-40309a61d8f0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:34.775490+00:00"
+    },
+    {
+      "id": "2a403a2c-1bd1-4d2f-8fc3-3cd1e285c08c",
+      "text": "Functional ethical reasoning in professional settings requires contextually grounded elements such as accountability, emotional saliency, and empathy, none of which are present in the LLMs' purely computational simulations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "97bc96e5-7241-4c2a-b263-40309a61d8f0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:34.775934+00:00"
+    },
+    {
+      "id": "aa4f6476-15bc-498d-99cf-4288df4c6c10",
+      "text": "The EU AI Act explicitly maintains human accountability for deployers who fail to adhere to transparency, risk management, or monitoring requirements defined in Article 16. Furthermore, human users who deploy AI for clearly prohibited manipulative practices remain fully liable for those violations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bbdf6bf2-243c-4592-9012-805becea3c07",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:34.913163+00:00"
+    },
+    {
+      "id": "4ea9ced4-7d0e-4440-9999-11fe5bbb3813",
+      "text": "Shifting legal liability for a defective AI system to the developer (like product liability) does not erase the necessity of human moral accountability for misuse. For example, a court holding a company liable for faulty car brakes does not absolve the human driver of accountability for driving recklessly.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bbdf6bf2-243c-4592-9012-805becea3c07",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:34.913592+00:00"
+    },
+    {
+      "id": "aec1468d-0b26-4c8e-8d9f-f60dc61d555e",
+      "text": "Automation replaces millions of routine assembly jobs with thousands of specialized maintenance and software roles, leading to a massive net reduction in workforce size. For example, US textile manufacturing productivity grew 40% between 2000 and 2010, while employment dropped 50% without matching absorption in high-skill sectors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c851df57-d580-48eb-bba9-e1650ea8b443",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:35.169250+00:00"
+    },
+    {
+      "id": "9753b83f-d6d3-4c92-a04c-44e98f062c30",
+      "text": "Automation in industries with inelastic demand, such as utilities, pharmaceuticals, and certain healthcare services, primarily results in increased profit margins and shareholder returns, without reducing prices or scaling demand enough to create offsetting new employment. This mechanism fails entirely when consumer demand cannot expand.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c851df57-d580-48eb-bba9-e1650ea8b443",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:35.169285+00:00"
+    },
+    {
+      "id": "4f0bc5e9-5bc8-4189-aa1d-9db64fe0f3fe",
+      "text": "AI implementation in high-volume, low-skill service sectors like telemarketing or bank data processing results in direct, mass displacement, as these roles lack the complexity or ethical regulatory requirements that demand specialized human oversight found in medicine or law.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "be012dba-40c1-4ec7-816c-0fb371de663a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:36.122537+00:00"
+    },
+    {
+      "id": "7a969586-ff07-49a0-8a50-bd481f3767d0",
+      "text": "Equating the creation of a few high-skill AI oversight jobs with \"successful adaptation\" ignores the massive scale disparity; millions of mid-skill workers (e.g., accounting bookkeepers, administrative assistants) lack the advanced educational background required for the newly created specialized roles, leading to structural unemployment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "be012dba-40c1-4ec7-816c-0fb371de663a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:36.122578+00:00"
+    },
+    {
+      "id": "36a6c148-097d-450b-918f-2bbdd1e6faa8",
+      "text": "Organizations deploying generative AI must establish specialized governance and compliance managers (e.g., in finance or legal) to manage data security, model drift, and regulatory liability, which is a required dedicated non-functional oversight role.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d02ee691-3670-4d8a-8775-8873f37dc485",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:36.502327+00:00"
+    },
+    {
+      "id": "9dae92f8-0395-41f9-b065-af128555c6ef",
+      "text": "While individual worker input may feel augmented, the successful integration of enterprise Gen AI requires significant project management and infrastructure investment to link tools with incompatible legacy data systems, often causing temporary productivity slowdowns and demanding specialized change management.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d02ee691-3670-4d8a-8775-8873f37dc485",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:36.502354+00:00"
+    },
+    {
+      "id": "02a9c1e1-515c-4bc3-b6f6-24eeb4903501",
+      "text": "Historically, the vast majority of mechanization targeted physical labor: the power loom and assembly line displaced millions of manual laborers in manufacturing and agriculture long before widespread office automation appeared. This demonstrates that non-cognitive tasks have historically been the principal target of large-scale job displacement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "93cb14cd-62f6-406e-bbd6-7946c8e64173",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:39.426505+00:00"
+    },
+    {
+      "id": "c2ee432f-b4f4-438d-bd0d-581edb6299f7",
+      "text": "Between 1995 and 2005, US textile manufacturing realized a 100% productivity increase through automation, but employment simultaneously dropped by 50%, showing job elimination significantly outpaced the creation of complementary labor roles.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e2ee7998-c717-4bdd-83ab-012eda1f3735",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:40.403975+00:00"
+    },
+    {
+      "id": "aa2f7c81-fc80-48b3-861b-4bdce0b80a6a",
+      "text": "Current AI models, like large language models (LLMs), perform complex system troubleshooting, write novel legal motions, and generate diagnostic medical summaries, indicating that specialized judgment tasks are rapidly becoming automated.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e2ee7998-c717-4bdd-83ab-012eda1f3735",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:40.404021+00:00"
+    },
+    {
+      "id": "04b7fbf5-3749-48cc-ae27-b4083202e9bb",
+      "text": "Automation profits often accrue as corporate savings or shareholder dividends, which are increasingly held in offshore accounts or invested in purely financial assets, leading to capital concentration rather than immediate domestic labor reinvestment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3127b632-522e-48e2-924d-aab6933a9951",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:43.048519+00:00"
+    },
+    {
+      "id": "0b87a69f-80fb-4f59-98e2-41f6d54784ab",
+      "text": "Specialized service sectors are already undergoing automation, as demonstrated by the rapid adoption of AI diagnostics in healthcare (e.g., radiology) and personalized learning algorithms in specialized education, removing the assumption of a perpetually \"high-touch\" refuge for displaced labor.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3127b632-522e-48e2-924d-aab6933a9951",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:43.048584+00:00"
+    },
+    {
+      "id": "5347d325-8bfc-42a8-ba7b-d85c07ad84a8",
+      "text": "Historical data from advanced economies like the US since 2000 shows that while jobs shift, overall labor force participation rates have declined, demonstrating that the resulting job growth is not consistently \"massive\" enough to sustainably absorb displaced workers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3127b632-522e-48e2-924d-aab6933a9951",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:43.048609+00:00"
+    },
+    {
+      "id": "b9c1294d-79e6-41ad-b598-c97396d87054",
+      "text": "Advanced roles within quality assurance testing and technical support\u2014especially those dealing with complex AI systems, such as identifying adversarial attacks or inherent model failures\u2014require specialized computer science knowledge and degrees, not just technical certifications.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "752d9125-a35e-4f58-9ec1-d2d8c4bb9e7a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:43.227582+00:00"
+    },
+    {
+      "id": "156b7b36-a409-4981-9eaf-e36ad9dcef09",
+      "text": "Data economy roles, particularly annotation and QA, increasingly require foundational understanding of ethical AI principles and data bias, as their work directly influences model fairness, privacy compliance (e.g., GDPR), and the prevention of discriminatory outcomes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "752d9125-a35e-4f58-9ec1-d2d8c4bb9e7a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:43.227623+00:00"
+    },
+    {
+      "id": "c982df76-dc58-4494-b7c7-814b8eb1e65e",
+      "text": "Domain Generalization benchmarks (e.g., PACS, VLCS) consistently show SOTA models achieving OOD accuracy far exceeding random, indicating that performance degrades but they do not inherently fail or produce zero utility on novel data distributions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5b5452b8-73c2-4315-be99-f1defc673065",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:44.541993+00:00"
+    },
+    {
+      "id": "f69dd9ea-b846-479e-9fa6-c0deea3a8a40",
+      "text": "Techniques like Invariant Risk Minimization (IRM) and various self-supervised learning methods significantly improve OOD robustness by identifying features invariant across training environments, achieving generalization without explicit causal modeling.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5b5452b8-73c2-4315-be99-f1defc673065",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:44.542035+00:00"
+    },
+    {
+      "id": "e8416056-d6ef-4818-abd8-d400eabda8e1",
+      "text": "Bureau of Labor Statistics reports indicate that during the 1995-2020 period, the largest absolute job gains occurred in established fields like education and health services (adding over 7 million jobs) and government, not predominantly in specialized, novel technology sectors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1d9809d1-3b47-4b74-b5ee-8dc389944e5b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:45.679314+00:00"
+    },
+    {
+      "id": "30de69cb-1adf-407e-9d9a-141ef94e6bd1",
+      "text": "The large-scale, geographically concentrated displacement of manufacturing and back-office jobs (millions lost since 2000) created deep regional economic crises, showing that newly emerging professional sectors fail to absorb displaced workers rapidly or fully.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1d9809d1-3b47-4b74-b5ee-8dc389944e5b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:45.679340+00:00"
+    },
+    {
+      "id": "26a554f6-3295-4175-bddb-7b4f75ac3b8e",
+      "text": "Legal liability frameworks address punitive measures after the fact, but they do not guarantee continuous human oversight roles. High-frequency stock trading algorithms eliminate human decision-making and execute millions of transactions per second, rendering the human \"monitoring\" required by such acts practically impossible for job preservation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "aa4f6476-15bc-498d-99cf-4288df4c6c10",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:46.058620+00:00"
+    },
+    {
+      "id": "7f32cbfc-b413-43a7-a772-e25ed3adf96d",
+      "text": "Singapore's SkillsFuture relies heavily on a centrally managed, mandatory national training levy and substantial employer tax rebates, which are mechanisms large, decentralized labor markets like the US or many EU states lack due to governance structure and scale.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7bda83a5-76d9-4111-825d-085d07177caf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:46.944348+00:00"
+    },
+    {
+      "id": "de1ee5fa-cbbe-425f-83fc-4f8ffc7d1d16",
+      "text": "A 2022 OECD study found that only 15% of displaced workers globally transition into completely new, higher-skilled sectors above their previous wage within one year; most land in equivalent or lower-wage roles.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7bda83a5-76d9-4111-825d-085d07177caf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:46.944376+00:00"
+    },
+    {
+      "id": "0a1bd5fa-5f1a-4774-99dd-86e7b13c1d2e",
+      "text": "Human ethical reasoning, like an LLM's, relies on applying inductively learned principles and established resolutions (pattern recognition) to novel situations; focusing purely on the statistical mechanism ignores the functional outcome of principle application.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "699453a8-a4aa-49c2-b421-200224919e26",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:47.246994+00:00"
+    },
+    {
+      "id": "1dc415eb-59e3-4d52-90d6-fe6077527c7c",
+      "text": "Established human ethical frameworks, such as utility or duty, are designed to apply pre-existing principles to any context; thus, the requirement of solving a \"truly novel dilemma lacking precedent\" sets an impractical standard for judging functional capability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "699453a8-a4aa-49c2-b421-200224919e26",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:47.247025+00:00"
+    },
+    {
+      "id": "0ca72085-5c77-4456-83be-4bc1d5d4dc2e",
+      "text": "Many professional ethics, such as legal compliance or financial regulation, rely on the strict application of codified rules and utilitarian criteria, which LLMs can functionally simulate regardless of internal emotional states.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2a403a2c-1bd1-4d2f-8fc3-3cd1e285c08c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:47.517152+00:00"
+    },
+    {
+      "id": "06664968-f482-42dc-a6bf-2994c77e4748",
+      "text": "The inability to experience internal states like empathy does not preclude LLMs from generating functionally sound ethical decisions, as demonstrated by their capacity to apply complex criteria (like legal statutes or medical protocols) to novel scenarios.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2a403a2c-1bd1-4d2f-8fc3-3cd1e285c08c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:47.517178+00:00"
+    },
+    {
+      "id": "5f15c068-fccf-47fc-a9dc-67bdf8aaab39",
+      "text": "Large Language Models like GPT-4 derive abstract reasoning abilities, such as generating novel computer code and achieving top scores on the Uniform Bar Examination, using the same scaling principles as deep learning pattern recognition systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "845710e0-ad0b-41f6-8590-6c404e1035cf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:50.767183+00:00"
+    },
+    {
+      "id": "486e9c8e-5265-450e-9f3a-567d9b0d559f",
+      "text": "Major economic forecasts from institutions like the World Economic Forum and OECD categorize AI-related job growth across technical, operational (data preparers), and ancillary (maintenance) sectors, demonstrating the typical analysis scope is not restricted solely to specialized roles.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f19cd821-b12a-4f0d-b9f8-d927df059804",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:50.786589+00:00"
+    },
+    {
+      "id": "29efe1c5-a27a-4986-8413-ed37fca1e5ba",
+      "text": "Many cited jobs, such as data labeling and basic infrastructure maintenance, represent transitional roles that AI systems are rapidly evolving to automate, significantly limiting the jobs' long-term growth potential below hundreds of thousands. For example, advancements in synthetic data generation reduce the need for manual preparation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f19cd821-b12a-4f0d-b9f8-d927df059804",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:50.786626+00:00"
+    },
+    {
+      "id": "1d94e92c-b512-418c-889c-8489477941d3",
+      "text": "Complex AI systems like deep neural networks introduce epistemic opacity where the user cannot know the system's reasoning path, dissolving the human moral accountability implied by the analogy of a driver manually operating defective mechanical brakes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4ea9ced4-7d0e-4440-9999-11fe5bbb3813",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:51.375900+00:00"
+    },
+    {
+      "id": "84e0b186-67cc-42d0-ad94-7184ace8165e",
+      "text": "The US manufacturing sector lost 7 million jobs between 1979 and 2009 largely due to automation, while the required technical workforce for maintenance and IT grew by significantly smaller amounts, demonstrating displacement vastly outpaced creation in those sectors.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cbc63942-2475-4553-901f-7c99ae74c1b7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:51.949510+00:00"
+    },
+    {
+      "id": "04b03740-09f5-4453-b373-7f921a0b22f6",
+      "text": "New roles in software development and cloud engineering typically require specialized degrees and several years of experience, skills which are largely inaccessible to workers displaced from routine logistics or clerical tasks, leading to prolonged structural unemployment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cbc63942-2475-4553-901f-7c99ae74c1b7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:05:51.949538+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "c8bd7aa3-a6f9-49fc-a374-0142ae537892",
+      "target": "8a05e683-821b-40d0-b484-e9e8cd6ca331",
+      "type": "objection"
+    },
+    {
+      "source": "c8bd7aa3-a6f9-49fc-a374-0142ae537892",
+      "target": "365da031-7f6c-4b40-8d58-392b1541a818",
+      "type": "objection"
+    },
+    {
+      "source": "4fdfd79c-20fc-4d33-8272-45c7ded0b140",
+      "target": "13274da0-0502-47d9-9d6a-4b08e12fe11e",
+      "type": "objection"
+    },
+    {
+      "source": "4fdfd79c-20fc-4d33-8272-45c7ded0b140",
+      "target": "18be4c36-94df-4f52-9001-ef4545b8db2d",
+      "type": "objection"
+    },
+    {
+      "source": "4fdfd79c-20fc-4d33-8272-45c7ded0b140",
+      "target": "b509221c-764d-4a99-98e9-387a8a42862c",
+      "type": "objection"
+    },
+    {
+      "source": "e463368c-6616-4ba2-baf3-c4f4f8ff2106",
+      "target": "9778288a-3680-41dd-aa17-c59e66a9f2e0",
+      "type": "objection"
+    },
+    {
+      "source": "e463368c-6616-4ba2-baf3-c4f4f8ff2106",
+      "target": "49e7ca09-ea2e-481f-90e9-bfa460bf13a4",
+      "type": "objection"
+    },
+    {
+      "source": "b8e8ebac-fe06-40bd-af55-3dda511d14b1",
+      "target": "55a36340-9f98-442d-b22a-db12aa2b733a",
+      "type": "objection"
+    },
+    {
+      "source": "b8e8ebac-fe06-40bd-af55-3dda511d14b1",
+      "target": "c675c1c6-0368-4b0c-b5b1-c81f6ed6b4a2",
+      "type": "objection"
+    },
+    {
+      "source": "b8e8ebac-fe06-40bd-af55-3dda511d14b1",
+      "target": "ec33f716-9b31-4d41-a3db-b176995cf46f",
+      "type": "objection"
+    },
+    {
+      "source": "28734644-78f9-42bd-89a5-9299ede001df",
+      "target": "64c0d304-2b99-4eec-97d2-520a99517718",
+      "type": "objection"
+    },
+    {
+      "source": "28734644-78f9-42bd-89a5-9299ede001df",
+      "target": "dd3db75c-de16-44a5-8126-7a80772eea37",
+      "type": "objection"
+    },
+    {
+      "source": "e4fe7ff6-e030-4036-b9f3-2766f67877b4",
+      "target": "95d407ff-7bce-4fd1-9e5d-2288180a5a1a",
+      "type": "objection"
+    },
+    {
+      "source": "e4fe7ff6-e030-4036-b9f3-2766f67877b4",
+      "target": "8b5d6548-1b26-46df-b4ff-eaff81fc328c",
+      "type": "objection"
+    },
+    {
+      "source": "8a05e683-821b-40d0-b484-e9e8cd6ca331",
+      "target": "a2d26996-2380-4204-9f62-c29862dd58f5",
+      "type": "response"
+    },
+    {
+      "source": "8a05e683-821b-40d0-b484-e9e8cd6ca331",
+      "target": "153b002a-7a66-4ce1-a360-5645f320c682",
+      "type": "response"
+    },
+    {
+      "source": "365da031-7f6c-4b40-8d58-392b1541a818",
+      "target": "1c2abadb-a62b-4538-91e6-7253a741ab3a",
+      "type": "response"
+    },
+    {
+      "source": "365da031-7f6c-4b40-8d58-392b1541a818",
+      "target": "0c36bf8a-2040-49d2-8a41-9e6b2b4f2e12",
+      "type": "response"
+    },
+    {
+      "source": "c675c1c6-0368-4b0c-b5b1-c81f6ed6b4a2",
+      "target": "97a612fb-4ef7-437c-9c29-3ac6076ec538",
+      "type": "response"
+    },
+    {
+      "source": "c675c1c6-0368-4b0c-b5b1-c81f6ed6b4a2",
+      "target": "857f01c8-863b-4f4f-b6d8-12d2b6e91654",
+      "type": "response"
+    },
+    {
+      "source": "49e7ca09-ea2e-481f-90e9-bfa460bf13a4",
+      "target": "71b66383-5d88-43d2-a880-390a6788d002",
+      "type": "response"
+    },
+    {
+      "source": "49e7ca09-ea2e-481f-90e9-bfa460bf13a4",
+      "target": "3bb6b391-98dd-49e0-b9be-87d04191fc78",
+      "type": "response"
+    },
+    {
+      "source": "9778288a-3680-41dd-aa17-c59e66a9f2e0",
+      "target": "bf0ae857-d460-43a9-9e79-d44614caff88",
+      "type": "response"
+    },
+    {
+      "source": "9778288a-3680-41dd-aa17-c59e66a9f2e0",
+      "target": "6149c1dc-b28d-4787-8834-7da9ec096e70",
+      "type": "response"
+    },
+    {
+      "source": "55a36340-9f98-442d-b22a-db12aa2b733a",
+      "target": "18d16801-37a4-4bac-8c91-ae2f6348de85",
+      "type": "response"
+    },
+    {
+      "source": "55a36340-9f98-442d-b22a-db12aa2b733a",
+      "target": "57ea8372-bcaa-43dc-91d4-5d13678b0582",
+      "type": "response"
+    },
+    {
+      "source": "b509221c-764d-4a99-98e9-387a8a42862c",
+      "target": "0919bae6-be42-48f5-b8ce-0add26e2aa91",
+      "type": "response"
+    },
+    {
+      "source": "b509221c-764d-4a99-98e9-387a8a42862c",
+      "target": "93b50b79-fafc-4a7e-a814-5434d002812b",
+      "type": "response"
+    },
+    {
+      "source": "13274da0-0502-47d9-9d6a-4b08e12fe11e",
+      "target": "a23fdf61-560f-4a0e-b4b9-157d2f960844",
+      "type": "response"
+    },
+    {
+      "source": "13274da0-0502-47d9-9d6a-4b08e12fe11e",
+      "target": "5a0f6331-4b59-4d47-949a-941e8ba1f1aa",
+      "type": "response"
+    },
+    {
+      "source": "8b5d6548-1b26-46df-b4ff-eaff81fc328c",
+      "target": "22df94c5-55b8-4858-a75a-7dbc6cecb9a7",
+      "type": "response"
+    },
+    {
+      "source": "8b5d6548-1b26-46df-b4ff-eaff81fc328c",
+      "target": "8d04c0ac-213f-42b1-827a-e967352c152f",
+      "type": "response"
+    },
+    {
+      "source": "95d407ff-7bce-4fd1-9e5d-2288180a5a1a",
+      "target": "37ea33fc-6d29-4dd5-8102-540e9dd70008",
+      "type": "response"
+    },
+    {
+      "source": "95d407ff-7bce-4fd1-9e5d-2288180a5a1a",
+      "target": "836ed388-5f30-4e20-b3b9-010056ba1840",
+      "type": "response"
+    },
+    {
+      "source": "a2d26996-2380-4204-9f62-c29862dd58f5",
+      "target": "ee8a3464-7a65-43f3-9a12-20e7af4d9416",
+      "type": "response"
+    },
+    {
+      "source": "a2d26996-2380-4204-9f62-c29862dd58f5",
+      "target": "7eaa15d1-c032-49d9-8f07-3bbd18a421fd",
+      "type": "response"
+    },
+    {
+      "source": "1c2abadb-a62b-4538-91e6-7253a741ab3a",
+      "target": "f3253733-5881-4f9b-8f67-599bc438dce8",
+      "type": "response"
+    },
+    {
+      "source": "dd3db75c-de16-44a5-8126-7a80772eea37",
+      "target": "7603798a-1e86-4b99-ad47-2b761cbbeb45",
+      "type": "response"
+    },
+    {
+      "source": "dd3db75c-de16-44a5-8126-7a80772eea37",
+      "target": "f16fdde0-eb5e-4d7e-bec1-28350b38ac70",
+      "type": "response"
+    },
+    {
+      "source": "64c0d304-2b99-4eec-97d2-520a99517718",
+      "target": "05f4db5f-8929-4fa2-aea1-5915542fc512",
+      "type": "response"
+    },
+    {
+      "source": "64c0d304-2b99-4eec-97d2-520a99517718",
+      "target": "a204e808-0e2b-4380-a218-069d0a557166",
+      "type": "response"
+    },
+    {
+      "source": "97a612fb-4ef7-437c-9c29-3ac6076ec538",
+      "target": "ac66d626-4334-442f-a3a3-ed33bb4b1cf8",
+      "type": "response"
+    },
+    {
+      "source": "153b002a-7a66-4ce1-a360-5645f320c682",
+      "target": "8e490d7e-ddab-4792-91fa-f227a8f5f6fc",
+      "type": "response"
+    },
+    {
+      "source": "153b002a-7a66-4ce1-a360-5645f320c682",
+      "target": "267b96cb-d656-464d-bcd4-49f01108a996",
+      "type": "response"
+    },
+    {
+      "source": "71b66383-5d88-43d2-a880-390a6788d002",
+      "target": "e11d9065-81a2-4c3f-86d2-abd6bf734d78",
+      "type": "response"
+    },
+    {
+      "source": "71b66383-5d88-43d2-a880-390a6788d002",
+      "target": "d750d604-5c92-43f6-985d-26025d585987",
+      "type": "response"
+    },
+    {
+      "source": "3bb6b391-98dd-49e0-b9be-87d04191fc78",
+      "target": "9c137dfa-e225-4d6d-a321-e42894f52bd4",
+      "type": "response"
+    },
+    {
+      "source": "57ea8372-bcaa-43dc-91d4-5d13678b0582",
+      "target": "4351b9b9-cec4-4d90-b27e-5e7aff598ca2",
+      "type": "response"
+    },
+    {
+      "source": "a23fdf61-560f-4a0e-b4b9-157d2f960844",
+      "target": "345f9608-3360-4a2b-a7c1-550a5afa3862",
+      "type": "response"
+    },
+    {
+      "source": "bf0ae857-d460-43a9-9e79-d44614caff88",
+      "target": "52abee2d-8cdc-40e1-98c3-110898ebb664",
+      "type": "response"
+    },
+    {
+      "source": "bf0ae857-d460-43a9-9e79-d44614caff88",
+      "target": "b4b32560-34dc-4618-9ac1-d840d465f540",
+      "type": "response"
+    },
+    {
+      "source": "0919bae6-be42-48f5-b8ce-0add26e2aa91",
+      "target": "cae46ec2-407b-414e-a42b-3f4188ef3266",
+      "type": "response"
+    },
+    {
+      "source": "0919bae6-be42-48f5-b8ce-0add26e2aa91",
+      "target": "79c4822d-b67d-4a42-aa54-462b1d7d0b8a",
+      "type": "response"
+    },
+    {
+      "source": "6149c1dc-b28d-4787-8834-7da9ec096e70",
+      "target": "af02083e-3969-4b40-a541-531e76ec2747",
+      "type": "response"
+    },
+    {
+      "source": "6149c1dc-b28d-4787-8834-7da9ec096e70",
+      "target": "ebd0e267-1c7b-4646-9e4a-09098ba272ce",
+      "type": "response"
+    },
+    {
+      "source": "857f01c8-863b-4f4f-b6d8-12d2b6e91654",
+      "target": "217ab630-66b4-4871-a618-8f59711f06d4",
+      "type": "response"
+    },
+    {
+      "source": "836ed388-5f30-4e20-b3b9-010056ba1840",
+      "target": "6c83a95b-6bda-4784-a70e-3b0d729a24d2",
+      "type": "response"
+    },
+    {
+      "source": "22df94c5-55b8-4858-a75a-7dbc6cecb9a7",
+      "target": "5f00ccf0-c00a-4dcb-8ccd-f57a74293d29",
+      "type": "response"
+    },
+    {
+      "source": "22df94c5-55b8-4858-a75a-7dbc6cecb9a7",
+      "target": "958678eb-94c1-4a0a-a42c-1a1aa9f0b673",
+      "type": "response"
+    },
+    {
+      "source": "18d16801-37a4-4bac-8c91-ae2f6348de85",
+      "target": "a026b62f-e382-4abd-a519-9cad0bf19c35",
+      "type": "response"
+    },
+    {
+      "source": "18d16801-37a4-4bac-8c91-ae2f6348de85",
+      "target": "e3d0fd35-3302-45bc-965c-3be3c729e626",
+      "type": "response"
+    },
+    {
+      "source": "93b50b79-fafc-4a7e-a814-5434d002812b",
+      "target": "402fd8a3-7ee2-43e2-93cb-7534213412c2",
+      "type": "response"
+    },
+    {
+      "source": "93b50b79-fafc-4a7e-a814-5434d002812b",
+      "target": "fc4eb54e-6a94-4506-8fe6-763f6d7f174f",
+      "type": "response"
+    },
+    {
+      "source": "5a0f6331-4b59-4d47-949a-941e8ba1f1aa",
+      "target": "570d7ba5-76a6-4537-9b79-030dc3f635ff",
+      "type": "response"
+    },
+    {
+      "source": "5a0f6331-4b59-4d47-949a-941e8ba1f1aa",
+      "target": "13ffb1a2-eb82-4148-be6d-059314ec46f1",
+      "type": "response"
+    },
+    {
+      "source": "37ea33fc-6d29-4dd5-8102-540e9dd70008",
+      "target": "5be10c4d-7a38-4cfe-a248-f65ebe531736",
+      "type": "response"
+    },
+    {
+      "source": "37ea33fc-6d29-4dd5-8102-540e9dd70008",
+      "target": "f0ae8932-08f1-4ae7-8e32-7d434c59448e",
+      "type": "response"
+    },
+    {
+      "source": "05f4db5f-8929-4fa2-aea1-5915542fc512",
+      "target": "e8fd4bab-5476-41b7-90f6-ab0405e176e4",
+      "type": "response"
+    },
+    {
+      "source": "a204e808-0e2b-4380-a218-069d0a557166",
+      "target": "ccbdd05f-a501-41ae-93c3-ca3e92f2ccd8",
+      "type": "response"
+    },
+    {
+      "source": "a204e808-0e2b-4380-a218-069d0a557166",
+      "target": "5e1995f0-8800-4828-b573-1d9051db4cd7",
+      "type": "response"
+    },
+    {
+      "source": "8d04c0ac-213f-42b1-827a-e967352c152f",
+      "target": "aec068fd-e706-46ae-8a10-13fb30e817af",
+      "type": "response"
+    },
+    {
+      "source": "8d04c0ac-213f-42b1-827a-e967352c152f",
+      "target": "d8a349be-3c24-4261-b0ab-508b26886213",
+      "type": "response"
+    },
+    {
+      "source": "f16fdde0-eb5e-4d7e-bec1-28350b38ac70",
+      "target": "a835e725-68e0-4855-8b8b-7a470fe51df2",
+      "type": "response"
+    },
+    {
+      "source": "f16fdde0-eb5e-4d7e-bec1-28350b38ac70",
+      "target": "ee71a8ca-9b84-48cf-81af-a2bd79745149",
+      "type": "response"
+    },
+    {
+      "source": "0c36bf8a-2040-49d2-8a41-9e6b2b4f2e12",
+      "target": "61d371f6-6287-47aa-92e5-f20db208d1ed",
+      "type": "response"
+    },
+    {
+      "source": "0c36bf8a-2040-49d2-8a41-9e6b2b4f2e12",
+      "target": "52f1b3cb-3f81-4461-bf72-934beea35fa7",
+      "type": "response"
+    },
+    {
+      "source": "7603798a-1e86-4b99-ad47-2b761cbbeb45",
+      "target": "a9f6c5ef-8306-4f6d-9b70-02e2283e1cb3",
+      "type": "response"
+    },
+    {
+      "source": "7603798a-1e86-4b99-ad47-2b761cbbeb45",
+      "target": "cd65cc2e-a7ff-4f07-993d-49c5a51e8a68",
+      "type": "response"
+    },
+    {
+      "source": "6ce4e404-e229-4746-a8cc-cba85fa5c52f",
+      "target": "52811bee-9180-4e4e-8d9e-be8e1b878abb",
+      "type": "objection"
+    },
+    {
+      "source": "6ce4e404-e229-4746-a8cc-cba85fa5c52f",
+      "target": "bbdf6bf2-243c-4592-9012-805becea3c07",
+      "type": "objection"
+    },
+    {
+      "source": "a76d5dde-ebf1-4b03-b16f-5c98d865e190",
+      "target": "35f0f9b5-eda7-48b2-a16c-6099773e5cd7",
+      "type": "objection"
+    },
+    {
+      "source": "a76d5dde-ebf1-4b03-b16f-5c98d865e190",
+      "target": "279824e3-9160-4d1c-82b5-12e143652407",
+      "type": "objection"
+    },
+    {
+      "source": "c7cf552e-7c26-4c73-9d5a-88748a24795f",
+      "target": "6dd7b1e3-83c5-46fb-a0ea-696e5dc7a10b",
+      "type": "objection"
+    },
+    {
+      "source": "c7cf552e-7c26-4c73-9d5a-88748a24795f",
+      "target": "109f6d48-5873-47a2-9b39-30fc768b8291",
+      "type": "objection"
+    },
+    {
+      "source": "34fa9422-3ce7-45b5-aa05-daa5c96be7e9",
+      "target": "be2c59c1-ff2d-4c38-b048-b4e32610c54b",
+      "type": "objection"
+    },
+    {
+      "source": "34fa9422-3ce7-45b5-aa05-daa5c96be7e9",
+      "target": "8b3003cb-8ad0-4970-8400-f64cc9697714",
+      "type": "objection"
+    },
+    {
+      "source": "b711d366-377c-42d5-95f3-dd8276282720",
+      "target": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "type": "objection"
+    },
+    {
+      "source": "b711d366-377c-42d5-95f3-dd8276282720",
+      "target": "058de928-b27a-4308-8672-2f7634cd046e",
+      "type": "objection"
+    },
+    {
+      "source": "635ca079-1a61-4e86-ad4c-d0e90e335729",
+      "target": "97bc96e5-7241-4c2a-b263-40309a61d8f0",
+      "type": "objection"
+    },
+    {
+      "source": "635ca079-1a61-4e86-ad4c-d0e90e335729",
+      "target": "ae9e294c-9868-42ea-828a-1ab59badb923",
+      "type": "objection"
+    },
+    {
+      "source": "35f0f9b5-eda7-48b2-a16c-6099773e5cd7",
+      "target": "5bb400c2-4cdf-445a-96bb-4b2c6471435f",
+      "type": "response"
+    },
+    {
+      "source": "35f0f9b5-eda7-48b2-a16c-6099773e5cd7",
+      "target": "37d68127-46b7-476f-ae1f-fc2b0cd4c268",
+      "type": "response"
+    },
+    {
+      "source": "279824e3-9160-4d1c-82b5-12e143652407",
+      "target": "c851df57-d580-48eb-bba9-e1650ea8b443",
+      "type": "response"
+    },
+    {
+      "source": "279824e3-9160-4d1c-82b5-12e143652407",
+      "target": "e2ee7998-c717-4bdd-83ab-012eda1f3735",
+      "type": "response"
+    },
+    {
+      "source": "be2c59c1-ff2d-4c38-b048-b4e32610c54b",
+      "target": "94c4930d-fbf7-4b7c-ac71-acd5d044ea1f",
+      "type": "response"
+    },
+    {
+      "source": "be2c59c1-ff2d-4c38-b048-b4e32610c54b",
+      "target": "9a0653b1-214f-421e-9283-7f300442ad6a",
+      "type": "response"
+    },
+    {
+      "source": "52811bee-9180-4e4e-8d9e-be8e1b878abb",
+      "target": "96827d04-f7f0-45a8-8d89-46263e2c0179",
+      "type": "response"
+    },
+    {
+      "source": "52811bee-9180-4e4e-8d9e-be8e1b878abb",
+      "target": "913f7fc4-349e-4549-9280-dd9a358c9450",
+      "type": "response"
+    },
+    {
+      "source": "8b3003cb-8ad0-4970-8400-f64cc9697714",
+      "target": "1d9809d1-3b47-4b74-b5ee-8dc389944e5b",
+      "type": "response"
+    },
+    {
+      "source": "8b3003cb-8ad0-4970-8400-f64cc9697714",
+      "target": "d02ee691-3670-4d8a-8775-8873f37dc485",
+      "type": "response"
+    },
+    {
+      "source": "ae9e294c-9868-42ea-828a-1ab59badb923",
+      "target": "845710e0-ad0b-41f6-8590-6c404e1035cf",
+      "type": "response"
+    },
+    {
+      "source": "ae9e294c-9868-42ea-828a-1ab59badb923",
+      "target": "5b5452b8-73c2-4315-be99-f1defc673065",
+      "type": "response"
+    },
+    {
+      "source": "6dd7b1e3-83c5-46fb-a0ea-696e5dc7a10b",
+      "target": "93cb14cd-62f6-406e-bbd6-7946c8e64173",
+      "type": "response"
+    },
+    {
+      "source": "6dd7b1e3-83c5-46fb-a0ea-696e5dc7a10b",
+      "target": "be012dba-40c1-4ec7-816c-0fb371de663a",
+      "type": "response"
+    },
+    {
+      "source": "913f7fc4-349e-4549-9280-dd9a358c9450",
+      "target": "716e6c42-b8c8-43ce-a09a-3d77b8cd4231",
+      "type": "response"
+    },
+    {
+      "source": "5bb400c2-4cdf-445a-96bb-4b2c6471435f",
+      "target": "e7496de6-900b-48c1-85a7-48af3df2211f",
+      "type": "response"
+    },
+    {
+      "source": "5bb400c2-4cdf-445a-96bb-4b2c6471435f",
+      "target": "7ac20787-6089-468e-a388-3a4d1c49ea7a",
+      "type": "response"
+    },
+    {
+      "source": "058de928-b27a-4308-8672-2f7634cd046e",
+      "target": "752d9125-a35e-4f58-9ec1-d2d8c4bb9e7a",
+      "type": "response"
+    },
+    {
+      "source": "058de928-b27a-4308-8672-2f7634cd046e",
+      "target": "7bda83a5-76d9-4111-825d-085d07177caf",
+      "type": "response"
+    },
+    {
+      "source": "94c4930d-fbf7-4b7c-ac71-acd5d044ea1f",
+      "target": "0c3713c8-0b39-457b-9556-ee36424e33f6",
+      "type": "response"
+    },
+    {
+      "source": "37d68127-46b7-476f-ae1f-fc2b0cd4c268",
+      "target": "1416d2c9-4528-4b38-a450-a1e689ba4372",
+      "type": "response"
+    },
+    {
+      "source": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "target": "f19cd821-b12a-4f0d-b9f8-d927df059804",
+      "type": "response"
+    },
+    {
+      "source": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "target": "cbc63942-2475-4553-901f-7c99ae74c1b7",
+      "type": "response"
+    },
+    {
+      "source": "6eac749f-7a46-4e45-b615-e64fd0a38dab",
+      "target": "3127b632-522e-48e2-924d-aab6933a9951",
+      "type": "response"
+    },
+    {
+      "source": "9a0653b1-214f-421e-9283-7f300442ad6a",
+      "target": "2deeed83-5494-439c-a8ae-e3fd04b2c7ae",
+      "type": "response"
+    },
+    {
+      "source": "9a0653b1-214f-421e-9283-7f300442ad6a",
+      "target": "d1d9fde0-1a7a-467f-a9cf-f0558d9e13ab",
+      "type": "response"
+    },
+    {
+      "source": "96827d04-f7f0-45a8-8d89-46263e2c0179",
+      "target": "b14feced-385d-4773-afd1-15ff4f4ae583",
+      "type": "response"
+    },
+    {
+      "source": "97bc96e5-7241-4c2a-b263-40309a61d8f0",
+      "target": "699453a8-a4aa-49c2-b421-200224919e26",
+      "type": "response"
+    },
+    {
+      "source": "97bc96e5-7241-4c2a-b263-40309a61d8f0",
+      "target": "2a403a2c-1bd1-4d2f-8fc3-3cd1e285c08c",
+      "type": "response"
+    },
+    {
+      "source": "bbdf6bf2-243c-4592-9012-805becea3c07",
+      "target": "aa4f6476-15bc-498d-99cf-4288df4c6c10",
+      "type": "response"
+    },
+    {
+      "source": "bbdf6bf2-243c-4592-9012-805becea3c07",
+      "target": "4ea9ced4-7d0e-4440-9999-11fe5bbb3813",
+      "type": "response"
+    },
+    {
+      "source": "c851df57-d580-48eb-bba9-e1650ea8b443",
+      "target": "aec1468d-0b26-4c8e-8d9f-f60dc61d555e",
+      "type": "response"
+    },
+    {
+      "source": "c851df57-d580-48eb-bba9-e1650ea8b443",
+      "target": "9753b83f-d6d3-4c92-a04c-44e98f062c30",
+      "type": "response"
+    },
+    {
+      "source": "be012dba-40c1-4ec7-816c-0fb371de663a",
+      "target": "4f0bc5e9-5bc8-4189-aa1d-9db64fe0f3fe",
+      "type": "response"
+    },
+    {
+      "source": "be012dba-40c1-4ec7-816c-0fb371de663a",
+      "target": "7a969586-ff07-49a0-8a50-bd481f3767d0",
+      "type": "response"
+    },
+    {
+      "source": "d02ee691-3670-4d8a-8775-8873f37dc485",
+      "target": "36a6c148-097d-450b-918f-2bbdd1e6faa8",
+      "type": "response"
+    },
+    {
+      "source": "d02ee691-3670-4d8a-8775-8873f37dc485",
+      "target": "9dae92f8-0395-41f9-b065-af128555c6ef",
+      "type": "response"
+    },
+    {
+      "source": "93cb14cd-62f6-406e-bbd6-7946c8e64173",
+      "target": "02a9c1e1-515c-4bc3-b6f6-24eeb4903501",
+      "type": "response"
+    },
+    {
+      "source": "e2ee7998-c717-4bdd-83ab-012eda1f3735",
+      "target": "c2ee432f-b4f4-438d-bd0d-581edb6299f7",
+      "type": "response"
+    },
+    {
+      "source": "e2ee7998-c717-4bdd-83ab-012eda1f3735",
+      "target": "aa2f7c81-fc80-48b3-861b-4bdce0b80a6a",
+      "type": "response"
+    },
+    {
+      "source": "3127b632-522e-48e2-924d-aab6933a9951",
+      "target": "04b7fbf5-3749-48cc-ae27-b4083202e9bb",
+      "type": "response"
+    },
+    {
+      "source": "3127b632-522e-48e2-924d-aab6933a9951",
+      "target": "0b87a69f-80fb-4f59-98e2-41f6d54784ab",
+      "type": "response"
+    },
+    {
+      "source": "3127b632-522e-48e2-924d-aab6933a9951",
+      "target": "5347d325-8bfc-42a8-ba7b-d85c07ad84a8",
+      "type": "response"
+    },
+    {
+      "source": "752d9125-a35e-4f58-9ec1-d2d8c4bb9e7a",
+      "target": "b9c1294d-79e6-41ad-b598-c97396d87054",
+      "type": "response"
+    },
+    {
+      "source": "752d9125-a35e-4f58-9ec1-d2d8c4bb9e7a",
+      "target": "156b7b36-a409-4981-9eaf-e36ad9dcef09",
+      "type": "response"
+    },
+    {
+      "source": "5b5452b8-73c2-4315-be99-f1defc673065",
+      "target": "c982df76-dc58-4494-b7c7-814b8eb1e65e",
+      "type": "response"
+    },
+    {
+      "source": "5b5452b8-73c2-4315-be99-f1defc673065",
+      "target": "f69dd9ea-b846-479e-9fa6-c0deea3a8a40",
+      "type": "response"
+    },
+    {
+      "source": "1d9809d1-3b47-4b74-b5ee-8dc389944e5b",
+      "target": "e8416056-d6ef-4818-abd8-d400eabda8e1",
+      "type": "response"
+    },
+    {
+      "source": "1d9809d1-3b47-4b74-b5ee-8dc389944e5b",
+      "target": "30de69cb-1adf-407e-9d9a-141ef94e6bd1",
+      "type": "response"
+    },
+    {
+      "source": "aa4f6476-15bc-498d-99cf-4288df4c6c10",
+      "target": "26a554f6-3295-4175-bddb-7b4f75ac3b8e",
+      "type": "response"
+    },
+    {
+      "source": "7bda83a5-76d9-4111-825d-085d07177caf",
+      "target": "7f32cbfc-b413-43a7-a772-e25ed3adf96d",
+      "type": "response"
+    },
+    {
+      "source": "7bda83a5-76d9-4111-825d-085d07177caf",
+      "target": "de1ee5fa-cbbe-425f-83fc-4f8ffc7d1d16",
+      "type": "response"
+    },
+    {
+      "source": "699453a8-a4aa-49c2-b421-200224919e26",
+      "target": "0a1bd5fa-5f1a-4774-99dd-86e7b13c1d2e",
+      "type": "response"
+    },
+    {
+      "source": "699453a8-a4aa-49c2-b421-200224919e26",
+      "target": "1dc415eb-59e3-4d52-90d6-fe6077527c7c",
+      "type": "response"
+    },
+    {
+      "source": "2a403a2c-1bd1-4d2f-8fc3-3cd1e285c08c",
+      "target": "0ca72085-5c77-4456-83be-4bc1d5d4dc2e",
+      "type": "response"
+    },
+    {
+      "source": "2a403a2c-1bd1-4d2f-8fc3-3cd1e285c08c",
+      "target": "06664968-f482-42dc-a6bf-2994c77e4748",
+      "type": "response"
+    },
+    {
+      "source": "845710e0-ad0b-41f6-8590-6c404e1035cf",
+      "target": "5f15c068-fccf-47fc-a9dc-67bdf8aaab39",
+      "type": "response"
+    },
+    {
+      "source": "f19cd821-b12a-4f0d-b9f8-d927df059804",
+      "target": "486e9c8e-5265-450e-9f3a-567d9b0d559f",
+      "type": "response"
+    },
+    {
+      "source": "f19cd821-b12a-4f0d-b9f8-d927df059804",
+      "target": "29efe1c5-a27a-4986-8413-ed37fca1e5ba",
+      "type": "response"
+    },
+    {
+      "source": "4ea9ced4-7d0e-4440-9999-11fe5bbb3813",
+      "target": "1d94e92c-b512-418c-889c-8489477941d3",
+      "type": "response"
+    },
+    {
+      "source": "cbc63942-2475-4553-901f-7c99ae74c1b7",
+      "target": "84e0b186-67cc-42d0-ad94-7184ace8165e",
+      "type": "response"
+    },
+    {
+      "source": "cbc63942-2475-4553-901f-7c99ae74c1b7",
+      "target": "04b03740-09f5-4453-b373-7f921a0b22f6",
+      "type": "response"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Character limits based on depth
+            const limits = {
+                0: 100,  // Root nodes - show more
+                1: 80,
+                2: 60,
+                3: 40,
+                4: 30,
+                5: 25
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            const widths = {
+                0: 180,
+                1: 150,
+                2: 130,
+                3: 100,
+                4: 80,
+                5: 70
+            };
+
+            const heights = {
+                0: 60,
+                1: 50,
+                2: 45,
+                3: 40,
+                4: 35,
+                5: 30
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 70,
+                height: heights[Math.min(d.depth, 5)] || 30
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Create force simulation with improved parameters
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Longer links for deeper nodes
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return 120 + (depth * 20);
+            }))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            });
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes with improved tooltips
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showNodeDetails(d);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation();
+                toggleSubtree(d);
+            })
+            .append("title")
+            .text(d => getTooltipText(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height);
+
+            // Create HTML content with badge and text
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center");
+
+            // Add badge (only for depth 0-1 to avoid clutter)
+            if (d.depth <= 1) {
+                div.append("xhtml:div")
+                    .attr("class", `node-badge ${d.type}`)
+                    .text(d.type);
+            }
+
+            // Add text content
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.depth === 0 ? "13px" : (d.depth <= 2 ? "11px" : "10px"))
+                .style("font-weight", d.depth === 0 ? "600" : "500")
+                .text(displayText);
+        });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebar-content");
+
+            let html = `
+                <h2>Argument Details</h2>
+                <div class="node-text">${d.text}</div>
+                <div class="node-meta"><strong>Type:</strong> ${d.type}</div>
+                <div class="node-meta"><strong>Side:</strong> ${d.side}</div>
+                <div class="node-meta"><strong>Depth:</strong> ${d.depth}</div>
+                <div class="node-meta"><strong>Children:</strong> ${d.children_count}</div>
+                <div class="node-meta"><strong>Source:</strong> ${d.source}</div>
+            `;
+
+            if (d.references && d.references.length > 0) {
+                html += '<div class="node-meta"><strong>References:</strong></div><ul>';
+                d.references.forEach(ref => {
+                    html += `<li style="margin-left: 20px; font-size: 0.85em;"><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+                html += '</ul>';
+            }
+
+            content.innerHTML = html;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset view
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+        }
+
+        // Fit graph to view
+        function fitToView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.9;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

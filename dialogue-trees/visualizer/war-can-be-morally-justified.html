@@ -1,0 +1,3933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>War can be morally justified - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>War can be morally justified</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            145 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/war-can-be-morally-justified.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">145</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "2a5058a1-e7a0-43a5-ac35-37c5894ca687",
+      "text": "War is morally necessary when waged in immediate self-defense to repel an existential military invasion, as this upholds the fundamental sovereign right to existence. The defense of Ukrainian territory against foreign aggression exemplifies the moral imperative of national self-preservation in the face of an immediate threat.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "NATO",
+        "United Nations Charter Article 51"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:46.340798+00:00"
+    },
+    {
+      "id": "a80c1364-1205-4395-be8f-8aa259a823dc",
+      "text": "Initiating war is morally mandated if it is the only viable means to prevent an impending genocide or a massive systemic humanitarian disaster. Intervention in Kosovo in 1999 exemplifies a response intended to avert ethnic cleansing on a mass scale, prioritizing human life over non-intervention.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:46.341295+00:00"
+    },
+    {
+      "id": "eaa87009-9316-4c7b-9e94-4e161d98312b",
+      "text": "History provides empirical evidence that warfare may be the only successful means to safeguard global liberal values and international order against nihilistic or totalitarian aggression. The Allied military action against Nazi Germany was demonstrably the necessary and morally imperative response to prevent the collapse of global governance.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:46.341604+00:00"
+    },
+    {
+      "id": "60b5b04c-5fb3-4909-b5a4-2a80726ada15",
+      "text": "War is justified as a last resort action to correct a grave and persistent injustice, such as reclaiming stolen national territory or liberating an oppressed populace from foreign domination. The 1982 recapture of the Falkland Islands represents a justified effort to restore sovereignty after all diplomatic options had been exhausted.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:46.341898+00:00"
+    },
+    {
+      "id": "00ebcbba-353a-4cf4-905b-095ac77f23b5",
+      "text": "The credible capacity and justified willingness to engage in defensive war provides a necessary military deterrence that stabilizes regional security. This willingness prevents potential aggressors from initiating larger, more destructive conflicts, acting as a functional tool for maintaining peace, as demonstrated by NATO's posture during the Cold War.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "NATO"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:46.342292+00:00"
+    },
+    {
+      "id": "138fd274-3138-4a0a-9788-efe998ce3d86",
+      "text": "Entering a defensive war as an auxiliary force is morally justifiable when based on prior, solemnized duties derived from formal mutual defense treaties. Upholding these treaty obligations, like the mutual defense commitment found in NATO Article 5, is an essential ethical mandate for alliance credibility and stability.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "NATO Article 5"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:46.342593+00:00"
+    },
+    {
+      "id": "ca755f96-b07a-4eca-b53f-369ac8626222",
+      "text": "Deterrence inherently triggers a security dilemma where one state's defensive build-up is viewed as an offensive threat by others, resulting in destabilizing arms races, exemplified by the nuclear proliferation between India and Pakistan.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "00ebcbba-353a-4cf4-905b-095ac77f23b5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:57.466525+00:00"
+    },
+    {
+      "id": "4ddb1036-42ef-42a9-9693-91d176c7c2db",
+      "text": "The Cold War, cited as a success for deterrence, was defined by highly destructive proxy conflicts\u2014such as the wars in Vietnam and Korea\u2014demonstrating that superpower military postures merely displaced violence rather than guaranteeing genuine regional stability.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "00ebcbba-353a-4cf4-905b-095ac77f23b5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:57.467377+00:00"
+    },
+    {
+      "id": "ae420b6f-a298-47d0-9601-c0e14630c741",
+      "text": "Argentina views the UK's presence on the Malvinas since 1833 as the grave and persistent injustice, demonstrating that the justification for war rests on contested historical sovereignty claims rather than established foreign oppression.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "60b5b04c-5fb3-4909-b5a4-2a80726ada15",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:04.631199+00:00"
+    },
+    {
+      "id": "b4beb143-2d8b-42ec-a41d-af8f0a2984d1",
+      "text": "Historical records show diplomatic proposals, specifically the \"leaseback\" option that was discussed in the preceding years, were not fully exhausted before the military action in 1982, indicating the conflict was not genuinely a last resort.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "60b5b04c-5fb3-4909-b5a4-2a80726ada15",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:04.632050+00:00"
+    },
+    {
+      "id": "35d5bf63-e68b-4728-a049-a080144752f5",
+      "text": "Upholding political alliance credibility does not inherently satisfy the moral requirement for entering war, which requires a just cause. In 1914, Italy refused to honor its Triple Alliance treaty commitment to Germany and Austria-Hungary because they were the aggressors, prioritizing moral justification over contractual adherence.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "138fd274-3138-4a0a-9788-efe998ce3d86",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:05.106409+00:00"
+    },
+    {
+      "id": "a09415a9-a6ab-4da2-99db-0597b6bf70e3",
+      "text": "Military intervention must satisfy the ethical principle of proportionality, which is superior to mere contractual duty when deploying lethal force. Adherence to mutual defense treaties, such as SEATO compelling the U.S. toward involvement in the Vietnam conflict, is morally insufficient if the resulting war\u2019s costs grossly outweigh the defensive goal.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "138fd274-3138-4a0a-9788-efe998ce3d86",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:05.107218+00:00"
+    },
+    {
+      "id": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "text": "The thirty-year Cold War strategy of mutually assured economic and political containment led to the collapse of the Soviet Union without direct great power military conflict, safeguarding liberal ideals and global order via non-military means.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "eaa87009-9316-4c7b-9e94-4e161d98312b",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.359656+00:00"
+    },
+    {
+      "id": "48c0976f-e091-41cf-af34-c794ae0c94df",
+      "text": "Interventions like the Vietnam War and the 2003 invasion of Iraq, launched to defend claimed \"global values,\" instead resulted in immense regional destabilization, loss of life, and failed to establish stable liberal governance.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "eaa87009-9316-4c7b-9e94-4e161d98312b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.360527+00:00"
+    },
+    {
+      "id": "2be5ef39-594c-4440-8340-5e52be30b83a",
+      "text": "Intervention is demonstrably not the only viable means, as severe economic sanctions and targeted diplomatic actions deterred systemic humanitarian disaster in South Africa (1980s) without massive military conflict. The 1999 NATO intervention proceeded without a UN Security Council resolution, indicating a failure to exhaust all non-military, globally recognized means.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a80c1364-1205-4395-be8f-8aa259a823dc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:09.732757+00:00"
+    },
+    {
+      "id": "71218c90-d45e-479a-8e78-ac681dbdc306",
+      "text": "The moral mandate is undermined when humanitarian intervention causes greater systemic harm than it prevents. The 2011 NATO intervention in Libya, intended to protect civilians, destabilized the country and resulted in years of civil war, a subsequent humanitarian crisis, and regional instability that exceeded the initial threat.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a80c1364-1205-4395-be8f-8aa259a823dc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:09.733293+00:00"
+    },
+    {
+      "id": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "text": "War, even in immediate self-defense, is seldom \"morally necessary\" if less destructive political resistance or strategic retreat can preserve national identity and minimize catastrophic civilian losses, as demonstrated by the moral debate over The Netherlands' decision to surrender quickly to Germany in 1940. The moral imperative of preservation must be constantly weighed against the overwhelming cost of mass death and destruction in places like Mariupol.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a5058a1-e7a0-43a5-ac35-37c5894ca687",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.047783+00:00"
+    },
+    {
+      "id": "af093ace-575d-4190-8f2f-a0a5df883d14",
+      "text": "The concept of \"existential military invasion\" relies on subjective interpretation, allowing aggressor states to recast pre-emptive attacks as moral self-defense. For instance, the United States justified its 2003 invasion of Iraq partly as a necessary pre-emptive measure for American security, illustrating the ease with which \"self-preservation\" legitimates offensive war.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2a5058a1-e7a0-43a5-ac35-37c5894ca687",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.048575+00:00"
+    },
+    {
+      "id": "d5c13684-ebb1-4f75-a953-ac3da7e58dc4",
+      "text": "The doctrine of mutually assured destruction (MAD) maintained strategic stability between the US and the Soviet Union during the Cold War, preventing direct major conflict despite continuous nuclear build-up.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ca755f96-b07a-4eca-b53f-369ac8626222",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.351605+00:00"
+    },
+    {
+      "id": "8e8a953a-489d-468a-bd53-7eaafc050860",
+      "text": "Deterrence can be stabilized by arms control regimes, such as the Conventional Forces in Europe (CFE) Treaty signed in 1990, which required the reduction of offensively-capable land forces.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ca755f96-b07a-4eca-b53f-369ac8626222",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.352110+00:00"
+    },
+    {
+      "id": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "text": "Cold War deterrence successfully secured the primary stability objective of preventing a direct global thermonuclear exchange between the US and the USSR, as demonstrated during the Cuban Missile Crisis of 1962. The success of deterrence is measured by the avoidance of strategic Armageddon, not the elimination of all regional conflicts in the global South.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4ddb1036-42ef-42a9-9693-91d176c7c2db",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.640835+00:00"
+    },
+    {
+      "id": "f27ad270-73b0-4241-b2a2-83ea86a4a7ed",
+      "text": "The localized proxy wars in Angola and Afghanistan, while tragic, resulted in profoundly fewer catastrophic casualties than the hundreds of millions of projected fatalities from theoretical direct US-Soviet strategic warfare. Deterrence successfully exchanged global nuclear destruction for contained regional conflicts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4ddb1036-42ef-42a9-9693-91d176c7c2db",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.641361+00:00"
+    },
+    {
+      "id": "d61698c8-a471-4e86-b783-a0b3d07a9007",
+      "text": "Mutual defense treaties are a core foundation for strategic stability and deterrence, serving a moral purpose of solidarity; labeling this commitment as \"mere contractual duty\" trivializes its importance, as demonstrated by NATO's history.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a09415a9-a6ab-4da2-99db-0597b6bf70e3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:16.652529+00:00"
+    },
+    {
+      "id": "b24b0dce-dfc4-40e2-8ad2-a791a409354c",
+      "text": "The US intervention in Vietnam was primarily motivated by the Cold War policy of containment and the resultant domino theory, not legal compulsion under the SEATO agreement, which lacked NATO's binding collective defense structure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a09415a9-a6ab-4da2-99db-0597b6bf70e3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:16.653076+00:00"
+    },
+    {
+      "id": "bf09ba59-def9-4694-ab7b-b574c480749d",
+      "text": "The Cold War strategy was fundamentally military, relying on nuclear deterrence (MAD) and massive arms spending, such as the costly Strategic Defense Initiative (SDI), to functionally bankrupt the Soviet system. Claiming the collapse was due to non-military means ignores the existential threat that underpinned containment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.069994+00:00"
+    },
+    {
+      "id": "2124ea27-8914-404d-8dae-665ded621ab5",
+      "text": "Attributing the USSR\u2019s collapse solely to external containment ignores critical internal factors, primarily the systemic failure of the command economy and the destabilizing political effects of perestroika and glasnost begun by Mikhail Gorbachev. Foreign policy pressure was a contributing factor, not the proximate cause of the state's dissolution.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.070617+00:00"
+    },
+    {
+      "id": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "text": "The resulting outcome did not \"safeguard global order,\" but rather created a period of instability marked by regional conflicts like the Yugoslav Wars, the rise of nationalist movements, and a destabilized unipolar world structure that eventually led to new great power tensions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.071103+00:00"
+    },
+    {
+      "id": "f90b00c1-7b33-4114-b3db-b24249994d51",
+      "text": "The 1882 Triple Alliance treaty was defensive, meaning Italy was legally released from its commitment when Austria-Hungary initiated military action against Serbia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "35d5bf63-e68b-4728-a049-a080144752f5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.097713+00:00"
+    },
+    {
+      "id": "f419df7c-b6bc-49ea-9a17-1b5f5ed15192",
+      "text": "Italy\u2019s neutrality and subsequent entry into World War I were motivated by realpolitik, specifically the desire to wrest Italian-speaking territories like Trieste and Trentino from Austria-Hungary.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "35d5bf63-e68b-4728-a049-a080144752f5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.098232+00:00"
+    },
+    {
+      "id": "d8fa7ac2-bc6c-4550-9b4f-b07dc61adde1",
+      "text": "The South Africa analogy is flawed because economic sanctions are too slow to address acute humanitarian crises like the 1994 Rwandan Genocide, where military action is needed immediately to prevent rapid mass slaughter. South Africa involved a protracted, internal political struggle, fundamentally different from rapidly collapsing states facing ethnic cleansing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2be5ef39-594c-4440-8340-5e52be30b83a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.783938+00:00"
+    },
+    {
+      "id": "4b5c4e9e-39da-4e77-9929-398cc745b38f",
+      "text": "Failing to secure a UN Security Council resolution means political consensus was absent, not that diplomatic options were procedurally unexhausted; extensive negotiations occurred over Kosovo, but Russian and Chinese vetoes made UN approval impossible, forcing a decision between inaction and non-sanctioned intervention.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2be5ef39-594c-4440-8340-5e52be30b83a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.784938+00:00"
+    },
+    {
+      "id": "364943de-b8d5-4b75-9abc-fe9eb9769da8",
+      "text": "Strategic stability also relied on non-nuclear factors, such as the US-Soviet Hotline established after the 1962 Cuban Missile Crisis, which exemplified diplomatic off-ramps preventing escalation that MAD alone could not guarantee.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d5c13684-ebb1-4f75-a953-ac3da7e58dc4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.752414+00:00"
+    },
+    {
+      "id": "cd89acfe-b081-4977-87b3-3ab4237fd590",
+      "text": "The Conventional Forces in Europe Treaty failed structurally, as demonstrated by Russia formally suspending its participation in 2007 and escalating tensions by withdrawing completely in 2015, proving that arms control regimes are vulnerable to unilateral abandonment when geopolitical interests shift.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8e8a953a-489d-468a-bd53-7eaafc050860",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:23.126685+00:00"
+    },
+    {
+      "id": "7e52037f-2fe1-4e9c-97ce-b6fadf28cb01",
+      "text": "Negotiations over the \"leaseback\" proposal had repeatedly stalled for over fifteen years before 1982 because neither the UK nor Argentina could politically compromise on sovereignty, demonstrating a practical stalemate rather than insufficient diplomatic effort.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b4beb143-2d8b-42ec-a41d-af8f0a2984d1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:23.464831+00:00"
+    },
+    {
+      "id": "9b8d6b62-979b-464f-bba9-165e71a95b0b",
+      "text": "If the \"military action\" refers to the Argentine invasion on April 2, 1982, the exhaustion of diplomatic proposals is irrelevant, as the invasion itself was a hostile act terminating the diplomatic process.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b4beb143-2d8b-42ec-a41d-af8f0a2984d1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:23.465357+00:00"
+    },
+    {
+      "id": "65a465c0-26a4-4618-a944-30011bed2658",
+      "text": "The NATO intervention in Kosovo (1999) stopped large-scale ethnic cleansing and prevented wider Balkan destabilization, successfully establishing a transitional UN administration and long-term peacekeepers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "48c0976f-e091-41cf-af34-c794ae0c94df",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.873999+00:00"
+    },
+    {
+      "id": "fa2d7d0d-a6e4-489b-ba1a-08c3778cf0ff",
+      "text": "The Allied occupation of Japan and West Germany after 1945 transitioned authoritarian states into long-term stable democracies, demonstrating that high-value interventions can establish functional liberal governance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "48c0976f-e091-41cf-af34-c794ae0c94df",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.874530+00:00"
+    },
+    {
+      "id": "3fbec2b9-9c17-4a41-bf33-3752d12b73a1",
+      "text": "The persistent denial of claimed national territory by a foreign power is universally considered a grave political injury, which Argentina views as oppression, mirroring Russia's justification for annexing Crimea based on historical and cultural ties.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ae420b6f-a298-47d0-9601-c0e14630c741",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.378615+00:00"
+    },
+    {
+      "id": "8c6fe938-2e09-4a4f-be07-7fbe28db5071",
+      "text": "Military action to restore historical sovereignty against territorial invasion is an established international norm, as evidenced by the 1991 Gulf War, where a global coalition intervened solely to restore the established, yet violated, historical sovereignty of Kuwait.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ae420b6f-a298-47d0-9601-c0e14630c741",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.379376+00:00"
+    },
+    {
+      "id": "c261503d-a0ba-4b58-9a20-a9cb9949e364",
+      "text": "The avoidance of direct US-Soviet conflict was driven by practical non-deterrence factors, such as shared political recognition after the Cuban Missile Crisis (1962) that direct engagement posed an unacceptable existential risk, irrespective of localized proxy wars.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f27ad270-73b0-4241-b2a2-83ea86a4a7ed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.641954+00:00"
+    },
+    {
+      "id": "66810ec6-566c-48cc-b14d-396a538d7fc0",
+      "text": "The stability created by nuclear deterrence often prolonged these conflicts, turning them into decades-long proxy wars, such as the Soviet-Afghan War (1979\u20131989), which devastated entire regions and resulted in millions of sustained, overlooked casualties.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f27ad270-73b0-4241-b2a2-83ea86a4a7ed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.642023+00:00"
+    },
+    {
+      "id": "33528521-5c74-4c1f-850e-74de14e63792",
+      "text": "The Dutch surrender in 1940 did not minimize catastrophic civilian losses, as less than 30% of the small military casualties compare to the nearly 75% extermination rate of the nation's Jewish population under the ensuing German occupation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:28.536022+00:00"
+    },
+    {
+      "id": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "text": "Ceding sovereignty through retreat immediately forfeits the national identity and political structure that self-defense aims to preserve; the Vichy regime in France demonstrates how surrender facilitates collaboration and loss of political autonomy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:28.536547+00:00"
+    },
+    {
+      "id": "d03961df-8acc-45ad-820c-d22d0c54d8d5",
+      "text": "Immediate, forceful defense is morally required when surrender guarantees democide or genocide; the initial military resistance in Ukraine prevented the immediate imposition of Russian occupation and mass atrocities over the entire country, which would have occurred otherwise.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:28.536892+00:00"
+    },
+    {
+      "id": "cd48ea2c-3433-48ae-afbe-e282140310bc",
+      "text": "The inherent instability and internal disputes within NATO demonstrate that national self-interest often supersedes the purported moral solidarity, as exemplified by France withdrawing from the integrated military command in 1966 to preserve strategic autonomy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d61698c8-a471-4e86-b783-a0b3d07a9007",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:29.818310+00:00"
+    },
+    {
+      "id": "2d004361-a1ac-457e-b635-885a8f245b04",
+      "text": "The strategic stability and long-term deterrence are established by the concrete, predictable enforcement mechanisms of the treaty, meaning the contractual duty is the essential non-trivial foundation, not an abstract moral purpose.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d61698c8-a471-4e86-b783-a0b3d07a9007",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:29.818358+00:00"
+    },
+    {
+      "id": "c1f7f448-9560-4d12-872c-c0c21dca9e40",
+      "text": "Direct diplomacy, rather than the threat of mutually assured destruction, solved the Cuban Missile Crisis when President Kennedy and Premier Khrushchev negotiated specific concessions on Turkey and Cuba.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.391059+00:00"
+    },
+    {
+      "id": "2345ec28-e19d-43ae-8d05-0bbb0d8e16d8",
+      "text": "Measuring success only by avoiding global war ignores the estimated 20 million deaths resulting from US-Soviet proxy conflicts in countries like Vietnam, Afghanistan, and Korea.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.391089+00:00"
+    },
+    {
+      "id": "092e9cfa-e043-46f6-9682-6918ad36f6e8",
+      "text": "The Cuban Missile Crisis demonstrated the fragility of deterrence, as a single Soviet officer, Vasili Arkhipov, had to veto the firing of a nuclear torpedo to prevent escalation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.391102+00:00"
+    },
+    {
+      "id": "a5bc76fe-7a4c-4ea6-87a7-ac59a668ad24",
+      "text": "Qaddafi\u2019s explicit threat to \u201ccleanse\u201d Benghazi of opponents faced an imminent risk of mass atrocities or genocide, potentially resulting in immediate mortality rates comparable to the 800,000 deaths during the 1994 Rwandan Genocide. Therefore, the resulting lower-mortality instability cannot be definitively judged as exceeding the initial threat.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "71218c90-d45e-479a-8e78-ac681dbdc306",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:31.149315+00:00"
+    },
+    {
+      "id": "1c3aa018-47ca-40ef-8a4f-027d11da7213",
+      "text": "Libyan instability following 2011 was largely driven by the decades-long suppression of state institutions by Qaddafi\u2019s regime and the immediate widespread dispersal of former military stockpiles. These internal and material factors, not the intervention alone, fueled both the civil war and regional conflicts like the war in Mali.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "71218c90-d45e-479a-8e78-ac681dbdc306",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:31.149949+00:00"
+    },
+    {
+      "id": "f71f1632-f8ea-4589-a04f-eaeafdbdc56a",
+      "text": "The moral imperative to prevent massive suffering often transcends legal contracts; Italy's justification for neutrality based solely on the defensive clause ignored the moral responsibility to curb Austria-Hungary's aggression and halt the escalation towards World War I.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f90b00c1-7b33-4114-b3db-b24249994d51",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:31.713640+00:00"
+    },
+    {
+      "id": "0cb6f765-3a05-4b9c-ab74-a744c6804db0",
+      "text": "The secret 1915 Treaty of London promised Italy substantial non-Italian-speaking regions, including large portions of Dalmatia and parts of Albania. This shows that Italy\u2019s realpolitik motivations were driven by broad imperial expansion, not merely the unification of Trieste and Trentino.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f419df7c-b6bc-49ea-9a17-1b5f5ed15192",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:32.011991+00:00"
+    },
+    {
+      "id": "9cadecdc-7af0-4aed-a0ed-abf778d8b485",
+      "text": "Soviet central planning caused economic stagnation beginning in the 1970s, making the system structurally unable to compete even without the extreme pressure of SDI.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bf09ba59-def9-4694-ab7b-b574c480749d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.574265+00:00"
+    },
+    {
+      "id": "b72433f7-777d-4c84-b162-f5f44efad666",
+      "text": "The Helsinki Accords (1975) focused on human rights and political liberalization, empowering internal dissident movements like Poland's Solidarity and accelerating the erosion of Soviet legitimacy through non-military means.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bf09ba59-def9-4694-ab7b-b574c480749d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.574296+00:00"
+    },
+    {
+      "id": "77946001-5fef-41e6-bfd2-abadb1f64c6c",
+      "text": "The proposed norm fails when tested against non-interventions, such as the lack of military action by a global coalition to restore Georgia's territorial sovereignty following the 2008 Russo-Georgian War or Ukraine's sovereignty after the 2014 annexation of Crimea.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8c6fe938-2e09-4a4f-be07-7fbe28db5071",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.970625+00:00"
+    },
+    {
+      "id": "fe475dac-7fd7-47d8-9ca1-34446834d227",
+      "text": "The intervention was motivated by crucial geopolitical factors ignored by the argument; Iraq\u2019s invasion of Kuwait threatened over 20% of the world's oil production, leading coalition members to protect global economic stability beyond restoring mere historical sovereignty.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8c6fe938-2e09-4a4f-be07-7fbe28db5071",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.970673+00:00"
+    },
+    {
+      "id": "86556a91-2e98-4e8f-a780-babc2ffe4549",
+      "text": "The principle of *jus ad bellum*, enshrined in the UN Charter, dictates that the moral and legal legitimacy of a hostile act is judged based on whether peaceful means were exhausted prior to the invasion, which remains a relevant factor years later. For example, the 2003 invasion of Iraq remains widely disputed because the US and UK failed to secure a final UN resolution and did not demonstrably exhaust all diplomatic inspection regimes before commencing hostilities.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9b8d6b62-979b-464f-bba9-165e71a95b0b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.524639+00:00"
+    },
+    {
+      "id": "86a19c16-3026-4fd2-b3bc-b280d508231e",
+      "text": "The 1998 Good Friday Agreement successfully negotiated a solution for Northern Ireland's sovereignty, which had caused decades of political violence and deadlock, demonstrating that intense diplomatic effort can successfully overcome seemingly absolute political stalemates.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7e52037f-2fe1-4e9c-97ce-b6fadf28cb01",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.626134+00:00"
+    },
+    {
+      "id": "0be188ac-a13b-48c6-92da-b169f0a59e7f",
+      "text": "The US strategic military buildup, including the Reagan administration's Strategic Defense Initiative (SDI), forced the Soviet Union to divert immense resources to competitive defense spending, fatally accelerating the collapse of the command economy. This external spending pressure acted as a primary catalyst that weaponized existing internal flaws, shifting it from a contributing factor to a proximate cause.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2124ea27-8914-404d-8dae-665ded621ab5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:39.759248+00:00"
+    },
+    {
+      "id": "e4ef12a8-312e-4563-a142-a9b4d9c983b4",
+      "text": "The primary US motivation, the domino theory, proved empirically incorrect, as the fall of South Vietnam in 1975 did not lead to the subsequent Communist takeover of neighboring states like the Philippines or Thailand. This empirical strategic failure demonstrates that speculative future threats are insufficient grounds for morally justifying massive military intervention.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b24b0dce-dfc4-40e2-8ad2-a791a409354c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:40.080697+00:00"
+    },
+    {
+      "id": "f209cb91-1a8a-4d8c-b032-99a4c71aac33",
+      "text": "Japan and West Germany already possessed high literacy rates, established industrial capacity, and experienced bureaucratic systems necessary for stabilizing democracy, unlike targets of later interventions like Afghanistan or Libya.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "fa2d7d0d-a6e4-489b-ba1a-08c3778cf0ff",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:41.526990+00:00"
+    },
+    {
+      "id": "e8a3dfb5-b093-4dbe-8a8c-ccfbfbf513b8",
+      "text": "Allied post-war interventions often resulted in unstable or authoritarian outcomes; the division of Germany yielded an authoritarian East German state, and attempts to build unified liberal states in Korea and Vietnam were unsuccessful.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "fa2d7d0d-a6e4-489b-ba1a-08c3778cf0ff",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:41.527054+00:00"
+    },
+    {
+      "id": "8bdbdd7c-31bd-4bea-92b6-cb33f7bdac4f",
+      "text": "Despite China's persistent claims to Taiwan, the majority of UN member states and the United States maintain diplomatic ambiguity, showing that denial of territory is not universally treated as a grave political injury requiring redress.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3fbec2b9-9c17-4a41-bf33-3752d12b73a1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:41.692860+00:00"
+    },
+    {
+      "id": "cbb829e7-ccd2-48ea-9edd-a43e5b2b17b5",
+      "text": "The 2013 Falkland Islands sovereignty referendum showed 99.8% of residents wished to remain British, setting the territorial denial as a matter of self-determination, unlike Russia's justification for the coerced annexation of Crimea.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3fbec2b9-9c17-4a41-bf33-3752d12b73a1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:41.692910+00:00"
+    },
+    {
+      "id": "01f8d9ab-8508-4d93-abda-e55e1316f418",
+      "text": "The decision was not limited to inaction or military intervention, as coercive non-military actions, like the extended targeted economic sanctions applied to Slobodan Milo\u0161evi\u0107\u2019s regime, represented a third path.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4b5c4e9e-39da-4e77-9929-398cc745b38f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:43.161477+00:00"
+    },
+    {
+      "id": "ea0eff42-eca8-4f00-882f-350c00e62d35",
+      "text": "The strategic withdrawal of British forces at Dunkirk in 1940 specifically preserved the military and government structure, allowing the United Kingdom to continue fighting, which contradicts the immediate forfeiture of political autonomy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:43.464573+00:00"
+    },
+    {
+      "id": "e7eb69a6-e688-4f29-aefa-bf61f1bdd423",
+      "text": "The Russian army's deep retreat against Napoleon's invasion in 1812 preserved the operational military and political assets, leading directly to the ultimate defeat of the invaders rather than national collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:43.464697+00:00"
+    },
+    {
+      "id": "e350a9cc-41ab-46ca-9981-51e7fe8664d0",
+      "text": "The Polish government-in-exile retained international legitimacy and a functional political structure after the country's occupation in 1939, demonstrating that political integrity survives military setback and territorial retreat.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:43.464732+00:00"
+    },
+    {
+      "id": "1d2afe4d-097b-4cf5-a9d3-5a705da4e404",
+      "text": "Military intervention is not always immediate; the NATO air campaign in the 1999 Kosovo War, which was aimed at stopping acute ethnic cleansing, still took months of planning and diplomatic effort before it could commence.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d8fa7ac2-bc6c-4550-9b4f-b07dc61adde1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:43.572302+00:00"
+    },
+    {
+      "id": "695ce723-c184-4f39-b97f-d21de5f214db",
+      "text": "The sustained, intentional German bombing of Rotterdam in May 1940 during the initial fighting demonstrates that prolonged military resistance would have immediately inflicted heavy non-Jewish civilian casualties through direct combat and aerial bombardment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "33528521-5c74-4c1f-850e-74de14e63792",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:45.237585+00:00"
+    },
+    {
+      "id": "10aec619-517e-419b-a1ef-6e95593c33db",
+      "text": "The systematic extermination of Jewish populations (the Final Solution) was a distinct ideological policy pursued by Germany across all occupied nations, regardless of whether those nations surrendered immediately or resisted fiercely, as seen in Poland.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "33528521-5c74-4c1f-850e-74de14e63792",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:45.237617+00:00"
+    },
+    {
+      "id": "73ae496a-5500-4f6d-a13e-13ccf0cda18c",
+      "text": "Intervention forces failed to prevent ethnic cleansing against all groups; after KFOR entered Kosovo in 1999, approximately 250,000 Serbs, Roma, and other non-Albanians were expelled from the area in retaliatory attacks.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "65a465c0-26a4-4618-a944-30011bed2658",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:45.636478+00:00"
+    },
+    {
+      "id": "4784b4d3-6b5f-48f7-b15b-f938f46f35b1",
+      "text": "The intervention created long-term instability rather than preventing it, as Kosovo's 2008 independence declaration remains unrecognized by Serbia and major UN states like Russia and China, maintaining chronic regional tension.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "65a465c0-26a4-4618-a944-30011bed2658",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:45.636530+00:00"
+    },
+    {
+      "id": "68439e4c-3bfc-46fa-ad44-9ed9cdf4bab2",
+      "text": "The post-Cold War outcome included crucial stabilizing elements like the nuclear non-proliferation agreements (e.g., START treaties) between the US and Russia and the rapid economic integration of nations like Poland and Hungary into Western structures.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:47.941218+00:00"
+    },
+    {
+      "id": "3216ac4f-ce34-496d-8713-aee62bb384ed",
+      "text": "The re-emergence of conflicts like the Yugoslav Wars and the Chechen Wars were fundamentally driven by long-suppressed ethnic and nationalist resentments dating back to the Russian Empire and Soviet consolidation, not solely created by the post-Cold War outcome.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:47.941273+00:00"
+    },
+    {
+      "id": "0f113546-431b-42f6-945b-dd0a3522b09c",
+      "text": "The structure initially enabled temporary global order, exemplified by the swift, successful, multinational coalition response to the 1990 Iraqi invasion of Kuwait, which secured critical global resources.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:47.941299+00:00"
+    },
+    {
+      "id": "987a2ef6-0770-4b45-bd62-f467128bb36f",
+      "text": "Qaddafi\u2019s previous internal massacres, like the 1996 Abu Salim prison incident or the 1980s killings, resulted in thousands of deaths, not the several hundred thousand needed to approach the scale of the 1994 Rwandan Genocide.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a5bc76fe-7a4c-4ea6-87a7-ac59a668ad24",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:49.854171+00:00"
+    },
+    {
+      "id": "4ff0d242-c6e6-4322-9ffa-5753aad48f34",
+      "text": "The resulting lower-mortality instability became a protracted civil war, destroying the Libyan state structure and creating permanent regional instability, a consequence comparable to the state failure seen in Somalia after 1991.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a5bc76fe-7a4c-4ea6-87a7-ac59a668ad24",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:49.854217+00:00"
+    },
+    {
+      "id": "89b898d1-95e6-4f85-84ea-e3eefa84d295",
+      "text": "Forced political annexation, such as the Soviet absorption of the Baltic States in 1940, resulted in political repression and mass deportations (democide over time), yet did not lead to the immediate, comprehensive, state-wide genocide of the entire population upon surrender. This shows that occupation, while brutal, does not automatically equal guaranteed existential genocide for the full national group.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d03961df-8acc-45ad-820c-d22d0c54d8d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:55.065640+00:00"
+    },
+    {
+      "id": "74554978-a371-43e7-b131-8acba5f19eb6",
+      "text": "The NATO operation provided the necessary catalyst, as its air campaign destroyed the command structure, leading to the immediate and complete dissolution of the state security apparatus. The 2003 dissolution of the Iraqi army demonstrated that eliminating a nation's security structure is the trigger for immediate, protracted instability, regardless of prior authoritarian flaws.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1c3aa018-47ca-40ef-8a4f-027d11da7213",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.609936+00:00"
+    },
+    {
+      "id": "5d74a06b-a8dd-41a0-915b-c748f6110f32",
+      "text": "War fundamentally violates the categorical imperative that human beings must always be treated as ends in themselves, not merely as means. By intentionally subjecting non-combatants and conscripted soldiers to death for state interests, war reduces individuals to instruments of political policy, rendering it morally illegitimate.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.610185+00:00"
+    },
+    {
+      "id": "e593c2f3-8e8d-4eef-8b79-0426a5968c9d",
+      "text": "The massive, predictable externalities of war, including widespread famine, refugee crises, and infrastructural collapse, always outweigh any stated political or territorial objective. The profound devastation seen in countries like Syria and Yemen demonstrates that no strategic gain can justify such irreversible suffering.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.611217+00:00"
+    },
+    {
+      "id": "f4476697-d584-4ef8-beab-bcefb6a80fbf",
+      "text": "Historical practice demonstrates that wars invariably involve systematic violations of *Jus in Bello* principles, negating claims of initial moral justification. Events like the firebombing of Dresden in WWII or the My Lai Massacre illustrate that the brutality of conflict overwhelms initial legal and ethical constraints.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.611907+00:00"
+    },
+    {
+      "id": "a44812ed-a477-438b-8336-68affe10a5d6",
+      "text": "The nature of modern insurgency and technological warfare makes the moral distinction between combatants and civilians practically impossible. Drone warfare, as conducted in places like Pakistan and Yemen, frequently results in high civilian casualty rates, proving that the principle of discrimination cannot be effectively executed.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.612428+00:00"
+    },
+    {
+      "id": "305837ad-4027-4e62-a157-603028316f24",
+      "text": "Initiating inter-state conflict violates the core premise of the UN Charter, which mandates peaceful dispute resolution and prohibits offensive military force. This act undermines the established global legal order designed to maintain international stability and prevent catastrophic wars.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.612947+00:00"
+    },
+    {
+      "id": "6ddddaad-cbff-44b5-add9-63433c8db69a",
+      "text": "Empirical evidence demonstrates that military interventions often fail to achieve their stated goals, instead increasing long-term instability and extremism. Interventions in Iraq and Afghanistan resulted not in democracy, but in greater state fragility, resource depletion, and the rise of violent groups like ISIS.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.613456+00:00"
+    },
+    {
+      "id": "adddf139-94c5-45be-bd95-89933adceaf0",
+      "text": "The established global legal order consistently fails to prevent major conflicts initiated by great powers, such as the 2003 U.S.-led invasion of Iraq and Russia's 2022 invasion of Ukraine.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "305837ad-4027-4e62-a157-603028316f24",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.185266+00:00"
+    },
+    {
+      "id": "69b59d3f-8f86-46cb-9623-e0c2fa18d096",
+      "text": "International stability is frequently maintained by the military balance of power and alliances, not legal mandates; the 1962 Cuban Missile Crisis was resolved through political negotiation backed by nuclear deterrents.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "305837ad-4027-4e62-a157-603028316f24",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.186202+00:00"
+    },
+    {
+      "id": "960ec092-f3cc-487b-80f8-cd93fd0ea285",
+      "text": "Ukraine\u2019s 2022 defensive war meets the criteria for *Jus ad Bellum* (self-defense against aggression); subsequent documented violations of *Jus in Bello* by individual soldiers or units do not retroactively negate that initial justification.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f4476697-d584-4ef8-beab-bcefb6a80fbf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.461880+00:00"
+    },
+    {
+      "id": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "text": "Coalition forces in the 1991 Gulf War employed precision targeting and stringent rules of engagement that minimized civilian loss, demonstrating that large-scale conflict can adhere substantially to *Jus in Bello* principles.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f4476697-d584-4ef8-beab-bcefb6a80fbf",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.462478+00:00"
+    },
+    {
+      "id": "2298e1e4-646a-4441-ba91-027c4267199d",
+      "text": "Precision-guided weaponry used extensively in the 1991 Gulf War successfully limited collateral damage by targeting specific military assets, proving that discrimination remains technically possible in modern technological warfare.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a44812ed-a477-438b-8336-68affe10a5d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.650476+00:00"
+    },
+    {
+      "id": "517a5f9a-3c22-465b-b282-2bdb7254dbb6",
+      "text": "High civilian casualties from drone strikes often result from expansive legal interpretations, such as \"signature strikes\" in Pakistan, demonstrating a strategic breakdown of operational policy rather than the objective impossibility of the moral principle.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a44812ed-a477-438b-8336-68affe10a5d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.651299+00:00"
+    },
+    {
+      "id": "4160f310-1ed2-4b6e-a5bd-cc02b0df3b45",
+      "text": "The Allied war against Nazi Germany caused immense infrastructural collapse and suffering across Europe, yet the objective of defeating a genocidal regime was universally considered a moral necessity that justified the devastation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e593c2f3-8e8d-4eef-8b79-0426a5968c9d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.857340+00:00"
+    },
+    {
+      "id": "7e9c21f8-8747-4bf4-8d11-f4ce041f13bd",
+      "text": "A non-material political objective, such as retaining national sovereignty, cannot be objectively quantified or mathematically \"outweighed\" by the material costs of famine or infrastructural damage, as evidenced by Ukraine's continued resistance to invasion.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e593c2f3-8e8d-4eef-8b79-0426a5968c9d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.857898+00:00"
+    },
+    {
+      "id": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "text": "The NATO intervention in Kosovo in 1999 successfully achieved its goals of halting ethnic cleansing and led to the establishment of stable, independent states in the former Yugoslavia.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6ddddaad-cbff-44b5-add9-63433c8db69a",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.909174+00:00"
+    },
+    {
+      "id": "048ac7f8-0c1a-49f0-ab99-e7c7b56b9ebe",
+      "text": "Following World War II, the sustained interventions in Germany and Japan successfully led to their demilitarization, the establishment of stable democratic governments, and decades of economic prosperity, decreasing long-term instability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6ddddaad-cbff-44b5-add9-63433c8db69a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.909742+00:00"
+    },
+    {
+      "id": "a515ae26-4ea2-493a-89b3-be5f630a384d",
+      "text": "The Doctrine of Double Effect, central to Just War theory since Thomas Aquinas, distinguishes between intending harm and foreseeing it: collateral damage is a foreseeable negative effect, not the primary means to achieve victory, making proportional defensive wars morally distinct from pure instrumentalization.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5d74a06b-a8dd-41a0-915b-c748f6110f32",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:17.592481+00:00"
+    },
+    {
+      "id": "3d8660fe-09ab-477b-a70d-483d920a973e",
+      "text": "Defensive wars instrumentalize the lives of conscripts and soldiers to protect the survival and rights of millions of other citizens, as seen in the mobilization against existential threats like the 1967 Six-Day War, arguing that inaction would constitute a greater moral failure to treat citizens as ends.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5d74a06b-a8dd-41a0-915b-c748f6110f32",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:17.592997+00:00"
+    },
+    {
+      "id": "8773f9a0-0185-48f2-b23d-d8164c1f1adf",
+      "text": "Major international stability frameworks, such as the Nuclear Non-Proliferation Treaty (NPT) and the UN Charter's collective security provisions, are legal mandates that explicitly structure alliance power and define the acceptable \"balance.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "69b59d3f-8f86-46cb-9623-e0c2fa18d096",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.380973+00:00"
+    },
+    {
+      "id": "c8c6cf67-5f1b-4272-af2b-98bd16959877",
+      "text": "The CMC is an extreme outlier; most frequent stability maintenance involves routine governance of economic relations and disputes through non-military legal bodies like the World Trade Organization (WTO) and the International Court of Justice (ICJ).",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "69b59d3f-8f86-46cb-9623-e0c2fa18d096",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.381667+00:00"
+    },
+    {
+      "id": "2634b31f-8d38-4bd1-a18d-f2e25c169899",
+      "text": "The notion of \"universally considered\" is incorrect, as significant ethical debates persisted among Allied leaders and the public concerning the morality and strategic necessity of specific tactics, such as the saturation bombing of civilian centers like Dresden.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4160f310-1ed2-4b6e-a5bd-cc02b0df3b45",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:22.312674+00:00"
+    },
+    {
+      "id": "025acd1b-e19a-428c-a771-ebec96332361",
+      "text": "Asserting that a morally necessary objective automatically justifies the devastation neglects the critical principle of proportionality, which mandates that the scale of suffering and infrastructural damage must be strictly limited to direct military necessity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4160f310-1ed2-4b6e-a5bd-cc02b0df3b45",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:22.313190+00:00"
+    },
+    {
+      "id": "0b5491bb-5537-4b6a-af11-76933fc0e5ec",
+      "text": "The 1991 Gulf War's air campaign systematically targeted critical dual-use civilian infrastructure, such as electrical grids and water purification plants, resulting in widespread humanitarian and public health damage excluded from a narrow definition of \"collateral damage.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2298e1e4-646a-4441-ba91-027c4267199d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:23.474874+00:00"
+    },
+    {
+      "id": "0c7cb05a-1361-41d3-b280-09f6e6ff6f25",
+      "text": "The 1991 conflict primarily involved targeting fixed assets in conventional and desert environments; modern conflicts, like the 2016 Battle of Mosul, occur in dense urban terrain where the proximity to civilians makes large-scale collateral damage highly probable.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2298e1e4-646a-4441-ba91-027c4267199d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:23.475825+00:00"
+    },
+    {
+      "id": "849c609b-25c9-4fd2-b4c0-4437c8137954",
+      "text": "Independent reports by organizations like Greenpeace estimated civilian deaths in Iraq during the 1991 bombing campaign were over 15,000, significantly contradicting official claims that civilian loss was \"minimized.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.018977+00:00"
+    },
+    {
+      "id": "8cc3fa6e-c33c-4c3d-9def-330d166bb397",
+      "text": "The systematic bombing of Iraqi electrical grids, water purification plants, and medical infrastructure during the 1991 operation violated the proportionality rule by causing widespread post-conflict suffering and preventable disease.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.019400+00:00"
+    },
+    {
+      "id": "8b07e4c7-05e5-4130-82d9-bcee6ada9444",
+      "text": "The highly asymmetrical nature of the 1991 conflict, featuring overwhelming air superiority against a single conventional army, cannot demonstrate adherence to Jus in Bello in modern symmetrical large-scale conflicts like the 2022 Russo-Ukrainian War.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.019666+00:00"
+    },
+    {
+      "id": "ef06d045-bc97-450c-a26d-a8114e276247",
+      "text": "The global legal order has successfully de-escalated and codified agreements preventing major wars, as seen when the 1998 Bras\u00edlia Presidential Act resolved the long-standing border conflict between Ecuador and Peru.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "adddf139-94c5-45be-bd95-89933adceaf0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.224673+00:00"
+    },
+    {
+      "id": "52753757-e00e-4e8c-adbc-e05ba9c0f235",
+      "text": "The UN legal structure, established by the UN Charter, grants permanent Security Council members like the U.S. and Russia veto power, meaning the system is intentionally designed to allow great powers to check external legal enforcement against them.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "adddf139-94c5-45be-bd95-89933adceaf0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.225436+00:00"
+    },
+    {
+      "id": "a04961d9-8966-41bf-b1b9-ddac0bdab3be",
+      "text": "West Germany's \"economic miracle\" was substantially fueled by the Marshall Plan and the strategic need for a strong US ally against the Soviet Union, providing non-market advantages beyond the initial intervention's design. Japan's rapid economic recovery was crucially catalyzed by massive US military procurement contracts associated with the Korean War, which acted as a major external stimulus.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "048ac7f8-0c1a-49f0-ab99-e7c7b56b9ebe",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.779182+00:00"
+    },
+    {
+      "id": "b66ac605-0093-46ef-b252-124822eb977f",
+      "text": "The intervention failed to establish uniform stability in Germany, resulting in the immediate partition and the long-term existence of the economically collapsed and authoritarian German Democratic Republic (GDR). The need to construct the Berlin Wall in 1961 to contain instability within the Soviet zone directly contradicts claims of universally decreased long-term instability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "048ac7f8-0c1a-49f0-ab99-e7c7b56b9ebe",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.779546+00:00"
+    },
+    {
+      "id": "03b22bf5-f432-42d8-9ac7-06439d2ccd73",
+      "text": "Slovenia, Croatia, Bosnia and Herzegovina, and North Macedonia achieved their independence in 1991 and 1992, years before the 1999 NATO intervention began.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.234848+00:00"
+    },
+    {
+      "id": "f23fe057-5c69-4bb6-b371-6214cd77cd4d",
+      "text": "The resulting region remains politically unstable, evidenced by Serbia's continued refusal to recognize Kosovo and recurring violent conflicts in northern Kosovo through 2023.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.235575+00:00"
+    },
+    {
+      "id": "38fcc334-8505-4a02-81f5-889b089e7d2d",
+      "text": "After the intervention, approximately 200,000 Serbs, Roma, and other non-Albanians were displaced from Kosovo due to widespread retaliatory ethnic cleansing.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.236075+00:00"
+    },
+    {
+      "id": "5946d848-3b4b-4f36-9231-a36dd3ef8c79",
+      "text": "During the Munich Agreement of 1938, Britain and France explicitly sacrificed Czechoslovakia's sovereignty to prevent the immediate material and human costs of a larger, destructive European war.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7e9c21f8-8747-4bf4-8d11-f4ce041f13bd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.862941+00:00"
+    },
+    {
+      "id": "b6e806fe-bc9d-481d-b5d2-3b3a776a99d5",
+      "text": "Political actors consistently reveal subjective prioritizations when making choices, such as when the UK government prioritized perceived sovereignty gains post-Brexit despite official Bank of England forecasts projecting material GDP loss.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7e9c21f8-8747-4bf4-8d11-f4ce041f13bd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.863616+00:00"
+    },
+    {
+      "id": "e12038ec-7773-41a4-9360-f5d8dbb448a5",
+      "text": "The moral debates over tactics, such as the Dresden bombing, do not invalidate the near-universal moral consensus among Allied nations that fighting the genocidal Axis powers was a necessary and just war. The post-war Nuremberg Trials established an international legal framework where the war\u2019s defense against aggression and crimes against humanity was morally sanctioned, regardless of internal tactical disputes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2634b31f-8d38-4bd1-a18d-f2e25c169899",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:29.610275+00:00"
+    },
+    {
+      "id": "5399197a-b8d2-4e9b-af16-ec3ed9080edc",
+      "text": "The NPT and UN Charter outline mutual obligations and constraints on state behavior, but they lack any legal mechanism to explicitly structure the internal workings of alliances like NATO or define a geopolitical \"balance\" of power.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8773f9a0-0185-48f2-b23d-d8164c1f1adf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.896316+00:00"
+    },
+    {
+      "id": "1d4a4dbf-1550-4db3-b013-ae8f50506d3d",
+      "text": "The enforcement of the UN Charter's collective security is fundamentally limited by the Security Council's P5 veto, which allows major powers like Russia or the US to bypass the legal structure based on national political interests.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8773f9a0-0185-48f2-b23d-d8164c1f1adf",
+      "children_count": 0,
+      "references": [
+        "UN Security Council P5 Veto",
+        "2014 Annexation of Crimea"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.896364+00:00"
+    },
+    {
+      "id": "df45a800-e359-45c7-84d4-53523c428493",
+      "text": "The moral justification for the 1991 Gulf War was the immediate cessation of large-scale aggression by Iraq against a sovereign state, an overriding necessity that prevents long-term state-sponsored violence and regional destabilization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0b5491bb-5537-4b6a-af11-76933fc0e5ec",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.994413+00:00"
+    },
+    {
+      "id": "c0871fe4-673e-4b84-a1fd-d28f721fbd89",
+      "text": "The principle of proportionality is fundamentally subjective, requiring only that anticipated military advantage not be \"excessive\" relative to civilian harm, which allows states like Russia and Israel wide latitude to justify massive infrastructural destruction by inflating the perceived military value of civilian targets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "025acd1b-e19a-428c-a771-ebec96332361",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:36.671832+00:00"
+    },
+    {
+      "id": "9e8f4f04-2b12-4eac-bcbb-994357da6285",
+      "text": "Appeasement in 1938 did not prevent conflict, but merely delayed the inevitable World War II for one year at the cost of tens of millions of lives, demonstrating that refusing a necessary, justified conflict can lead to a far costlier war later.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5946d848-3b4b-4f36-9231-a36dd3ef8c79",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.651589+00:00"
+    },
+    {
+      "id": "809f89a7-1621-4063-9d75-11c40a038ce4",
+      "text": "Immanuel Kant's Groundwork of the Metaphysics of Morals (1785) established the deontological principle that the individual must never be treated merely as a means, which contradicts any moral justification for instrumentalizing conscripts regardless of the potential collective benefit.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3d8660fe-09ab-477b-a70d-483d920a973e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.867905+00:00"
+    },
+    {
+      "id": "75f3322b-84da-45ac-a6c4-3119cac59411",
+      "text": "The existential threat posed during the 1962 Cuban Missile Crisis was successfully averted through intense diplomacy and negotiation, demonstrating that protecting millions from immediate threat does not necessarily require the instrumentalization and sacrifice of military personnel.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3d8660fe-09ab-477b-a70d-483d920a973e",
+      "children_count": 1,
+      "references": [
+        "Cuban Missile Crisis 1962"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.868352+00:00"
+    },
+    {
+      "id": "8b91b7fd-ea0f-4122-82c3-f53afa510bcb",
+      "text": "Modern limited-warfare campaigns often occur in remote, non-urban areas, such as the extensive drone operations targeting militants in rural Yemen and the border regions of Pakistan. This demonstrates that not all modern conflicts are dependent on dense urban terrain, allowing for military actions far from large civilian populations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0c7cb05a-1361-41d3-b280-09f6e6ff6f25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:37.873999+00:00"
+    },
+    {
+      "id": "09d0177c-ac14-415b-be93-155431082ded",
+      "text": "Complex, non-routine stability maintenance frequently occurs through bodies like the UN Security Council, distinct from routine trade disputes; examples include the extensive multilateral sanctions programs imposed on Iran and North Korea.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c8c6cf67-5f1b-4272-af2b-98bd16959877",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:38.096630+00:00"
+    },
+    {
+      "id": "656a79fb-5c70-450a-b3c9-6c919777aac5",
+      "text": "Geopolitical crises, even if low-frequency compared to trade disputes, have a disproportionately massive impact on global stability; the 2022 Russian invasion of Ukraine disrupted global energy, food markets, and security architecture more than all WTO/ICJ cases over the past decade.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c8c6cf67-5f1b-4272-af2b-98bd16959877",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:38.096657+00:00"
+    },
+    {
+      "id": "a29afe85-c9d1-4838-91f0-06d3e25e758a",
+      "text": "The moral justification for the intervention remains strong because it averted a far greater human catastrophe, specifically the massive systematic displacement and killing of approximately 850,000 ethnic Albanians by Serbian forces that was ongoing prior to NATO\u2019s entry. Preventing immediate, state-sponsored mass atrocities often outweighs the tragic, but less systematic, retaliatory violence that occurs in the post-conflict vacuum.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "38fcc334-8505-4a02-81f5-889b089e7d2d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:38.616550+00:00"
+    },
+    {
+      "id": "62301cfe-a147-46a4-a675-a3bf48dda55b",
+      "text": "The moral justification for the 1999 NATO intervention is challenged because it was conducted without explicit authorization from the United Nations Security Council, violating established principles of international law. This lack of legal mandate makes the intervention a contentious precedent, irrespective of its stated humanitarian goals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "03b22bf5-f432-42d8-9ac7-06439d2ccd73",
+      "children_count": 0,
+      "references": [
+        "NATO 1999 intervention"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:38.898113+00:00"
+    },
+    {
+      "id": "1b1dd985-972b-4630-86e3-522c616dbaea",
+      "text": "The intervention resulted in the creation of the Federal Republic of Germany (FRG), a stable and democratic state whose economic success anchored the long-term political stability of Western Europe, offsetting the instability localized in the GDR.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b66ac605-0093-46ef-b252-124822eb977f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:39.792664+00:00"
+    },
+    {
+      "id": "10cf3bc6-f8c7-43da-983c-30051fb5cad6",
+      "text": "The global legal order failed to prevent major wars involving powerful states, such as the 2003 US invasion of Iraq and the 2022 full-scale Russian invasion of Ukraine, despite clear international law contraventions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ef06d045-bc97-450c-a26d-a8114e276247",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:42.515162+00:00"
+    },
+    {
+      "id": "3af6b1ed-8108-491e-954d-9c785cf12d17",
+      "text": "A border dispute between two medium powers, like the one resolved between Ecuador and Peru, uses arbitration mechanisms functionally distinct from those required to prevent great power conflicts like the Korean War or the Cuban Missile Crisis.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ef06d045-bc97-450c-a26d-a8114e276247",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:42.515190+00:00"
+    },
+    {
+      "id": "32b87bfa-0b1a-40e1-8b89-92a639b7975e",
+      "text": "Targeting dual-use infrastructure like the Iraqi electrical grid was a recognized military objective to degrade Saddam Hussein's command and control centers and arms production during the 1991 invasion. The proportionality rule legally requires military planners to weigh the immediate military gain against only the predicted immediate civilian harm at the time of the attack.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8cc3fa6e-c33c-4c3d-9def-330d166bb397",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.641385+00:00"
+    },
+    {
+      "id": "09363d18-0766-4115-9f01-7fe0fd328287",
+      "text": "The proportionality rule in International Humanitarian Law strictly defines incidental harm as the immediate, predictable damage occurring during the attack, not long-term, post-conflict effects. Extended suffering, such as the widespread chronic disease and cholera outbreaks following the Gulf War in 1991, falls outside the legal scope of incidental harm.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8cc3fa6e-c33c-4c3d-9def-330d166bb397",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:43.641416+00:00"
+    },
+    {
+      "id": "6f6b4165-2a69-43c6-8602-2ca8263f2509",
+      "text": "The Allied intervention in World War II against the systemic genocide by Nazi Germany provides a clear case of moral justification, demonstrating that necessary defense against existential evil must outweigh subsequent concerns about post-conflict instability, such as the decades-long Cold War division of Europe.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f23fe057-5c69-4bb6-b371-6214cd77cd4d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:44.150080+00:00"
+    },
+    {
+      "id": "86d8f14b-e73f-464e-9835-0419bc9b7595",
+      "text": "Coalition forces applied explicit distinction rules in the 1991 Gulf War using precision munitions and strict targeting, demonstrating a measurable doctrinal commitment to Jus in Bello. This proven institutional compliance carries relevance to subsequent conflicts, like the 2003 Iraq War, regardless of tactical symmetry.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8b07e4c7-05e5-4130-82d9-bcee6ada9444",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:45.103102+00:00"
+    },
+    {
+      "id": "a23cb4ce-10a7-4668-b5de-b5830272cd56",
+      "text": "Rules of distinction and proportionality, codified in the 1949 Geneva Conventions, apply universally to all armed conflicts regardless of the ratio of forces involved. The legal standard for avoiding civilian harm demonstrated in the 1990s Balkans conflicts remains the same in the 2022 large-scale war in Ukraine.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8b07e4c7-05e5-4130-82d9-bcee6ada9444",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:45.103149+00:00"
+    },
+    {
+      "id": "a1600061-d552-4fb6-8738-fa9272ff4c50",
+      "text": "The UN General Assembly successfully invoked the \"Uniting for Peace\" resolution in 1950 to recommend military action in the Korean War after the Soviet Union vetoed the measure, demonstrating a legal path for enforcement when Security Council paralysis occurs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "52753757-e00e-4e8c-adbc-e05ba9c0f235",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:46.212826+00:00"
+    },
+    {
+      "id": "cad895c1-cc0a-40eb-af5b-fc7672a4dd77",
+      "text": "The success of diplomacy during the Cuban Missile Crisis was critically predicated on the instrumentalization of military force, including the US naval 'quarantine' and the explicit threat of invasion, which provided the necessary leverage for any negotiation to occur. This concrete example actually shows that a credible military threat is often the precondition for successful, peace-preserving diplomacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "75f3322b-84da-45ac-a6c4-3119cac59411",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:48.612305+00:00"
+    },
+    {
+      "id": "700bf5ab-72c3-49eb-8053-9d6c44ca5d8a",
+      "text": "War's moral justification fails because it inevitably produces vast, multigenerational refugee crises and geopolitical instability that extends the harm far beyond the conflict zone, exemplified by the destabilization of the entire Middle East following the 2011 intervention in Libya.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a04961d9-8966-41bf-b1b9-ddac0bdab3be",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:48.693077+00:00"
+    },
+    {
+      "id": "bcbfdbde-4208-4637-906f-f49fe3a6549f",
+      "text": "UK political actors explicitly prioritized achieving long-term regulatory freedom and securing comprehensive external trade deals like the CPTPP, believing this strategic flexibility would objectively boost growth. The Brexit choice was thus a prioritization between competing long-term and short-term economic objectives, not merely a subjective preference for non-economic values.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b6e806fe-bc9d-481d-b5d2-3b3a776a99d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:52.706662+00:00"
+    },
+    {
+      "id": "b2da6a17-6e36-4746-b9d1-733f9c32ff4f",
+      "text": "According to Kant\u2019s The Metaphysics of Morals (1797), a rational citizen has a duty to help preserve the political constitution which secures their liberty. Fulfilling a conscripted military duty is therefore consistent with the citizen's own rational will, meaning they are not treated merely as a means but as participants in their own ends.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "809f89a7-1621-4063-9d75-11c40a038ce4",
+      "children_count": 0,
+      "references": [
+        "Immanuel Kant's The Metaphysics of Morals (1797)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:54.545139+00:00"
+    },
+    {
+      "id": "05fecd3d-3df3-4779-b0a8-491c2aedf2dd",
+      "text": "Widely referenced estimates, such as those analyzed by the Project on Defense Alternatives regarding the 1991 Gulf War, placed direct civilian fatality counts between 1,000 and 5,000, significantly lower than 15,000.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "849c609b-25c9-4fd2-b4c0-4437c8137954",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:58.333402+00:00"
+    },
+    {
+      "id": "ccb78c8e-8de6-412b-87c5-c63e1ace8e53",
+      "text": "The concept of \"minimization\" in warfare is defined by the principle of proportionality under international law, meaning the civilian loss was judged not excessive compared to the decisive military objectives achieved in freeing Kuwait.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "849c609b-25c9-4fd2-b4c0-4437c8137954",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:58.333433+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:46.340739+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:46.340739+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "00ebcbba-353a-4cf4-905b-095ac77f23b5",
+      "target": "ca755f96-b07a-4eca-b53f-369ac8626222",
+      "type": "objection"
+    },
+    {
+      "source": "00ebcbba-353a-4cf4-905b-095ac77f23b5",
+      "target": "4ddb1036-42ef-42a9-9693-91d176c7c2db",
+      "type": "objection"
+    },
+    {
+      "source": "60b5b04c-5fb3-4909-b5a4-2a80726ada15",
+      "target": "ae420b6f-a298-47d0-9601-c0e14630c741",
+      "type": "objection"
+    },
+    {
+      "source": "60b5b04c-5fb3-4909-b5a4-2a80726ada15",
+      "target": "b4beb143-2d8b-42ec-a41d-af8f0a2984d1",
+      "type": "objection"
+    },
+    {
+      "source": "138fd274-3138-4a0a-9788-efe998ce3d86",
+      "target": "35d5bf63-e68b-4728-a049-a080144752f5",
+      "type": "objection"
+    },
+    {
+      "source": "138fd274-3138-4a0a-9788-efe998ce3d86",
+      "target": "a09415a9-a6ab-4da2-99db-0597b6bf70e3",
+      "type": "objection"
+    },
+    {
+      "source": "eaa87009-9316-4c7b-9e94-4e161d98312b",
+      "target": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "type": "objection"
+    },
+    {
+      "source": "eaa87009-9316-4c7b-9e94-4e161d98312b",
+      "target": "48c0976f-e091-41cf-af34-c794ae0c94df",
+      "type": "objection"
+    },
+    {
+      "source": "a80c1364-1205-4395-be8f-8aa259a823dc",
+      "target": "2be5ef39-594c-4440-8340-5e52be30b83a",
+      "type": "objection"
+    },
+    {
+      "source": "a80c1364-1205-4395-be8f-8aa259a823dc",
+      "target": "71218c90-d45e-479a-8e78-ac681dbdc306",
+      "type": "objection"
+    },
+    {
+      "source": "2a5058a1-e7a0-43a5-ac35-37c5894ca687",
+      "target": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "type": "objection"
+    },
+    {
+      "source": "2a5058a1-e7a0-43a5-ac35-37c5894ca687",
+      "target": "af093ace-575d-4190-8f2f-a0a5df883d14",
+      "type": "objection"
+    },
+    {
+      "source": "ca755f96-b07a-4eca-b53f-369ac8626222",
+      "target": "d5c13684-ebb1-4f75-a953-ac3da7e58dc4",
+      "type": "response"
+    },
+    {
+      "source": "ca755f96-b07a-4eca-b53f-369ac8626222",
+      "target": "8e8a953a-489d-468a-bd53-7eaafc050860",
+      "type": "response"
+    },
+    {
+      "source": "4ddb1036-42ef-42a9-9693-91d176c7c2db",
+      "target": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "type": "response"
+    },
+    {
+      "source": "4ddb1036-42ef-42a9-9693-91d176c7c2db",
+      "target": "f27ad270-73b0-4241-b2a2-83ea86a4a7ed",
+      "type": "response"
+    },
+    {
+      "source": "a09415a9-a6ab-4da2-99db-0597b6bf70e3",
+      "target": "d61698c8-a471-4e86-b783-a0b3d07a9007",
+      "type": "response"
+    },
+    {
+      "source": "a09415a9-a6ab-4da2-99db-0597b6bf70e3",
+      "target": "b24b0dce-dfc4-40e2-8ad2-a791a409354c",
+      "type": "response"
+    },
+    {
+      "source": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "target": "bf09ba59-def9-4694-ab7b-b574c480749d",
+      "type": "response"
+    },
+    {
+      "source": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "target": "2124ea27-8914-404d-8dae-665ded621ab5",
+      "type": "response"
+    },
+    {
+      "source": "f1432a11-8a00-44b0-ac93-addf51ad9ea1",
+      "target": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "type": "response"
+    },
+    {
+      "source": "35d5bf63-e68b-4728-a049-a080144752f5",
+      "target": "f90b00c1-7b33-4114-b3db-b24249994d51",
+      "type": "response"
+    },
+    {
+      "source": "35d5bf63-e68b-4728-a049-a080144752f5",
+      "target": "f419df7c-b6bc-49ea-9a17-1b5f5ed15192",
+      "type": "response"
+    },
+    {
+      "source": "2be5ef39-594c-4440-8340-5e52be30b83a",
+      "target": "d8fa7ac2-bc6c-4550-9b4f-b07dc61adde1",
+      "type": "response"
+    },
+    {
+      "source": "2be5ef39-594c-4440-8340-5e52be30b83a",
+      "target": "4b5c4e9e-39da-4e77-9929-398cc745b38f",
+      "type": "response"
+    },
+    {
+      "source": "d5c13684-ebb1-4f75-a953-ac3da7e58dc4",
+      "target": "364943de-b8d5-4b75-9abc-fe9eb9769da8",
+      "type": "response"
+    },
+    {
+      "source": "8e8a953a-489d-468a-bd53-7eaafc050860",
+      "target": "cd89acfe-b081-4977-87b3-3ab4237fd590",
+      "type": "response"
+    },
+    {
+      "source": "b4beb143-2d8b-42ec-a41d-af8f0a2984d1",
+      "target": "7e52037f-2fe1-4e9c-97ce-b6fadf28cb01",
+      "type": "response"
+    },
+    {
+      "source": "b4beb143-2d8b-42ec-a41d-af8f0a2984d1",
+      "target": "9b8d6b62-979b-464f-bba9-165e71a95b0b",
+      "type": "response"
+    },
+    {
+      "source": "48c0976f-e091-41cf-af34-c794ae0c94df",
+      "target": "65a465c0-26a4-4618-a944-30011bed2658",
+      "type": "response"
+    },
+    {
+      "source": "48c0976f-e091-41cf-af34-c794ae0c94df",
+      "target": "fa2d7d0d-a6e4-489b-ba1a-08c3778cf0ff",
+      "type": "response"
+    },
+    {
+      "source": "ae420b6f-a298-47d0-9601-c0e14630c741",
+      "target": "3fbec2b9-9c17-4a41-bf33-3752d12b73a1",
+      "type": "response"
+    },
+    {
+      "source": "ae420b6f-a298-47d0-9601-c0e14630c741",
+      "target": "8c6fe938-2e09-4a4f-be07-7fbe28db5071",
+      "type": "response"
+    },
+    {
+      "source": "f27ad270-73b0-4241-b2a2-83ea86a4a7ed",
+      "target": "c261503d-a0ba-4b58-9a20-a9cb9949e364",
+      "type": "response"
+    },
+    {
+      "source": "f27ad270-73b0-4241-b2a2-83ea86a4a7ed",
+      "target": "66810ec6-566c-48cc-b14d-396a538d7fc0",
+      "type": "response"
+    },
+    {
+      "source": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "target": "33528521-5c74-4c1f-850e-74de14e63792",
+      "type": "response"
+    },
+    {
+      "source": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "target": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "type": "response"
+    },
+    {
+      "source": "61099154-c158-42a0-b1d9-eb8a909a392b",
+      "target": "d03961df-8acc-45ad-820c-d22d0c54d8d5",
+      "type": "response"
+    },
+    {
+      "source": "d61698c8-a471-4e86-b783-a0b3d07a9007",
+      "target": "cd48ea2c-3433-48ae-afbe-e282140310bc",
+      "type": "response"
+    },
+    {
+      "source": "d61698c8-a471-4e86-b783-a0b3d07a9007",
+      "target": "2d004361-a1ac-457e-b635-885a8f245b04",
+      "type": "response"
+    },
+    {
+      "source": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "target": "c1f7f448-9560-4d12-872c-c0c21dca9e40",
+      "type": "response"
+    },
+    {
+      "source": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "target": "2345ec28-e19d-43ae-8d05-0bbb0d8e16d8",
+      "type": "response"
+    },
+    {
+      "source": "2b2c7a7e-93f2-45ac-962a-c404fddb3530",
+      "target": "092e9cfa-e043-46f6-9682-6918ad36f6e8",
+      "type": "response"
+    },
+    {
+      "source": "71218c90-d45e-479a-8e78-ac681dbdc306",
+      "target": "a5bc76fe-7a4c-4ea6-87a7-ac59a668ad24",
+      "type": "response"
+    },
+    {
+      "source": "71218c90-d45e-479a-8e78-ac681dbdc306",
+      "target": "1c3aa018-47ca-40ef-8a4f-027d11da7213",
+      "type": "response"
+    },
+    {
+      "source": "f90b00c1-7b33-4114-b3db-b24249994d51",
+      "target": "f71f1632-f8ea-4589-a04f-eaeafdbdc56a",
+      "type": "response"
+    },
+    {
+      "source": "f419df7c-b6bc-49ea-9a17-1b5f5ed15192",
+      "target": "0cb6f765-3a05-4b9c-ab74-a744c6804db0",
+      "type": "response"
+    },
+    {
+      "source": "bf09ba59-def9-4694-ab7b-b574c480749d",
+      "target": "9cadecdc-7af0-4aed-a0ed-abf778d8b485",
+      "type": "response"
+    },
+    {
+      "source": "bf09ba59-def9-4694-ab7b-b574c480749d",
+      "target": "b72433f7-777d-4c84-b162-f5f44efad666",
+      "type": "response"
+    },
+    {
+      "source": "8c6fe938-2e09-4a4f-be07-7fbe28db5071",
+      "target": "77946001-5fef-41e6-bfd2-abadb1f64c6c",
+      "type": "response"
+    },
+    {
+      "source": "8c6fe938-2e09-4a4f-be07-7fbe28db5071",
+      "target": "fe475dac-7fd7-47d8-9ca1-34446834d227",
+      "type": "response"
+    },
+    {
+      "source": "9b8d6b62-979b-464f-bba9-165e71a95b0b",
+      "target": "86556a91-2e98-4e8f-a780-babc2ffe4549",
+      "type": "response"
+    },
+    {
+      "source": "7e52037f-2fe1-4e9c-97ce-b6fadf28cb01",
+      "target": "86a19c16-3026-4fd2-b3bc-b280d508231e",
+      "type": "response"
+    },
+    {
+      "source": "2124ea27-8914-404d-8dae-665ded621ab5",
+      "target": "0be188ac-a13b-48c6-92da-b169f0a59e7f",
+      "type": "response"
+    },
+    {
+      "source": "b24b0dce-dfc4-40e2-8ad2-a791a409354c",
+      "target": "e4ef12a8-312e-4563-a142-a9b4d9c983b4",
+      "type": "response"
+    },
+    {
+      "source": "fa2d7d0d-a6e4-489b-ba1a-08c3778cf0ff",
+      "target": "f209cb91-1a8a-4d8c-b032-99a4c71aac33",
+      "type": "response"
+    },
+    {
+      "source": "fa2d7d0d-a6e4-489b-ba1a-08c3778cf0ff",
+      "target": "e8a3dfb5-b093-4dbe-8a8c-ccfbfbf513b8",
+      "type": "response"
+    },
+    {
+      "source": "3fbec2b9-9c17-4a41-bf33-3752d12b73a1",
+      "target": "8bdbdd7c-31bd-4bea-92b6-cb33f7bdac4f",
+      "type": "response"
+    },
+    {
+      "source": "3fbec2b9-9c17-4a41-bf33-3752d12b73a1",
+      "target": "cbb829e7-ccd2-48ea-9edd-a43e5b2b17b5",
+      "type": "response"
+    },
+    {
+      "source": "4b5c4e9e-39da-4e77-9929-398cc745b38f",
+      "target": "01f8d9ab-8508-4d93-abda-e55e1316f418",
+      "type": "response"
+    },
+    {
+      "source": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "target": "ea0eff42-eca8-4f00-882f-350c00e62d35",
+      "type": "response"
+    },
+    {
+      "source": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "target": "e7eb69a6-e688-4f29-aefa-bf61f1bdd423",
+      "type": "response"
+    },
+    {
+      "source": "3b3e1031-9e91-4bb8-8347-71593f5bb33a",
+      "target": "e350a9cc-41ab-46ca-9981-51e7fe8664d0",
+      "type": "response"
+    },
+    {
+      "source": "d8fa7ac2-bc6c-4550-9b4f-b07dc61adde1",
+      "target": "1d2afe4d-097b-4cf5-a9d3-5a705da4e404",
+      "type": "response"
+    },
+    {
+      "source": "33528521-5c74-4c1f-850e-74de14e63792",
+      "target": "695ce723-c184-4f39-b97f-d21de5f214db",
+      "type": "response"
+    },
+    {
+      "source": "33528521-5c74-4c1f-850e-74de14e63792",
+      "target": "10aec619-517e-419b-a1ef-6e95593c33db",
+      "type": "response"
+    },
+    {
+      "source": "65a465c0-26a4-4618-a944-30011bed2658",
+      "target": "73ae496a-5500-4f6d-a13e-13ccf0cda18c",
+      "type": "response"
+    },
+    {
+      "source": "65a465c0-26a4-4618-a944-30011bed2658",
+      "target": "4784b4d3-6b5f-48f7-b15b-f938f46f35b1",
+      "type": "response"
+    },
+    {
+      "source": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "target": "68439e4c-3bfc-46fa-ad44-9ed9cdf4bab2",
+      "type": "response"
+    },
+    {
+      "source": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "target": "3216ac4f-ce34-496d-8713-aee62bb384ed",
+      "type": "response"
+    },
+    {
+      "source": "2316790d-6b14-4e76-9506-9f923dbf6690",
+      "target": "0f113546-431b-42f6-945b-dd0a3522b09c",
+      "type": "response"
+    },
+    {
+      "source": "a5bc76fe-7a4c-4ea6-87a7-ac59a668ad24",
+      "target": "987a2ef6-0770-4b45-bd62-f467128bb36f",
+      "type": "response"
+    },
+    {
+      "source": "a5bc76fe-7a4c-4ea6-87a7-ac59a668ad24",
+      "target": "4ff0d242-c6e6-4322-9ffa-5753aad48f34",
+      "type": "response"
+    },
+    {
+      "source": "d03961df-8acc-45ad-820c-d22d0c54d8d5",
+      "target": "89b898d1-95e6-4f85-84ea-e3eefa84d295",
+      "type": "response"
+    },
+    {
+      "source": "1c3aa018-47ca-40ef-8a4f-027d11da7213",
+      "target": "74554978-a371-43e7-b131-8acba5f19eb6",
+      "type": "response"
+    },
+    {
+      "source": "305837ad-4027-4e62-a157-603028316f24",
+      "target": "adddf139-94c5-45be-bd95-89933adceaf0",
+      "type": "objection"
+    },
+    {
+      "source": "305837ad-4027-4e62-a157-603028316f24",
+      "target": "69b59d3f-8f86-46cb-9623-e0c2fa18d096",
+      "type": "objection"
+    },
+    {
+      "source": "f4476697-d584-4ef8-beab-bcefb6a80fbf",
+      "target": "960ec092-f3cc-487b-80f8-cd93fd0ea285",
+      "type": "objection"
+    },
+    {
+      "source": "f4476697-d584-4ef8-beab-bcefb6a80fbf",
+      "target": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "type": "objection"
+    },
+    {
+      "source": "a44812ed-a477-438b-8336-68affe10a5d6",
+      "target": "2298e1e4-646a-4441-ba91-027c4267199d",
+      "type": "objection"
+    },
+    {
+      "source": "a44812ed-a477-438b-8336-68affe10a5d6",
+      "target": "517a5f9a-3c22-465b-b282-2bdb7254dbb6",
+      "type": "objection"
+    },
+    {
+      "source": "e593c2f3-8e8d-4eef-8b79-0426a5968c9d",
+      "target": "4160f310-1ed2-4b6e-a5bd-cc02b0df3b45",
+      "type": "objection"
+    },
+    {
+      "source": "e593c2f3-8e8d-4eef-8b79-0426a5968c9d",
+      "target": "7e9c21f8-8747-4bf4-8d11-f4ce041f13bd",
+      "type": "objection"
+    },
+    {
+      "source": "6ddddaad-cbff-44b5-add9-63433c8db69a",
+      "target": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "type": "objection"
+    },
+    {
+      "source": "6ddddaad-cbff-44b5-add9-63433c8db69a",
+      "target": "048ac7f8-0c1a-49f0-ab99-e7c7b56b9ebe",
+      "type": "objection"
+    },
+    {
+      "source": "5d74a06b-a8dd-41a0-915b-c748f6110f32",
+      "target": "a515ae26-4ea2-493a-89b3-be5f630a384d",
+      "type": "objection"
+    },
+    {
+      "source": "5d74a06b-a8dd-41a0-915b-c748f6110f32",
+      "target": "3d8660fe-09ab-477b-a70d-483d920a973e",
+      "type": "objection"
+    },
+    {
+      "source": "69b59d3f-8f86-46cb-9623-e0c2fa18d096",
+      "target": "8773f9a0-0185-48f2-b23d-d8164c1f1adf",
+      "type": "response"
+    },
+    {
+      "source": "69b59d3f-8f86-46cb-9623-e0c2fa18d096",
+      "target": "c8c6cf67-5f1b-4272-af2b-98bd16959877",
+      "type": "response"
+    },
+    {
+      "source": "4160f310-1ed2-4b6e-a5bd-cc02b0df3b45",
+      "target": "2634b31f-8d38-4bd1-a18d-f2e25c169899",
+      "type": "response"
+    },
+    {
+      "source": "4160f310-1ed2-4b6e-a5bd-cc02b0df3b45",
+      "target": "025acd1b-e19a-428c-a771-ebec96332361",
+      "type": "response"
+    },
+    {
+      "source": "2298e1e4-646a-4441-ba91-027c4267199d",
+      "target": "0b5491bb-5537-4b6a-af11-76933fc0e5ec",
+      "type": "response"
+    },
+    {
+      "source": "2298e1e4-646a-4441-ba91-027c4267199d",
+      "target": "0c7cb05a-1361-41d3-b280-09f6e6ff6f25",
+      "type": "response"
+    },
+    {
+      "source": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "target": "849c609b-25c9-4fd2-b4c0-4437c8137954",
+      "type": "response"
+    },
+    {
+      "source": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "target": "8cc3fa6e-c33c-4c3d-9def-330d166bb397",
+      "type": "response"
+    },
+    {
+      "source": "c8f68467-757f-4b0e-9124-43f774bea244",
+      "target": "8b07e4c7-05e5-4130-82d9-bcee6ada9444",
+      "type": "response"
+    },
+    {
+      "source": "adddf139-94c5-45be-bd95-89933adceaf0",
+      "target": "ef06d045-bc97-450c-a26d-a8114e276247",
+      "type": "response"
+    },
+    {
+      "source": "adddf139-94c5-45be-bd95-89933adceaf0",
+      "target": "52753757-e00e-4e8c-adbc-e05ba9c0f235",
+      "type": "response"
+    },
+    {
+      "source": "048ac7f8-0c1a-49f0-ab99-e7c7b56b9ebe",
+      "target": "a04961d9-8966-41bf-b1b9-ddac0bdab3be",
+      "type": "response"
+    },
+    {
+      "source": "048ac7f8-0c1a-49f0-ab99-e7c7b56b9ebe",
+      "target": "b66ac605-0093-46ef-b252-124822eb977f",
+      "type": "response"
+    },
+    {
+      "source": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "target": "03b22bf5-f432-42d8-9ac7-06439d2ccd73",
+      "type": "response"
+    },
+    {
+      "source": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "target": "f23fe057-5c69-4bb6-b371-6214cd77cd4d",
+      "type": "response"
+    },
+    {
+      "source": "7f68a33e-707d-45ee-a1c9-6d41971a9b22",
+      "target": "38fcc334-8505-4a02-81f5-889b089e7d2d",
+      "type": "response"
+    },
+    {
+      "source": "7e9c21f8-8747-4bf4-8d11-f4ce041f13bd",
+      "target": "5946d848-3b4b-4f36-9231-a36dd3ef8c79",
+      "type": "response"
+    },
+    {
+      "source": "7e9c21f8-8747-4bf4-8d11-f4ce041f13bd",
+      "target": "b6e806fe-bc9d-481d-b5d2-3b3a776a99d5",
+      "type": "response"
+    },
+    {
+      "source": "2634b31f-8d38-4bd1-a18d-f2e25c169899",
+      "target": "e12038ec-7773-41a4-9360-f5d8dbb448a5",
+      "type": "response"
+    },
+    {
+      "source": "8773f9a0-0185-48f2-b23d-d8164c1f1adf",
+      "target": "5399197a-b8d2-4e9b-af16-ec3ed9080edc",
+      "type": "response"
+    },
+    {
+      "source": "8773f9a0-0185-48f2-b23d-d8164c1f1adf",
+      "target": "1d4a4dbf-1550-4db3-b013-ae8f50506d3d",
+      "type": "response"
+    },
+    {
+      "source": "0b5491bb-5537-4b6a-af11-76933fc0e5ec",
+      "target": "df45a800-e359-45c7-84d4-53523c428493",
+      "type": "response"
+    },
+    {
+      "source": "025acd1b-e19a-428c-a771-ebec96332361",
+      "target": "c0871fe4-673e-4b84-a1fd-d28f721fbd89",
+      "type": "response"
+    },
+    {
+      "source": "5946d848-3b4b-4f36-9231-a36dd3ef8c79",
+      "target": "9e8f4f04-2b12-4eac-bcbb-994357da6285",
+      "type": "response"
+    },
+    {
+      "source": "3d8660fe-09ab-477b-a70d-483d920a973e",
+      "target": "809f89a7-1621-4063-9d75-11c40a038ce4",
+      "type": "response"
+    },
+    {
+      "source": "3d8660fe-09ab-477b-a70d-483d920a973e",
+      "target": "75f3322b-84da-45ac-a6c4-3119cac59411",
+      "type": "response"
+    },
+    {
+      "source": "0c7cb05a-1361-41d3-b280-09f6e6ff6f25",
+      "target": "8b91b7fd-ea0f-4122-82c3-f53afa510bcb",
+      "type": "response"
+    },
+    {
+      "source": "c8c6cf67-5f1b-4272-af2b-98bd16959877",
+      "target": "09d0177c-ac14-415b-be93-155431082ded",
+      "type": "response"
+    },
+    {
+      "source": "c8c6cf67-5f1b-4272-af2b-98bd16959877",
+      "target": "656a79fb-5c70-450a-b3c9-6c919777aac5",
+      "type": "response"
+    },
+    {
+      "source": "38fcc334-8505-4a02-81f5-889b089e7d2d",
+      "target": "a29afe85-c9d1-4838-91f0-06d3e25e758a",
+      "type": "response"
+    },
+    {
+      "source": "03b22bf5-f432-42d8-9ac7-06439d2ccd73",
+      "target": "62301cfe-a147-46a4-a675-a3bf48dda55b",
+      "type": "response"
+    },
+    {
+      "source": "b66ac605-0093-46ef-b252-124822eb977f",
+      "target": "1b1dd985-972b-4630-86e3-522c616dbaea",
+      "type": "response"
+    },
+    {
+      "source": "ef06d045-bc97-450c-a26d-a8114e276247",
+      "target": "10cf3bc6-f8c7-43da-983c-30051fb5cad6",
+      "type": "response"
+    },
+    {
+      "source": "ef06d045-bc97-450c-a26d-a8114e276247",
+      "target": "3af6b1ed-8108-491e-954d-9c785cf12d17",
+      "type": "response"
+    },
+    {
+      "source": "8cc3fa6e-c33c-4c3d-9def-330d166bb397",
+      "target": "32b87bfa-0b1a-40e1-8b89-92a639b7975e",
+      "type": "response"
+    },
+    {
+      "source": "8cc3fa6e-c33c-4c3d-9def-330d166bb397",
+      "target": "09363d18-0766-4115-9f01-7fe0fd328287",
+      "type": "response"
+    },
+    {
+      "source": "f23fe057-5c69-4bb6-b371-6214cd77cd4d",
+      "target": "6f6b4165-2a69-43c6-8602-2ca8263f2509",
+      "type": "response"
+    },
+    {
+      "source": "8b07e4c7-05e5-4130-82d9-bcee6ada9444",
+      "target": "86d8f14b-e73f-464e-9835-0419bc9b7595",
+      "type": "response"
+    },
+    {
+      "source": "8b07e4c7-05e5-4130-82d9-bcee6ada9444",
+      "target": "a23cb4ce-10a7-4668-b5de-b5830272cd56",
+      "type": "response"
+    },
+    {
+      "source": "52753757-e00e-4e8c-adbc-e05ba9c0f235",
+      "target": "a1600061-d552-4fb6-8738-fa9272ff4c50",
+      "type": "response"
+    },
+    {
+      "source": "75f3322b-84da-45ac-a6c4-3119cac59411",
+      "target": "cad895c1-cc0a-40eb-af5b-fc7672a4dd77",
+      "type": "response"
+    },
+    {
+      "source": "a04961d9-8966-41bf-b1b9-ddac0bdab3be",
+      "target": "700bf5ab-72c3-49eb-8053-9d6c44ca5d8a",
+      "type": "response"
+    },
+    {
+      "source": "b6e806fe-bc9d-481d-b5d2-3b3a776a99d5",
+      "target": "bcbfdbde-4208-4637-906f-f49fe3a6549f",
+      "type": "response"
+    },
+    {
+      "source": "809f89a7-1621-4063-9d75-11c40a038ce4",
+      "target": "b2da6a17-6e36-4746-b9d1-733f9c32ff4f",
+      "type": "response"
+    },
+    {
+      "source": "849c609b-25c9-4fd2-b4c0-4437c8137954",
+      "target": "05fecd3d-3df3-4779-b0a8-491c2aedf2dd",
+      "type": "response"
+    },
+    {
+      "source": "849c609b-25c9-4fd2-b4c0-4437c8137954",
+      "target": "ccb78c8e-8de6-412b-87c5-c63e1ace8e53",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "2a5058a1-e7a0-43a5-ac35-37c5894ca687",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a80c1364-1205-4395-be8f-8aa259a823dc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "eaa87009-9316-4c7b-9e94-4e161d98312b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "60b5b04c-5fb3-4909-b5a4-2a80726ada15",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "00ebcbba-353a-4cf4-905b-095ac77f23b5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "138fd274-3138-4a0a-9788-efe998ce3d86",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5d74a06b-a8dd-41a0-915b-c748f6110f32",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "e593c2f3-8e8d-4eef-8b79-0426a5968c9d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "f4476697-d584-4ef8-beab-bcefb6a80fbf",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a44812ed-a477-438b-8336-68affe10a5d6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "305837ad-4027-4e62-a157-603028316f24",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6ddddaad-cbff-44b5-add9-63433c8db69a",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

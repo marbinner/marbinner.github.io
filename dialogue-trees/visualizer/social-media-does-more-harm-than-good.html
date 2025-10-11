@@ -1,0 +1,3069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social media does more harm than good - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Social media does more harm than good</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            95 total nodes • Max depth: 4 •
+            Version 4
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/social-media-does-more-harm-than-good.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">95</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "9c864e21-62e6-4681-85c1-e8b981041ecc",
+      "text": "The design of engagement-maximizing algorithms fosters widespread addictive behavior and contributes significantly to the youth mental health crisis, evidenced by rising rates of anxiety and depression across countries like the **United States** and the **United Kingdom**.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:18.029193"
+    },
+    {
+      "id": "15320e98-1cf1-4a8b-9753-8ed85ebed851",
+      "text": "Social media platforms are systematically exploited to spread coordinated political disinformation, thereby polarizing populations and undermining democratic institutions, exemplified by documented foreign interference in the **2016 U.S. election** and the platforming of domestic extremist movements leading to events like the **January 6th Capitol attack**.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:18.030053"
+    },
+    {
+      "id": "a98d3a4c-fda6-4ce6-835b-efc9d962642c",
+      "text": "The core business model relies on pervasive user surveillance and data harvesting, fundamentally eroding personal privacy and enabling the weaponization of massive personal datasets for psychological manipulation and political influence, as demonstrated by the **Cambridge Analytica scandal**.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:18.030536"
+    },
+    {
+      "id": "5122c94a-e5d2-47f7-aa61-856444d17e85",
+      "text": "The unchecked global power of a few private technology firms allows them to function as unaccountable gatekeepers of public discourse, enabling arbitrary content moderation decisions that affect free speech and political transparency across diverse national jurisdictions, including ongoing regulatory clashes in **India** and **Brazil**.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:18.031063"
+    },
+    {
+      "id": "86bf4096-d2aa-4f28-b987-a5a3380d91c9",
+      "text": "Rising youth anxiety correlates with multiple factors, including increasing economic inequality, the disruptive impact of the COVID-19 pandemic, and growing concerns over climate change, demonstrating the mental health crisis is not singularly attributable to platform algorithms.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9c864e21-62e6-4681-85c1-e8b981041ecc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:26.279813"
+    },
+    {
+      "id": "84ceee6d-cd3e-4c2d-909b-ec556ea76169",
+      "text": "The vast majority of data harvesting is commercially driven (e.g., targeted advertising, product recommendations), optimizing revenue through efficient market matching, which does not inherently equate to inevitable political \"weaponization\" or systemic psychological manipulation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a98d3a4c-fda6-4ce6-835b-efc9d962642c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:28.430078"
+    },
+    {
+      "id": "a87c08d5-0884-4e59-9ecb-6ecb79e22aaf",
+      "text": "Academic studies and journalistic analyses have significantly disputed the scale and effectiveness of the psychological manipulation claimed by the Cambridge Analytica scandal, suggesting its actual political impact was negligible compared to traditional campaigning methods.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a98d3a4c-fda6-4ce6-835b-efc9d962642c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:28.431251"
+    },
+    {
+      "id": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "text": "Academic studies show that political polarization is primarily driven by macro-factors like economic inequality and the fragmentation of traditional media, with social media consumption accounting for only a marginal, indirect portion of this effect.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "15320e98-1cf1-4a8b-9753-8ed85ebed851",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:28.734901"
+    },
+    {
+      "id": "9a762642-3b9f-4e26-8eef-a828af7392a4",
+      "text": "Using high-profile US incidents (2016 election, January 6th) as evidence of systematic, global failure constitutes a hasty generalization, given that many stable democracies (e.g., Germany, Canada) have seen little evidence that social media disinformation has undermined core institutional stability.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "15320e98-1cf1-4a8b-9753-8ed85ebed851",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:28.735965"
+    },
+    {
+      "id": "a7683bde-699b-4e5c-876d-ce10c8166177",
+      "text": "The precise micro-targeting infrastructure and detailed user profiles developed for commercial \"market matching\" are the identical technical mechanisms required for political disinformation campaigns and voter manipulation, meaning the capability for weaponization already exists regardless of current intent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "84ceee6d-cd3e-4c2d-909b-ec556ea76169",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:38.363008"
+    },
+    {
+      "id": "d5be4cd7-766f-46cd-b413-809f906116fe",
+      "text": "Highly optimized commercial targeting, designed to exploit cognitive biases and create compulsive purchasing habits for profit, already constitutes a form of systemic psychological manipulation, whether the desired outcome is commercial revenue or political change.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "84ceee6d-cd3e-4c2d-909b-ec556ea76169",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:38.363565"
+    },
+    {
+      "id": "10d47a45-7c51-4d99-a407-c1bae199fcb2",
+      "text": "Social media's harm extends beyond polarization; it serves as the necessary, scalable platform for foreign state-sponsored disinformation campaigns and the focused, organized harassment of political opponents and journalists.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:40.323024"
+    },
+    {
+      "id": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "text": "Social media algorithms are the critical mechanism that translates media fragmentation and underlying economic anxiety into mass political polarization by optimizing the engagement and spread of divisive, extremist content.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:40.323866"
+    },
+    {
+      "id": "4e718f62-d0f4-489a-b306-07246fe0cfc6",
+      "text": "Social media is the essential mechanism enabling the rapid organization and dissemination of election misinformation and coordinating real-world political violence, evidenced by the January 6th Capitol attack.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:40.324427"
+    },
+    {
+      "id": "56b09809-247c-412e-a326-0892c56958b8",
+      "text": "Even if psychographic targeting based on the OCEAN model failed, Cambridge Analytica's use of highly tailored, emotionally resonant messages to micro-target known political segments still provided a documented, non-negligible advantage in the 2016 US election and the Brexit referendum.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a87c08d5-0884-4e59-9ecb-6ecb79e22aaf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:43.367503"
+    },
+    {
+      "id": "dd75982a-9c0f-4041-807d-62a6f538abb6",
+      "text": "The major political impact of the scandal was the systemic, unauthorized harvesting of personal data from 87 million Facebook users, which resulted in global regulatory backlash, including the implementation of GDPR, drastically altering policy on data privacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a87c08d5-0884-4e59-9ecb-6ecb79e22aaf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:43.368304"
+    },
+    {
+      "id": "5ad1b2f6-4e95-4382-93ab-3e1f63ac0625",
+      "text": "Social media platforms significantly enable collective action and political mobilization, as demonstrated by their critical role in coordinating pro-democracy movements like the Arab Spring in 2011.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:47.539778"
+    },
+    {
+      "id": "e0a197d3-84ad-4d2a-ac5b-465a73149097",
+      "text": "Social media provides unprecedented, low-cost market access for small and micro-businesses globally, fostering economic growth and entrepreneurship far beyond the reach of traditional advertising models.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:47.539820"
+    },
+    {
+      "id": "9cee6139-b43f-4a0b-9bc2-64ea633d3617",
+      "text": "During disasters, social media serves as a vital, rapid communication tool for coordinating aid and ensuring public safety, exemplified by the widespread use of features like Facebook Safety Check during major hurricanes and earthquakes.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:47.539841"
+    },
+    {
+      "id": "56ad8f63-29de-4ddf-8a83-695b22bf1f73",
+      "text": "The primary function of commercial targeting systems is often effective market segmentation and preference reinforcement (e.g., personalized recommendations), which is standard persuasion and optimization, not necessarily the creation of pathology or compulsive purchasing habits.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d5be4cd7-766f-46cd-b413-809f906116fe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:51.763026"
+    },
+    {
+      "id": "57e03c8d-98c7-4a6b-83f6-7ed7901da626",
+      "text": "Exploiting cognitive biases, such as employing the scarcity principle or framing effects, is foundational to traditional advertising and rhetoric, and does not automatically meet the high threshold required to be labeled as systemic psychological manipulation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d5be4cd7-766f-46cd-b413-809f906116fe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:51.763051"
+    },
+    {
+      "id": "ec6d4605-f811-4343-b1f0-5f404c854c4a",
+      "text": "Social media is a crucial tool for democratic advancement, enabling rapid organization, mobilization, and communication for political resistance movements. Events like the Arab Spring and ongoing global civil rights movements demonstrate its capacity to hold centralized power accountable and empower marginalized voices.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:51.763146"
+    },
+    {
+      "id": "c1ea5f67-712e-4b82-ac39-9f473bd3058e",
+      "text": "Social media drives economic empowerment by providing millions of small businesses, entrepreneurs, and content creators with immediate, low-cost access to global markets. This economic functionality supports jobs and innovation that traditional physical marketplaces cannot achieve, providing a measurable productivity gain.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:51.763573"
+    },
+    {
+      "id": "12634763-bbdb-4739-89d9-6219799c3d12",
+      "text": "When used by official agencies and relief organizations, social media provides essential infrastructure for rapid communication during public health emergencies and natural disasters. The real-time dissemination of life-saving information and coordination of volunteer efforts greatly optimizes crisis response effectiveness.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:51.763865"
+    },
+    {
+      "id": "f966a407-4bee-4d00-b9a5-e8c80d0f87ac",
+      "text": "Social media facilitates indispensable social connection, allowing individuals to maintain extensive networks and overcome geographical isolation, especially for diaspora communities or people with specialized needs. The ability to find and participate in niche, supportive online communities counters feelings of personal isolation.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:13:51.764108"
+    },
+    {
+      "id": "5d5fc0ac-488b-4746-8efc-11ead6ceef9f",
+      "text": "Rapid mobilization often fails to achieve lasting democratic advancement; for example, in countries central to the Arab Spring like Egypt and Syria, protests led to military coups or prolonged civil war, not stable, open democratic institutions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ec6d4605-f811-4343-b1f0-5f404c854c4a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:01.814432"
+    },
+    {
+      "id": "c12f413e-b21c-4a88-92a2-41f46146f2fb",
+      "text": "Social media simultaneously damages democratic health by enabling state actors to deploy widespread disinformation and propaganda, leading to increased societal polarization and enhancing government surveillance capabilities over resistance movements.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ec6d4605-f811-4343-b1f0-5f404c854c4a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:01.815162"
+    },
+    {
+      "id": "aab6e9ed-a69e-4590-9962-d3e17bb2f6f3",
+      "text": "Social media is not indispensable for connection; established mechanisms like phone calls and dedicated community platforms historically achieved strong, lasting network support for specialized or geographically dispersed groups long before modern social media existed.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f966a407-4bee-4d00-b9a5-e8c80d0f87ac",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:02.309378"
+    },
+    {
+      "id": "404888be-9cf3-45ce-b685-be7bba9f9436",
+      "text": "Studies consistently show that high-intensity social media use correlates with increased feelings of loneliness and depressive symptoms, often due to social comparison anxiety and the substitution of shallow, extensive digital networks for deeper physical relationships.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f966a407-4bee-4d00-b9a5-e8c80d0f87ac",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:02.309804"
+    },
+    {
+      "id": "97192c84-b702-4d57-add8-22ee50ea82f0",
+      "text": "The rapid dissemination of dangerous misinformation and disinformation via social media during crises (e.g., the COVID-19 pandemic) often undermines official communication, actively degrading public trust and complicating coordinated response efforts.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "12634763-bbdb-4739-89d9-6219799c3d12",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:02.527294"
+    },
+    {
+      "id": "bddabbc2-f040-4549-9b49-5273b4806496",
+      "text": "Social media is not \"essential infrastructure\" because reliance on it excludes populations lacking digital access or areas suffering from power/internet grid failure, necessitating redundant traditional methods like radio and public address systems for universal reach.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "12634763-bbdb-4739-89d9-6219799c3d12",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:02.528422"
+    },
+    {
+      "id": "232d16f0-c2e8-4f90-829e-4abca729a7b4",
+      "text": "Global reach for small businesses long preceded social media via established export networks and supply chains. Social media primarily changed the cost and speed of customer acquisition, not the fundamental mechanism of global logistics and product fulfillment.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c1ea5f67-712e-4b82-ac39-9f473bd3058e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:03.419456"
+    },
+    {
+      "id": "5258ed34-0e4f-4319-bb95-4e44aa62bb2e",
+      "text": "The microeconomic gains for individual sellers are often zero-sum displacements of existing traditional retailers, and this access is frequently offset by a massive macroeconomic productivity loss resulting from platform-induced professional distractions and fragmented attention.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c1ea5f67-712e-4b82-ac39-9f473bd3058e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:03.420582"
+    },
+    {
+      "id": "c8ac2436-68d5-4987-b9c9-9ed21f79c353",
+      "text": "Successful rapid mobilizations, such as the 1989 Velvet Revolution and Indonesia's 1998 Reformasi Movement, swiftly established resilient democratic institutions, counter to the notion that speed inherently destabilizes transitions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5d5fc0ac-488b-4746-8efc-11ead6ceef9f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:09.855946"
+    },
+    {
+      "id": "9567b175-e04d-4ae5-a920-f7e46ba170a3",
+      "text": "The correlation likely reflects self-selection: individuals already experiencing loneliness or depression intensify social media use as an ineffective coping mechanism, meaning the negative mental state often precedes the high-intensity use.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "404888be-9cf3-45ce-b685-be7bba9f9436",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:12.057616"
+    },
+    {
+      "id": "355136ff-12ed-4614-873b-2a6976f0d6e9",
+      "text": "Essential infrastructure status does not require universal accessibility or perfect resilience; for example, the modern electrical grid is deemed essential despite lacking universal reach in deep rural areas and requiring local backups (generators) during outages.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bddabbc2-f040-4549-9b49-5273b4806496",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:12.587718"
+    },
+    {
+      "id": "46da4fa6-2450-4492-a7fa-738ca846947a",
+      "text": "Historical access required small businesses to rely on high-capital intermediaries like trading houses or large mail-order companies, which is not equivalent to the direct, low-cost marketplace access digital platforms offer individual producers.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "232d16f0-c2e8-4f90-829e-4abca729a7b4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:13.689755"
+    },
+    {
+      "id": "fde8a6ed-1c0f-4a99-9f64-bbec911491ee",
+      "text": "The necessity of specialized \"export organizations\" proves the failure of the local traditional physical marketplace to facilitate global reach for small businesses independently, requiring expensive, separate entities to broker international logistics.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "232d16f0-c2e8-4f90-829e-4abca729a7b4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:13.690198"
+    },
+    {
+      "id": "da908c03-f8a5-4814-bfb7-1754fe77c9bb",
+      "text": "Platform commerce is not zero-sum, as digitization enables efficiency gains and fundamentally new markets, such as niche remote services and artisan goods (e.g., Etsy), which increase overall economic activity and consumer welfare beyond mere displacement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5258ed34-0e4f-4319-bb95-4e44aa62bb2e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:13.781765"
+    },
+    {
+      "id": "aa87690d-70dd-4c57-a8df-e3396995d6af",
+      "text": "Platforms lower global transaction costs and optimize supply chains, generating material macroeconomic efficiency gains that structurally neutralize any productivity loss from individual professional distractions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5258ed34-0e4f-4319-bb95-4e44aa62bb2e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:13.782316"
+    },
+    {
+      "id": "d7070ac7-92f6-4cda-b944-1b5f4963f16d",
+      "text": "Social media significantly aids democratic health by providing unparalleled platforms for civil society, resistance movements, and public scrutiny, exemplified during the Arab Spring and the Hong Kong protests, often bypassing state-controlled traditional media channels.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c12f413e-b21c-4a88-92a2-41f46146f2fb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:14.202219"
+    },
+    {
+      "id": "f4f21104-7427-47b4-8a24-72ef71c9f93c",
+      "text": "Societal polarization correlates more strongly with economic inequality and established partisan media than with social media platforms. Social media merely reflects and amplifies these pre-existing political and material divisions, rather than fundamentally creating increased societal division.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c12f413e-b21c-4a88-92a2-41f46146f2fb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:14.202653"
+    },
+    {
+      "id": "ecdb18bc-acef-435d-b562-c2f5ad43fd83",
+      "text": "Social media algorithms actively promote political polarization and the rapid spread of disinformation, as seen during the 2016 US election and the European refugee crisis, which undermines the informed public discourse necessary for democratic stability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d7070ac7-92f6-4cda-b944-1b5f4963f16d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:24.852217"
+    },
+    {
+      "id": "c62ea1a8-58b2-4ab7-95f4-3f953b62a646",
+      "text": "Initial mobilization via social media, such as during the Arab Spring in countries like Egypt, frequently fails to translate into stable democratic transitions, leading instead to enhanced state surveillance, military takeovers, or political instability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d7070ac7-92f6-4cda-b944-1b5f4963f16d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:24.852244"
+    },
+    {
+      "id": "b18bcbad-231e-4c3e-89aa-47556d784994",
+      "text": "Farmers' markets, craft cooperatives, and local fairs provided historical direct-to-consumer channels that required minimal capital investment, proving low-cost access was not unique to modern digital platforms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "46da4fa6-2450-4492-a7fa-738ca846947a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:25.053739"
+    },
+    {
+      "id": "05452e09-f50e-40f5-907c-b4df1c55b4fc",
+      "text": "Digital platforms are not truly low-cost; major marketplaces charge high commissions (15-30% or more) and impose strict rules, acting as high-leverage centralized intermediaries rather than facilitators of direct producer access.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "46da4fa6-2450-4492-a7fa-738ca846947a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:25.053779"
+    },
+    {
+      "id": "5d172af2-f399-4ddb-aaa6-b457db84c3e5",
+      "text": "Social media provides unprecedented, low-cost organizational capability, enabling large-scale civic mobilization and democratic action, exemplified by the Arab Spring movements and recent protests against authoritarian regimes, which outweighs the focus on isolated individual psychological harms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fde8a6ed-1c0f-4a99-9f64-bbec911491ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:27.061442"
+    },
+    {
+      "id": "6fb17aa6-9fe8-4979-809a-1a9da7600b88",
+      "text": "By providing built-in targeted advertising and direct global fulfillment, social media platforms allow Small and Medium Enterprises (SMEs) to bypass physical marketplaces and legacy international trade infrastructure entirely.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fde8a6ed-1c0f-4a99-9f64-bbec911491ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:27.061485"
+    },
+    {
+      "id": "8332bc60-3a7c-44a9-ba5d-d778983d0496",
+      "text": "Macroeconomic productivity loss arises from the shift in corporate R&D spending and top engineering talent towards optimizing engagement algorithms and personalized advertising, fundamentally diverting massive capital away from tangible innovation in physical sectors like energy and biotechnology.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "aa87690d-70dd-4c57-a8df-e3396995d6af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:27.647267"
+    },
+    {
+      "id": "94f25dcb-535e-44d7-84f3-e57ef3a71450",
+      "text": "Econometric studies globally show the rise of digital monopolies correlates with declining firm entry rates, decreased business dynamism, and historically low levels of capital investment outside the immediate tech sector, indicating that platform efficiency gains are offset by reduced systemic competition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "aa87690d-70dd-4c57-a8df-e3396995d6af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:14:27.647292"
+    },
+    {
+      "id": "4e369dee-ab21-43a8-97c4-f54c9b8bfcbf",
+      "text": "Data show that the steep acceleration of youth mental health decline, particularly for adolescent girls regarding depression and self-harm, began around 2012, significantly predating the COVID-19 pandemic and the major rise in public climate anxiety. This timeline correlates directly with the widespread adoption of algorithm-driven social media on smartphones.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "86bf4096-d2aa-4f28-b987-a5a3380d91c9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:16.764918+00:00"
+    },
+    {
+      "id": "8bc844ab-6fb5-4680-a5c9-dcc1d6a78d78",
+      "text": "Social media platforms are distinct from other stressors because they actively function as powerful amplifiers, continuously broadcasting and sensationalizing content about economic instability and climate catastrophe. This mechanism generates constant exposure to perceived threats, which directly increases rumination and chronic anxiety beyond the impact of the initial events themselves.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "86bf4096-d2aa-4f28-b987-a5a3380d91c9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:16.764945+00:00"
+    },
+    {
+      "id": "dedfb36d-4f06-4990-b572-9a8edef4f8a9",
+      "text": "Foreign state actors utilized social media disinformation to target the 2017 German federal election and amplify disruptive narratives during Canada\u2019s 'Freedom Convoy,' directly impacting core institutional stability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9a762642-3b9f-4e26-8eef-a828af7392a4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:51.069508+00:00"
+    },
+    {
+      "id": "c026c025-fe82-458f-8735-a587c90ad7cc",
+      "text": "Systematic harm extends beyond institutional stability to widespread psychological damage and social fracturing in stable democracies. For instance, UNICEF reports significant increases in adolescent anxiety and self-harm in Western European nations like the Netherlands and Finland, strongly correlated with intensive social media use.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9a762642-3b9f-4e26-8eef-a828af7392a4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:51.069533+00:00"
+    },
+    {
+      "id": "3ec62f23-2fef-40b1-a430-3d4d883eae68",
+      "text": "Older connection mechanisms effectively supported strong ties (close relationships) but failed at maintaining weak ties across vast, dispersed networks due to high marginal effort per connection. Social media's algorithmic presentation and low cost are indispensable for nurturing weak ties, which are empirically shown to be critical for large-scale social capital accumulation, job searching, and rapid community mobilization.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aab6e9ed-a69e-4590-9962-d3e17bb2f6f3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:56.910560+00:00"
+    },
+    {
+      "id": "2c9f3411-839d-4e32-b99d-e469f17ef4d8",
+      "text": "Dedicated community platforms require users to already know where the community resides and are often niche walled gardens unavailable to the general public. Social media functions as a centralized global directory that facilitates the rapid discovery of niche or geographically disparate communities via searchable public profiles and shared hashtags, enabling network expansion beyond established knowledge bases.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aab6e9ed-a69e-4590-9962-d3e17bb2f6f3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:09:56.910598+00:00"
+    },
+    {
+      "id": "8a1ba2c6-55d1-4881-ae83-ee36f20e7c7d",
+      "text": "Data suggests declines in institutional trust predate the rise of major social media platforms, indicating that official messaging inconsistencies, political polarization, and historical failures are root causes. Social media primarily amplifies existing public skepticism toward authority rather than creating the underlying distrust itself.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "97192c84-b702-4d57-add8-22ee50ea82f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:02.029859+00:00"
+    },
+    {
+      "id": "47728ac2-32c3-4ef9-8935-caa4fd408c93",
+      "text": "During crises, social media enables official health bodies, emergency services, and aid organizations to rapidly disseminate life-saving alerts, coordinate localized volunteer efforts, and conduct real-time fact-checking against initial rumors. This function improves the speed and scope of official coordination efforts.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "97192c84-b702-4d57-add8-22ee50ea82f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:02.029881+00:00"
+    },
+    {
+      "id": "e36f6263-e63f-4912-8f8a-48fe0401e7bb",
+      "text": "Content moderation adheres formally to extensive, publicly available internal policies, such as the Facebook Community Standards, and is often adjudicated by public mechanisms like the Meta Oversight Board, demonstrating rule-based, not arbitrary, systems.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "5122c94a-e5d2-47f7-aa61-856444d17e85",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:28.347202+00:00"
+    },
+    {
+      "id": "73d61680-9b8a-4e36-aadb-813b30de03f5",
+      "text": "National governments impose direct accountability and severe checks on corporate power, such as India\u2019s 2021 IT Rules, which mandate that platforms remove content designated by the state within precise timelines.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "5122c94a-e5d2-47f7-aa61-856444d17e85",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:28.347629+00:00"
+    },
+    {
+      "id": "8a538180-65ab-4b42-a94c-0d4f89078754",
+      "text": "Policies are often vague and applied by under-trained, over-stressed outsourced human moderators, resulting in wide inconsistency and subjectively arbitrary enforcement at massive scale, regardless of the formal rulebook.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e36f6263-e63f-4912-8f8a-48fe0401e7bb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:36.755137+00:00"
+    },
+    {
+      "id": "9c239ef3-bb7e-42e0-8adb-92d2aa503f68",
+      "text": "Public mechanisms like the Meta Oversight Board review only a tiny fraction of the millions of moderation decisions made monthly, failing to provide meaningful oversight or remedy the systemic inconsistencies of automated and large-scale human enforcement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e36f6263-e63f-4912-8f8a-48fe0401e7bb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:36.755162+00:00"
+    },
+    {
+      "id": "ac30b692-3747-4aab-a92f-03da9257f76a",
+      "text": "Content removal mandates exploit corporate control over internet infrastructure to enforce state censorship, doing little to limit underlying corporate economic power or introduce traditional accountability measures like antitrust or consumer protection.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "73d61680-9b8a-4e36-aadb-813b30de03f5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:39.365137+00:00"
+    },
+    {
+      "id": "bc5cdf8b-de3f-47a9-b63c-bf8fccdd4d79",
+      "text": "The use of India's specific and controversial IT rules is insufficient to support a generalization about all \"National governments,\" as many countries, especially in the West, are often criticized for insufficient regulation and weak checks on corporate power.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "73d61680-9b8a-4e36-aadb-813b30de03f5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:39.365165+00:00"
+    },
+    {
+      "id": "be8f8a0d-9fea-4959-ab4c-617f37f31b56",
+      "text": "Political campaigns face mandatory ad platform requirements, such as public ad libraries detailing expenditure and content, a level of transparency and accountability that does not exist for commercial micro-targeting, functionally limiting the weaponization potential.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a7683bde-699b-4e5c-876d-ce10c8166177",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:10:49.921974+00:00"
+    },
+    {
+      "id": "2d30d299-23d2-4c5a-b000-993fec4ea338",
+      "text": "Transparency libraries are primarily reactive, requiring retroactive disclosure long after micro-targeted disinformation campaigns have influenced voters, evidenced by the fact that many 2016 US election influence efforts were only studied well after the voting period concluded.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "be8f8a0d-9fea-4959-ab4c-617f37f31b56",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:01.599850+00:00"
+    },
+    {
+      "id": "059e4121-cfee-404f-8139-6087ba038757",
+      "text": "Political micro-targeting allows for voter suppression and radicalization of narrow, vulnerable demographics through contextually-manipulated messages hidden from public scrutiny, a unique harm that is not mitigated by public disclosure rules that follow the election cycle.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "be8f8a0d-9fea-4959-ab4c-617f37f31b56",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:01.599878+00:00"
+    },
+    {
+      "id": "d9378217-07e0-40ac-b656-cb2b63f02165",
+      "text": "The 2011 Tunisian and Egyptian revolutions relied heavily on platforms like Facebook and Twitter to bypass state censorship, organize mass street protests, and successfully challenge authoritarian leaders, demonstrating social media\u2019s unique power to mobilize pro-democracy movements against state control.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "10d47a45-7c51-4d99-a407-c1bae199fcb2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:14.967783+00:00"
+    },
+    {
+      "id": "46bf5485-c55a-4b17-959b-affc3f8bf874",
+      "text": "Pro-democracy movements successfully organized before social media, such as the 1989 Velvet Revolution using word-of-mouth and unauthorized media, demonstrating that the organizational power is not unique to modern platforms but rather the communication technology available at the time.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "d9378217-07e0-40ac-b656-cb2b63f02165",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:26.306356+00:00"
+    },
+    {
+      "id": "ee886800-e8cc-4acc-835a-812a65348a4e",
+      "text": "Authoritarian governments quickly evolved to use social media against protesters, employing surveillance, using platform data for mass arrests, and disseminating sophisticated disinformation campaigns, as evidenced by state actions following uprisings in Belarus and Hong Kong.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "d9378217-07e0-40ac-b656-cb2b63f02165",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:26.306392+00:00"
+    },
+    {
+      "id": "5cc440e0-8af6-4259-870c-82249c3017fd",
+      "text": "Investigations into the January 6th Capitol attack found that specific political figures, traditional media outlets, and pre-existing far-right organizations were the principal agents of mobilization, suggesting that social media served as a marginal coordination tool rather than the fundamental cause of the violence.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4e718f62-d0f4-489a-b306-07246fe0cfc6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:42.792224+00:00"
+    },
+    {
+      "id": "dc503748-4268-4bb3-bcde-fbd501a9f178",
+      "text": "Social media platforms provided the essential infrastructure for the designated principal agents to instantly reach and mobilize millions of disparate followers across state lines, meaning the mobilization was functionally dependent on the platform's unique capacity for decentralized, rapid scaling. This essential reliance on the medium for mass execution is not marginal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "5cc440e0-8af6-4259-870c-82249c3017fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:52.008820+00:00"
+    },
+    {
+      "id": "e2877877-b220-456e-a9b6-cf173d94eb72",
+      "text": "The analysis ignores social media's role in the prerequisite conditions for violence, as platforms' algorithms amplified extreme content and disinformation over several years, radicalizing the user base and generating the ideological certainty necessary for the principal agents to successfully mobilize. The long-term radicalization facilitated by the platform is a fundamental cause.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "5cc440e0-8af6-4259-870c-82249c3017fd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:11:52.008848+00:00"
+    },
+    {
+      "id": "f22da230-2898-426e-b52f-525e35943dab",
+      "text": "Independent academic studies and official investigations, such as those conducted in the UK and cited in the US Mueller Report, concluded there is no definitive documentation that Cambridge Analytica\u2019s micro-targeting strategies determined the outcome of the 2016 election or the Brexit vote.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "56b09809-247c-412e-a326-0892c56958b8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:02.965805+00:00"
+    },
+    {
+      "id": "cf8c8d96-7fd0-4630-aca6-c495ed42a922",
+      "text": "The alleged advantage from targeting \"known political segments\" is likely indistinguishable from the baseline effectiveness of traditional campaign strategies using standard demographic and geographic segmentation, making the specific causal contribution practically negligible and unverifiable.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "56b09809-247c-412e-a326-0892c56958b8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:02.966307+00:00"
+    },
+    {
+      "id": "e880c337-e258-45e6-ac9d-8442ebcb30a7",
+      "text": "Targeted digital political advertising allows campaigns to suppress turnout or radicalize specific, highly defined voter segments in ways that mass-media traditional advertising cannot, demonstrating a distinct mechanism and causal effect on election outcomes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "cf8c8d96-7fd0-4630-aca6-c495ed42a922",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:16.379929+00:00"
+    },
+    {
+      "id": "07af7b57-9f3a-43ec-9d6e-cfd404ad5fa6",
+      "text": "Because major elections are often determined by margins of less than 1% in pivotal districts, even a statistically small advantage gained through advanced targeting is strategically definitive, meaning the effect is not practically \"negligible.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "cf8c8d96-7fd0-4630-aca6-c495ed42a922",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:16.379955+00:00"
+    },
+    {
+      "id": "1bba6d5d-4ac2-40f1-a8ce-a90c331f048f",
+      "text": "The harm caused by social media is not limited to \"determining outcomes,\" but includes the documented success of campaigns like CA in exploiting platform vulnerabilities to achieve high-volume, targeted psychological manipulation, which systemically increases civic polarization and distrust.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "f22da230-2898-426e-b52f-525e35943dab",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:17.097289+00:00"
+    },
+    {
+      "id": "a4030668-2d08-476b-b551-83ec8c41a7dc",
+      "text": "The General Data Protection Regulation (GDPR) was passed by the EU in April 2016, nearly two years before the scandal became public knowledge in March 2018, proving the scandal did not cause its implementation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dd75982a-9c0f-4041-807d-62a6f538abb6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:25.273244+00:00"
+    },
+    {
+      "id": "ea34c5f7-8635-4b0c-95c9-10d3c01a1d08",
+      "text": "Data harvesting was the event mechanism; the major political impact was distinctively the resulting global investigation into foreign electoral interference and subsequent hearings on platform accountability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dd75982a-9c0f-4041-807d-62a6f538abb6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:25.273692+00:00"
+    },
+    {
+      "id": "96937328-b823-4b28-a616-05c27fbd3afb",
+      "text": "The major political impact was not the hearings and investigations, but the substantive legislative consequence, exemplified by the EU\u2019s introduction of the General Data Protection Regulation (GDPR) in 2018, which created a global standard for data handling and corporate liability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ea34c5f7-8635-4b0c-95c9-10d3c01a1d08",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:36.925328+00:00"
+    },
+    {
+      "id": "2a3fb306-38e7-4f21-98e6-cc7c9d41da7b",
+      "text": "The Cambridge Analytica data acquisition occurred initially in 2014, and internal whistleblowers like Christopher Wylie were already raising concerns privately within regulatory circles prior to the March 2018 public news coverage.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a4030668-2d08-476b-b551-83ec8c41a7dc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:45.871535+00:00"
+    },
+    {
+      "id": "3ce8f3cd-4824-495b-9eed-df250d64178b",
+      "text": "The foundation for the GDPR was the 1995 Data Protection Directive, which European policymakers determined needed reform by 2012 due to widespread systemic data exploitation by platforms like Google and Facebook, making the 2018 scandal one high-profile example of a pre-existing threat.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a4030668-2d08-476b-b551-83ec8c41a7dc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:45.871562+00:00"
+    },
+    {
+      "id": "8551da14-5359-4f16-a984-1d501fab7cc4",
+      "text": "Rapid, non-violent transitions resulting in enduring democracy are historically rare. The 1989 Tiananmen Square protests resulted in regime crackdown, and swift transitions during the 2011 Arab Spring in countries like Egypt and Libya resulted in a return to authoritarianism or state collapse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c8ac2436-68d5-4987-b9c9-9ed21f79c353",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:12:59.185240+00:00"
+    },
+    {
+      "id": "b85c2325-7519-4bb5-a558-6dbe721aadc4",
+      "text": "Rapid democratic transitions were successfully achieved across Eastern Europe following the collapse of the USSR; for instance, Czechoslovakia's 1989 Velvet Revolution and Poland's 1989 semi-free elections established enduring democratic systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "8551da14-5359-4f16-a984-1d501fab7cc4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:13:14.748637+00:00"
+    },
+    {
+      "id": "a6e16af7-f25d-4048-9975-e3d5afed5c48",
+      "text": "Social media algorithms actively amplify existing negative sentiment, turning coping mechanisms into a pathological feedback loop. Internal reports from Meta revealed that Instagram usage significantly worsened body image and suicidal ideation for approximately 32% of teenage girls already struggling with these issues, showing causality beyond simple correlation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9567b175-e04d-4ae5-a920-f7e46ba170a3",
+      "children_count": 2,
+      "references": [
+        "Wall Street Journal: The Facebook Files; 2021"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:13:31.445931+00:00"
+    },
+    {
+      "id": "7f025c0b-53dc-4ef0-a05c-73cf60eac246",
+      "text": "Longitudinal studies frequently establish a strong bidirectional correlation, where individuals experiencing distress increase their social media use, rather than proving social media is the sole causal agent for the distress itself.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "a6e16af7-f25d-4048-9975-e3d5afed5c48",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:13:50.793691+00:00"
+    },
+    {
+      "id": "df1cb9e5-23ce-4fd8-960d-9a6903786c09",
+      "text": "The Meta internal report noted that 68% of the struggling teenage girls demographic did not report worsening outcomes related to body image or suicidal ideation, indicating the alleged pathological feedback loop is limited and not a general mechanism of harm.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "a6e16af7-f25d-4048-9975-e3d5afed5c48",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:13:50.793719+00:00"
+    },
+    {
+      "id": "b46526f5-1a90-455a-b9d9-972585ae31a8",
+      "text": "Utility regulation in the US and EU mandates continuous improvement toward universal service and robust reliability (N-1 criteria for grids), treating current gaps in rural coverage and resilience as failures to be corrected through planning and investment, not acceptable definitional features of essential infrastructure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "355136ff-12ed-4614-873b-2a6976f0d6e9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:14:03.398945+00:00"
+    },
+    {
+      "id": "b7826fe7-84ec-44dc-acb2-d88adbe7c60e",
+      "text": "Social media platforms have proven essential for enabling democratic organization and collective action, notably during the Arab Spring in 2011 and the Hong Kong protests in 2019. These tools bypass state censorship and facilitate coordination in repressive environments, generating significant public good that outweighs individual psychological harms.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "b46526f5-1a90-455a-b9d9-972585ae31a8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:14:26.224725+00:00"
+    },
+    {
+      "id": "036041b1-53e9-4b81-a35e-afa4010d8f9c",
+      "text": "The enormous market dominance of platform giants like Amazon or Uber is primarily achieved through anticompetitive practices and the displacement of established, labor-intensive retail and taxi sectors, suggesting their overall economic contribution is largely a transfer of existing wealth, not net creation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "da908c03-f8a5-4814-bfb7-1754fe77c9bb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:14:39.694834+00:00"
+    },
+    {
+      "id": "6667e3e7-a336-40e4-beb3-a1197ca69fc9",
+      "text": "Uber's ridership growth stemmed from providing readily available geographic coverage and transparent pricing through GPS tracking, efficiencies that independent taxi companies could not match, demonstrating that technological advantage fuels dominance in addition to market behavior.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "036041b1-53e9-4b81-a35e-afa4010d8f9c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:03.397225+00:00"
+    },
+    {
+      "id": "ceae7ab4-f998-4f08-9571-67474ac8bd08",
+      "text": "Economists estimate that Amazon generates massive consumer surplus, potentially in the tens of billions of dollars annually, by providing lower prices and superior convenience, representing new economic value created rather than a mere wealth transfer.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "036041b1-53e9-4b81-a35e-afa4010d8f9c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:03.397252+00:00"
+    },
+    {
+      "id": "c84e9fba-7fe8-4428-a5e3-0a4b555493ec",
+      "text": "Social media algorithms actively intensify polarization by rewarding engagement with extreme, outrage-inducing content, functioning as a rapid acceleration mechanism rather than a passive reflection of underlying factors like inequality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f4f21104-7427-47b4-8a24-72ef71c9f93c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:11.690497+00:00"
+    },
+    {
+      "id": "72994e02-30df-4bde-bda1-369bf75c7f93",
+      "text": "The function is synergistic; algorithms intensify polarization precisely by rewarding content that reflects and optimizes engagement with pre-existing, deep-seated political divisions and inequalities, blurring the strict distinction between acceleration and passive reflection.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "c84e9fba-7fe8-4428-a5e3-0a4b555493ec",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:15:21.745087+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:13:18.029105"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:13:18.029105"
+    }
+  ],
+  "links": [
+    {
+      "source": "9c864e21-62e6-4681-85c1-e8b981041ecc",
+      "target": "86bf4096-d2aa-4f28-b987-a5a3380d91c9",
+      "type": "objection"
+    },
+    {
+      "source": "a98d3a4c-fda6-4ce6-835b-efc9d962642c",
+      "target": "84ceee6d-cd3e-4c2d-909b-ec556ea76169",
+      "type": "objection"
+    },
+    {
+      "source": "a98d3a4c-fda6-4ce6-835b-efc9d962642c",
+      "target": "a87c08d5-0884-4e59-9ecb-6ecb79e22aaf",
+      "type": "objection"
+    },
+    {
+      "source": "15320e98-1cf1-4a8b-9753-8ed85ebed851",
+      "target": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "type": "objection"
+    },
+    {
+      "source": "15320e98-1cf1-4a8b-9753-8ed85ebed851",
+      "target": "9a762642-3b9f-4e26-8eef-a828af7392a4",
+      "type": "objection"
+    },
+    {
+      "source": "84ceee6d-cd3e-4c2d-909b-ec556ea76169",
+      "target": "a7683bde-699b-4e5c-876d-ce10c8166177",
+      "type": "response"
+    },
+    {
+      "source": "84ceee6d-cd3e-4c2d-909b-ec556ea76169",
+      "target": "d5be4cd7-766f-46cd-b413-809f906116fe",
+      "type": "response"
+    },
+    {
+      "source": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "target": "10d47a45-7c51-4d99-a407-c1bae199fcb2",
+      "type": "response"
+    },
+    {
+      "source": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "target": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "type": "response"
+    },
+    {
+      "source": "41ef8777-02ef-4a5f-96a7-48ac284876b9",
+      "target": "4e718f62-d0f4-489a-b306-07246fe0cfc6",
+      "type": "response"
+    },
+    {
+      "source": "a87c08d5-0884-4e59-9ecb-6ecb79e22aaf",
+      "target": "56b09809-247c-412e-a326-0892c56958b8",
+      "type": "response"
+    },
+    {
+      "source": "a87c08d5-0884-4e59-9ecb-6ecb79e22aaf",
+      "target": "dd75982a-9c0f-4041-807d-62a6f538abb6",
+      "type": "response"
+    },
+    {
+      "source": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "target": "5ad1b2f6-4e95-4382-93ab-3e1f63ac0625",
+      "type": "response"
+    },
+    {
+      "source": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "target": "e0a197d3-84ad-4d2a-ac5b-465a73149097",
+      "type": "response"
+    },
+    {
+      "source": "83fe746c-a334-41d6-9a0d-7b7e649e189f",
+      "target": "9cee6139-b43f-4a0b-9bc2-64ea633d3617",
+      "type": "response"
+    },
+    {
+      "source": "d5be4cd7-766f-46cd-b413-809f906116fe",
+      "target": "56ad8f63-29de-4ddf-8a83-695b22bf1f73",
+      "type": "response"
+    },
+    {
+      "source": "d5be4cd7-766f-46cd-b413-809f906116fe",
+      "target": "57e03c8d-98c7-4a6b-83f6-7ed7901da626",
+      "type": "response"
+    },
+    {
+      "source": "ec6d4605-f811-4343-b1f0-5f404c854c4a",
+      "target": "5d5fc0ac-488b-4746-8efc-11ead6ceef9f",
+      "type": "objection"
+    },
+    {
+      "source": "ec6d4605-f811-4343-b1f0-5f404c854c4a",
+      "target": "c12f413e-b21c-4a88-92a2-41f46146f2fb",
+      "type": "objection"
+    },
+    {
+      "source": "f966a407-4bee-4d00-b9a5-e8c80d0f87ac",
+      "target": "aab6e9ed-a69e-4590-9962-d3e17bb2f6f3",
+      "type": "objection"
+    },
+    {
+      "source": "f966a407-4bee-4d00-b9a5-e8c80d0f87ac",
+      "target": "404888be-9cf3-45ce-b685-be7bba9f9436",
+      "type": "objection"
+    },
+    {
+      "source": "12634763-bbdb-4739-89d9-6219799c3d12",
+      "target": "97192c84-b702-4d57-add8-22ee50ea82f0",
+      "type": "objection"
+    },
+    {
+      "source": "12634763-bbdb-4739-89d9-6219799c3d12",
+      "target": "bddabbc2-f040-4549-9b49-5273b4806496",
+      "type": "objection"
+    },
+    {
+      "source": "c1ea5f67-712e-4b82-ac39-9f473bd3058e",
+      "target": "232d16f0-c2e8-4f90-829e-4abca729a7b4",
+      "type": "objection"
+    },
+    {
+      "source": "c1ea5f67-712e-4b82-ac39-9f473bd3058e",
+      "target": "5258ed34-0e4f-4319-bb95-4e44aa62bb2e",
+      "type": "objection"
+    },
+    {
+      "source": "5d5fc0ac-488b-4746-8efc-11ead6ceef9f",
+      "target": "c8ac2436-68d5-4987-b9c9-9ed21f79c353",
+      "type": "response"
+    },
+    {
+      "source": "404888be-9cf3-45ce-b685-be7bba9f9436",
+      "target": "9567b175-e04d-4ae5-a920-f7e46ba170a3",
+      "type": "response"
+    },
+    {
+      "source": "bddabbc2-f040-4549-9b49-5273b4806496",
+      "target": "355136ff-12ed-4614-873b-2a6976f0d6e9",
+      "type": "response"
+    },
+    {
+      "source": "232d16f0-c2e8-4f90-829e-4abca729a7b4",
+      "target": "46da4fa6-2450-4492-a7fa-738ca846947a",
+      "type": "response"
+    },
+    {
+      "source": "232d16f0-c2e8-4f90-829e-4abca729a7b4",
+      "target": "fde8a6ed-1c0f-4a99-9f64-bbec911491ee",
+      "type": "response"
+    },
+    {
+      "source": "5258ed34-0e4f-4319-bb95-4e44aa62bb2e",
+      "target": "da908c03-f8a5-4814-bfb7-1754fe77c9bb",
+      "type": "response"
+    },
+    {
+      "source": "5258ed34-0e4f-4319-bb95-4e44aa62bb2e",
+      "target": "aa87690d-70dd-4c57-a8df-e3396995d6af",
+      "type": "response"
+    },
+    {
+      "source": "c12f413e-b21c-4a88-92a2-41f46146f2fb",
+      "target": "d7070ac7-92f6-4cda-b944-1b5f4963f16d",
+      "type": "response"
+    },
+    {
+      "source": "c12f413e-b21c-4a88-92a2-41f46146f2fb",
+      "target": "f4f21104-7427-47b4-8a24-72ef71c9f93c",
+      "type": "response"
+    },
+    {
+      "source": "d7070ac7-92f6-4cda-b944-1b5f4963f16d",
+      "target": "ecdb18bc-acef-435d-b562-c2f5ad43fd83",
+      "type": "response"
+    },
+    {
+      "source": "d7070ac7-92f6-4cda-b944-1b5f4963f16d",
+      "target": "c62ea1a8-58b2-4ab7-95f4-3f953b62a646",
+      "type": "response"
+    },
+    {
+      "source": "46da4fa6-2450-4492-a7fa-738ca846947a",
+      "target": "b18bcbad-231e-4c3e-89aa-47556d784994",
+      "type": "response"
+    },
+    {
+      "source": "46da4fa6-2450-4492-a7fa-738ca846947a",
+      "target": "05452e09-f50e-40f5-907c-b4df1c55b4fc",
+      "type": "response"
+    },
+    {
+      "source": "fde8a6ed-1c0f-4a99-9f64-bbec911491ee",
+      "target": "5d172af2-f399-4ddb-aaa6-b457db84c3e5",
+      "type": "response"
+    },
+    {
+      "source": "fde8a6ed-1c0f-4a99-9f64-bbec911491ee",
+      "target": "6fb17aa6-9fe8-4979-809a-1a9da7600b88",
+      "type": "response"
+    },
+    {
+      "source": "aa87690d-70dd-4c57-a8df-e3396995d6af",
+      "target": "8332bc60-3a7c-44a9-ba5d-d778983d0496",
+      "type": "response"
+    },
+    {
+      "source": "aa87690d-70dd-4c57-a8df-e3396995d6af",
+      "target": "94f25dcb-535e-44d7-84f3-e57ef3a71450",
+      "type": "response"
+    },
+    {
+      "source": "86bf4096-d2aa-4f28-b987-a5a3380d91c9",
+      "target": "4e369dee-ab21-43a8-97c4-f54c9b8bfcbf",
+      "type": "response"
+    },
+    {
+      "source": "86bf4096-d2aa-4f28-b987-a5a3380d91c9",
+      "target": "8bc844ab-6fb5-4680-a5c9-dcc1d6a78d78",
+      "type": "response"
+    },
+    {
+      "source": "9a762642-3b9f-4e26-8eef-a828af7392a4",
+      "target": "dedfb36d-4f06-4990-b572-9a8edef4f8a9",
+      "type": "response"
+    },
+    {
+      "source": "9a762642-3b9f-4e26-8eef-a828af7392a4",
+      "target": "c026c025-fe82-458f-8735-a587c90ad7cc",
+      "type": "response"
+    },
+    {
+      "source": "aab6e9ed-a69e-4590-9962-d3e17bb2f6f3",
+      "target": "3ec62f23-2fef-40b1-a430-3d4d883eae68",
+      "type": "response"
+    },
+    {
+      "source": "aab6e9ed-a69e-4590-9962-d3e17bb2f6f3",
+      "target": "2c9f3411-839d-4e32-b99d-e469f17ef4d8",
+      "type": "response"
+    },
+    {
+      "source": "97192c84-b702-4d57-add8-22ee50ea82f0",
+      "target": "8a1ba2c6-55d1-4881-ae83-ee36f20e7c7d",
+      "type": "response"
+    },
+    {
+      "source": "97192c84-b702-4d57-add8-22ee50ea82f0",
+      "target": "47728ac2-32c3-4ef9-8935-caa4fd408c93",
+      "type": "response"
+    },
+    {
+      "source": "5122c94a-e5d2-47f7-aa61-856444d17e85",
+      "target": "e36f6263-e63f-4912-8f8a-48fe0401e7bb",
+      "type": "objection"
+    },
+    {
+      "source": "5122c94a-e5d2-47f7-aa61-856444d17e85",
+      "target": "73d61680-9b8a-4e36-aadb-813b30de03f5",
+      "type": "objection"
+    },
+    {
+      "source": "e36f6263-e63f-4912-8f8a-48fe0401e7bb",
+      "target": "8a538180-65ab-4b42-a94c-0d4f89078754",
+      "type": "response"
+    },
+    {
+      "source": "e36f6263-e63f-4912-8f8a-48fe0401e7bb",
+      "target": "9c239ef3-bb7e-42e0-8adb-92d2aa503f68",
+      "type": "response"
+    },
+    {
+      "source": "73d61680-9b8a-4e36-aadb-813b30de03f5",
+      "target": "ac30b692-3747-4aab-a92f-03da9257f76a",
+      "type": "response"
+    },
+    {
+      "source": "73d61680-9b8a-4e36-aadb-813b30de03f5",
+      "target": "bc5cdf8b-de3f-47a9-b63c-bf8fccdd4d79",
+      "type": "response"
+    },
+    {
+      "source": "a7683bde-699b-4e5c-876d-ce10c8166177",
+      "target": "be8f8a0d-9fea-4959-ab4c-617f37f31b56",
+      "type": "response"
+    },
+    {
+      "source": "be8f8a0d-9fea-4959-ab4c-617f37f31b56",
+      "target": "2d30d299-23d2-4c5a-b000-993fec4ea338",
+      "type": "response"
+    },
+    {
+      "source": "be8f8a0d-9fea-4959-ab4c-617f37f31b56",
+      "target": "059e4121-cfee-404f-8139-6087ba038757",
+      "type": "response"
+    },
+    {
+      "source": "10d47a45-7c51-4d99-a407-c1bae199fcb2",
+      "target": "d9378217-07e0-40ac-b656-cb2b63f02165",
+      "type": "response"
+    },
+    {
+      "source": "d9378217-07e0-40ac-b656-cb2b63f02165",
+      "target": "46bf5485-c55a-4b17-959b-affc3f8bf874",
+      "type": "response"
+    },
+    {
+      "source": "d9378217-07e0-40ac-b656-cb2b63f02165",
+      "target": "ee886800-e8cc-4acc-835a-812a65348a4e",
+      "type": "response"
+    },
+    {
+      "source": "4e718f62-d0f4-489a-b306-07246fe0cfc6",
+      "target": "5cc440e0-8af6-4259-870c-82249c3017fd",
+      "type": "response"
+    },
+    {
+      "source": "5cc440e0-8af6-4259-870c-82249c3017fd",
+      "target": "dc503748-4268-4bb3-bcde-fbd501a9f178",
+      "type": "response"
+    },
+    {
+      "source": "5cc440e0-8af6-4259-870c-82249c3017fd",
+      "target": "e2877877-b220-456e-a9b6-cf173d94eb72",
+      "type": "response"
+    },
+    {
+      "source": "56b09809-247c-412e-a326-0892c56958b8",
+      "target": "f22da230-2898-426e-b52f-525e35943dab",
+      "type": "response"
+    },
+    {
+      "source": "56b09809-247c-412e-a326-0892c56958b8",
+      "target": "cf8c8d96-7fd0-4630-aca6-c495ed42a922",
+      "type": "response"
+    },
+    {
+      "source": "cf8c8d96-7fd0-4630-aca6-c495ed42a922",
+      "target": "e880c337-e258-45e6-ac9d-8442ebcb30a7",
+      "type": "response"
+    },
+    {
+      "source": "cf8c8d96-7fd0-4630-aca6-c495ed42a922",
+      "target": "07af7b57-9f3a-43ec-9d6e-cfd404ad5fa6",
+      "type": "response"
+    },
+    {
+      "source": "f22da230-2898-426e-b52f-525e35943dab",
+      "target": "1bba6d5d-4ac2-40f1-a8ce-a90c331f048f",
+      "type": "response"
+    },
+    {
+      "source": "dd75982a-9c0f-4041-807d-62a6f538abb6",
+      "target": "a4030668-2d08-476b-b551-83ec8c41a7dc",
+      "type": "response"
+    },
+    {
+      "source": "dd75982a-9c0f-4041-807d-62a6f538abb6",
+      "target": "ea34c5f7-8635-4b0c-95c9-10d3c01a1d08",
+      "type": "response"
+    },
+    {
+      "source": "ea34c5f7-8635-4b0c-95c9-10d3c01a1d08",
+      "target": "96937328-b823-4b28-a616-05c27fbd3afb",
+      "type": "response"
+    },
+    {
+      "source": "a4030668-2d08-476b-b551-83ec8c41a7dc",
+      "target": "2a3fb306-38e7-4f21-98e6-cc7c9d41da7b",
+      "type": "response"
+    },
+    {
+      "source": "a4030668-2d08-476b-b551-83ec8c41a7dc",
+      "target": "3ce8f3cd-4824-495b-9eed-df250d64178b",
+      "type": "response"
+    },
+    {
+      "source": "c8ac2436-68d5-4987-b9c9-9ed21f79c353",
+      "target": "8551da14-5359-4f16-a984-1d501fab7cc4",
+      "type": "response"
+    },
+    {
+      "source": "8551da14-5359-4f16-a984-1d501fab7cc4",
+      "target": "b85c2325-7519-4bb5-a558-6dbe721aadc4",
+      "type": "response"
+    },
+    {
+      "source": "9567b175-e04d-4ae5-a920-f7e46ba170a3",
+      "target": "a6e16af7-f25d-4048-9975-e3d5afed5c48",
+      "type": "response"
+    },
+    {
+      "source": "a6e16af7-f25d-4048-9975-e3d5afed5c48",
+      "target": "7f025c0b-53dc-4ef0-a05c-73cf60eac246",
+      "type": "response"
+    },
+    {
+      "source": "a6e16af7-f25d-4048-9975-e3d5afed5c48",
+      "target": "df1cb9e5-23ce-4fd8-960d-9a6903786c09",
+      "type": "response"
+    },
+    {
+      "source": "355136ff-12ed-4614-873b-2a6976f0d6e9",
+      "target": "b46526f5-1a90-455a-b9d9-972585ae31a8",
+      "type": "response"
+    },
+    {
+      "source": "b46526f5-1a90-455a-b9d9-972585ae31a8",
+      "target": "b7826fe7-84ec-44dc-acb2-d88adbe7c60e",
+      "type": "response"
+    },
+    {
+      "source": "da908c03-f8a5-4814-bfb7-1754fe77c9bb",
+      "target": "036041b1-53e9-4b81-a35e-afa4010d8f9c",
+      "type": "response"
+    },
+    {
+      "source": "036041b1-53e9-4b81-a35e-afa4010d8f9c",
+      "target": "6667e3e7-a336-40e4-beb3-a1197ca69fc9",
+      "type": "response"
+    },
+    {
+      "source": "036041b1-53e9-4b81-a35e-afa4010d8f9c",
+      "target": "ceae7ab4-f998-4f08-9571-67474ac8bd08",
+      "type": "response"
+    },
+    {
+      "source": "f4f21104-7427-47b4-8a24-72ef71c9f93c",
+      "target": "c84e9fba-7fe8-4428-a5e3-0a4b555493ec",
+      "type": "response"
+    },
+    {
+      "source": "c84e9fba-7fe8-4428-a5e3-0a4b555493ec",
+      "target": "72994e02-30df-4bde-bda1-369bf75c7f93",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9c864e21-62e6-4681-85c1-e8b981041ecc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "15320e98-1cf1-4a8b-9753-8ed85ebed851",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a98d3a4c-fda6-4ce6-835b-efc9d962642c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "5122c94a-e5d2-47f7-aa61-856444d17e85",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ec6d4605-f811-4343-b1f0-5f404c854c4a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "c1ea5f67-712e-4b82-ac39-9f473bd3058e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "12634763-bbdb-4739-89d9-6219799c3d12",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "f966a407-4bee-4d00-b9a5-e8c80d0f87ac",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

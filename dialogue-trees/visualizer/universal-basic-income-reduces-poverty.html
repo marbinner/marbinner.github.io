@@ -1,0 +1,2890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal basic income reduces poverty - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Universal basic income reduces poverty</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            84 total nodes • Max depth: 2 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/universal-basic-income-reduces-poverty.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">84</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "79ffde0d-4d32-41c7-ad48-530696bdd9ae",
+      "text": "UBI establishes an income floor sufficient to meet basic needs, immediately preventing recipients from falling below a predetermined poverty line. This direct injection of guaranteed capital inherently eradicates income poverty for participants.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:30.156870+00:00"
+    },
+    {
+      "id": "fa42bdb1-bbd2-4d0b-a2d9-28b3f0202acb",
+      "text": "Pilot programs in jurisdictions like Stockton, California, and Finland demonstrate consistent empirical success. Recipients consistently report substantial improvements in measured income poverty metrics and financial stability post-implementation, confirming the policy's effectiveness.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "World Bank data on cash transfers"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:30.157602+00:00"
+    },
+    {
+      "id": "b0db0d05-2585-4e5e-afe0-1c8e60d8553b",
+      "text": "Guaranteed income reduces financial stress, leading to documented improvements in physical health, mental wellbeing, and educational outcomes. This stability helps break cycles of intergenerational poverty by allowing children to focus on learning rather than scarcity.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "OECD studies of family cash transfers"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:30.158083+00:00"
+    },
+    {
+      "id": "c6a18f4d-7581-4335-b2e7-c52d6a186495",
+      "text": "Historical programs like the Alaska Permanent Fund Dividend (APFD) demonstrate a measurable track record of success. The APFD, which has provided annual unconditional payments since 1982, is empirically linked to reductions in poverty rates and income inequality in the state.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Alaska's Permanent Fund Dividend (APFD)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:30.158526+00:00"
+    },
+    {
+      "id": "581f018e-1ca9-4621-a8d8-991688d76f93",
+      "text": "UBI recipients spend the money instantly on essential local goods and services, leading to a strong economic multiplier effect. This rapid injection of capital stimulates local demand, generates new employment opportunities, and reduces poverty indirectly for the wider community.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:30.158963+00:00"
+    },
+    {
+      "id": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "text": "Replacing complex, means-tested welfare programs with a single, universal payment eliminates significant bureaucratic waste and administrative overhead. This pragmatic shift ensures a higher percentage of aid, currently lost to fragmented systems, reaches its poverty-reducing target effectively and without stigma.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:30.159383+00:00"
+    },
+    {
+      "id": "342751bd-d29c-4ce6-8952-22f4a4b5e55c",
+      "text": "The APFD is not a generalizable model for UBI because it is funded by non-renewable oil revenue, separating the transfer from the tax base and avoiding the massive tax increases required for most proposed UBI programs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c6a18f4d-7581-4335-b2e7-c52d6a186495",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:41.309735+00:00"
+    },
+    {
+      "id": "383ada04-5d5e-488f-8b72-94a4d379e1f0",
+      "text": "Despite the dividend, Alaska\u2019s remoteness and dependence on imports result in one of the highest costs of living in the US, limiting the dividend's actual capacity to alleviate poverty in real terms.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c6a18f4d-7581-4335-b2e7-c52d6a186495",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:41.310176+00:00"
+    },
+    {
+      "id": "a9ddc907-c6f8-454f-a25e-368b37c76de0",
+      "text": "Universal payments drastically reduce targeting efficiency because a majority of the funds are delivered to the non-poor, significantly increasing the total fiscal cost required to move poor households above the poverty line compared to means-tested schemes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:41.445953+00:00"
+    },
+    {
+      "id": "30fcd853-a467-471c-b3ab-210668dd8ee7",
+      "text": "While simplifying eligibility, administration still requires significant overhead for large-scale distribution, identity verification, and financial systems maintenance, meaning the percentage reduction in bureaucracy is often minor compared to the overall scheme's massive fiscal cost.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:41.446409+00:00"
+    },
+    {
+      "id": "ec979dba-8d45-45ac-bf0e-3f5da93389ee",
+      "text": "Fiscally sustainable universal payments are often set far below the actual income needed to escape poverty, compromising benefit adequacy and failing to guarantee effective poverty reduction, as demonstrated in the Canadian Mincome or recent Finnish UBI trials.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:41.446674+00:00"
+    },
+    {
+      "id": "f56bf630-0fbb-466c-b8a7-9dccd6b7a083",
+      "text": "UBI pilots in countries like Finland and various US cities show recipients often prioritize using funds to pay down pre-existing high-interest debt or build emergency savings, which dampens the immediate local multiplier effect.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "581f018e-1ca9-4621-a8d8-991688d76f93",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:44.430842+00:00"
+    },
+    {
+      "id": "0faa78a3-2e8b-4aa3-ab7a-e7542bbba297",
+      "text": "In local economies with inelastic supply, particularly housing and essential services, the rapid influx of UBI funds drives up prices through demand-pull inflation, eroding the purchasing power and negating wider poverty reduction.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "581f018e-1ca9-4621-a8d8-991688d76f93",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:44.431500+00:00"
+    },
+    {
+      "id": "810f7a98-16f6-4ba9-9aae-91538843afcb",
+      "text": "The official results of Finland's 2017-2018 Basic Income experiment reported that recipients found no more employment than the control group, directly refuting claims of consistent empirical success in job market participation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fa42bdb1-bbd2-4d0b-a2d9-28b3f0202acb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:44.716543+00:00"
+    },
+    {
+      "id": "d52c9354-464d-4d16-90c2-add22789bdf1",
+      "text": "Full-scale UBI requires massive taxation or government debt, triggering widespread labor market disincentives and macroeconomic instability that are completely absent in small, externally-funded pilot programs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fa42bdb1-bbd2-4d0b-a2d9-28b3f0202acb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:44.716972+00:00"
+    },
+    {
+      "id": "640506e1-d15d-463f-a0ff-d741c7f36797",
+      "text": "Short-term UBI experiments, such as the two-year, $500/month pilot in Stockton, California, demonstrate slight health improvements but do not provide the sustained capital required to fundamentally alter educational attainment and break cycles of intergenerational poverty.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b0db0d05-2585-4e5e-afe0-1c8e60d8553b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:46.929851+00:00"
+    },
+    {
+      "id": "e9bdb78c-ad39-4f10-b623-0ed3120ff32c",
+      "text": "Cash transfers address financial scarcity but do not solve structural barriers like under-resourced public schools, inadequate transportation, and limited access to quality healthcare that primarily constrain educational outcomes and job mobility.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b0db0d05-2585-4e5e-afe0-1c8e60d8553b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:46.930312+00:00"
+    },
+    {
+      "id": "fd196d71-647f-417d-b28a-6f6f8bee6dcf",
+      "text": "The Finnish UBI trial (2017-2018) provided monthly payments of 560 euros, a figure below the national poverty line, demonstrating that fiscally constrained UBI schemes often remain insufficient to eradicate poverty.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "79ffde0d-4d32-41c7-ad48-530696bdd9ae",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:52.013292+00:00"
+    },
+    {
+      "id": "17042194-5065-4bea-8aa7-9b739c66d6e5",
+      "text": "The purchasing power of a fixed UBI dramatically varies by location; an amount sufficient for basic needs in rural Mississippi provides insufficient rental coverage to prevent poverty in high-cost metro areas like San Francisco.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "79ffde0d-4d32-41c7-ad48-530696bdd9ae",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:52.013986+00:00"
+    },
+    {
+      "id": "0838433e-438c-4501-a3c8-c79582fef5eb",
+      "text": "Means-tested programs require expensive administrative infrastructure for verification and compliance, sometimes consuming 10-30% of the program's budget, which significantly reduces the net fiscal savings over universal transfers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9ddc907-c6f8-454f-a25e-368b37c76de0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:52.313547+00:00"
+    },
+    {
+      "id": "32221ddf-f1f7-4e11-bbaa-b78632cecd95",
+      "text": "The pursuit of leakage reduction results in high exclusion errors and low take-up rates; means-tested programs frequently fail to reach 30-50% of the eligible poor population due to stigma and complex application procedures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9ddc907-c6f8-454f-a25e-368b37c76de0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:52.313577+00:00"
+    },
+    {
+      "id": "e7617a90-f88f-4117-a57f-5e7729a108fb",
+      "text": "Prioritizing debt repayment immediately increases a recipient's future disposable income by eliminating high interest payments, thus translating the initial UBI investment into a stronger, more sustainable long-term consumption multiplier.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f56bf630-0fbb-466c-b8a7-9dccd6b7a083",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:55.352380+00:00"
+    },
+    {
+      "id": "370d4cc8-1cb1-4104-b23d-d0654fb765a4",
+      "text": "Focusing solely on immediate spending ignores the macroeconomic benefit of reduced financial precarity, which improves credit scores and lowers systemic risk from widespread consumer defaults and reliance on public safety nets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f56bf630-0fbb-466c-b8a7-9dccd6b7a083",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:55.352408+00:00"
+    },
+    {
+      "id": "769a1754-4985-45d3-88d3-875fb36decbd",
+      "text": "The Canadian Mincome trial was a Negative Income Tax (NIT), a phase-out, targeted system fundamentally different from a true universal payment, making it irrelevant evidence for UBI adequacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ec979dba-8d45-45ac-bf0e-3f5da93389ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:55.425968+00:00"
+    },
+    {
+      "id": "b13c5a11-1600-4055-b223-3b58ce74c64b",
+      "text": "The cited Finnish and Canadian studies were short-term, limited pilot programs primarily designed to study behavioral effects, not permanent macroeconomic policies integrated to provide a poverty-level floor, undermining their utility as proof of systemic failure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ec979dba-8d45-45ac-bf0e-3f5da93389ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:55.426019+00:00"
+    },
+    {
+      "id": "fa9b0b5a-f6d2-4eda-af41-487a8b25885a",
+      "text": "Administrative efficiency gains are correctly determined by the percentage reduction against the pre-existing administrative budget, not by comparing the savings to the entire program expenditure which is overwhelmingly dominated by participant payouts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "30fcd853-a467-471c-b3ab-210668dd8ee7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:56.613535+00:00"
+    },
+    {
+      "id": "177fbac6-9bec-4222-93da-b9aa2a35867f",
+      "text": "Eliminating complicated eligibility verification and means-testing, such as that required by the US Temporary Assistance for Needy Families (TANF) program, generates substantial absolute savings even if they constitute a small percentage of the total fiscal cost.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "30fcd853-a467-471c-b3ab-210668dd8ee7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:56.613575+00:00"
+    },
+    {
+      "id": "b0d9dd29-19dc-4021-97a0-482ec5b17b31",
+      "text": "The primary consumption of poverty-level beneficiaries is weighted toward goods with highly elastic supply, such as bulk staples and consumer packaged goods, limiting significant inflation to specific, location-sensitive markets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0faa78a3-2e8b-4aa3-ab7a-e7542bbba297",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:56.805473+00:00"
+    },
+    {
+      "id": "e14ba8ef-92a1-49b2-92e6-d8bb96fc7bdc",
+      "text": "Increased demand and resulting price signals create a powerful market incentive for long-run capital investment to expand supply in lagging sectors like housing and infrastructure, counteracting initial inelasticity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0faa78a3-2e8b-4aa3-ab7a-e7542bbba297",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:56.805500+00:00"
+    },
+    {
+      "id": "eca58e39-1519-41d7-bc97-17248eacbc2b",
+      "text": "The Finnish BI experiment scope was limited to already-unemployed job seekers, whereas US-based pilots, like the Stockton, California experiment, focus on employed low-income residents, testing different labor market impacts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "810f7a98-16f6-4ba9-9aae-91538843afcb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:59.907513+00:00"
+    },
+    {
+      "id": "2c7ecb36-6f7f-4a80-8772-eaff4f800d73",
+      "text": "The same Finnish report confirmed BI recipients experienced better financial security, reduced mental stress, and higher trust in government, which are key success metrics beyond direct employment gains.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "810f7a98-16f6-4ba9-9aae-91538843afcb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:36:59.907540+00:00"
+    },
+    {
+      "id": "1628485b-6b92-404c-a2c2-5a8652a28dc8",
+      "text": "Consolidating and streamlining hundreds of complex, overlapping welfare and subsidy programs can fund a UBI through administrative efficiency gains, thereby avoiding the necessity of massive new taxation or debt.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d52c9354-464d-4d16-90c2-add22789bdf1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:02.776872+00:00"
+    },
+    {
+      "id": "38804ed0-4d42-42a8-82a5-4c25a25da31b",
+      "text": "The Finnish basic income experiment found recipients worked, on average, six more days per year than the control group, demonstrating that labor market effects are present even in basic pilots and are not necessarily negative.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d52c9354-464d-4d16-90c2-add22789bdf1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:02.776898+00:00"
+    },
+    {
+      "id": "53d7b62a-c860-454d-8387-7a9bfc20837f",
+      "text": "Longitudinal studies of the Progresa/Oportunidades program in Mexico demonstrate that transfers increase educational attainment and transition to non-agricultural jobs, showing money allows recipients to overcome local structural access issues.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e9bdb78c-ad39-4f10-b623-0ed3120ff32c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:02.980896+00:00"
+    },
+    {
+      "id": "18b11dce-41c5-48ef-826d-53adcbcbc97b",
+      "text": "Structural deficiencies require decades of state investment, but cash transfers provide immediate means for families to purchase essential private substitutes, such as private transportation or supplemental tutoring.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e9bdb78c-ad39-4f10-b623-0ed3120ff32c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:02.980926+00:00"
+    },
+    {
+      "id": "c27e9c7c-4e52-4b3d-840e-2d3a37cf0c38",
+      "text": "A basic cash payment explicitly set below the established national poverty line cannot functionally eradicate poverty, rendering the finding that the specific 560 euro amount was insufficient entirely trivial.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fd196d71-647f-417d-b28a-6f6f8bee6dcf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:07.324340+00:00"
+    },
+    {
+      "id": "b3b3fb76-3062-4702-a0f1-0f033d366057",
+      "text": "The Finnish UBI trial evaluated how unattached cash transfers affected the employment rates and bureaucratic steps for 2,000 unemployed individuals, not its sufficiency as a universal poverty intervention for the entire populace.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fd196d71-647f-417d-b28a-6f6f8bee6dcf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:07.324365+00:00"
+    },
+    {
+      "id": "7ddfe0a3-31b7-4eaa-b142-dbcbce74da46",
+      "text": "The Stockton experiment increased the portion of participants securing full-time employment from 28% to 40% after one year, indicating the short-term capital alters immediate economic stability and opens pathways for future attainment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "640506e1-d15d-463f-a0ff-d741c7f36797",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.537239+00:00"
+    },
+    {
+      "id": "f6580e73-b6d5-4570-b646-c6232ea95da6",
+      "text": "Evidence from Canada's \"Mincome\" experiment in the 1970s showed psychological stability provided by the income floor correlated with children staying in high school longer, demonstrating an early impact on educational outcomes, not just health.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "640506e1-d15d-463f-a0ff-d741c7f36797",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.537267+00:00"
+    },
+    {
+      "id": "35a65799-fe8b-479b-bb63-b43f98290552",
+      "text": "Injecting a large volume of non-stimulatory cash increases aggregate demand without a corresponding increase in production. This leads to demand-pull inflation, raising the cost of essential goods and negating the real purchasing power gains intended to reduce poverty.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.537355+00:00"
+    },
+    {
+      "id": "6c10a7ea-b906-4940-bff9-097095022738",
+      "text": "Implementing UBI often requires consolidating or dismantling highly targeted in-kind benefits, such as housing vouchers or disability supports. These targeted programs address non-cash poverty needs, such as secure shelter, more directly and effectively than a modest general cash transfer.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.537808+00:00"
+    },
+    {
+      "id": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "text": "Because UBI is universal, the majority of the funds must be distributed to individuals above the poverty line. This makes the program fiscally inefficient and wasteful compared to targeted, means-tested programs like the US Earned Income Tax Credit, which focus resources exclusively on the poor.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.538108+00:00"
+    },
+    {
+      "id": "bdce8149-cd65-4918-8264-20c4d2a0074e",
+      "text": "A dependable basic income floor reduces the financial necessity for continued employment, potentially leading to decreased labor force participation (LFP). Reduced LFP slows overall economic growth and shrinks the tax revenue base required to sustain the massive costs of the UBI program.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.538383+00:00"
+    },
+    {
+      "id": "2aac3bdf-1481-41e4-b26c-c7266586b98a",
+      "text": "Small-scale, temporary UBI pilot programs cannot replicate the long-term, systemic economic effects of a permanent national policy. These limited experiments fail to capture aggregate changes in labor supply, nationwide price levels, or long-term investment decisions required for effective evaluation.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.538666+00:00"
+    },
+    {
+      "id": "2e4f93c3-eb0b-4a55-b338-fbd40b6b2b26",
+      "text": "Given the massive economic cost required for UBI, any politically feasible payment amount is likely to be set below the official poverty line. Such an amount stabilizes income for the poor but fails to genuinely eliminate or technically reduce poverty based on standard government metrics.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:09.539084+00:00"
+    },
+    {
+      "id": "ff0c17f4-be21-471a-b52f-5d3a261d1fa8",
+      "text": "Targeted programs like the US Earned Income Tax Credit create high effective marginal tax rates for low-income workers, creating work disincentives and contributing to significant non-take-up rates, which reduces net poverty reduction efficiency.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:22.332795+00:00"
+    },
+    {
+      "id": "4b9f08ba-a44f-401d-a383-48c1274c7c6b",
+      "text": "UBI's true fiscal efficiency depends on its funding mechanism; when paired with progressive taxation, high earners pay back the majority of their UBI through the tax system (clawback), minimizing the net 'wasteful' distribution.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:22.333423+00:00"
+    },
+    {
+      "id": "bfa24681-50eb-42ea-a93b-6b4d0d7942cb",
+      "text": "Means-tested programs require expensive, elaborate bureaucracy and auditing to confirm eligibility, conferring high administrative costs that undermine the fiscal savings achieved through targeted distribution.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:22.333842+00:00"
+    },
+    {
+      "id": "64d46a66-0720-4a43-84d4-71aabb3326c1",
+      "text": "Reduced labor force participation can mask a shift toward higher-value activities and human capital formation, which can increase productivity and drive economic growth more effectively than maintaining low-wage employment. Enabling individuals to pursue education or specialized training, as seen in limited UBI experiments, counteracts the detrimental effect of slightly lower LFP.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bdce8149-cd65-4918-8264-20c4d2a0074e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:23.716075+00:00"
+    },
+    {
+      "id": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "text": "The assumption of a shrinking tax base is flawed because UBI funding typically relies on shifting taxation away from labor towards consumption taxes (e.g., VAT) or wealth taxes, ensuring necessary revenue generation regardless of LFP changes. Furthermore, the inherent demand stimulation from UBI increases aggregate consumption, boosting sales and corporate tax revenue.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "bdce8149-cd65-4918-8264-20c4d2a0074e",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:23.716582+00:00"
+    },
+    {
+      "id": "6e8e46e5-eac3-498b-b80e-cec12a27bc9c",
+      "text": "Consolidating the approximately 80 US federal anti-poverty programs, such as SNAP and housing assistance programs, would offset a significant portion of the gross cost of Universal Basic Income. This reallocation of existing welfare budgets makes a UBI set above the poverty line financially achievable without substantially increasing the total tax burden.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2e4f93c3-eb0b-4a55-b338-fbd40b6b2b26",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:25.450918+00:00"
+    },
+    {
+      "id": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "text": "Political feasibility is achievable by linking UBI funding to resource wealth, as demonstrated by the Alaska Permanent Fund, which shares oil revenues directly with all state residents. Such dividends are often set above local poverty thresholds and are sustained by stable, non-income-based revenue streams.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2e4f93c3-eb0b-4a55-b338-fbd40b6b2b26",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:25.451356+00:00"
+    },
+    {
+      "id": "e6647394-331d-46bf-bce1-564ef23ba47b",
+      "text": "Pilot programs, specifically the Stockton Economic Empowerment Demonstration (SEED), successfully measure crucial micro-economic effects like improved mental health scores and reduced income volatility, providing necessary local data for long-term policy forecasting.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2aac3bdf-1481-41e4-b26c-c7266586b98a",
+      "children_count": 2,
+      "references": [
+        "Stockton Economic Empowerment Demonstration (SEED)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:26.022388+00:00"
+    },
+    {
+      "id": "117d9c41-243f-4181-813a-c136571fa3be",
+      "text": "Econometric models use micro-level elasticity data from historically temporary pilots, such as the 1970s US Negative Income Tax experiments, to forecast aggregate long-term effects on labor supply and price inflation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2aac3bdf-1481-41e4-b26c-c7266586b98a",
+      "children_count": 2,
+      "references": [
+        "US Negative Income Tax experiments (1970s)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:26.022810+00:00"
+    },
+    {
+      "id": "8b04c32a-3203-45dd-91ec-6bad508c2f76",
+      "text": "Several proposed UBI models, such as those relying on land value taxes or carbon dividends, are structured to provide funding without requiring the dismantling of existing housing or specialized disability support programs.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6c10a7ea-b906-4940-bff9-097095022738",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:26.523040+00:00"
+    },
+    {
+      "id": "d565047b-aedd-42fd-8034-350bce3ce2bf",
+      "text": "Cash transfer experiments, such as those conducted in Finland (2017-2018), provided recipients with purchasing power, showing that a UBI set at or above the poverty line can effectively allow individuals to independently secure housing and non-cash needs.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6c10a7ea-b906-4940-bff9-097095022738",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:26.523446+00:00"
+    },
+    {
+      "id": "543af653-8fa4-4323-86c3-7e3c91ed7f46",
+      "text": "Clawback depends entirely on the specific UBI grant amount, the tax base, and the marginal tax rates; generic progressive taxation guarantees no specific recovery rate or whether the majority of funds are recouped.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4b9f08ba-a44f-401d-a383-48c1274c7c6b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:31.254652+00:00"
+    },
+    {
+      "id": "94cf44b8-1a17-4346-bce8-c7faaaeadef4",
+      "text": "Overall fiscal efficiency includes the administrative cost of distributing the UBI grant to all citizens, which is not inherently minimized by the clawback mechanism compared to targeted alternatives like a streamlined Negative Income Tax.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4b9f08ba-a44f-401d-a383-48c1274c7c6b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:31.254679+00:00"
+    },
+    {
+      "id": "2ae619bb-b955-42ff-ac1f-1b5270cc9d3c",
+      "text": "During periods of high economic slack, like the unemployment rates exceeding 9% in the Eurozone after the 2008 financial crisis, cash injections spur production and employment before triggering significant demand-pull inflation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "35a65799-fe8b-479b-bb63-b43f98290552",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:32.638539+00:00"
+    },
+    {
+      "id": "abd79ed9-a490-42f6-816a-e06e73228e29",
+      "text": "Food production and basic manufactured goods often exhibit highly elastic supply in the short term, allowing output to expand rapidly in response to new consumer demand without immediate broad price spikes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "35a65799-fe8b-479b-bb63-b43f98290552",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:32.638971+00:00"
+    },
+    {
+      "id": "1682f91b-ab23-4b18-b88f-61cbbce2efa5",
+      "text": "Long-term LFP declines in advanced economies like the US are predominantly driven by structural issues such as the aging population, rising disability rates, and discouraged workers, not a widespread shift toward human capital formation. This factual reality contradicts the assumption that reduced LFP is primarily masking a beneficial, high-value transition.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "64d46a66-0720-4a43-84d4-71aabb3326c1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:34.016415+00:00"
+    },
+    {
+      "id": "39ccc1d1-8374-4553-bb92-22f24bee8097",
+      "text": "The positive behavioral changes observed in limited, localized UBI experiments are not scalable to the macro economy, as a generalized LFP reduction significantly shrinks the national tax base required to fund the public education and infrastructure necessary for long-term productivity growth. This undermines the mechanism by which the assumed benefits could outweigh the macroeconomic cost.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "64d46a66-0720-4a43-84d4-71aabb3326c1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:34.016446+00:00"
+    },
+    {
+      "id": "c4d8d32b-8f8a-4a42-98eb-d8684afbbf5e",
+      "text": "Most proposed UBI funding, particularly high wealth or consumption taxes needed for sufficient revenue, faces steep political opposition, demonstrated by the failure of the 2016 Swiss UBI referendum to secure a viable financing plan.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:35.287418+00:00"
+    },
+    {
+      "id": "b921498c-b1d0-4c7b-bb2e-8dbc0f8438b3",
+      "text": "The anticipated demand stimulation may not offset the lost economic output if UBI significantly reduces labor supply and productivity among recipients, thereby shrinking the overall GDP and the long-term corporate profit tax base.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:35.287476+00:00"
+    },
+    {
+      "id": "db1828e7-e9a7-4063-a8b2-572a7ee3d671",
+      "text": "Reliance on consumption (VAT) and wealth taxes introduces revenue volatility, as both tax bases contract sharply during economic downturns, exemplified by the collapse of sales tax revenue during the 2008 recession.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:35.287503+00:00"
+    },
+    {
+      "id": "3733ff14-99a4-464d-8881-1e6e7b0691cc",
+      "text": "Administrative costs for many means-tested programs, such as the US Earned Income Tax Credit (EITC), are empirically low (often under 10% of total funds), failing to nullify the much larger fiscal savings from targeted distribution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bfa24681-50eb-42ea-a93b-6b4d0d7942cb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:35.353592+00:00"
+    },
+    {
+      "id": "aa25bf53-2552-4ef1-956a-e3fd1cbd7573",
+      "text": "The primary rationale for means-testing is to maximize social equity and economic efficacy by concentrating limited public resources on the truly needy, a benefit ignored by focusing only on net fiscal savings.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bfa24681-50eb-42ea-a93b-6b4d0d7942cb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:35.353618+00:00"
+    },
+    {
+      "id": "5787c319-406a-405a-80e1-e8eacbfcdf86",
+      "text": "Long-term policy forecasting, especially related to fiscal responsibility and national scale, relies on established macroeconomic models and broad labor market data, making micro-level results from a single small pilot project superfluous, not necessary.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e6647394-331d-46bf-bce1-564ef23ba47b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:37.893560+00:00"
+    },
+    {
+      "id": "7ebf69a7-8c16-4d3a-b923-ecf82ba1632e",
+      "text": "Results from small, subsidized pilots like SEED are methodologically unreliable for long-term forecasting because they cannot simulate the macroeconomic effects of universal implementation, such as widespread labor supply reduction or the fiscal impact of national financing.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e6647394-331d-46bf-bce1-564ef23ba47b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:37.893588+00:00"
+    },
+    {
+      "id": "4d191d70-6132-42fe-94d3-01a8a552eab2",
+      "text": "The decision to retain complex, specialized programs like existing disability or housing support is a political choice concerning program efficiency, independent of the UBI's revenue source, as many UBI proponents advocate consolidation regardless of funding.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8b04c32a-3203-45dd-91ec-6bad508c2f76",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:38.584638+00:00"
+    },
+    {
+      "id": "b79c68aa-dc6b-4bef-8dee-323174dd10d3",
+      "text": "Projected revenue from land value taxes or carbon dividends may still be insufficient to fund a fiscally necessary UBI alongside existing, costly specialized programs, necessitating dismantling due to fiscal reality.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8b04c32a-3203-45dd-91ec-6bad508c2f76",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:38.584664+00:00"
+    },
+    {
+      "id": "52e9f0b8-e6bc-4b16-947b-b472b715f960",
+      "text": "The projected gross cost of a Universal Basic Income set above the poverty line (estimated at $3 trillion annually) is six times the total cost of all existing means-tested federal programs (approximately $500 billion), meaning consolidation covers only a small fraction and requires substantial new taxes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6e8e46e5-eac3-498b-b80e-cec12a27bc9c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:38.693721+00:00"
+    },
+    {
+      "id": "7088a0c5-4fda-4aba-b9ce-0cfc91eea6ae",
+      "text": "Consolidating specialized in-kind aid like housing assistance into a cash UBI fails because it does not increase the supply of affordable units, causing rapid rent inflation that diminishes the UBI's real value and leaves the poorest still unable to secure stable housing.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6e8e46e5-eac3-498b-b80e-cec12a27bc9c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:38.693769+00:00"
+    },
+    {
+      "id": "c8242d19-008d-49e8-a2a0-101229d85e76",
+      "text": "The Finnish UBI experiment provided recipients with \u20ac560 per month, which was significantly below the Finnish at-risk-of-poverty threshold of approximately \u20ac1,190 monthly in 2018, meaning the transfer was not set at or above the poverty line.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d565047b-aedd-42fd-8034-350bce3ce2bf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:40.933542+00:00"
+    },
+    {
+      "id": "b01c1cc3-e1f7-4790-b68c-a560a9bd228b",
+      "text": "Temporary, two-year transfers cannot demonstrate long-term independence, as securing housing and other major non-cash needs requires consistent income stability and capital that often exceeds temporary welfare payments in high-cost cities like Helsinki.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d565047b-aedd-42fd-8034-350bce3ce2bf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:40.933570+00:00"
+    },
+    {
+      "id": "8d032a7a-9fd2-4fa0-a900-c8e628b1ba3b",
+      "text": "Temporary incentives, like those in the 1970s US Negative Income Tax experiments, elicit larger short-term behavioral changes than a permanent program where recipients fundamentally adjust long-term human capital investments and future career plans.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "117d9c41-243f-4181-813a-c136571fa3be",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:41.471065+00:00"
+    },
+    {
+      "id": "60b8195d-039f-4cda-9506-1c2225be2244",
+      "text": "Scaling micro-level elasticity data to the aggregate ignores general equilibrium effects, such as the policy-induced reduction in labor supply driving up market-wide wages and input prices.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "117d9c41-243f-4181-813a-c136571fa3be",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:41.471100+00:00"
+    },
+    {
+      "id": "de371a59-21d7-498c-a460-b100a2bbeff5",
+      "text": "Empirical evidence consistently demonstrates that the EITC significantly increases labor force participation, drawing single mothers and unemployed individuals into work, proving a net positive work incentive overall.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ff0c17f4-be21-471a-b52f-5d3a261d1fa8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:41.796031+00:00"
+    },
+    {
+      "id": "62622f14-ae4c-4a88-9d5f-5d83710f21b0",
+      "text": "Non-take-up rates persist primarily because the EITC application process is complex and requires yearly re-filing, causing high administrative barriers and insufficient outreach, not because workers calculate high effective marginal tax rates.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ff0c17f4-be21-471a-b52f-5d3a261d1fa8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:41.796058+00:00"
+    },
+    {
+      "id": "25e2e550-1e86-4d0d-a0e6-17f1fcd4a85f",
+      "text": "The high per capita resource wealth in Alaska, sustained by a low population of only 730,000, is not generalizable to large high-population nations like the United States or India.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:42.284160+00:00"
+    },
+    {
+      "id": "687781c2-cc3c-4c13-a9f8-4874d971325b",
+      "text": "The Alaska Permanent Fund dividend averaged roughly $1,600 annually per resident, significantly less than the $14,580 US Federal Poverty Guideline for a single person, proving it does not offer an income floor above poverty.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:42.284186+00:00"
+    },
+    {
+      "id": "24661ba3-37c5-47e0-a594-73ebe8bc9b25",
+      "text": "A guaranteed poverty-level UBI of $12,000 annually requires sustained national funding commitments in the trillions of dollars, whereas the APF relies on variable oil revenue creating an annual distribution that fluctuates widely.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:42.284196+00:00"
+    },
+    {
+      "id": "90bc963d-ff5d-401f-ad1d-00fb65526d4b",
+      "text": "Food production is inherently inelastic in the short term, constrained by fixed biological cycles like crop harvest seasons and livestock gestation periods.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "abd79ed9-a490-42f6-816a-e06e73228e29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:43.905902+00:00"
+    },
+    {
+      "id": "34bda4d3-e206-4f3a-ad0d-2d24eace34d0",
+      "text": "Basic manufactured goods often face short-term inelasticity due to bottlenecks in specialized component production (e.g., semiconductors) or transport capacity (e.g., shipping containers), causing immediate price spikes to ration limited supply.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "abd79ed9-a490-42f6-816a-e06e73228e29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:37:43.905955+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:36:30.156776+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:36:30.156776+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "c6a18f4d-7581-4335-b2e7-c52d6a186495",
+      "target": "342751bd-d29c-4ce6-8952-22f4a4b5e55c",
+      "type": "objection"
+    },
+    {
+      "source": "c6a18f4d-7581-4335-b2e7-c52d6a186495",
+      "target": "383ada04-5d5e-488f-8b72-94a4d379e1f0",
+      "type": "objection"
+    },
+    {
+      "source": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "target": "a9ddc907-c6f8-454f-a25e-368b37c76de0",
+      "type": "objection"
+    },
+    {
+      "source": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "target": "30fcd853-a467-471c-b3ab-210668dd8ee7",
+      "type": "objection"
+    },
+    {
+      "source": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "target": "ec979dba-8d45-45ac-bf0e-3f5da93389ee",
+      "type": "objection"
+    },
+    {
+      "source": "581f018e-1ca9-4621-a8d8-991688d76f93",
+      "target": "f56bf630-0fbb-466c-b8a7-9dccd6b7a083",
+      "type": "objection"
+    },
+    {
+      "source": "581f018e-1ca9-4621-a8d8-991688d76f93",
+      "target": "0faa78a3-2e8b-4aa3-ab7a-e7542bbba297",
+      "type": "objection"
+    },
+    {
+      "source": "fa42bdb1-bbd2-4d0b-a2d9-28b3f0202acb",
+      "target": "810f7a98-16f6-4ba9-9aae-91538843afcb",
+      "type": "objection"
+    },
+    {
+      "source": "fa42bdb1-bbd2-4d0b-a2d9-28b3f0202acb",
+      "target": "d52c9354-464d-4d16-90c2-add22789bdf1",
+      "type": "objection"
+    },
+    {
+      "source": "b0db0d05-2585-4e5e-afe0-1c8e60d8553b",
+      "target": "640506e1-d15d-463f-a0ff-d741c7f36797",
+      "type": "objection"
+    },
+    {
+      "source": "b0db0d05-2585-4e5e-afe0-1c8e60d8553b",
+      "target": "e9bdb78c-ad39-4f10-b623-0ed3120ff32c",
+      "type": "objection"
+    },
+    {
+      "source": "79ffde0d-4d32-41c7-ad48-530696bdd9ae",
+      "target": "fd196d71-647f-417d-b28a-6f6f8bee6dcf",
+      "type": "objection"
+    },
+    {
+      "source": "79ffde0d-4d32-41c7-ad48-530696bdd9ae",
+      "target": "17042194-5065-4bea-8aa7-9b739c66d6e5",
+      "type": "objection"
+    },
+    {
+      "source": "a9ddc907-c6f8-454f-a25e-368b37c76de0",
+      "target": "0838433e-438c-4501-a3c8-c79582fef5eb",
+      "type": "response"
+    },
+    {
+      "source": "a9ddc907-c6f8-454f-a25e-368b37c76de0",
+      "target": "32221ddf-f1f7-4e11-bbaa-b78632cecd95",
+      "type": "response"
+    },
+    {
+      "source": "f56bf630-0fbb-466c-b8a7-9dccd6b7a083",
+      "target": "e7617a90-f88f-4117-a57f-5e7729a108fb",
+      "type": "response"
+    },
+    {
+      "source": "f56bf630-0fbb-466c-b8a7-9dccd6b7a083",
+      "target": "370d4cc8-1cb1-4104-b23d-d0654fb765a4",
+      "type": "response"
+    },
+    {
+      "source": "ec979dba-8d45-45ac-bf0e-3f5da93389ee",
+      "target": "769a1754-4985-45d3-88d3-875fb36decbd",
+      "type": "response"
+    },
+    {
+      "source": "ec979dba-8d45-45ac-bf0e-3f5da93389ee",
+      "target": "b13c5a11-1600-4055-b223-3b58ce74c64b",
+      "type": "response"
+    },
+    {
+      "source": "30fcd853-a467-471c-b3ab-210668dd8ee7",
+      "target": "fa9b0b5a-f6d2-4eda-af41-487a8b25885a",
+      "type": "response"
+    },
+    {
+      "source": "30fcd853-a467-471c-b3ab-210668dd8ee7",
+      "target": "177fbac6-9bec-4222-93da-b9aa2a35867f",
+      "type": "response"
+    },
+    {
+      "source": "0faa78a3-2e8b-4aa3-ab7a-e7542bbba297",
+      "target": "b0d9dd29-19dc-4021-97a0-482ec5b17b31",
+      "type": "response"
+    },
+    {
+      "source": "0faa78a3-2e8b-4aa3-ab7a-e7542bbba297",
+      "target": "e14ba8ef-92a1-49b2-92e6-d8bb96fc7bdc",
+      "type": "response"
+    },
+    {
+      "source": "810f7a98-16f6-4ba9-9aae-91538843afcb",
+      "target": "eca58e39-1519-41d7-bc97-17248eacbc2b",
+      "type": "response"
+    },
+    {
+      "source": "810f7a98-16f6-4ba9-9aae-91538843afcb",
+      "target": "2c7ecb36-6f7f-4a80-8772-eaff4f800d73",
+      "type": "response"
+    },
+    {
+      "source": "d52c9354-464d-4d16-90c2-add22789bdf1",
+      "target": "1628485b-6b92-404c-a2c2-5a8652a28dc8",
+      "type": "response"
+    },
+    {
+      "source": "d52c9354-464d-4d16-90c2-add22789bdf1",
+      "target": "38804ed0-4d42-42a8-82a5-4c25a25da31b",
+      "type": "response"
+    },
+    {
+      "source": "e9bdb78c-ad39-4f10-b623-0ed3120ff32c",
+      "target": "53d7b62a-c860-454d-8387-7a9bfc20837f",
+      "type": "response"
+    },
+    {
+      "source": "e9bdb78c-ad39-4f10-b623-0ed3120ff32c",
+      "target": "18b11dce-41c5-48ef-826d-53adcbcbc97b",
+      "type": "response"
+    },
+    {
+      "source": "fd196d71-647f-417d-b28a-6f6f8bee6dcf",
+      "target": "c27e9c7c-4e52-4b3d-840e-2d3a37cf0c38",
+      "type": "response"
+    },
+    {
+      "source": "fd196d71-647f-417d-b28a-6f6f8bee6dcf",
+      "target": "b3b3fb76-3062-4702-a0f1-0f033d366057",
+      "type": "response"
+    },
+    {
+      "source": "640506e1-d15d-463f-a0ff-d741c7f36797",
+      "target": "7ddfe0a3-31b7-4eaa-b142-dbcbce74da46",
+      "type": "response"
+    },
+    {
+      "source": "640506e1-d15d-463f-a0ff-d741c7f36797",
+      "target": "f6580e73-b6d5-4570-b646-c6232ea95da6",
+      "type": "response"
+    },
+    {
+      "source": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "target": "ff0c17f4-be21-471a-b52f-5d3a261d1fa8",
+      "type": "objection"
+    },
+    {
+      "source": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "target": "4b9f08ba-a44f-401d-a383-48c1274c7c6b",
+      "type": "objection"
+    },
+    {
+      "source": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "target": "bfa24681-50eb-42ea-a93b-6b4d0d7942cb",
+      "type": "objection"
+    },
+    {
+      "source": "bdce8149-cd65-4918-8264-20c4d2a0074e",
+      "target": "64d46a66-0720-4a43-84d4-71aabb3326c1",
+      "type": "objection"
+    },
+    {
+      "source": "bdce8149-cd65-4918-8264-20c4d2a0074e",
+      "target": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "type": "objection"
+    },
+    {
+      "source": "2e4f93c3-eb0b-4a55-b338-fbd40b6b2b26",
+      "target": "6e8e46e5-eac3-498b-b80e-cec12a27bc9c",
+      "type": "objection"
+    },
+    {
+      "source": "2e4f93c3-eb0b-4a55-b338-fbd40b6b2b26",
+      "target": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "type": "objection"
+    },
+    {
+      "source": "2aac3bdf-1481-41e4-b26c-c7266586b98a",
+      "target": "e6647394-331d-46bf-bce1-564ef23ba47b",
+      "type": "objection"
+    },
+    {
+      "source": "2aac3bdf-1481-41e4-b26c-c7266586b98a",
+      "target": "117d9c41-243f-4181-813a-c136571fa3be",
+      "type": "objection"
+    },
+    {
+      "source": "6c10a7ea-b906-4940-bff9-097095022738",
+      "target": "8b04c32a-3203-45dd-91ec-6bad508c2f76",
+      "type": "objection"
+    },
+    {
+      "source": "6c10a7ea-b906-4940-bff9-097095022738",
+      "target": "d565047b-aedd-42fd-8034-350bce3ce2bf",
+      "type": "objection"
+    },
+    {
+      "source": "4b9f08ba-a44f-401d-a383-48c1274c7c6b",
+      "target": "543af653-8fa4-4323-86c3-7e3c91ed7f46",
+      "type": "response"
+    },
+    {
+      "source": "4b9f08ba-a44f-401d-a383-48c1274c7c6b",
+      "target": "94cf44b8-1a17-4346-bce8-c7faaaeadef4",
+      "type": "response"
+    },
+    {
+      "source": "35a65799-fe8b-479b-bb63-b43f98290552",
+      "target": "2ae619bb-b955-42ff-ac1f-1b5270cc9d3c",
+      "type": "objection"
+    },
+    {
+      "source": "35a65799-fe8b-479b-bb63-b43f98290552",
+      "target": "abd79ed9-a490-42f6-816a-e06e73228e29",
+      "type": "objection"
+    },
+    {
+      "source": "64d46a66-0720-4a43-84d4-71aabb3326c1",
+      "target": "1682f91b-ab23-4b18-b88f-61cbbce2efa5",
+      "type": "response"
+    },
+    {
+      "source": "64d46a66-0720-4a43-84d4-71aabb3326c1",
+      "target": "39ccc1d1-8374-4553-bb92-22f24bee8097",
+      "type": "response"
+    },
+    {
+      "source": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "target": "c4d8d32b-8f8a-4a42-98eb-d8684afbbf5e",
+      "type": "response"
+    },
+    {
+      "source": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "target": "b921498c-b1d0-4c7b-bb2e-8dbc0f8438b3",
+      "type": "response"
+    },
+    {
+      "source": "519fc38a-b780-4357-bb9b-99fec5ec76e2",
+      "target": "db1828e7-e9a7-4063-a8b2-572a7ee3d671",
+      "type": "response"
+    },
+    {
+      "source": "bfa24681-50eb-42ea-a93b-6b4d0d7942cb",
+      "target": "3733ff14-99a4-464d-8881-1e6e7b0691cc",
+      "type": "response"
+    },
+    {
+      "source": "bfa24681-50eb-42ea-a93b-6b4d0d7942cb",
+      "target": "aa25bf53-2552-4ef1-956a-e3fd1cbd7573",
+      "type": "response"
+    },
+    {
+      "source": "e6647394-331d-46bf-bce1-564ef23ba47b",
+      "target": "5787c319-406a-405a-80e1-e8eacbfcdf86",
+      "type": "response"
+    },
+    {
+      "source": "e6647394-331d-46bf-bce1-564ef23ba47b",
+      "target": "7ebf69a7-8c16-4d3a-b923-ecf82ba1632e",
+      "type": "response"
+    },
+    {
+      "source": "8b04c32a-3203-45dd-91ec-6bad508c2f76",
+      "target": "4d191d70-6132-42fe-94d3-01a8a552eab2",
+      "type": "response"
+    },
+    {
+      "source": "8b04c32a-3203-45dd-91ec-6bad508c2f76",
+      "target": "b79c68aa-dc6b-4bef-8dee-323174dd10d3",
+      "type": "response"
+    },
+    {
+      "source": "6e8e46e5-eac3-498b-b80e-cec12a27bc9c",
+      "target": "52e9f0b8-e6bc-4b16-947b-b472b715f960",
+      "type": "response"
+    },
+    {
+      "source": "6e8e46e5-eac3-498b-b80e-cec12a27bc9c",
+      "target": "7088a0c5-4fda-4aba-b9ce-0cfc91eea6ae",
+      "type": "response"
+    },
+    {
+      "source": "d565047b-aedd-42fd-8034-350bce3ce2bf",
+      "target": "c8242d19-008d-49e8-a2a0-101229d85e76",
+      "type": "response"
+    },
+    {
+      "source": "d565047b-aedd-42fd-8034-350bce3ce2bf",
+      "target": "b01c1cc3-e1f7-4790-b68c-a560a9bd228b",
+      "type": "response"
+    },
+    {
+      "source": "117d9c41-243f-4181-813a-c136571fa3be",
+      "target": "8d032a7a-9fd2-4fa0-a900-c8e628b1ba3b",
+      "type": "response"
+    },
+    {
+      "source": "117d9c41-243f-4181-813a-c136571fa3be",
+      "target": "60b8195d-039f-4cda-9506-1c2225be2244",
+      "type": "response"
+    },
+    {
+      "source": "ff0c17f4-be21-471a-b52f-5d3a261d1fa8",
+      "target": "de371a59-21d7-498c-a460-b100a2bbeff5",
+      "type": "response"
+    },
+    {
+      "source": "ff0c17f4-be21-471a-b52f-5d3a261d1fa8",
+      "target": "62622f14-ae4c-4a88-9d5f-5d83710f21b0",
+      "type": "response"
+    },
+    {
+      "source": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "target": "25e2e550-1e86-4d0d-a0e6-17f1fcd4a85f",
+      "type": "response"
+    },
+    {
+      "source": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "target": "687781c2-cc3c-4c13-a9f8-4874d971325b",
+      "type": "response"
+    },
+    {
+      "source": "bed3485f-f92a-4204-97c5-df70536b2c40",
+      "target": "24661ba3-37c5-47e0-a594-73ebe8bc9b25",
+      "type": "response"
+    },
+    {
+      "source": "abd79ed9-a490-42f6-816a-e06e73228e29",
+      "target": "90bc963d-ff5d-401f-ad1d-00fb65526d4b",
+      "type": "response"
+    },
+    {
+      "source": "abd79ed9-a490-42f6-816a-e06e73228e29",
+      "target": "34bda4d3-e206-4f3a-ad0d-2d24eace34d0",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "79ffde0d-4d32-41c7-ad48-530696bdd9ae",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "fa42bdb1-bbd2-4d0b-a2d9-28b3f0202acb",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b0db0d05-2585-4e5e-afe0-1c8e60d8553b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "c6a18f4d-7581-4335-b2e7-c52d6a186495",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "581f018e-1ca9-4621-a8d8-991688d76f93",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "f41d09d9-3f4f-47ae-8cfe-3d83310d362c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "35a65799-fe8b-479b-bb63-b43f98290552",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6c10a7ea-b906-4940-bff9-097095022738",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "7364ac1b-7dba-407e-a414-732f3b9df9a1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "bdce8149-cd65-4918-8264-20c4d2a0074e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2aac3bdf-1481-41e4-b26c-c7266586b98a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2e4f93c3-eb0b-4a55-b338-fbd40b6b2b26",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

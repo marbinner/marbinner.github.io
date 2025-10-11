@@ -1,0 +1,3341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euthanasia should be legal - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Euthanasia should be legal</h1>
+        <div class="meta">
+            5 arguments for • 6 arguments against •
+            110 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/euthanasia-should-be-legal.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">110</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">5</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "22cf00ac-44d8-4b3c-bc72-d2b4d9caca7d",
+      "text": "Individual autonomy grants competent adults the fundamental right to control their bodies and choose the timing and manner of their death. Denying this choice when facing incurable and intolerable suffering violates the right to self-determination inherent in medical ethics.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:40.991665+00:00"
+    },
+    {
+      "id": "b11a1636-ba49-4fd3-92f9-cb83929b3966",
+      "text": "Legalizing euthanasia provides a compassionate and definitive exit from prolonged, irreversible, and agonizing suffering. This act minimizes the patient\u2019s overall pain and maximizes their final well-being by offering a peaceful alternative to a cruel, drawn-out decline.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:40.992572+00:00"
+    },
+    {
+      "id": "1e7f944b-ff4b-4440-8875-02327cd71da2",
+      "text": "Establishing a legal framework ensures the practice occurs transparently under strict medical regulation and government oversight. This prevents the dangerous and desperate choices resulting from unregulated, unsanctioned underground efforts at self-euthanasia or informal assistance.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:40.993155+00:00"
+    },
+    {
+      "id": "c83049de-dfcb-4cd1-92da-23573a31a1d2",
+      "text": "Data from jurisdictions including the Netherlands, Belgium, and Canada confirms that rigorous governmental safeguards and professional review boards successfully limit the practice. These systems demonstrate that euthanasia can be safely and securely managed, dispelling fears about unauthorized expansion.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Netherlands",
+        "Belgium",
+        "Canada"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:40.993683+00:00"
+    },
+    {
+      "id": "e21440e5-d992-4d7e-a390-086ad0bbe9e2",
+      "text": "Choosing assisted dying allows individuals to preserve their personal dignity by preventing the loss of autonomy and functional independence caused by terminal disease progression. It enables the patient to define their own legacy and avoid the final indignities of severe physical or cognitive decay.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:40.994318+00:00"
+    },
+    {
+      "id": "cd549667-1bd3-47db-b83c-89a4adcb3017",
+      "text": "Dignity is often considered an intrinsic human characteristic, independent of functional independence in many philosophical and religious traditions; therefore, physical or cognitive decay does not inherently necessitate a loss of personal dignity.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e21440e5-d992-4d7e-a390-086ad0bbe9e2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:52.226842+00:00"
+    },
+    {
+      "id": "e3fa9006-bfa9-45d0-b7e5-e5bdcde696d5",
+      "text": "Defining one's legacy is achieved primarily through a patient's advanced care planning, relationships, and enduring life contributions, none of which are uniquely enabled or enhanced by the choice of assisted dying.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e21440e5-d992-4d7e-a390-086ad0bbe9e2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:52.227812+00:00"
+    },
+    {
+      "id": "279a0fa0-79f4-47da-86a2-f10049a14124",
+      "text": "The right to refuse life support, affirmed by the US Supreme Court in Cruzan v. Director (1990), is a negative right to be free from intervention, distinct from a positive right to demand a physician perform a lethal act.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "22cf00ac-44d8-4b3c-bc72-d2b4d9caca7d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:55.820623+00:00"
+    },
+    {
+      "id": "6821e4f8-114d-4039-94b0-666686397cab",
+      "text": "Mainstream medical ethics, rooted in the Hippocratic Oath, contains an explicit prohibition against giving patients a deadly drug, creating a fundamental tension with the principle of individual autonomy.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "22cf00ac-44d8-4b3c-bc72-d2b4d9caca7d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:55.821174+00:00"
+    },
+    {
+      "id": "fe26e327-5ac4-40d1-aaf9-e85f8590ec31",
+      "text": "Regulated medical systems still experience significant corruption and lack of transparency; for example, the systemic fraud scandals involving Medicare and Medicaid often bypass extensive government oversight in the United States.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1e7f944b-ff4b-4440-8875-02327cd71da2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:55.937519+00:00"
+    },
+    {
+      "id": "3441fd80-6b7e-486c-b4a3-039ab7925b7a",
+      "text": "Data from the Netherlands and Belgium show that informal or underground assistance persists for patients who do not meet the strict terminal illness criteria of the legal frameworks, meaning regulated systems do not \"prevent\" all unregulated choices.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1e7f944b-ff4b-4440-8875-02327cd71da2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:55.938348+00:00"
+    },
+    {
+      "id": "d94eba37-459c-4623-8aa6-b3e6b59d0d42",
+      "text": "Epicurus argued that death is \"nothing to us\" because all good and evil reside in sensation, meaning the cessation of being cannot be a positive state of \"maximal well-being.\"",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b11a1636-ba49-4fd3-92f9-cb83929b3966",
+      "children_count": 2,
+      "references": [
+        "Epicurus, Letter to Menoeceus"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:58.658544+00:00"
+    },
+    {
+      "id": "340a9eea-f612-4a2f-9d1f-620778dea325",
+      "text": "Comprehensive palliative sedation and modern hospice practices, as formalized by the UK's National Health Service, manage virtually all extreme physical and existential pain, providing an alternative definitive exit from agony without needing to end life prematurely.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b11a1636-ba49-4fd3-92f9-cb83929b3966",
+      "children_count": 2,
+      "references": [
+        "UK's National Health Service (NHS) palliative care guidelines"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:34:58.659367+00:00"
+    },
+    {
+      "id": "cae1e385-fec1-47c6-aec0-4ff984d7eb15",
+      "text": "In philosophical traditions emphasizing individual liberty, such as John Stuart Mill's harm principle, the right to choose one's final exit becomes the ultimate expression of personal sovereignty, making the manner of death a defining contribution to one's life narrative.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e3fa9006-bfa9-45d0-b7e5-e5bdcde696d5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:07.925067+00:00"
+    },
+    {
+      "id": "a8e5580f-397d-49de-b009-02f7b13d3f85",
+      "text": "Data from jurisdictions like Oregon and the Netherlands demonstrate that conscious, planned assisted dying allows patients to complete intentional farewells and finalize relationships, producing greater peace and affirmed meaning for survivors than prolonged, unpredictable decline.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e3fa9006-bfa9-45d0-b7e5-e5bdcde696d5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:07.925955+00:00"
+    },
+    {
+      "id": "b128f4c8-eaac-4b3d-a354-89909aff8c93",
+      "text": "Studies tracking specialized palliative care consistently show that 3\u20135% of patients suffer from symptoms, like refractory dyspnea or psychological distress, that remain unresponsive to all maximal palliative treatments, including deep sedation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "340a9eea-f612-4a2f-9d1f-620778dea325",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:13.029463+00:00"
+    },
+    {
+      "id": "916e9b82-baf1-48ff-a50a-78468d2566ec",
+      "text": "Palliative sedation manages symptoms by inducing unconsciousness until natural death, which is fundamentally different from the immediate, irreversible cessation of suffering achieved by Medical Aid in Dying protocols used in the healthcare systems of Belgium or the Netherlands.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "340a9eea-f612-4a2f-9d1f-620778dea325",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:13.030350+00:00"
+    },
+    {
+      "id": "67cf1c19-d7ee-46f9-b136-ac8847e25090",
+      "text": "Legal frameworks in the Netherlands and Belgium prioritize vital professional oversight and standardized procedures, ensuring safety and documentation for high-stakes cases that would occur dangerously in the shadows. Traffic laws, for example, are considered successful because they substantially reduce fatalities, despite failing to prevent all instances of speeding.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3441fd80-6b7e-486c-b4a3-039ab7925b7a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:14.335381+00:00"
+    },
+    {
+      "id": "691cd9f7-2ec0-41d8-8958-45e43da97d95",
+      "text": "Regulated systems intentionally establish strict criteria to limit access to specific populations, successfully defining an ethical boundary, rather than aiming for 100% suppression of all external demand. The US restricted market for controlled substances like high-dose opioids is successful in maintaining medical quality control despite the continued existence of illegal street demand.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3441fd80-6b7e-486c-b4a3-039ab7925b7a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:14.336262+00:00"
+    },
+    {
+      "id": "68590253-721c-4cc8-bb8f-384ec63bf07f",
+      "text": "Euthanasia cases in the Netherlands increased from 1,882 in 2006 to 8,728 in 2022, demonstrating consistent systematic expansion, not the successful limitation claimed by safeguards. Belgium's criteria have legally broadened to include minors and non-terminal psychiatric cases, counteracting the stated goal of \"rigorous governmental safeguards.\"",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c83049de-dfcb-4cd1-92da-23573a31a1d2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:21.868309+00:00"
+    },
+    {
+      "id": "36d29cc2-4906-40f8-aa71-69a60797edab",
+      "text": "Fears about expansion relate primarily to the legal erosion of eligibility criteria, a process untouched by procedural security. This is evidenced by Canada's decision to permit Medical Assistance In Dying (MAID) for mental illness as a sole condition, expanding the scope beyond terminal illness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c83049de-dfcb-4cd1-92da-23573a31a1d2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:21.869183+00:00"
+    },
+    {
+      "id": "71e13afc-c09f-4b09-a2d0-56489391680d",
+      "text": "Under John Stuart Mill\u2019s *On Liberty*, the enduring right to intellectual and moral independence, such as publicly expressing controversial political or religious views without state censorship, constitutes the primary and ongoing expression of individual sovereignty.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "cae1e385-fec1-47c6-aec0-4ff984d7eb15",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:22.011726+00:00"
+    },
+    {
+      "id": "6a8bb9b1-cf3a-4568-bb9d-6518a020fd85",
+      "text": "The intellectual and moral legacy of Socrates is defined by his decades of philosophical inquiry and teaching, making his final, coerced act of consuming hemlock a tragic conclusion, not the defining contribution, to his life narrative.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "cae1e385-fec1-47c6-aec0-4ff984d7eb15",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:22.011783+00:00"
+    },
+    {
+      "id": "cd78902f-5677-4ffe-bc99-f4b565289df4",
+      "text": "Deep and continuous palliative sedation often relies on the withdrawal of hydration and nutrition, which in practice leads to death within days, functionally blurring the fundamental distinction from actively inducing death for a patient facing intolerable suffering.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "916e9b82-baf1-48ff-a50a-78468d2566ec",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:24.047905+00:00"
+    },
+    {
+      "id": "f90f21b2-17b5-4f9c-bada-e8d4aa2c264d",
+      "text": "Plato, in his philosophy, established non-sensory, objective goods like Justice and Truth as the ultimate source of value, contradicting the notion that good and evil reside exclusively in sensation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d94eba37-459c-4623-8aa6-b3e6b59d0d42",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:25.812413+00:00"
+    },
+    {
+      "id": "ddf44ea6-4a33-4e64-90e1-82c76b075bf5",
+      "text": "The process of dying and the anticipation of death cause profound, present sensory suffering, exemplified by the psychiatric condition Thanatophobia, making death highly relevant to current well-being.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d94eba37-459c-4623-8aa6-b3e6b59d0d42",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:25.813416+00:00"
+    },
+    {
+      "id": "c816872f-69da-4bcd-bebb-e89ebbbdc47e",
+      "text": "The US restricted opioid market is a catastrophic regulatory failure, not a success; it fueled the opioid crisis leading to hundreds of thousands of overdose deaths and millions of addictions through intentional over-prescription and diversion, contradicting claims of successful quality control.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "691cd9f7-2ec0-41d8-8958-45e43da97d95",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:25.862777+00:00"
+    },
+    {
+      "id": "e7b98d20-7865-4993-a42a-f08034e0537f",
+      "text": "The proportion of patients with truly refractory symptoms depends heavily on the quality and comprehensiveness of palliative care offered, demonstrating significant geographical variability. Comprehensive, integrated care models, such as those within the UK's National Health Service, report far lower rates of unrelieved distress through protocols that prioritize specialized pain management.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b128f4c8-eaac-4b3d-a354-89909aff8c93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:27.962260+00:00"
+    },
+    {
+      "id": "70258a23-c706-4fef-8f28-a5327e6f40e3",
+      "text": "The increase in Dutch euthanasia cases reflects greater societal acceptance and an aging population, not necessarily failed oversight; the Regional Review Committees still verify 100% of reported cases for procedural adherence to due care criteria.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "68590253-721c-4cc8-bb8f-384ec63bf07f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:34.499364+00:00"
+    },
+    {
+      "id": "f3360e0e-3790-47fe-99f4-ccaa550bad1d",
+      "text": "Belgium's legislative expansion reflects a political decision by its parliament to adjust eligibility criteria; the governmental safeguards (like mandatory multiple specialist consultations for psychiatric cases) ensure the new, broader scope is applied rigorously, not that the scope remains static.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "68590253-721c-4cc8-bb8f-384ec63bf07f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:34.500603+00:00"
+    },
+    {
+      "id": "92d5b02b-1fec-4dc1-9e82-df8ebe8c6fd5",
+      "text": "Modern palliative care models, such as those successfully implemented in Nordic countries, routinely manage pain and symptoms so that the physical process of dying itself is not characterized by \"profound sensory suffering.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ddf44ea6-4a33-4e64-90e1-82c76b075bf5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:36.307504+00:00"
+    },
+    {
+      "id": "60c2ef28-ae23-45c7-84b2-080d7b0b9162",
+      "text": "Using Thanatophobia as an example faulty generalizes an extreme, clinical anxiety disorder that affects a minority; the typical human reaction to death involves varied psychological states, including acceptance, not universal suffering.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ddf44ea6-4a33-4e64-90e1-82c76b075bf5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:36.307558+00:00"
+    },
+    {
+      "id": "4a45a78e-c330-4ed0-af0b-90f5208adb7a",
+      "text": "Canada's MAID MD-A framework mandates two independent medical assessments, a 90-day waiting period, and specialist consultations, creating numerous procedural security checks specifically for the expanded eligibility.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "36d29cc2-4906-40f8-aa71-69a60797edab",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:38.255027+00:00"
+    },
+    {
+      "id": "e1dd3822-fc88-40e4-adf6-87969ddd29be",
+      "text": "The Netherlands requires mandatory reporting to and review by Regional Euthanasia Review Committees for every instance of MAID, showing procedural oversight directly manages the practical application of expanded legal eligibility.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "36d29cc2-4906-40f8-aa71-69a60797edab",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:38.255855+00:00"
+    },
+    {
+      "id": "f2c3954c-deb7-43d7-ae0b-6233b67851ed",
+      "text": "Standardized procedures for traffic laws rely on objective metrics like speed and distance, whereas the legal standard for euthanasia in the Netherlands relies heavily on subjective, individualized definitions of \"unbearable suffering.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "67cf1c19-d7ee-46f9-b136-ac8847e25090",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:38.617924+00:00"
+    },
+    {
+      "id": "25aa148d-5cea-4b40-bdd5-b1f8d30173dc",
+      "text": "In jurisdictions like the United Kingdom and France where euthanasia is illegal, professional standards ensure that ethically complex procedures such as deep palliative sedation and withdrawal of life support are transparent and regulated, not occurring dangerously in the shadows.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "67cf1c19-d7ee-46f9-b136-ac8847e25090",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:38.617991+00:00"
+    },
+    {
+      "id": "627e3832-8f6a-473d-ba81-afbb224896c6",
+      "text": "Longitudinal studies using grief metrics like the Inventory of Complicated Grief show that pre-existing dependent relationship dynamics, not the method of death, are the strongest predictors of complicated bereavement distress in survivors.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a8e5580f-397d-49de-b009-02f7b13d3f85",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:39.767311+00:00"
+    },
+    {
+      "id": "25a2024f-2986-4dd3-a4f3-195b9a815617",
+      "text": "Studies on family bereavement following assisted suicide in Switzerland and Belgium report feelings of abandonment and intense decisional guilt among survivors who opposed the patient\u2019s choice, generating distinct psychological trauma.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a8e5580f-397d-49de-b009-02f7b13d3f85",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:39.767368+00:00"
+    },
+    {
+      "id": "5cdb7830-b77b-4b68-9d5d-8103c97e2352",
+      "text": "Jeremy Bentham's utilitarianism, outlined in An Introduction to the Principles of Morals and Legislation (1789), develops a robust, objective system of Justice and Truth grounded entirely in the measurable sensations of pleasure and pain, demonstrating that objective value need not reside in non-sensory Forms.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f90f21b2-17b5-4f9c-bada-e8d4aa2c264d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:44.930293+00:00"
+    },
+    {
+      "id": "37b59c2b-3a1b-4e35-a465-cb365ca7226f",
+      "text": "Verification of reported cases is retrospective and procedural, which fails to prevent the substantive expansion of \"unbearable suffering\" to non-terminal conditions, as documented by cases involving early-stage dementia or cognitive decline in the Netherlands.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "70258a23-c706-4fef-8f28-a5327e6f40e3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:45.977043+00:00"
+    },
+    {
+      "id": "198912ec-c7e9-4a16-9396-6e19c82de6b8",
+      "text": "The number of reported euthanasia cases in Belgium has steadily risen every year since its legalization, with cases for non-terminal psychiatric suffering increasing substantially over time despite safeguards. This systematic loosening of application standards demonstrates that the mandatory consultation process does not ensure rigorous control against incremental scope expansion.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f3360e0e-3790-47fe-99f4-ccaa550bad1d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:48.337122+00:00"
+    },
+    {
+      "id": "034a62d4-f9fc-4428-9012-30e18c71cafe",
+      "text": "Despite stringent procedural checks, Canadian health authorities have approved MAID for patients citing non-terminal suffering linked primarily to homelessness, poverty, and inadequate disability support, indicating the safeguards are insufficient against socio-economic despair.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4a45a78e-c330-4ed0-af0b-90f5208adb7a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:49.265085+00:00"
+    },
+    {
+      "id": "50f3bf5c-fc48-45d1-894d-fa97f51b8832",
+      "text": "The Dutch Regional Review Committees assess compliance retrospectively after the death has occurred, and less than 0.1% of cases are referred to prosecutors, revealing post-facto accountability rather than real-time procedural management.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e1dd3822-fc88-40e4-adf6-87969ddd29be",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.087440+00:00"
+    },
+    {
+      "id": "1e679311-a63c-4f4f-93b9-c4a1938012f2",
+      "text": "The Netherlands' criteria for legally permissible euthanasia, including \"unbearable suffering,\" have not expanded since the 2002 law was enacted, maintaining stable legal eligibility standards rather than managing constant legal expansion.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e1dd3822-fc88-40e4-adf6-87969ddd29be",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.087504+00:00"
+    },
+    {
+      "id": "0424ae93-d1cb-4c1a-ab28-6e8417a1b36a",
+      "text": "The fundamental sanctity of human life prohibits the state from institutionalizing the deliberate termination of life, regardless of individual consent. State participation in physician-assisted death fundamentally undermines the ethical commitment of medicine, which is sworn to preserve and heal life.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.087772+00:00"
+    },
+    {
+      "id": "dae09376-03d9-4e7e-9a52-c2a4cc68a980",
+      "text": "It is practically impossible to guarantee that consent for euthanasia is entirely voluntary and uncoerced, as patients often suffer from clinical depression or psychological distress impacting judicial capacity. External pressures regarding the financial burden of long-term care or familial expectations can further compromise the autonomy of the decision.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.088754+00:00"
+    },
+    {
+      "id": "552591e9-338a-4f49-b07f-2744f2b96cea",
+      "text": "Legalization initiates a dangerous \"slippery slope\" by justifying the expansion of criteria over time to include non-terminal conditions, as documented in countries like Belgium and the Netherlands. This expansion risks eventual non-voluntary euthanasia for marginalized individuals deemed to have a low quality of life.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.089482+00:00"
+    },
+    {
+      "id": "58f7ac35-5e37-4e0a-bd4c-203828b6c2e5",
+      "text": "Legalization creates a perverse economic incentive for healthcare systems and insurers to favor the terminal option as a cost-saving measure. This systemic pressure risks manifesting as denial or limited access to expensive, long-term palliative and chronic care.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.090096+00:00"
+    },
+    {
+      "id": "58b9eca4-db2b-43a3-9332-02a310146cf0",
+      "text": "Legalizing euthanasia diverts crucial funding, innovation, and societal focus away from improving quality of life measures and comprehensive palliative care alternatives. Concentrating resources on ending life, rather than enhancing living, undermines global public health goals championed by groups like the World Health Organization.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.090634+00:00"
+    },
+    {
+      "id": "6fd4f827-4de8-4bc1-abb7-713baa190434",
+      "text": "Since medical diagnoses and prognoses regarding life expectancy are not infallible, legalization risks prematurely ending lives due to inevitable errors in clinical judgment. Cases of unexpected remission, documented frequently in oncology and neurology, illustrate the unpredictable nature of terminal illnesses and the potential for wrongful death.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:57.091162+00:00"
+    },
+    {
+      "id": "db0ad707-f6b6-41f1-8269-73e6d9cdbda6",
+      "text": "The concept of the sanctity of life is not universally prohibitive, as demonstrated by jurisdictions like the Netherlands and Canada, which prioritize individual autonomy and the right to self-determination in cases of intolerable suffering.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0424ae93-d1cb-4c1a-ab28-6e8417a1b36a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:08.234252+00:00"
+    },
+    {
+      "id": "939d5ad8-e1a0-488b-99cd-672de5941f11",
+      "text": "The ethical commitment of modern medicine includes the principle of non-maleficence and the relief of suffering, which allows physicians to respect the voluntary, informed choices of terminal patients to end their lives.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0424ae93-d1cb-4c1a-ab28-6e8417a1b36a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:08.235327+00:00"
+    },
+    {
+      "id": "5fed62b0-9fa8-47ae-9b5b-dc3a05b62f97",
+      "text": "Belgian and Dutch euthanasia laws maintain a strict requirement for explicit, voluntary, and repeated patient consent, making non-voluntary ending of life illegal and subject to homicide prosecution.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "552591e9-338a-4f49-b07f-2744f2b96cea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:11.549331+00:00"
+    },
+    {
+      "id": "8fd856cf-2fb3-452c-a9fd-0332ee9da72f",
+      "text": "Oregon's Death with Dignity Act, established in 1997, expanded criteria slightly over 25 years without removing the fundamental requirement for voluntary, informed, and repeated patient requests.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "552591e9-338a-4f49-b07f-2744f2b96cea",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:11.550248+00:00"
+    },
+    {
+      "id": "75f32fcb-6198-4faa-af25-1162414eda9a",
+      "text": "Countries like the Netherlands and Canada enforce mandatory protocols requiring multiple, independent psychiatric assessments and mandatory waiting periods to rule out temporary depression or coercion before assisted dying is approved.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dae09376-03d9-4e7e-9a52-c2a4cc68a980",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:12.919413+00:00"
+    },
+    {
+      "id": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "text": "Patients are routinely permitted to refuse life-saving treatments, such as chemotherapy or organ transplants, even while suffering from chronic illness and psychological distress, demonstrating an accepted limit to guaranteed autonomy in medical decisions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dae09376-03d9-4e7e-9a52-c2a4cc68a980",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:12.920338+00:00"
+    },
+    {
+      "id": "1c091a8c-03a4-4538-ac01-69e09d06f980",
+      "text": "In Canada, the MAID process is regulated by provincial health authorities under a public health system that mandates universal access to palliative care; this structure removes the financial incentive of private insurers to skew end-of-life options.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "58f7ac35-5e37-4e0a-bd4c-203828b6c2e5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:12.973669+00:00"
+    },
+    {
+      "id": "7f95c1e5-be10-45b5-a981-83be22071ea8",
+      "text": "Countries like Belgium and the Netherlands, where MAID has been lawful for decades, operate under nationalized or highly regulated health insurance that prioritizes patient autonomy over insurer cost-cutting measures, undermining the claimed cost-saving pressure.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "58f7ac35-5e37-4e0a-bd4c-203828b6c2e5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:12.974666+00:00"
+    },
+    {
+      "id": "f67a08da-e4a7-4fc4-b8de-79038cc93a74",
+      "text": "In the Netherlands and Canada, the introduction of legal euthanasia has coincided with the continued growth and high quality of government-funded palliative care services, demonstrating that resources are not inherently diverted.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "58b9eca4-db2b-43a3-9332-02a310146cf0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:16.796621+00:00"
+    },
+    {
+      "id": "dd18dd57-1e18-4b57-85e6-934cbac00d8b",
+      "text": "Euthanasia and assisted dying serve as a final quality-of-life measure for patients with medically refractory suffering, such as those with late-stage ALS, which aligns with public health goals of reducing unmanageable pain and distress.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "58b9eca4-db2b-43a3-9332-02a310146cf0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:16.797327+00:00"
+    },
+    {
+      "id": "f0f7b463-825d-44fb-b76a-0fbfd0868610",
+      "text": "Major surgical procedures like complex heart transplants or high-dose chemotherapy are mandated based on reasonable certainty despite high mortality rates and imperfect prognoses. Laws in countries like the Netherlands require multiple physician sign-offs and psychiatric evaluations to establish sufficient certainty, treating assisted dying like other high-risk medical procedures.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6fd4f827-4de8-4bc1-abb7-713baa190434",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:18.119239+00:00"
+    },
+    {
+      "id": "d3893755-e998-4d66-9dc6-386eb7e466eb",
+      "text": "Legal definitions of \"wrongful death\" in US tort law require evidence of negligence or fault resulting in non-consensual fatalities. Since physician-assisted death statutes in states like Oregon require multiple voluntary, informed requests from a mentally competent patient, the death is considered voluntary consent, not a negligent \"wrongful death.\"",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6fd4f827-4de8-4bc1-abb7-713baa190434",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:18.120372+00:00"
+    },
+    {
+      "id": "83c42ed5-2e4a-4154-b40d-110e9670ca99",
+      "text": "Non-maleficence traditionally prohibits physicians from actively intervening to cause death; the ethical foundation means avoiding harm, not necessarily hastening death. Legalization of euthanasia in jurisdictions like Belgium and the Netherlands required specific statutory exemptions because the act fundamentally violates this established medical principle.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "939d5ad8-e1a0-488b-99cd-672de5941f11",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:19.997336+00:00"
+    },
+    {
+      "id": "000b50c5-a1e8-4f20-a4e0-e305ad26d665",
+      "text": "The medical commitment to relieve suffering is fully met by modern palliative care and hospice, which provide intensive pain and symptom management without terminating life. Studies show that effective, accessible palliative care significantly reduces requests for death among terminally ill patients, fulfilling the ethical duty without recourse to active killing.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "939d5ad8-e1a0-488b-99cd-672de5941f11",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:19.998452+00:00"
+    },
+    {
+      "id": "5dec039b-f017-4408-aaae-9ec6e8d4c59b",
+      "text": "The Netherlands' Euthanasia Act does not impose a fixed mandatory waiting period for all requests; the required timeline is determined situationally based on \"due care\" criteria, allowing for rapid approval in cases of acute, unbearable suffering.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75f32fcb-6198-4faa-af25-1162414eda9a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:24.456170+00:00"
+    },
+    {
+      "id": "99a558c7-9e0e-48b5-bb7c-630e9020f2bc",
+      "text": "Canada's MAID legislation requires only two physicians or nurse practitioners to assess eligibility, with psychiatric consultation generally reserved for complex cases of mental suffering, not mandatory for all terminal patients.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75f32fcb-6198-4faa-af25-1162414eda9a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:24.457395+00:00"
+    },
+    {
+      "id": "765acdcc-1abe-4029-adee-ae571283bd22",
+      "text": "Describing the expansion as \"slight\" is misleading, as the 2022 settlement removed the residency requirement, fundamentally expanding the eligibility pool to non-Oregon residents.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8fd856cf-2fb3-452c-a9fd-0332ee9da72f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:25.450079+00:00"
+    },
+    {
+      "id": "764b9537-1540-495f-9192-7fe4156dea6e",
+      "text": "The functional safeguard of \"repeated patient requests\" has diminished because post-2022 waivers of the mandatory waiting period allow the process to be completed rapidly, neutralizing the time for reflection.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8fd856cf-2fb3-452c-a9fd-0332ee9da72f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:25.451423+00:00"
+    },
+    {
+      "id": "2470748d-8e39-42c2-a3ae-8e1bb570eccd",
+      "text": "High-risk medical procedures aim to achieve a potential clinical benefit, where the required certainty confirms the chance of improved health despite the risk. Assisted dying requires certainty regarding the patient's volition and irremediable suffering, which is an existential determination entirely distinct from clinical viability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f0f7b463-825d-44fb-b76a-0fbfd0868610",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:30.112665+00:00"
+    },
+    {
+      "id": "87d526c9-2b6c-448c-916c-000ad69baf7c",
+      "text": "Assisted dying is a medically initiated, irreversible process whose success is defined as the immediate death of the patient. A failed high-risk surgery allows for ongoing palliative care or secondary interventions, unlike the absolute finality of euthanasia or physician-assisted suicide.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f0f7b463-825d-44fb-b76a-0fbfd0868610",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:30.113320+00:00"
+    },
+    {
+      "id": "08ad6c4a-64d7-4fb2-8eac-38128283b319",
+      "text": "The World Health Organization (WHO) and global public health frameworks prioritize the extension of life and the prevention of premature death, establishing a mandate that directly conflicts with the institutionalized facilitation of dying.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "dd18dd57-1e18-4b57-85e6-934cbac00d8b",
+      "children_count": 2,
+      "references": [
+        "World Health Organization"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.223110+00:00"
+    },
+    {
+      "id": "7aa8ddbe-3152-4bd9-aa4e-4aaefb9e05fb",
+      "text": "The definition of \"medically refractory suffering\" is inherently unstable, demonstrated by Canada\u2019s MAID program expansion from terminal physical illness to include mental illness as a sole justification for assisted death.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "dd18dd57-1e18-4b57-85e6-934cbac00d8b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.224403+00:00"
+    },
+    {
+      "id": "a2336ec4-7936-4b8a-9835-c5d8fba266aa",
+      "text": "Canada has no universally mandated national standards for palliative care funding or access, resulting in significant regional disparities and service shortages in areas like rural British Columbia and the Northern Territories.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1c091a8c-03a4-4538-ac01-69e09d06f980",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.396150+00:00"
+    },
+    {
+      "id": "03a4c35d-e3b1-4f89-addb-346f36aea6b3",
+      "text": "Publicly funded healthcare systems operate under finite budgets; high resource consumption from complex palliative or long-term care creates budgetary pressure on provinces to favor low-cost permanent alternatives, regardless of private insurers.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1c091a8c-03a4-4538-ac01-69e09d06f980",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.397275+00:00"
+    },
+    {
+      "id": "29ccba30-410b-4282-a576-aec6a200f73d",
+      "text": "Systemic cost control remains a priority in nationalized systems; the United Kingdom\u2019s National Health Service, for example, frequently limits access to expensive long-term or experimental treatments due to severe budget constraints.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7f95c1e5-be10-45b5-a981-83be22071ea8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.592486+00:00"
+    },
+    {
+      "id": "8eb32891-bd94-47cd-8523-7d99584f85fb",
+      "text": "In the Netherlands and Belgium, hospitals operate under fixed budget allocations where resource efficiency demands mean prolonged, complex palliative care competes directly with other mandated services for limited institutional funds.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7f95c1e5-be10-45b5-a981-83be22071ea8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.593606+00:00"
+    },
+    {
+      "id": "f0b9db71-5555-4b22-839c-5f9936338c35",
+      "text": "Canada's federal government dedicated substantial, new funding specifically for palliative care beginning in 2017, showing the growth resulted from targeted investment independent of the Medical Assistance in Dying (MAiD) policy. The resources used to establish and administer the complex MAiD assessment system still represent a significant opportunity cost that could have staffed numerous palliative care beds.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f67a08da-e4a7-4fc4-b8de-79038cc93a74",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:33.937227+00:00"
+    },
+    {
+      "id": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "text": "The \u201chigh quality\u201d and \u201ccontinued growth\u201d are not universally experienced in these nations; only about 30% of Canadians who need palliative care currently receive it, which reveals major geographic and systemic access barriers remain. The Netherlands has also faced recent scrutiny regarding the accessibility and quality of home-based palliative care, contradicting generalized claims of universal high standards.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f67a08da-e4a7-4fc4-b8de-79038cc93a74",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:33.938418+00:00"
+    },
+    {
+      "id": "445d2612-9b4e-4416-be48-fe88c238c985",
+      "text": "The acceptance of \"Do Not Resuscitate\" (DNR) orders and refusal of blood transfusions by Jehovah's Witnesses are foundational examples in US and UK law, confirming the authority to refuse life-sustaining treatment is the highest expression of patient autonomy.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:34.199263+00:00"
+    },
+    {
+      "id": "be650cb3-a9ac-4256-8a2c-1d2d3363c27b",
+      "text": "Legal systems, such as the UK's Mental Capacity Act 2005, restrict the right to refuse care only when the patient fails specific tests of competence, reinforcing that the baseline right to autonomous refusal is widely protected.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:34.200232+00:00"
+    },
+    {
+      "id": "782953c1-05cf-4264-a6a7-2138d2564de0",
+      "text": "Guarantees of autonomy are severely restricted only in specific, narrow contexts like mandatory quarantine or treatment for minors, proving the rule of non-interference applies outside these clear public health or pediatric exceptions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:34.201120+00:00"
+    },
+    {
+      "id": "e06b3c3b-b2ec-41d1-a9c7-86ef4c84dda8",
+      "text": "Requiring only two assessors, without a mandatory consultation from a palliative care specialist, risks MAID being accessed primarily due to unresolved physical pain or lack of societal support, not because the condition is truly irremediable.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "99a558c7-9e0e-48b5-bb7c-630e9020f2bc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:35.483884+00:00"
+    },
+    {
+      "id": "9aca9e06-24b3-4991-a067-6d583e6bfe0b",
+      "text": "The removal of the residency requirement has a practically minor effect because non-residents must still travel to Oregon multiple times for mandatory assessment and prescription fulfillment, a logistical barrier that functionally limits utilization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "765acdcc-1abe-4029-adee-ae571283bd22",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:35.858062+00:00"
+    },
+    {
+      "id": "56e33963-d6a6-4df0-96f1-f2051762f978",
+      "text": "The situational determination of \"due care\" has resulted in significant scope expansion, exemplified by the approval of euthanasia for over 100 people annually in the Netherlands whose sole or primary basis for suffering is psychiatric.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5dec039b-f017-4408-aaae-9ec6e8d4c59b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:38.707842+00:00"
+    },
+    {
+      "id": "6a17aeb8-ff83-44dc-8272-a95cdf326369",
+      "text": "The true safeguard of reflection occurs organically over months or years of living with a severe condition, making an arbitrary, mandated waiting period after the formal request redundant. Professional assessments by physicians and psychiatrists confirming persistent decisional capacity are a more rigorous safeguard than a timeline requirement, irrespective of the waiver.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "764b9537-1540-495f-9192-7fe4156dea6e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:40.749092+00:00"
+    },
+    {
+      "id": "66c1ae9f-beca-4afa-a43c-e424312722e1",
+      "text": "Assisted dying protocols in jurisdictions like Oregon and the Netherlands legally require multiple doctors to certify the prognosis is terminal or the suffering is medically irremediable, demonstrating that the required certainty is an inherently clinical determination, not a purely existential one.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2470748d-8e39-42c2-a3ae-8e1bb570eccd",
+      "children_count": 0,
+      "references": [
+        "Assisted Dying (AD) laws in Oregon, Netherlands, Belgium, and Canada"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:41.254259+00:00"
+    },
+    {
+      "id": "e5cb5d94-29bd-4b21-a7e6-2d8825ee6c3f",
+      "text": "The expansion of Canada's MAID program is a legal decision driven by jurisprudence prioritizing patient autonomy, such as the Supreme Court's ruling in Carter v. Canada. This shift in legal eligibility criteria based on evolving societal values does not inherently prove that the clinical concept of \"medically refractory suffering\" is fundamentally unstable.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7aa8ddbe-3152-4bd9-aa4e-4aaefb9e05fb",
+      "children_count": 0,
+      "references": [
+        "Carter v. Canada (Attorney General)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:42.725657+00:00"
+    },
+    {
+      "id": "e6250b1d-8540-4593-97fd-d761d35f0f23",
+      "text": "The practice in Canada (following the Carter v. Canada Supreme Court decision) and Oregon (Death with Dignity Act) establishes that relieving the harm of intractable suffering through assisted death is consistent with a physician's duty of beneficence, not a fundamental violation of medical ethics. Autonomy-centric medical ethics frameworks, such as those implemented in Switzerland, reinterpret non-maleficence to include the protection of a patient's right to avoid severe, meaningless suffering.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "83c42ed5-2e4a-4154-b40d-110e9670ca99",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:43.647296+00:00"
+    },
+    {
+      "id": "9a40c9af-b66f-4e65-be70-bfa3b98ea458",
+      "text": "Global public health frameworks, including WHO resolutions, increasingly integrate high-quality palliative care and dignified dying as essential components of holistic medical systems, contradicting the assumption that the mandate is solely focused on life extension.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "08ad6c4a-64d7-4fb2-8eac-38128283b319",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:44.322196+00:00"
+    },
+    {
+      "id": "e14e1db2-4349-4d36-b422-6180855e716f",
+      "text": "Countries like the Netherlands and Belgium maintain high life expectancy and robust public health systems while legally offering Medical Aid in Dying (MAiD), demonstrating that individualized, voluntary end-of-life decisions do not conflict with population-level mortality prevention targets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "08ad6c4a-64d7-4fb2-8eac-38128283b319",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:44.322266+00:00"
+    },
+    {
+      "id": "17c9ea74-f889-42e6-a61a-92ffd3ff2a86",
+      "text": "The specific medical and legal professionals required for MAiD assessment, such as trained assessors and regulatory bodies, cannot simply be converted into the high volume of generalist nurses and support workers needed to staff numerous new palliative care beds.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f0b9db71-5555-4b22-839c-5f9936338c35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:45.386943+00:00"
+    },
+    {
+      "id": "d3a26e4d-eff3-4850-afec-e5f4b8111b05",
+      "text": "The political drive to ensure adequate alternatives to assisted dying means that the surge in palliative care funding, as seen in jurisdictions like the Netherlands and Canadian provinces, is functionally intertwined with MAiD legislation, not entirely independent of it.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f0b9db71-5555-4b22-839c-5f9936338c35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:45.387010+00:00"
+    },
+    {
+      "id": "7f66b85c-3250-4fcd-907d-18b897c6a12a",
+      "text": "Oregon Health Authority reports indicate that the primary reasons patients utilize the Death with Dignity Act are loss of autonomy and dignity, separate from pain control, demonstrating that mandated palliative care access would not negate the core demand for assisted dying.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a2336ec4-7936-4b8a-9835-c5d8fba266aa",
+      "children_count": 0,
+      "references": [
+        "Oregon Health Authority (OHA) Death with Dignity Act Data"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:47.098282+00:00"
+    },
+    {
+      "id": "99e5aedf-d46f-4600-8a6e-e6fdb14e789c",
+      "text": "A catastrophic intraoperative event, such as an anesthetic error or massive uncontrolled bleeding during complex neurosurgery, results in immediate and irreversible death, offering no opportunity for secondary palliative interventions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "87d526c9-2b6c-448c-916c-000ad69baf7c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:47.816836+00:00"
+    },
+    {
+      "id": "44e0c5fc-ab38-4b1b-ab64-60f8409bc987",
+      "text": "Successful but high-risk medical procedures, like complex brain stem tumor removal, often result in irreversible outcomes such as locked-in syndrome, which no secondary palliative intervention can reverse or improve.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "87d526c9-2b6c-448c-916c-000ad69baf7c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:47.816885+00:00"
+    },
+    {
+      "id": "676ca65f-9146-4177-afcf-463f6e40fcbb",
+      "text": "Norway's highly nationalized healthcare system, funded by its sovereign wealth, frequently ranks high in access to expensive treatments and new technologies, proving that nationalization does not universally necessitate severe budget-driven access limitations like those seen in the UK.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "29ccba30-410b-4282-a576-aec6a200f73d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:47.820788+00:00"
+    },
+    {
+      "id": "dd41f249-545b-4690-bf4d-fce94a1521ab",
+      "text": "Patient autonomy finds a more potent expression in proactive measures like establishing comprehensive Advance Directives or electing for Medical Aid in Dying in jurisdictions like Canada, rather than only refusing treatment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "445d2612-9b4e-4416-be48-fe88c238c985",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:50.636652+00:00"
+    },
+    {
+      "id": "d7dee9ee-fe1f-4cc5-9c15-1313e4ebbd10",
+      "text": "US and UK courts routinely invoke parens patriae to override parental refusal of life-saving blood transfusions for minor children, confirming that the right to refuse treatment is clearly limited when the interests of others are involved.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "445d2612-9b4e-4416-be48-fe88c238c985",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:50.636734+00:00"
+    },
+    {
+      "id": "ed90940d-1c4c-480d-a707-af664d500862",
+      "text": "Canada implemented Medical Assistance in Dying (MAID) following the 2015 Supreme Court ruling in *Carter v. Canada*, which established the right primarily based on bodily autonomy and the Charter, not fiscal considerations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "03a4c35d-e3b1-4f89-addb-346f36aea6b3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:51.143823+00:00"
+    },
+    {
+      "id": "545c5c86-0d7f-4528-beca-fbfe8c1356ea",
+      "text": "Publicly funded systems like the UK's National Health Service (NHS) manage high resource consumption by increasing investment in subsidized hospice and community palliative care, not by inherently favoring low-cost permanent alternatives.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "03a4c35d-e3b1-4f89-addb-346f36aea6b3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:51.143856+00:00"
+    },
+    {
+      "id": "17de0e49-1c58-49bb-befe-ed0e17af2fa0",
+      "text": "Addressing palliative care access is a funding and infrastructure challenge, not an indictment of quality; Australia, for instance, successfully doubled its hospice bed capacity between 2005 and 2015 through targeted government investment, significantly raising its coverage rates.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:53.237881+00:00"
+    },
+    {
+      "id": "3499b917-2bb5-4dcf-915c-a63e2a43c784",
+      "text": "Public scrutiny in nations like the Netherlands and the UK (via organizations like the CQC) functions as a mechanism for quality control, resulting in national average pain symptom management scores consistently above 85% for those receiving care.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:53.237927+00:00"
+    },
+    {
+      "id": "c305b1c5-83d2-4349-87c1-928407555a16",
+      "text": "Continued capacity growth is verifiable through investment data; the US National Institutes of Health increased funding for palliative care research and training by over 40% between 2015 and 2020, demonstrating active governmental efforts to expand future capacity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:53.237947+00:00"
+    },
+    {
+      "id": "949b858e-e691-4b7d-8c16-e52d0548cd7f",
+      "text": "Palliative sedation, the deepest form of symptom management, does not relieve the intense and unique psychological or existential suffering experienced by some terminally ill patients, as evidenced by patient accounts in Oregon's Death with Dignity program.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "000b50c5-a1e8-4f20-a4e0-e305ad26d665",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:55.502923+00:00"
+    },
+    {
+      "id": "97365de7-de4c-49e4-bddf-fa2073905bc7",
+      "text": "Data from the Netherlands and Belgium consistently show that even with universal, high-quality palliative care, 1-4% of total deaths occur via euthanasia, indicating a population whose suffering was not fully alleviated by PC alone.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "000b50c5-a1e8-4f20-a4e0-e305ad26d665",
+      "children_count": 0,
+      "references": [
+        "Palliative care and end-of-life decision-making in Belgium",
+        "Euthanasia and Palliative Care in the Netherlands"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:55.502955+00:00"
+    },
+    {
+      "id": "b21143e5-453d-4ecb-88b6-0cedde98efb0",
+      "text": "The existence of legalized euthanasia in countries like the Netherlands coincided with dedicated, separate government funding schemes established in the 2000s specifically to expand high-quality palliative care access, reducing direct competition with acute hospital services.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8eb32891-bd94-47cd-8523-7d99584f85fb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:58.052257+00:00"
+    },
+    {
+      "id": "edb4e88a-69fd-479a-8043-99a4a27f3ef6",
+      "text": "Autonomy is severely restricted through general state powers, such as involuntary psychiatric commitment for adults in US healthcare systems or criminal incarceration, which contradicts limiting exceptions exclusively to public health and pediatric cases.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "782953c1-05cf-4264-a6a7-2138d2564de0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:58.090039+00:00"
+    },
+    {
+      "id": "0fd5752f-abc0-4a21-8abc-6ce7535f24b4",
+      "text": "The supposed rule of non-interference is consistently overridden by broader social welfare requirements, demonstrated by mandatory professional reporting laws for child abuse and compulsory vaccination schedules for public school attendance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "782953c1-05cf-4264-a6a7-2138d2564de0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:58.090071+00:00"
+    },
+    {
+      "id": "a775552a-aefa-4a41-82e6-76a297e64c2a",
+      "text": "Legal systems in countries like Japan and many US states permit involuntary mental health care based on danger to self or others, irrespective of the patient's situational competence to refuse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "be650cb3-a9ac-4256-8a2c-1d2d3363c27b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:02.776346+00:00"
+    },
+    {
+      "id": "89be5d75-7b12-4685-a880-8cf5caa18d6f",
+      "text": "Public health law, such as enforced quarantine orders during the 2020 COVID-19 pandemic in Australia, legally overrides treatment refusal even when the individual is entirely competent for societal safety.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "be650cb3-a9ac-4256-8a2c-1d2d3363c27b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:02.776378+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 5,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:34:40.991559+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:34:40.991559+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "e21440e5-d992-4d7e-a390-086ad0bbe9e2",
+      "target": "cd549667-1bd3-47db-b83c-89a4adcb3017",
+      "type": "objection"
+    },
+    {
+      "source": "e21440e5-d992-4d7e-a390-086ad0bbe9e2",
+      "target": "e3fa9006-bfa9-45d0-b7e5-e5bdcde696d5",
+      "type": "objection"
+    },
+    {
+      "source": "22cf00ac-44d8-4b3c-bc72-d2b4d9caca7d",
+      "target": "279a0fa0-79f4-47da-86a2-f10049a14124",
+      "type": "objection"
+    },
+    {
+      "source": "22cf00ac-44d8-4b3c-bc72-d2b4d9caca7d",
+      "target": "6821e4f8-114d-4039-94b0-666686397cab",
+      "type": "objection"
+    },
+    {
+      "source": "1e7f944b-ff4b-4440-8875-02327cd71da2",
+      "target": "fe26e327-5ac4-40d1-aaf9-e85f8590ec31",
+      "type": "objection"
+    },
+    {
+      "source": "1e7f944b-ff4b-4440-8875-02327cd71da2",
+      "target": "3441fd80-6b7e-486c-b4a3-039ab7925b7a",
+      "type": "objection"
+    },
+    {
+      "source": "b11a1636-ba49-4fd3-92f9-cb83929b3966",
+      "target": "d94eba37-459c-4623-8aa6-b3e6b59d0d42",
+      "type": "objection"
+    },
+    {
+      "source": "b11a1636-ba49-4fd3-92f9-cb83929b3966",
+      "target": "340a9eea-f612-4a2f-9d1f-620778dea325",
+      "type": "objection"
+    },
+    {
+      "source": "e3fa9006-bfa9-45d0-b7e5-e5bdcde696d5",
+      "target": "cae1e385-fec1-47c6-aec0-4ff984d7eb15",
+      "type": "response"
+    },
+    {
+      "source": "e3fa9006-bfa9-45d0-b7e5-e5bdcde696d5",
+      "target": "a8e5580f-397d-49de-b009-02f7b13d3f85",
+      "type": "response"
+    },
+    {
+      "source": "340a9eea-f612-4a2f-9d1f-620778dea325",
+      "target": "b128f4c8-eaac-4b3d-a354-89909aff8c93",
+      "type": "response"
+    },
+    {
+      "source": "340a9eea-f612-4a2f-9d1f-620778dea325",
+      "target": "916e9b82-baf1-48ff-a50a-78468d2566ec",
+      "type": "response"
+    },
+    {
+      "source": "3441fd80-6b7e-486c-b4a3-039ab7925b7a",
+      "target": "67cf1c19-d7ee-46f9-b136-ac8847e25090",
+      "type": "response"
+    },
+    {
+      "source": "3441fd80-6b7e-486c-b4a3-039ab7925b7a",
+      "target": "691cd9f7-2ec0-41d8-8958-45e43da97d95",
+      "type": "response"
+    },
+    {
+      "source": "c83049de-dfcb-4cd1-92da-23573a31a1d2",
+      "target": "68590253-721c-4cc8-bb8f-384ec63bf07f",
+      "type": "objection"
+    },
+    {
+      "source": "c83049de-dfcb-4cd1-92da-23573a31a1d2",
+      "target": "36d29cc2-4906-40f8-aa71-69a60797edab",
+      "type": "objection"
+    },
+    {
+      "source": "cae1e385-fec1-47c6-aec0-4ff984d7eb15",
+      "target": "71e13afc-c09f-4b09-a2d0-56489391680d",
+      "type": "response"
+    },
+    {
+      "source": "cae1e385-fec1-47c6-aec0-4ff984d7eb15",
+      "target": "6a8bb9b1-cf3a-4568-bb9d-6518a020fd85",
+      "type": "response"
+    },
+    {
+      "source": "916e9b82-baf1-48ff-a50a-78468d2566ec",
+      "target": "cd78902f-5677-4ffe-bc99-f4b565289df4",
+      "type": "response"
+    },
+    {
+      "source": "d94eba37-459c-4623-8aa6-b3e6b59d0d42",
+      "target": "f90f21b2-17b5-4f9c-bada-e8d4aa2c264d",
+      "type": "response"
+    },
+    {
+      "source": "d94eba37-459c-4623-8aa6-b3e6b59d0d42",
+      "target": "ddf44ea6-4a33-4e64-90e1-82c76b075bf5",
+      "type": "response"
+    },
+    {
+      "source": "691cd9f7-2ec0-41d8-8958-45e43da97d95",
+      "target": "c816872f-69da-4bcd-bebb-e89ebbbdc47e",
+      "type": "response"
+    },
+    {
+      "source": "b128f4c8-eaac-4b3d-a354-89909aff8c93",
+      "target": "e7b98d20-7865-4993-a42a-f08034e0537f",
+      "type": "response"
+    },
+    {
+      "source": "68590253-721c-4cc8-bb8f-384ec63bf07f",
+      "target": "70258a23-c706-4fef-8f28-a5327e6f40e3",
+      "type": "response"
+    },
+    {
+      "source": "68590253-721c-4cc8-bb8f-384ec63bf07f",
+      "target": "f3360e0e-3790-47fe-99f4-ccaa550bad1d",
+      "type": "response"
+    },
+    {
+      "source": "ddf44ea6-4a33-4e64-90e1-82c76b075bf5",
+      "target": "92d5b02b-1fec-4dc1-9e82-df8ebe8c6fd5",
+      "type": "response"
+    },
+    {
+      "source": "ddf44ea6-4a33-4e64-90e1-82c76b075bf5",
+      "target": "60c2ef28-ae23-45c7-84b2-080d7b0b9162",
+      "type": "response"
+    },
+    {
+      "source": "36d29cc2-4906-40f8-aa71-69a60797edab",
+      "target": "4a45a78e-c330-4ed0-af0b-90f5208adb7a",
+      "type": "response"
+    },
+    {
+      "source": "36d29cc2-4906-40f8-aa71-69a60797edab",
+      "target": "e1dd3822-fc88-40e4-adf6-87969ddd29be",
+      "type": "response"
+    },
+    {
+      "source": "67cf1c19-d7ee-46f9-b136-ac8847e25090",
+      "target": "f2c3954c-deb7-43d7-ae0b-6233b67851ed",
+      "type": "response"
+    },
+    {
+      "source": "67cf1c19-d7ee-46f9-b136-ac8847e25090",
+      "target": "25aa148d-5cea-4b40-bdd5-b1f8d30173dc",
+      "type": "response"
+    },
+    {
+      "source": "a8e5580f-397d-49de-b009-02f7b13d3f85",
+      "target": "627e3832-8f6a-473d-ba81-afbb224896c6",
+      "type": "response"
+    },
+    {
+      "source": "a8e5580f-397d-49de-b009-02f7b13d3f85",
+      "target": "25a2024f-2986-4dd3-a4f3-195b9a815617",
+      "type": "response"
+    },
+    {
+      "source": "f90f21b2-17b5-4f9c-bada-e8d4aa2c264d",
+      "target": "5cdb7830-b77b-4b68-9d5d-8103c97e2352",
+      "type": "response"
+    },
+    {
+      "source": "70258a23-c706-4fef-8f28-a5327e6f40e3",
+      "target": "37b59c2b-3a1b-4e35-a465-cb365ca7226f",
+      "type": "response"
+    },
+    {
+      "source": "f3360e0e-3790-47fe-99f4-ccaa550bad1d",
+      "target": "198912ec-c7e9-4a16-9396-6e19c82de6b8",
+      "type": "response"
+    },
+    {
+      "source": "4a45a78e-c330-4ed0-af0b-90f5208adb7a",
+      "target": "034a62d4-f9fc-4428-9012-30e18c71cafe",
+      "type": "response"
+    },
+    {
+      "source": "e1dd3822-fc88-40e4-adf6-87969ddd29be",
+      "target": "50f3bf5c-fc48-45d1-894d-fa97f51b8832",
+      "type": "response"
+    },
+    {
+      "source": "e1dd3822-fc88-40e4-adf6-87969ddd29be",
+      "target": "1e679311-a63c-4f4f-93b9-c4a1938012f2",
+      "type": "response"
+    },
+    {
+      "source": "0424ae93-d1cb-4c1a-ab28-6e8417a1b36a",
+      "target": "db0ad707-f6b6-41f1-8269-73e6d9cdbda6",
+      "type": "objection"
+    },
+    {
+      "source": "0424ae93-d1cb-4c1a-ab28-6e8417a1b36a",
+      "target": "939d5ad8-e1a0-488b-99cd-672de5941f11",
+      "type": "objection"
+    },
+    {
+      "source": "552591e9-338a-4f49-b07f-2744f2b96cea",
+      "target": "5fed62b0-9fa8-47ae-9b5b-dc3a05b62f97",
+      "type": "objection"
+    },
+    {
+      "source": "552591e9-338a-4f49-b07f-2744f2b96cea",
+      "target": "8fd856cf-2fb3-452c-a9fd-0332ee9da72f",
+      "type": "objection"
+    },
+    {
+      "source": "dae09376-03d9-4e7e-9a52-c2a4cc68a980",
+      "target": "75f32fcb-6198-4faa-af25-1162414eda9a",
+      "type": "objection"
+    },
+    {
+      "source": "dae09376-03d9-4e7e-9a52-c2a4cc68a980",
+      "target": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "type": "objection"
+    },
+    {
+      "source": "58f7ac35-5e37-4e0a-bd4c-203828b6c2e5",
+      "target": "1c091a8c-03a4-4538-ac01-69e09d06f980",
+      "type": "objection"
+    },
+    {
+      "source": "58f7ac35-5e37-4e0a-bd4c-203828b6c2e5",
+      "target": "7f95c1e5-be10-45b5-a981-83be22071ea8",
+      "type": "objection"
+    },
+    {
+      "source": "58b9eca4-db2b-43a3-9332-02a310146cf0",
+      "target": "f67a08da-e4a7-4fc4-b8de-79038cc93a74",
+      "type": "objection"
+    },
+    {
+      "source": "58b9eca4-db2b-43a3-9332-02a310146cf0",
+      "target": "dd18dd57-1e18-4b57-85e6-934cbac00d8b",
+      "type": "objection"
+    },
+    {
+      "source": "6fd4f827-4de8-4bc1-abb7-713baa190434",
+      "target": "f0f7b463-825d-44fb-b76a-0fbfd0868610",
+      "type": "objection"
+    },
+    {
+      "source": "6fd4f827-4de8-4bc1-abb7-713baa190434",
+      "target": "d3893755-e998-4d66-9dc6-386eb7e466eb",
+      "type": "objection"
+    },
+    {
+      "source": "939d5ad8-e1a0-488b-99cd-672de5941f11",
+      "target": "83c42ed5-2e4a-4154-b40d-110e9670ca99",
+      "type": "response"
+    },
+    {
+      "source": "939d5ad8-e1a0-488b-99cd-672de5941f11",
+      "target": "000b50c5-a1e8-4f20-a4e0-e305ad26d665",
+      "type": "response"
+    },
+    {
+      "source": "75f32fcb-6198-4faa-af25-1162414eda9a",
+      "target": "5dec039b-f017-4408-aaae-9ec6e8d4c59b",
+      "type": "response"
+    },
+    {
+      "source": "75f32fcb-6198-4faa-af25-1162414eda9a",
+      "target": "99a558c7-9e0e-48b5-bb7c-630e9020f2bc",
+      "type": "response"
+    },
+    {
+      "source": "8fd856cf-2fb3-452c-a9fd-0332ee9da72f",
+      "target": "765acdcc-1abe-4029-adee-ae571283bd22",
+      "type": "response"
+    },
+    {
+      "source": "8fd856cf-2fb3-452c-a9fd-0332ee9da72f",
+      "target": "764b9537-1540-495f-9192-7fe4156dea6e",
+      "type": "response"
+    },
+    {
+      "source": "f0f7b463-825d-44fb-b76a-0fbfd0868610",
+      "target": "2470748d-8e39-42c2-a3ae-8e1bb570eccd",
+      "type": "response"
+    },
+    {
+      "source": "f0f7b463-825d-44fb-b76a-0fbfd0868610",
+      "target": "87d526c9-2b6c-448c-916c-000ad69baf7c",
+      "type": "response"
+    },
+    {
+      "source": "dd18dd57-1e18-4b57-85e6-934cbac00d8b",
+      "target": "08ad6c4a-64d7-4fb2-8eac-38128283b319",
+      "type": "response"
+    },
+    {
+      "source": "dd18dd57-1e18-4b57-85e6-934cbac00d8b",
+      "target": "7aa8ddbe-3152-4bd9-aa4e-4aaefb9e05fb",
+      "type": "response"
+    },
+    {
+      "source": "1c091a8c-03a4-4538-ac01-69e09d06f980",
+      "target": "a2336ec4-7936-4b8a-9835-c5d8fba266aa",
+      "type": "response"
+    },
+    {
+      "source": "1c091a8c-03a4-4538-ac01-69e09d06f980",
+      "target": "03a4c35d-e3b1-4f89-addb-346f36aea6b3",
+      "type": "response"
+    },
+    {
+      "source": "7f95c1e5-be10-45b5-a981-83be22071ea8",
+      "target": "29ccba30-410b-4282-a576-aec6a200f73d",
+      "type": "response"
+    },
+    {
+      "source": "7f95c1e5-be10-45b5-a981-83be22071ea8",
+      "target": "8eb32891-bd94-47cd-8523-7d99584f85fb",
+      "type": "response"
+    },
+    {
+      "source": "f67a08da-e4a7-4fc4-b8de-79038cc93a74",
+      "target": "f0b9db71-5555-4b22-839c-5f9936338c35",
+      "type": "response"
+    },
+    {
+      "source": "f67a08da-e4a7-4fc4-b8de-79038cc93a74",
+      "target": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "type": "response"
+    },
+    {
+      "source": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "target": "445d2612-9b4e-4416-be48-fe88c238c985",
+      "type": "response"
+    },
+    {
+      "source": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "target": "be650cb3-a9ac-4256-8a2c-1d2d3363c27b",
+      "type": "response"
+    },
+    {
+      "source": "0ea4c95d-d986-43ef-8b90-8098d61ba75b",
+      "target": "782953c1-05cf-4264-a6a7-2138d2564de0",
+      "type": "response"
+    },
+    {
+      "source": "99a558c7-9e0e-48b5-bb7c-630e9020f2bc",
+      "target": "e06b3c3b-b2ec-41d1-a9c7-86ef4c84dda8",
+      "type": "response"
+    },
+    {
+      "source": "765acdcc-1abe-4029-adee-ae571283bd22",
+      "target": "9aca9e06-24b3-4991-a067-6d583e6bfe0b",
+      "type": "response"
+    },
+    {
+      "source": "5dec039b-f017-4408-aaae-9ec6e8d4c59b",
+      "target": "56e33963-d6a6-4df0-96f1-f2051762f978",
+      "type": "response"
+    },
+    {
+      "source": "764b9537-1540-495f-9192-7fe4156dea6e",
+      "target": "6a17aeb8-ff83-44dc-8272-a95cdf326369",
+      "type": "response"
+    },
+    {
+      "source": "2470748d-8e39-42c2-a3ae-8e1bb570eccd",
+      "target": "66c1ae9f-beca-4afa-a43c-e424312722e1",
+      "type": "response"
+    },
+    {
+      "source": "7aa8ddbe-3152-4bd9-aa4e-4aaefb9e05fb",
+      "target": "e5cb5d94-29bd-4b21-a7e6-2d8825ee6c3f",
+      "type": "response"
+    },
+    {
+      "source": "83c42ed5-2e4a-4154-b40d-110e9670ca99",
+      "target": "e6250b1d-8540-4593-97fd-d761d35f0f23",
+      "type": "response"
+    },
+    {
+      "source": "08ad6c4a-64d7-4fb2-8eac-38128283b319",
+      "target": "9a40c9af-b66f-4e65-be70-bfa3b98ea458",
+      "type": "response"
+    },
+    {
+      "source": "08ad6c4a-64d7-4fb2-8eac-38128283b319",
+      "target": "e14e1db2-4349-4d36-b422-6180855e716f",
+      "type": "response"
+    },
+    {
+      "source": "f0b9db71-5555-4b22-839c-5f9936338c35",
+      "target": "17c9ea74-f889-42e6-a61a-92ffd3ff2a86",
+      "type": "response"
+    },
+    {
+      "source": "f0b9db71-5555-4b22-839c-5f9936338c35",
+      "target": "d3a26e4d-eff3-4850-afec-e5f4b8111b05",
+      "type": "response"
+    },
+    {
+      "source": "a2336ec4-7936-4b8a-9835-c5d8fba266aa",
+      "target": "7f66b85c-3250-4fcd-907d-18b897c6a12a",
+      "type": "response"
+    },
+    {
+      "source": "87d526c9-2b6c-448c-916c-000ad69baf7c",
+      "target": "99e5aedf-d46f-4600-8a6e-e6fdb14e789c",
+      "type": "response"
+    },
+    {
+      "source": "87d526c9-2b6c-448c-916c-000ad69baf7c",
+      "target": "44e0c5fc-ab38-4b1b-ab64-60f8409bc987",
+      "type": "response"
+    },
+    {
+      "source": "29ccba30-410b-4282-a576-aec6a200f73d",
+      "target": "676ca65f-9146-4177-afcf-463f6e40fcbb",
+      "type": "response"
+    },
+    {
+      "source": "445d2612-9b4e-4416-be48-fe88c238c985",
+      "target": "dd41f249-545b-4690-bf4d-fce94a1521ab",
+      "type": "response"
+    },
+    {
+      "source": "445d2612-9b4e-4416-be48-fe88c238c985",
+      "target": "d7dee9ee-fe1f-4cc5-9c15-1313e4ebbd10",
+      "type": "response"
+    },
+    {
+      "source": "03a4c35d-e3b1-4f89-addb-346f36aea6b3",
+      "target": "ed90940d-1c4c-480d-a707-af664d500862",
+      "type": "response"
+    },
+    {
+      "source": "03a4c35d-e3b1-4f89-addb-346f36aea6b3",
+      "target": "545c5c86-0d7f-4528-beca-fbfe8c1356ea",
+      "type": "response"
+    },
+    {
+      "source": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "target": "17de0e49-1c58-49bb-befe-ed0e17af2fa0",
+      "type": "response"
+    },
+    {
+      "source": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "target": "3499b917-2bb5-4dcf-915c-a63e2a43c784",
+      "type": "response"
+    },
+    {
+      "source": "e20ca0d3-acb3-4b32-993d-0be2e6809c93",
+      "target": "c305b1c5-83d2-4349-87c1-928407555a16",
+      "type": "response"
+    },
+    {
+      "source": "000b50c5-a1e8-4f20-a4e0-e305ad26d665",
+      "target": "949b858e-e691-4b7d-8c16-e52d0548cd7f",
+      "type": "response"
+    },
+    {
+      "source": "000b50c5-a1e8-4f20-a4e0-e305ad26d665",
+      "target": "97365de7-de4c-49e4-bddf-fa2073905bc7",
+      "type": "response"
+    },
+    {
+      "source": "8eb32891-bd94-47cd-8523-7d99584f85fb",
+      "target": "b21143e5-453d-4ecb-88b6-0cedde98efb0",
+      "type": "response"
+    },
+    {
+      "source": "782953c1-05cf-4264-a6a7-2138d2564de0",
+      "target": "edb4e88a-69fd-479a-8043-99a4a27f3ef6",
+      "type": "response"
+    },
+    {
+      "source": "782953c1-05cf-4264-a6a7-2138d2564de0",
+      "target": "0fd5752f-abc0-4a21-8abc-6ce7535f24b4",
+      "type": "response"
+    },
+    {
+      "source": "be650cb3-a9ac-4256-8a2c-1d2d3363c27b",
+      "target": "a775552a-aefa-4a41-82e6-76a297e64c2a",
+      "type": "response"
+    },
+    {
+      "source": "be650cb3-a9ac-4256-8a2c-1d2d3363c27b",
+      "target": "89be5d75-7b12-4685-a880-8cf5caa18d6f",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "22cf00ac-44d8-4b3c-bc72-d2b4d9caca7d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b11a1636-ba49-4fd3-92f9-cb83929b3966",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "1e7f944b-ff4b-4440-8875-02327cd71da2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "c83049de-dfcb-4cd1-92da-23573a31a1d2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "e21440e5-d992-4d7e-a390-086ad0bbe9e2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "0424ae93-d1cb-4c1a-ab28-6e8417a1b36a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "dae09376-03d9-4e7e-9a52-c2a4cc68a980",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "552591e9-338a-4f49-b07f-2744f2b96cea",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "58f7ac35-5e37-4e0a-bd4c-203828b6c2e5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "58b9eca4-db2b-43a3-9332-02a310146cf0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6fd4f827-4de8-4bc1-abb7-713baa190434",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

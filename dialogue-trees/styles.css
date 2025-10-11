@@ -1,0 +1,964 @@
+/* Wikipedia-style CSS for dialogue trees with sidebar TOC */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
+    line-height: 1.6;
+    color: #202122;
+    background: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+}
+
+/* Wikipedia-style layout with sidebar */
+.toc-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 240px;
+    height: 100vh;
+    background: #f8f9fa;
+    border-right: 1px solid #a2a9b1;
+    overflow-y: auto;
+    padding: 10px;
+    z-index: 100;
+}
+
+/* Back to index link at top of sidebar */
+.back-to-index {
+    display: block;
+    padding: 10px;
+    margin-bottom: 15px;
+    background: #fff;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+    color: #0645ad;
+    text-decoration: none;
+    font-size: 0.9em;
+    text-align: center;
+    transition: background 0.15s;
+}
+
+.back-to-index:hover {
+    background: #eaecf0;
+    text-decoration: none;
+}
+
+.back-to-index::before {
+    content: "← ";
+    margin-right: 4px;
+}
+
+.toc-header {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #202122;
+    margin-bottom: 15px;
+    padding-left: 10px;
+}
+
+.toc-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-nav > ul > li {
+    margin-bottom: 8px;
+}
+
+.toc-nav ul ul {
+    padding-left: 15px;
+    margin-top: 5px;
+}
+
+.toc-nav a {
+    color: #0645ad;
+    text-decoration: none;
+    display: block;
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-size: 0.95em;
+    line-height: 1.4;
+}
+
+.toc-nav a:hover {
+    background: #eaecf0;
+    text-decoration: none;
+}
+
+/* Overview Panel */
+.overview-panel {
+    background: #fff;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+
+.overview-header {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #202122;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-label {
+    font-size: 0.75em;
+    color: #72777d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #202122;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-pro {
+    color: #00af89;
+    white-space: nowrap;
+}
+
+.stat-con {
+    color: #dd5555;
+    white-space: nowrap;
+}
+
+.stat-divider {
+    color: #a2a9b1;
+    margin: 0;
+}
+
+.category-info,
+.tags-section {
+    margin: 12px 0;
+    padding: 10px 0;
+    border-top: 1px solid #eaecf0;
+}
+
+.category-label,
+.tags-label {
+    font-size: 0.75em;
+    color: #72777d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.category-value {
+    font-size: 0.9em;
+    color: #202122;
+    font-weight: 500;
+    padding: 4px 8px;
+    background: #f8f9fa;
+    border-radius: 2px;
+    border-left: 3px solid #202122;
+    transition: all 0.2s;
+}
+
+/* Category-specific colors for debate pages */
+.category-value[data-category*="Politics"] {
+    border-left-color: #4a90e2;
+    background: #e3f2fd;
+}
+
+.category-value[data-category*="Ethics"] {
+    border-left-color: #9b59b6;
+    background: #f3e5f5;
+}
+
+.category-value[data-category*="Philosophy"] {
+    border-left-color: #8e44ad;
+    background: #f3e5f5;
+}
+
+.category-value[data-category*="Religion"] {
+    border-left-color: #8e44ad;
+    background: #fff3e0;
+}
+
+.category-value[data-category*="Artificial Intelligence"] {
+    border-left-color: #7c3aed;
+    background: #f5f3ff;
+}
+
+.category-value[data-category*="Technology"] {
+    border-left-color: #16a085;
+    background: #e0f2f1;
+}
+
+.category-value[data-category*="Economics"] {
+    border-left-color: #27ae60;
+    background: #e8f5e9;
+}
+
+.category-value[data-category*="Science"] {
+    border-left-color: #e67e22;
+    background: #fff3e0;
+}
+
+.category-value[data-category*="Environment"] {
+    border-left-color: #2ecc71;
+    background: #e8f5e9;
+}
+
+.category-value[data-category*="Society"] {
+    border-left-color: #e74c3c;
+    background: #ffebee;
+}
+
+.category-value[data-category*="Personal"] {
+    border-left-color: #9c27b0;
+    background: #f3e5f5;
+}
+
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.tag-badge {
+    background: #eaecf0;
+    color: #202122;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.meta-info {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eaecf0;
+    font-size: 0.8em;
+    color: #72777d;
+}
+
+.meta-item {
+    margin: 4px 0;
+}
+
+/* Related Debates Section */
+.related-debates {
+    background: #fff;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+    padding: 12px;
+}
+
+.related-header {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #202122;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.related-section {
+    margin-bottom: 12px;
+}
+
+.related-section:last-child {
+    margin-bottom: 0;
+}
+
+.related-section-title {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #202122;
+    margin-bottom: 6px;
+    padding: 4px 0;
+}
+
+.related-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.related-list li {
+    margin: 0;
+    padding: 0;
+}
+
+.related-list a {
+    display: block;
+    color: #0645ad;
+    text-decoration: none;
+    padding: 4px 8px;
+    font-size: 0.85em;
+    line-height: 1.4;
+    border-radius: 2px;
+    transition: background 0.15s;
+}
+
+.related-list a:hover {
+    background: #eaecf0;
+    text-decoration: none;
+}
+
+/* Right sidebar for alphabetical debate list */
+.debates-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    background: #f8f9fa;
+    border-left: 1px solid #a2a9b1;
+    overflow-y: auto;
+    padding: 10px;
+    z-index: 100;
+}
+
+.debates-sidebar-header {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #202122;
+    margin-bottom: 15px;
+    padding-left: 10px;
+}
+
+.debates-sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.debates-sidebar li {
+    margin-bottom: 0;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.debates-sidebar li:last-child {
+    border-bottom: none;
+}
+
+.debates-sidebar a {
+    color: #0645ad;
+    text-decoration: none;
+    display: block;
+    padding: 6px 10px;
+    border-radius: 0;
+    font-size: 0.85em;
+    line-height: 1.4;
+    transition: background 0.15s;
+}
+
+.debates-sidebar a:hover {
+    background: #eaecf0;
+    text-decoration: none;
+}
+
+.alpha-separator {
+    font-size: 1em;
+    font-weight: 600;
+    color: #202122;
+    padding: 8px 10px 6px 10px;
+    margin-top: 12px;
+    border-bottom: 2px solid #a2a9b1;
+}
+
+.alpha-separator:first-child {
+    margin-top: 0;
+}
+
+/* Main content area - centered */
+.main-content {
+    margin-left: 240px;
+    margin-right: 280px;
+    padding: 20px 40px;
+    max-width: none;
+    display: flex;
+    justify-content: center;
+}
+
+.main-content .container {
+    width: 100%;
+    max-width: 900px;
+}
+
+.container {
+    background: white;
+    padding: 30px;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+}
+
+/* Page title */
+h1 {
+    font-size: 1.8em;
+    font-weight: 400;
+    margin: 0 0 0.3em 0;
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid #a2a9b1;
+    color: #000;
+    font-family: "Linux Libertine", Georgia, Times, serif;
+}
+
+/* Metadata box (Wikipedia-style) */
+.metadata-box {
+    background: #f8f9fa;
+    border: 1px solid #a2a9b1;
+    padding: 15px;
+    margin: 1em 0 1.5em 0;
+    font-size: 0.9em;
+    border-radius: 2px;
+}
+
+.metadata-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #202122;
+}
+
+.metadata-section {
+    margin: 15px 0;
+    padding: 12px 0;
+    border-top: 1px solid #d1d5db;
+}
+
+.metadata-section:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+.metadata-section h3 {
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    color: #202122;
+}
+
+.definitions-list {
+    margin: 5px 0;
+}
+
+.definitions-list dt {
+    font-weight: 600;
+    margin-top: 8px;
+    color: #202122;
+}
+
+.definitions-list dd {
+    margin-left: 20px;
+    margin-bottom: 8px;
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.tag {
+    background: #eaecf0;
+    color: #202122;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+/* Meta information */
+.meta {
+    color: #54595d;
+    font-size: 0.85em;
+    margin-top: 3em;
+    padding: 1em 0 0.5em 0;
+    border-top: 1px solid #eaecf0;
+}
+
+/* Proposition */
+.proposition {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border-left: 3px solid #0645ad;
+    margin: 1.5em 0;
+    font-size: 1.05em;
+    line-height: 1.5;
+}
+
+/* Section styles */
+.section {
+    margin: 2em 0 1.5em 0;
+    counter-reset: top-level-arg;
+}
+
+.section-title {
+    font-size: 1.4em;
+    margin-bottom: 0.8em;
+    color: #202122;
+    font-weight: 400;
+    border-bottom: 1px solid #a2a9b1;
+    padding-bottom: 0.2em;
+}
+
+.collapsible-title {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.collapsible-title:hover {
+    color: #0645ad;
+}
+
+.section-content {
+    transition: max-height 0.3s ease-out;
+}
+
+.section-content.collapsed {
+    display: none;
+}
+
+/* Collapse icons */
+.collapse-icon {
+    font-size: 0.8em;
+    color: #72777d;
+    display: inline-block;
+    min-width: 14px;
+    cursor: pointer;
+}
+
+/* Argument numbering */
+.argument-header::before {
+    content: counter(top-level-arg);
+    font-weight: 600;
+    color: #72777d;
+    font-size: 0.9em;
+    min-width: 28px;
+    display: inline-block;
+    text-align: right;
+    margin-right: 2px;
+    flex-shrink: 0;
+}
+
+.argument.depth-1 .argument-header::before {
+    content: counter(top-level-arg) "." counter(depth-1-arg);
+}
+
+.argument.depth-2 .argument-header::before {
+    content: counter(top-level-arg) "." counter(depth-1-arg) "." counter(depth-2-arg);
+}
+
+.argument.depth-3 .argument-header::before {
+    content: counter(top-level-arg) "." counter(depth-1-arg) "." counter(depth-2-arg) "." counter(depth-3-arg);
+}
+
+.argument.depth-4 .argument-header::before {
+    content: counter(top-level-arg) "." counter(depth-1-arg) "." counter(depth-2-arg) "." counter(depth-3-arg) "." counter(depth-4-arg);
+}
+
+/* Argument styles - more compact */
+.argument {
+    margin: 0.8em 0;
+    position: relative;
+}
+
+/* Counter setup for nested numbering */
+.argument.depth-0 {
+    counter-increment: top-level-arg;
+    counter-reset: depth-1-arg;
+}
+
+.argument.depth-1 {
+    counter-increment: depth-1-arg;
+    counter-reset: depth-2-arg;
+}
+
+.argument.depth-2 {
+    counter-increment: depth-2-arg;
+    counter-reset: depth-3-arg;
+}
+
+.argument.depth-3 {
+    counter-increment: depth-3-arg;
+    counter-reset: depth-4-arg;
+}
+
+.argument.depth-4 {
+    counter-increment: depth-4-arg;
+}
+
+.argument-header {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Remove hover background change - keep the colored backgrounds visible */
+.argument-header:hover .argument-content {
+    opacity: 0.95;
+}
+
+.argument-content {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px 12px;
+    border-radius: 2px;
+    background: #f8f9fa;
+    border-left: 3px solid #a2a9b1;
+    flex: 1;
+    margin-left: 6px;
+}
+
+/* Depth-based alternating colors that fade to gray at deeper levels */
+/* Arguments For section: Green -> Red -> Green -> Red -> Green */
+/* Arguments Against section: Red -> Green -> Red -> Green -> Red */
+
+/* Arguments For - Depth 0 - Green, full vibrant */
+#pro-section .argument.depth-0 .argument-content {
+    border-left-color: #00af89 !important;
+    background: #f0fdf9 !important;
+}
+
+/* Arguments For - Depth 1 - Red, slightly muted */
+#pro-section .argument.depth-1 .argument-content {
+    border-left-color: #dd5555 !important;
+    background: #fef9f9 !important;
+}
+
+/* Arguments For - Depth 2 - Green, more muted */
+#pro-section .argument.depth-2 .argument-content {
+    border-left-color: #7acfb8 !important;
+    background: #f7fefb !important;
+}
+
+/* Arguments For - Depth 3 - Red, even more muted */
+#pro-section .argument.depth-3 .argument-content {
+    border-left-color: #ef9999 !important;
+    background: #fefdfd !important;
+}
+
+/* Arguments For - Depth 4+ - Green, very muted, almost gray */
+#pro-section .argument.depth-4 .argument-content {
+    border-left-color: #b8e3d8 !important;
+    background: #fbfefe !important;
+}
+
+/* Arguments Against - Depth 0 - Red, full vibrant */
+#con-section .argument.depth-0 .argument-content {
+    border-left-color: #dd5555 !important;
+    background: #fef9f9 !important;
+}
+
+/* Arguments Against - Depth 1 - Green, slightly muted */
+#con-section .argument.depth-1 .argument-content {
+    border-left-color: #7acfb8 !important;
+    background: #f7fefb !important;
+}
+
+/* Arguments Against - Depth 2 - Red, more muted */
+#con-section .argument.depth-2 .argument-content {
+    border-left-color: #ef9999 !important;
+    background: #fefdfd !important;
+}
+
+/* Arguments Against - Depth 3 - Green, even more muted */
+#con-section .argument.depth-3 .argument-content {
+    border-left-color: #b8e3d8 !important;
+    background: #fbfefe !important;
+}
+
+/* Arguments Against - Depth 4+ - Red, very muted, almost gray */
+#con-section .argument.depth-4 .argument-content {
+    border-left-color: #e8c8c8 !important;
+    background: #fffefe !important;
+}
+
+.argument-body {
+    padding-left: 26px;
+    margin-top: 6px;
+    transition: max-height 0.2s ease-out;
+}
+
+.argument-body.collapsed {
+    display: none;
+}
+
+/* Argument icons - fade with depth, alternate by depth parity */
+.icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    margin-top: 1px;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+/* Arguments For - icon colors */
+#pro-section .argument.depth-0 .icon {
+    color: #00af89;
+}
+
+#pro-section .argument.depth-1 .icon {
+    color: #dd5555;
+}
+
+#pro-section .argument.depth-2 .icon {
+    color: #7acfb8;
+}
+
+#pro-section .argument.depth-3 .icon {
+    color: #ef9999;
+}
+
+#pro-section .argument.depth-4 .icon {
+    color: #b8e3d8;
+}
+
+/* Arguments Against - icon colors */
+#con-section .argument.depth-0 .icon {
+    color: #dd5555;
+}
+
+#con-section .argument.depth-1 .icon {
+    color: #7acfb8;
+}
+
+#con-section .argument.depth-2 .icon {
+    color: #ef9999;
+}
+
+#con-section .argument.depth-3 .icon {
+    color: #b8e3d8;
+}
+
+#con-section .argument.depth-4 .icon {
+    color: #e8c8c8;
+}
+
+.argument-text {
+    flex: 1;
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+/* Quality indicators */
+.quality-badge {
+    display: inline-block;
+    font-size: 0.75em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.badge-cited {
+    background: #e6f3ff;
+    color: #0066cc;
+    border: 1px solid #b3d9ff;
+}
+
+.badge-depth {
+    background: #f0f0f0;
+    color: #666;
+    border: 1px solid #ddd;
+    font-size: 0.7em;
+}
+
+.references {
+    margin-top: 6px;
+    font-size: 0.85em;
+    color: #54595d;
+    padding-left: 28px;
+}
+
+.references a {
+    color: #0645ad;
+    text-decoration: none;
+}
+
+.references a:hover {
+    text-decoration: underline;
+}
+
+/* Nested arguments - more compact indentation */
+.children {
+    margin-left: 20px;
+    margin-top: 6px;
+}
+
+.argument.depth-1 {
+    margin-left: 0;
+}
+
+.argument.depth-2 {
+    margin-left: 10px;
+}
+
+.argument.depth-3 {
+    margin-left: 20px;
+}
+
+.argument.depth-4 {
+    margin-left: 30px;
+}
+
+.argument.depth-5 {
+    margin-left: 40px;
+}
+
+/* Argument Permalink Button */
+.copy-link-btn {
+    background: none;
+    border: none;
+    color: #72777d;
+    cursor: pointer;
+    font-size: 0.9em;
+    padding: 4px 8px;
+    margin-left: 8px;
+    border-radius: 2px;
+    transition: all 0.2s;
+    opacity: 0;
+    flex-shrink: 0;
+}
+
+.argument-header:hover .copy-link-btn {
+    opacity: 1;
+}
+
+.copy-link-btn:hover {
+    background: #eaecf0;
+    color: #0645ad;
+}
+
+.copy-link-btn:active {
+    background: #d1d5db;
+}
+
+/* Highlighted Argument (when accessed via permalink) */
+.highlighted-argument {
+    animation: highlight-fade 3s ease-in-out;
+}
+
+@keyframes highlight-fade {
+    0% {
+        background: rgba(255, 243, 128, 0.3);
+        box-shadow: 0 0 20px rgba(255, 243, 128, 0.5);
+    }
+    50% {
+        background: rgba(255, 243, 128, 0.2);
+        box-shadow: 0 0 20px rgba(255, 243, 128, 0.4);
+    }
+    100% {
+        background: transparent;
+        box-shadow: none;
+    }
+}
+
+.highlighted-argument > .argument-header > .argument-content {
+    border-left-width: 4px !important;
+}
+
+/* Footer */
+.footer {
+    margin-top: 3em;
+    padding-top: 1.5em;
+    border-top: 1px solid #a2a9b1;
+    color: #54595d;
+    font-size: 0.85em;
+}
+
+.footer a {
+    color: #0645ad;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .toc-sidebar {
+        width: 200px;
+    }
+
+    .main-content {
+        margin-left: 200px;
+        padding: 15px 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .toc-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #a2a9b1;
+        padding: 15px;
+    }
+
+    .back-to-index {
+        margin-bottom: 10px;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 15px;
+        display: block;
+    }
+
+    .main-content .container {
+        max-width: 100%;
+    }
+
+    .container {
+        padding: 20px;
+    }
+
+    .children {
+        margin-left: 15px;
+    }
+
+    .argument.depth-2,
+    .argument.depth-3,
+    .argument.depth-4,
+    .argument.depth-5 {
+        margin-left: 0;
+    }
+
+    h1 {
+        font-size: 1.5em;
+    }
+
+    .section-title {
+        font-size: 1.2em;
+    }
+}

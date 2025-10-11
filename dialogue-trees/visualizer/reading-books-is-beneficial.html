@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading books is beneficial - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #666;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 1px solid #a2a9b1;
+            transition: right 0.3s;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #72777d;
+        }
+
+        #sidebar h2 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+            padding-right: 30px;
+        }
+
+        #sidebar .node-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #202122;
+        }
+
+        #sidebar .node-meta {
+            font-size: 0.85em;
+            color: #72777d;
+            margin-bottom: 5px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .node.pro circle {
+            fill: #00af89;
+        }
+
+        .node.con circle {
+            fill: #dd5555;
+        }
+
+        /* Depth-based styling */
+        .node circle {
+            opacity: 1;
+        }
+
+        .node.depth-1 circle {
+            opacity: 0.9;
+        }
+
+        .node.depth-2 circle {
+            opacity: 0.8;
+        }
+
+        .node.depth-3 circle {
+            opacity: 0.7;
+        }
+
+        .node.depth-4 circle,
+        .node.depth-5 circle {
+            opacity: 0.6;
+        }
+
+        .node.highlighted circle {
+            stroke: #ffd700;
+            stroke-width: 4px;
+        }
+
+        .node.selected circle {
+            stroke: #0645ad;
+            stroke-width: 4px;
+        }
+
+        /* Adaptive font sizing based on depth */
+        .node.depth-0 text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .node.depth-1 text,
+        .node.depth-2 text {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .node.depth-3 text,
+        .node.depth-4 text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .node.depth-5 text {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #00af89;
+            border-color: #00af89;
+        }
+
+        .node-badge.con {
+            color: #dd5555;
+            border-color: #dd5555;
+        }
+
+        .node-badge.objection {
+            color: #cc6600;
+            border-color: #cc6600;
+        }
+
+        .node-badge.response {
+            color: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.3;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        /* Fisheye zoom effect on hover */
+        .node {
+            transition: transform 0.2s ease;
+        }
+
+        .node:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .node:hover circle {
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.pro {
+            stroke: #00af89;
+            stroke-opacity: 0.4;
+        }
+
+        .link.con {
+            stroke: #dd5555;
+            stroke-opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Reading books is beneficial</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            120 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="fitToView()">Fit to View</button>
+
+        <div id="legend">
+            <h3>Statistics</h3>
+            <div style="font-size: 0.85em; color: #72777d; margin-bottom: 10px;">
+                <div style="margin-bottom: 3px;"><strong>Nodes:</strong> 120</div>
+                <div style="margin-bottom: 3px;"><strong>Max Depth:</strong> 3</div>
+                <div style="margin-bottom: 3px;"><strong>Pro:</strong> <span style="color: #00af89;">6</span></div>
+                <div style="margin-bottom: 3px;"><strong>Con:</strong> <span style="color: #dd5555;">6</span></div>
+            </div>
+
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00af89;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dd5555;"></div>
+                <span>Con / Opposing</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "0d35a186-94f4-4ee9-a6a8-221cdb806346",
+      "text": "Reading systematically increases vocabulary and language comprehension speed by exposing individuals to varied syntax and complex lexicon. This consistent exposure enhances fluency, thereby improving both written and oral communication effectiveness.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Psycholinguistic research on language acquisition"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:28.526417+00:00"
+    },
+    {
+      "id": "232dcda8-0967-479f-b182-b60ec858b972",
+      "text": "Engaging with complex narratives and structured arguments demands mental processing to track multi-layered plots and logical structures. This practice hones critical thinking skills, strengthening the ability to synthesize disparate pieces of information efficiently.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Cognitive science research on complex problem-solving"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:28.527700+00:00"
+    },
+    {
+      "id": "c0970d53-1202-4f44-bc44-3c2b316f834c",
+      "text": "Historically, the proliferation of books served as the primary vehicle for democratizing access to knowledge independently of institutional control. This widespread intellectual dissemination drove significant advancements, underpinning eras like the Renaissance and the Scientific Revolution.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Historical accounts of the Printing Revolution and the Enlightenment"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:28.528538+00:00"
+    },
+    {
+      "id": "311b1bc2-7a7a-4ba2-9f47-60fc3a617fb0",
+      "text": "Studies indicate reading for leisure reduces psychological stress levels and lowers heart rates more effectively than many other relaxation techniques. This measurable physiological response provides a consistent method for mental recuperation.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Studies published in journals such as the Journal of Health Psychology"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:28.529332+00:00"
+    },
+    {
+      "id": "18cbc993-5e8b-46cf-b257-0acd5456b3c6",
+      "text": "Immersion in diverse perspectives and complex characters cultivates enhanced empathy by forcing the reader to cognitively process others' beliefs and motivations. This practice improves \"Theory of Mind,\" strengthening social understanding and interpersonal interactions.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Social neuroscience research on Theory of Mind"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:28.530102+00:00"
+    },
+    {
+      "id": "7fdd04e3-957c-49f3-b31f-a5cb3c51831a",
+      "text": "Sustained cognitive engagement required during reading helps maintain neural connectivity and functional density in the brain. Research suggests this mental activity slows age-related cognitive decline and potentially reduces the risk of neurodegenerative diseases such as dementia.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [
+        "Epidemiological studies on brain health and lifelong cognitive engagement"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:28.531380+00:00"
+    },
+    {
+      "id": "c7da84a3-c340-46ee-babb-7c42badc90c8",
+      "text": "Effective oral communication requires practice in articulation, voice projection, and real-time responsiveness, skills that are not developed purely through the silent, receptive nature of reading.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0d35a186-94f4-4ee9-a6a8-221cdb806346",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:38.416090+00:00"
+    },
+    {
+      "id": "a5bcb483-3709-4642-9863-63eee5fb88d6",
+      "text": "Oral effectiveness relies crucially on pragmatic skills, such as adapting language to a listener's background or managing social turn-taking, which are learned through interactive discourse experience, not the solitary activity of reading.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0d35a186-94f4-4ee9-a6a8-221cdb806346",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:38.416850+00:00"
+    },
+    {
+      "id": "2d72fceb-bc25-4ec3-831c-21e1be80757e",
+      "text": "The measured physiological response reflects short-term distraction, not necessarily mental recuperation, which requires addressing the core cognitive sources of stress through active techniques like cognitive reappraisal or mindfulness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "311b1bc2-7a7a-4ba2-9f47-60fc3a617fb0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:38.571230+00:00"
+    },
+    {
+      "id": "5691715d-f0bb-4ef7-bfc0-8dd19be8a7f5",
+      "text": "The therapeutic effect is highly contingent on the material; highly challenging, dense, or emotionally upsetting content can drastically increase cognitive load and trigger stress responses, undermining the claim of consistency across all \"leisure\" reading.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "311b1bc2-7a7a-4ba2-9f47-60fc3a617fb0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:38.571652+00:00"
+    },
+    {
+      "id": "853bff3e-239b-4a74-b88d-2e8972ef370e",
+      "text": "Cognitive science research demonstrates that skills like narrative tracking are heavily domain-specific; efficient transfer to unrelated tasks like policy synthesis or scientific analysis is rare and requires explicit metamemory instruction.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "232dcda8-0967-479f-b182-b60ec858b972",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:40.198699+00:00"
+    },
+    {
+      "id": "647e91a2-e3ea-4b27-923a-3ff8afad41a2",
+      "text": "The required mental processing often involves deductive comprehension\u2014following established logic or plot points\u2014rather than the inductive, evaluative analysis necessary for broad critical thinking that challenges premises or generates novel conclusions.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "232dcda8-0967-479f-b182-b60ec858b972",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:40.199318+00:00"
+    },
+    {
+      "id": "876c2393-a76d-4e3c-98c7-4f8020a56a07",
+      "text": "Sophisticated cognitive processing of fictional characters' motivations is also characteristic of successful manipulators or high-functioning psychopathic individuals who score highly on Theory of Mind but lack affective empathy. Understanding perspectives does not automatically translate into feeling for others or improving real-world interpersonal interactions.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "18cbc993-5e8b-46cf-b257-0acd5456b3c6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:40.288932+00:00"
+    },
+    {
+      "id": "153c318a-82d2-4a21-98ed-51876c5c4e7e",
+      "text": "The alleged empathy-boosting effect is highly contingent on the type of immersion, with research suggesting that only engagement with complex literary fiction provides measurable, temporary boosts, while consumption of popular or genre fiction shows no generalizable improvements in social understanding. Thus, simply \"processing diverse perspectives\" is insufficient.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "18cbc993-5e8b-46cf-b257-0acd5456b3c6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:40.289594+00:00"
+    },
+    {
+      "id": "b3cef734-693e-4d92-9168-e05d61054e85",
+      "text": "The recognized cognitive benefits are likely due to *any* complex or novel mental activity (e.g., learning an instrument or intense problem-solving), not reading specifically, limiting the scope and mechanism of the argument.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7fdd04e3-957c-49f3-b31f-a5cb3c51831a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:40.321730+00:00"
+    },
+    {
+      "id": "9d5340e3-bee9-49f5-a840-b4a568cbfccb",
+      "text": "The observed link between frequent reading and delayed cognitive decline may be attributable to confounding variables, as readers often have higher levels of lifelong education and socioeconomic status, which independently build greater cognitive reserve.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7fdd04e3-957c-49f3-b31f-a5cb3c51831a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:40.322205+00:00"
+    },
+    {
+      "id": "a1365d13-6291-4ac1-b808-4a22f7f8e6a6",
+      "text": "Significant intellectual advancement during the Renaissance and Scientific Revolution required substantial patronage from wealthy families and royal institutions (e.g., the Medici), alongside urban trade and economic surplus that supported scholars, demonstrating that book access alone was insufficient.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c0970d53-1202-4f44-bc44-3c2b316f834c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:43.189829+00:00"
+    },
+    {
+      "id": "c71fce78-cd3d-4e2b-aecb-2fdd0eaf10a4",
+      "text": "Institutions like the Catholic Church maintained extensive control over printed knowledge through tools like the Index Librorum Prohibitorum, established in 1559, meaning intellectual dissemination was subject to official censorship for centuries after mass printing began.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c0970d53-1202-4f44-bc44-3c2b316f834c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:43.190521+00:00"
+    },
+    {
+      "id": "aa398a67-a571-43a2-b1c4-11f51e43b721",
+      "text": "Robust physiological metrics, such as decreased salivary cortisol levels and increased high-frequency Heart Rate Variability (HRV), are direct indicators of stress reduction and parasympathetic system recovery, not merely evidence of a fleeting distraction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2d72fceb-bc25-4ec3-831c-21e1be80757e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:47.779216+00:00"
+    },
+    {
+      "id": "21023e5f-6437-406c-b9ef-b8b530e5131e",
+      "text": "Mental recuperation does not necessarily require active cognitive techniques; passive interventions, such as physical exercise, deep sleep, or exposure to nature (Attention Restoration Theory), effectively replenish attentional resources and reduce allostatic load without cognitive reappraisal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "2d72fceb-bc25-4ec3-831c-21e1be80757e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:47.779764+00:00"
+    },
+    {
+      "id": "df711401-d54b-4f5c-b9c3-8d461e9a6456",
+      "text": "Reading literary works or high-quality discourse provides substantial indirect experience with nuanced social interactions, rhetorical framing, and varied registers, explicitly modeling the complex pragmatic skills and social awareness necessary for effective oral communication.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a5bcb483-3709-4642-9863-63eee5fb88d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:48.702839+00:00"
+    },
+    {
+      "id": "8d37cbc4-dcf3-42e0-a8f0-cbcccc55e8c6",
+      "text": "The expansive vocabulary and complex syntactic structures necessary for high-level oral effectiveness often originate primarily from passive exposure to sophisticated language found in extensive reading, which is a prerequisite for the accurate interactive application of language.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a5bcb483-3709-4642-9863-63eee5fb88d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:48.704006+00:00"
+    },
+    {
+      "id": "301aa053-d6c7-4fc9-880f-650e1fdcdd49",
+      "text": "Higher-level critical analysis, such as challenging a premise or generating a novel conclusion, necessitates prior deductive comprehension of the existing rules or structure being evaluated, making the separation between deduction and evaluation artificial.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "647e91a2-e3ea-4b27-923a-3ff8afad41a2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:52.050051+00:00"
+    },
+    {
+      "id": "440c0911-86f6-4153-a283-3b9bf423b79d",
+      "text": "The required mental processing is highly context-dependent; complex tasks like debugging code or analyzing historical documents systematically require inductive reasoning to infer general rules from specific examples and evaluate underlying assumptions, directly defying the generalization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "647e91a2-e3ea-4b27-923a-3ff8afad41a2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:52.050626+00:00"
+    },
+    {
+      "id": "bd788cfa-54c5-41dc-8120-ae257e2e3b54",
+      "text": "Reading uniquely requires activation of the neural networks associated with narrative comprehension and simulating complex social interaction (Theory of Mind), mechanisms not strongly engaged by non-linguistic activities like instrumental practice or mathematical problem-solving.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b3cef734-693e-4d92-9168-e05d61054e85",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:57.709552+00:00"
+    },
+    {
+      "id": "be9d25a3-7ad1-4064-b28a-5f89ef2ea498",
+      "text": "High-level chess and complex video games are intense problem-solving, yet research finds these activities do not consistently confer the specific benefits of increased vocabulary, enhanced verbal fluency, or superior writing skills attributed to deep reading.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b3cef734-693e-4d92-9168-e05d61054e85",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:57.710028+00:00"
+    },
+    {
+      "id": "d4e1798b-3198-45ab-bbd8-adf0ed4d2b81",
+      "text": "Virtual Reality (VR) simulations designed for perspective-taking show statistically significant, measurable increases in empathy and prosocial behaviors, demonstrating that immersive technologies, not just complex literary fiction, facilitate deep social understanding.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "153c318a-82d2-4a21-98ed-51876c5c4e7e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:58.330227+00:00"
+    },
+    {
+      "id": "e1779219-cd3f-4f1a-9a74-39831d34ef71",
+      "text": "The degree of narrative transport, or how lost a reader gets in a story, is a stronger predictor of temporary empathy boosts in research settings than the genre categorization, contradicting the necessity of \"complex literary fiction.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "153c318a-82d2-4a21-98ed-51876c5c4e7e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:58.330914+00:00"
+    },
+    {
+      "id": "283c5b11-c5fe-4f6b-85a1-eb07d3975ba6",
+      "text": "While passive methods reduce fatigue, they fail to address the underlying cognitive distortions that cause chronic psychological stress and drive high allostatic load. For clinical conditions involving rumination or trauma (e.g., PTSD), active cognitive restructuring (like CBT) is necessary because the negative appraisal itself is the primary stressor that passive activities cannot internally resolve.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "21023e5f-6437-406c-b9ef-b8b530e5131e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.101806+00:00"
+    },
+    {
+      "id": "bf2c86a8-ee7f-4198-8dce-ffeb296e67d6",
+      "text": "High-level oral effectiveness requires immediate recall, prosody, and turn-taking skills developed through active, real-time interactive practice and immediate corrective feedback, demonstrating that reading is not the primary mechanism of skill acquisition. For instance, specialized tasks like simultaneous interpretation demand intense, active training that goes significantly beyond passive textual exposure.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8d37cbc4-dcf3-42e0-a8f0-cbcccc55e8c6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.204968+00:00"
+    },
+    {
+      "id": "030f8f50-2005-4a0a-a51a-ad5add453bf5",
+      "text": "Extensive reading is not a prerequisite for accurate interactive application, as evidenced by primary (L1) language acquisition, where all native speakers achieve complex oral fluency purely through listening and speaking practice before ever learning to read. Many cultures also maintain complex oral traditions with minimal literacy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8d37cbc4-dcf3-42e0-a8f0-cbcccc55e8c6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.205013+00:00"
+    },
+    {
+      "id": "1ba55ca1-e730-4c71-a25d-e1f977fb257b",
+      "text": "Complex narrative tracking requires inferential reasoning about causal chains and agent intentions; these general-purpose cognitive operations are directly applicable and efficiently transfer to skills like synthesizing policy impacts and scientific hypotheses, which centrally depend on modeling causality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "853bff3e-239b-4a74-b88d-2e8972ef370e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.628769+00:00"
+    },
+    {
+      "id": "1e1d9f63-514a-475c-85b3-818db12e0493",
+      "text": "Studies on analogical reasoning demonstrate that high-road transfer of abstract conceptual structures, such as problem topology or deep causal relationships, often occurs implicitly and robustly when the source domain is mastered, contradicting the necessity of explicit metamemory instruction for functional transfer.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "853bff3e-239b-4a74-b88d-2e8972ef370e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.629206+00:00"
+    },
+    {
+      "id": "82dd745c-d415-4755-970d-6c953dad71af",
+      "text": "Major Protestant centers like Amsterdam, Geneva, and London operated powerful, uncensored presses that freely printed works banned by the Index and circulated them internationally, significantly limiting the Church's claimed \\",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c71fce78-cd3d-4e2b-aecb-2fdd0eaf10a4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.646924+00:00"
+    },
+    {
+      "id": "805b4fbe-07b1-463d-93cb-3ef4a7f55b0d",
+      "text": "State governments in countries such as France and Venice often exerted independent royal censorship over printed works, showing the Index was one of several, often competing, forms of limited control rather than the sole official censorship authority.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c71fce78-cd3d-4e2b-aecb-2fdd0eaf10a4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.647252+00:00"
+    },
+    {
+      "id": "a8f6ab2d-9888-46ec-bc87-67f96b07e5c0",
+      "text": "Neuroscientific research indicates high-functioning psychopathy is strongly associated with anatomical and functional deficits in the ventromedial prefrontal cortex (vmPFC) and amygdala. These deficits, which are critical for real-world affective decision-making, are not engaged or required during the purely cognitive analysis of fictional narratives.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "876c2393-a76d-4e3c-98c7-4f8020a56a07",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.798869+00:00"
+    },
+    {
+      "id": "92763b0a-f1b4-4618-8a9d-95e626396027",
+      "text": "Controlled experiments show that deep immersion in narrative fiction significantly correlates with increased prosocial behavior and improved moral reasoning in non-clinical populations immediately following exposure. This demonstrates that understanding perspectives can translate into improved real-world human interaction in generalized settings.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "876c2393-a76d-4e3c-98c7-4f8020a56a07",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:54:59.799504+00:00"
+    },
+    {
+      "id": "f2472383-735b-4f1e-8cb6-25a1cdd9d090",
+      "text": "The physiological indicators track immediate autonomic and hormonal changes; brief, non-significant positive stimuli are documented to cause sharp but temporary increases in HRV and drops in cortisol that quickly revert. The \"robustness\" of the metric only refers to the magnitude of the momentary shift, not the sustained duration of the psychological relief.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "aa398a67-a571-43a2-b1c4-11f51e43b721",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:01.026282+00:00"
+    },
+    {
+      "id": "3b8fafe6-e0fd-48a6-8989-c6a21747bc44",
+      "text": "Effective oral communication hinges on real-time feedback and spontaneous improvisation, skills which are dormant during passive consumption and require active, interactive practice to develop. The passive process of reading cannot simulate the dynamism required for successful real-world conversational turns and rapid pragmatic adjustments.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "df711401-d54b-4f5c-b9c3-8d461e9a6456",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:02.193095+00:00"
+    },
+    {
+      "id": "5473be01-1fe7-4ea4-ad7d-b5b06c849fdc",
+      "text": "Literary reading primarily engages language comprehension, neglecting the critical role of non-verbal communication, paralinguistics (tone, pacing, facial expression), and immediate social contextual awareness that are prerequisites for actual effective social interaction. These non-textual elements are essential for demonstrating social awareness far beyond the modeled linguistic framing.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "df711401-d54b-4f5c-b9c3-8d461e9a6456",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:02.193172+00:00"
+    },
+    {
+      "id": "5ceb7dd9-9295-4e36-88d2-2fb2e5958fa1",
+      "text": "The necessity of deduction as a prerequisite merely establishes temporal or functional ordering; constructing a foundation is necessary for building a house, yet the foundation and the superstructure remain distinct elements, not an artificial separation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "301aa053-d6c7-4fc9-880f-650e1fdcdd49",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:04.267874+00:00"
+    },
+    {
+      "id": "da0e20d0-8df6-4904-9dd8-7e370dae1202",
+      "text": "Critical evaluation frequently arises from inductive observation\u2014such as recognizing anomalies that violate observed patterns\u2014demonstrating that prior comprehension does not require a purely deductive understanding of the system's explicit rules.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "301aa053-d6c7-4fc9-880f-650e1fdcdd49",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:04.267920+00:00"
+    },
+    {
+      "id": "35e0aa2f-f61c-4822-897c-b8a10707e499",
+      "text": "Measurable increases in prosocial behavior are often short-term priming effects established in lab settings, failing to demonstrate the lasting cognitive empathy required for 'deep social understanding' in real-world contexts.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d4e1798b-3198-45ab-bbd8-adf0ed4d2b81",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:07.673598+00:00"
+    },
+    {
+      "id": "af002bb4-2c84-407d-a151-6f65f41bec36",
+      "text": "The vast majority of commercial \"immersive technologies\" (e.g., standard VR gaming and entertainment) lack the specific design elements necessary for perspective-taking, meaning the observed benefits do not generalize across the entire technology category.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d4e1798b-3198-45ab-bbd8-adf0ed4d2b81",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:07.673624+00:00"
+    },
+    {
+      "id": "ea5e10c4-e408-465c-b08c-226ba8ad352a",
+      "text": "Debugging code and historical analysis heavily rely on applying existing, documented rules and frameworks (language specifications, historical methodologies), which is purely deductive reasoning derived from textual knowledge, not systematic induction to infer general rules.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "440c0911-86f6-4153-a283-3b9bf423b79d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:08.558017+00:00"
+    },
+    {
+      "id": "d97179e4-2ef3-4c59-b928-94e798bf3822",
+      "text": "The Protestant presses were not truly uncensored, as local authorities imposed their own controls; for example, the Geneva Consistory strictly regulated religious content, and London used licensing laws to suppress political dissent and sedition.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "82dd745c-d415-4755-970d-6c953dad71af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:08.692223+00:00"
+    },
+    {
+      "id": "36b85f7a-27e2-4e72-bb7b-be4792a53930",
+      "text": "Research measuring temporary empathy boosts overlooks the long-term cognitive load and sustained critical thinking skills fostered primarily by engaging with the structural ambiguity and unreliable narrators common in complex literary fiction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e1779219-cd3f-4f1a-9a74-39831d34ef71",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:09.616981+00:00"
+    },
+    {
+      "id": "d357277f-7fb6-436c-9044-0276bcdef298",
+      "text": "The complexity of literary fiction is often necessary not just for general empathy, but for modeling non-routine psychological states or critically analyzing ethically ambiguous conflicts that highly transporting genre fiction may often simplify or avoid.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e1779219-cd3f-4f1a-9a74-39831d34ef71",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:09.617025+00:00"
+    },
+    {
+      "id": "c8a750ed-a6c6-41f7-9545-afeb493c0143",
+      "text": "Policy analysis requires specific training in non-linear, systemic causality (e.g., econometric models, climate feedback loops), which operates fundamentally differently from the localized, intentional, and anthropomorphic causality inferred from literary narratives. This domain specificity means the \u201cgeneral-purpose\u201d skill transfer is highly inefficient without dedicated contextual knowledge.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1ba55ca1-e730-4c71-a25d-e1f977fb257b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:10.110767+00:00"
+    },
+    {
+      "id": "ce49c7b7-d4e9-4530-9a23-278e230ff9ae",
+      "text": "Controlled experiments typically measure immediate, low-cost prosocial tasks (e.g., small donations or attitude surveys) in an artificial lab setting, which demonstrates short-term emotional priming rather than robust, internally-motivated behavioral change that persists outside the experiment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92763b0a-f1b4-4618-8a9d-95e626396027",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:10.145492+00:00"
+    },
+    {
+      "id": "61d6b7a9-f435-427e-8fe7-62ed502a6e54",
+      "text": "The measured prosocial effects are often characterized by short half-lives, failing to demonstrate the reliable translation of immediate cognitive or emotional gains into sustained, long-term modifications of complex real-world interaction patterns.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92763b0a-f1b4-4618-8a9d-95e626396027",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:10.145535+00:00"
+    },
+    {
+      "id": "8c637fb1-f2c2-4aba-b1a9-44040ed8eb58",
+      "text": "The Index's authority was universal, threatening excommunication across the Holy Roman Empire and Spanish colonies, giving it a moral and jurisdictional reach far exceeding localized state licensing and censorship practices like the French Crown's relatively narrow focus on sedition or privilege maintenance. This distinction shows the Index was fundamentally different in kind and scope from state controls, even if not administratively unique.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "805b4fbe-07b1-463d-93cb-3ef4a7f55b0d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:10.160673+00:00"
+    },
+    {
+      "id": "3cb18083-b71c-4464-8028-687d56330a05",
+      "text": "Theater performance and complex visual narrative film viewing activate the same core regions for both narrative comprehension and social simulation (Theory of Mind), demonstrating that reading is not the sole activity engaging these specific neural mechanisms.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bd788cfa-54c5-41dc-8120-ae257e2e3b54",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:10.408140+00:00"
+    },
+    {
+      "id": "96cda131-98c0-44fc-8d95-a341027af154",
+      "text": "High-level, collaborative problem-solving, such as in surgical teams or software engineering, heavily engages Theory of Mind by requiring members to anticipate the intentions and strategies of colleagues to achieve synchronization and successful outcomes.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bd788cfa-54c5-41dc-8120-ae257e2e3b54",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:10.408188+00:00"
+    },
+    {
+      "id": "51c2bb0f-7e9d-4ebf-90bb-00770342641b",
+      "text": "Functional neuroimaging studies demonstrate that engaging with fictional narratives significantly recruits the vmPFC and amygdala, particularly when readers process characters' emotional states or moral dilemmas. This empirical evidence directly contradicts the assertion that narrative analysis remains a purely cognitive task.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a8f6ab2d-9888-46ec-bc87-67f96b07e5c0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:14.375222+00:00"
+    },
+    {
+      "id": "3a7a72b7-aad9-4a6f-9d8c-aa3a2ae3d992",
+      "text": "While implicit transfer occurs post-mastery, most real-world learning involves novices who have not yet achieved mastery; research shows that without explicitly teaching search strategies, less experienced learners consistently fail to apply learned principles from one domain (e.g., mathematics) to a new contextual problem (e.g., physics).",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1e1d9f63-514a-475c-85b3-818db12e0493",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:14.483511+00:00"
+    },
+    {
+      "id": "dd0b9c9f-d7d3-475c-a6bf-c124c373da0e",
+      "text": "The argument incorrectly frames the debate around absolute necessity, ignoring the practical efficiency of instruction. Explicit metamemory training dramatically increases the *speed* and *probability* of high-road transfer across large groups, even if some individuals eventually achieve it implicitly.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1e1d9f63-514a-475c-85b3-818db12e0493",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:14.483580+00:00"
+    },
+    {
+      "id": "6059d28d-f5fe-43fa-8026-7e88329002f8",
+      "text": "Deep reading is the primary mechanism by which the brain encounters the structured syntactical complexity and million-word vocabularies necessary for high verbal fluency, a linguistic input entirely absent in spatial-logic tasks like chess or video games.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "be9d25a3-7ad1-4064-b28a-5f89ef2ea498",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:15.675825+00:00"
+    },
+    {
+      "id": "5bf0d2eb-dd9f-4407-aee0-c43cd7af1a5e",
+      "text": "The considerable time investment required for reading represents a significant opportunity cost, displacing practical skill acquisition, regular physical exercise, or essential professional networking that directly contribute to superior career advancement and physical health outcomes.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:15.675943+00:00"
+    },
+    {
+      "id": "4151bcfa-3980-4d0d-a484-d406de8c64b8",
+      "text": "Books deliver theoretical and passive knowledge delivery, which is demonstrably inadequate for skill mastery in practical domains, such as complex machinery maintenance or surgical procedures, where hands-on, experiential learning is the non-negotiable standard for competence.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:15.676344+00:00"
+    },
+    {
+      "id": "f1f5a00b-1070-4282-adb8-b3fa901bc4ea",
+      "text": "Prolonged sedentary behavior inherent to reading contributes to detrimental physical health outcomes, including chronic back pain, poor posture, and increased digital eye strain from focusing on fixed text sources for extended periods [1].",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:15.676596+00:00"
+    },
+    {
+      "id": "aa303dbf-538f-4230-b408-d53f44ba2e53",
+      "text": "Non-fiction literature, especially in scientific or rapidly changing technological fields like AI or genomics, quickly becomes obsolete, leading readers to acquire or reinforce factually inaccurate information and outdated methodologies.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:15.676848+00:00"
+    },
+    {
+      "id": "dcda8ff9-e8f7-43ca-8dfd-dbea32aeebe6",
+      "text": "The focused, sustained, and solitary concentration required for deep reading is increasingly incompatible with contemporary cognitive habits, leading to higher cognitive strain and decreased information processing efficiency compared to dynamically curated, multimodal sources.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:15.677080+00:00"
+    },
+    {
+      "id": "5a8011a1-87b9-4313-9cff-5db9c80f16d8",
+      "text": "Consistent consumption of books that strictly confirm existing biases, particularly within political or ideological spheres, can create an intractable intellectual echo chamber, diminishing critical thinking and hindering flexible engagement with alternative perspectives.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:15.677307+00:00"
+    },
+    {
+      "id": "4520e371-ecad-415b-be8d-09e8823b7915",
+      "text": "Books require focused attention and curation, making them a less efficient and less dominant driver of intellectual echo chambers compared to the continuous, algorithmically optimized bias-confirmation present in social media and digital platforms.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5a8011a1-87b9-4313-9cff-5db9c80f16d8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:24.976268+00:00"
+    },
+    {
+      "id": "b8b96442-f6bb-4002-be02-b88dbfc0c02e",
+      "text": "Deep, consistent analysis of complex ideological texts, even biased ones, requires and therefore develops advanced critical thinking and articulation skills specific to defending that intellectual framework.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5a8011a1-87b9-4313-9cff-5db9c80f16d8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:24.976675+00:00"
+    },
+    {
+      "id": "f7f0dbce-a882-44cf-8e4f-5ab9714819f0",
+      "text": "Reading technical documentation, professional literature, or industry analyses is essential for maintaining competence and specialized skill acquisition, meaning the activity is a direct contributor to, not a displacement of, career advancement.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5bf0d2eb-dd9f-4407-aee0-c43cd7af1a5e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:27.426807+00:00"
+    },
+    {
+      "id": "4f2bb113-2e9a-4f88-81d8-ee9f8d9c6350",
+      "text": "Long-term mental health benefits derived from reading, such as stress reduction (shown to decrease stress by 68%) and reduced risk of cognitive decline, provide essential neurological and psychological outcomes that are complementary to physical health, not necessarily inferior.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5bf0d2eb-dd9f-4407-aee0-c43cd7af1a5e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:27.427220+00:00"
+    },
+    {
+      "id": "d2a5f347-6811-40fc-960e-d511e981118d",
+      "text": "Digital eye strain (Computer Vision Syndrome) is a specific medical diagnosis linked to factors like refresh rates, blue light emission, and glare unique to electronic screens, differentiating it from general visual fatigue caused by reading printed text.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f1f5a00b-1070-4282-adb8-b3fa901bc4ea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:30.478836+00:00"
+    },
+    {
+      "id": "878d2d48-5b0a-4f62-b784-82afe88e6022",
+      "text": "Physical drawbacks like back pain are caused by prolonged static posture, which is mitigated by using standing desks or frequently implementing micro-breaks, meaning sedentary behavior is not inherent to the intellectual act of reading.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f1f5a00b-1070-4282-adb8-b3fa901bc4ea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:30.479242+00:00"
+    },
+    {
+      "id": "ad5f3f58-6c28-4bca-bf2c-9ea4c8e6afe5",
+      "text": "Foundational texts like Newton's *Principia Mathematica* or Darwin's *On the Origin of Species* are read for historical context and the development of scientific thought, remaining essential for education despite containing outdated specific details.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "aa303dbf-538f-4230-b408-d53f44ba2e53",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:31.437883+00:00"
+    },
+    {
+      "id": "10e3ec91-9c96-4c6b-9379-578441d9fe2c",
+      "text": "Non-fiction genres such as historical accounts, biographies, or philosophical works detail events and concepts largely immune to obsolescence caused by rapid technological advances in fields like AI or genomics.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "aa303dbf-538f-4230-b408-d53f44ba2e53",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:31.438706+00:00"
+    },
+    {
+      "id": "7d771c04-6997-409a-a70d-0dff9ff3a7d7",
+      "text": "Activities like competitive esports, complex software development, and technical analysis require hours of uninterrupted and highly focused concentration, demonstrating that sustained attention skills are still cultivated and maintained in contemporary digital environments.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dcda8ff9-e8f7-43ca-8dfd-dbea32aeebe6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:31.841131+00:00"
+    },
+    {
+      "id": "b9f5c6ea-81a5-4d65-bebe-b0c1f37e169c",
+      "text": "While multimodal sources may reduce initial cognitive burden, the increased mental effort of deep reading correlates directly with higher long-term knowledge retention and deeper conceptual understanding, which is a key metric of information processing efficiency.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dcda8ff9-e8f7-43ca-8dfd-dbea32aeebe6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:31.841923+00:00"
+    },
+    {
+      "id": "8672b628-4f52-467a-a66d-5343348e9171",
+      "text": "Surgical competence necessitates mastering theoretical components like human anatomy, cellular pathology, and pharmacology, which allows the practitioner to interpret unexpected phenomena during the physical procedure.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4151bcfa-3980-4d0d-a484-d406de8c64b8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:32.661527+00:00"
+    },
+    {
+      "id": "c8ed698d-b153-4b4e-8d96-da087d3ffc8e",
+      "text": "Practical mastery in domains like complex systems engineering or legal analysis depends critically on integrating vast theoretical knowledge from technical manuals and case law, where physical manipulation is irrelevant to measuring intellectual competence.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4151bcfa-3980-4d0d-a484-d406de8c64b8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:32.661951+00:00"
+    },
+    {
+      "id": "c4ff5b36-db76-4a9d-b10f-54206cb43d4b",
+      "text": "Career advancement often relies on demonstrating application and achieving tangible project results, not just theoretical knowledge. Time dedicated solely to reading displaces active project execution and public delivery, which are frequently the primary metrics used for promotion.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f7f0dbce-a882-44cf-8e4f-5ab9714819f0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:37.760744+00:00"
+    },
+    {
+      "id": "28940933-c88a-4bd7-8d0c-7384729d9d29",
+      "text": "Advancement is often heavily weighted by networking, mentorship, and high-visibility work necessary to gain internal advocacy. Reading is a solitary activity that displaces these critical interpersonal and political efforts essential for upward mobility and sponsorship.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f7f0dbce-a882-44cf-8e4f-5ab9714819f0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:37.761189+00:00"
+    },
+    {
+      "id": "bb15c0d1-5bb6-4c4c-8113-989174ff5d5a",
+      "text": "Focused attention and deep curation result in an intellectual echo chamber that is more structurally coherent and deeply entrenched than the frequent but superficial bias confirmation provided by social media. Reading a comprehensive book on an ideology provides a robust mental framework that is more resistant to change.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4520e371-ecad-415b-be8d-09e8823b7915",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:38.354555+00:00"
+    },
+    {
+      "id": "4d1dcde7-1f70-4cf7-b2f4-8f3680b0bb06",
+      "text": "The curation process for books establishes entrenched intellectual canons (e.g., specific partisan think tank publications) that define and dominate specific fields, creating institutional echo chambers that influence policy and culture more deeply than ephemeral digital discourse.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4520e371-ecad-415b-be8d-09e8823b7915",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:38.355016+00:00"
+    },
+    {
+      "id": "cbb51d9e-e142-42c5-b60e-53cd1a047432",
+      "text": "Analyzing texts solely for the purpose of *defense* cultivates confirmation bias and sophisticated rationalization (rhetorical skill), which directly inhibits the impartiality and intellectual humility necessary for objective advanced critical thinking.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b8b96442-f6bb-4002-be02-b88dbfc0c02e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:38.378107+00:00"
+    },
+    {
+      "id": "5c27f2de-bbd0-4a80-a2f3-273467dd0e7d",
+      "text": "Deep, consistent immersion in ideological systems focused on internal justification (e.g., highly insulated political echo chambers or cults) often results in entrenched dogmatism, where participants lose the skill to apply critical standards to external or rival frameworks.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b8b96442-f6bb-4002-be02-b88dbfc0c02e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:38.378446+00:00"
+    },
+    {
+      "id": "187c7917-1bb2-4758-bc6d-585ef8f4b604",
+      "text": "The vast majority of digital user engagement involves activities like short-form video viewing and infinite social media scrolling, which are specifically designed to encourage rapid context switching and actively counteract sustained focus for the general population.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7d771c04-6997-409a-a70d-0dff9ff3a7d7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:40.998074+00:00"
+    },
+    {
+      "id": "8f4f8b02-7101-4128-89bd-258d66dc2895",
+      "text": "These highly focused activities represent a self-selected population that already possess or are specifically compensated to develop high attention skills; this proves focused work is possible digitally, not that the contemporary digital environment generally cultivates or maintains attention.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7d771c04-6997-409a-a70d-0dff9ff3a7d7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:40.998506+00:00"
+    },
+    {
+      "id": "e10b39a8-d7ea-4b58-9e5f-d29f4014f4ed",
+      "text": "Modern scientific education relies on distilled, synthesized knowledge presented in current textbooks, as the core concepts have been clarified and updated over centuries. Therefore, reading the original, often obscure language of the full foundational text is non-essential for grasping the essential scientific principles.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ad5f3f58-6c28-4bca-bf2c-9ea4c8e6afe5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:42.834415+00:00"
+    },
+    {
+      "id": "05027c91-890e-46ad-803c-1ed4896f0c0d",
+      "text": "Assigning full foundational texts is inefficient pedagogy; students can gain adequate historical context from concise secondary sources and annotated excerpts, saving crucial instructional time needed to cover recent and more complex scientific breakthroughs like quantum theory or epigenetics.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ad5f3f58-6c28-4bca-bf2c-9ea4c8e6afe5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:42.835120+00:00"
+    },
+    {
+      "id": "a545e486-2515-4623-a76a-08e0982cc001",
+      "text": "Practical mastery in complex systems engineering is often defined by direct, physical manipulation skills, such as troubleshooting live hardware or integrating components, making physical aptitude highly relevant to measuring practical competence.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8ed698d-b153-4b4e-8d96-da087d3ffc8e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:43.483856+00:00"
+    },
+    {
+      "id": "65edce3f-f2d4-48d3-b29e-fa6887b38fe9",
+      "text": "The argument equivocates by shifting focus from the required components of 'practical mastery' to the measurement of 'intellectual competence,' failing to bridge the gap between theoretical knowledge and effective, real-world execution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "c8ed698d-b153-4b4e-8d96-da087d3ffc8e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:43.484558+00:00"
+    },
+    {
+      "id": "650c2842-1c11-49ff-9b20-40d535faa44c",
+      "text": "Genomic data regularly challenges historical accounts, such as ancient DNA revealing previously unknown migration paths (e.g., early European settlement) or complex familial relations in biographies, rendering previous interpretations based solely on textual/archaeological evidence obsolete.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "10e3ec91-9c96-4c6b-9379-578441d9fe2c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:44.052259+00:00"
+    },
+    {
+      "id": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "text": "Philosophical works concerning consciousness, free will, and ethics are highly susceptible to obsolescence, as advances in AI and neurogenomics rapidly challenge foundational assumptions about human agency and moral responsibility that underpin existing discourse.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "10e3ec91-9c96-4c6b-9379-578441d9fe2c",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:44.053089+00:00"
+    },
+    {
+      "id": "36aaad8f-3bfa-4feb-b4e5-ffdcc944e4da",
+      "text": "The statistic claiming reading decreases stress by 68% is based on a single small-scale 2009 study measuring physiological changes after only six minutes of silent reading, which does not extrapolate meaningfully to long-term mental health outcomes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4f2bb113-2e9a-4f88-81d8-ee9f8d9c6350",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:44.081063+00:00"
+    },
+    {
+      "id": "b4f6a3e8-18d5-48af-8eb6-9c2ca5a49f81",
+      "text": "Long-term aerobic exercise directly promotes neurogenesis in the hippocampus and significantly improves cardiovascular function, providing quantifiable superior physical and neurological outcomes compared to the generalized psychological stress reduction benefits of passive reading.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4f2bb113-2e9a-4f88-81d8-ee9f8d9c6350",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:44.081865+00:00"
+    },
+    {
+      "id": "2377f44d-1dca-4f86-85ba-0b46c2e59e7e",
+      "text": "Efficiency measures the ratio of output reliability (retention) to input cost (time, effort). If deep reading a document takes three times longer to yield only 10% higher retention than a fast multimodal review, this low output-to-input ratio contradicts the label of \"processing efficiency.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b9f5c6ea-81a5-4d65-bebe-b0c1f37e169c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:48.780665+00:00"
+    },
+    {
+      "id": "bb3327e9-bf66-4825-96e5-cf42b9d111b8",
+      "text": "Increased mental effort dedicated to navigating poorly structured text or complex syntax results in detrimental extraneous cognitive load, according to Cognitive Load Theory. This non-productive effort taxes working memory and decreases actual learning outcomes, even as the total perceived mental expenditure rises.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "b9f5c6ea-81a5-4d65-bebe-b0c1f37e169c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:48.781339+00:00"
+    },
+    {
+      "id": "9ed642b1-256a-4833-8eb3-18aa5237095e",
+      "text": "Deep foundational reading in fields like Silicon Valley computer science is actively institutionalized (e.g., early Google and 3M policies) because theoretical knowledge generates radical efficiency improvements and scalable, tangible project results impossible through mere incremental execution.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c4ff5b36-db76-4a9d-b10f-54206cb43d4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:48.891178+00:00"
+    },
+    {
+      "id": "5bd2fd89-2c78-47bb-8de7-1dee732d93c8",
+      "text": "Deep curation often involves the presentation of canonical texts or opposing viewpoints (e.g., academic reading lists and university curricula), which are designed to expose the reader to structural complexity and counterarguments, functioning as an intellectual antidote to simple echo chamber reinforcement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "bb15c0d1-5bb6-4c4c-8113-989174ff5d5a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:50.961786+00:00"
+    },
+    {
+      "id": "c2cd9c5b-63c0-4d2b-ae3b-62eec0d3533a",
+      "text": "Psychological research suggests that the constant, emotionally-charged, and algorithmically-reinforced feedback loops of social media fundamentally alter cognition and tribal identity faster than the slow input of deep reading, making rapid digital confirmation potentially more rigidifying and resistant to change.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "bb15c0d1-5bb6-4c4c-8113-989174ff5d5a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:50.961827+00:00"
+    },
+    {
+      "id": "e201e73c-d2b5-4b7f-bb49-6160e00fa0a9",
+      "text": "Reading routinely occurs during personal downtime (e.g., commutes, lunch breaks, replacing social media use) that employees would not dedicate to internal advocacy or high-level professional networking, thus eliminating the claimed negative displacement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "28940933-c88a-4bd7-8d0c-7384729d9d29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:53.069384+00:00"
+    },
+    {
+      "id": "adda2db2-3d72-495d-8c04-d49a9a5c85e9",
+      "text": "Deep expertise derived from technical or strategic reading provides the substance necessary for effective internal advocacy and high-visibility success. For example, knowledge of complex regulatory changes enables a manager to lead a core institutional preparedness project, thereby gaining sponsorship.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "28940933-c88a-4bd7-8d0c-7384729d9d29",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:53.069428+00:00"
+    },
+    {
+      "id": "5f2da156-f821-42e0-a0b9-2861bb948120",
+      "text": "Disciplined study within rigorous ideological systems, such as advanced dialectics or Islamic jurisprudence (Fiqh), requires continuous, detailed internal critique against all rival interpretations, refining and transferring highly developed critical reasoning skills to external frameworks.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5c27f2de-bbd0-4a80-a2f3-273467dd0e7d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:53.830219+00:00"
+    },
+    {
+      "id": "db09f500-2f20-4721-b088-8eb5f3810ee9",
+      "text": "Mastery in complex systems engineering, such as designing distributed cloud architectures or air traffic control networks, is determined by cognitive abilities like risk analysis, abstraction, and simulation, not the minimal physical manipulation skills used for hardware installation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a545e486-2515-4623-a76a-08e0982cc001",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:53.891739+00:00"
+    },
+    {
+      "id": "f8f25f2c-146f-4b20-8757-66d934c8e0a1",
+      "text": "Practical competence is measured by the reliability, efficiency, and cost optimization of the finalized system, making theoretical understanding and strategic decision-making the relevant metrics, not inherent physical aptitude like fine motor dexterity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a545e486-2515-4623-a76a-08e0982cc001",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:53.891769+00:00"
+    },
+    {
+      "id": "c178bbe0-c6bf-481e-a238-20e20c9df26f",
+      "text": "Decades of longitudinal research into cognitive reserve show that sustained, frequent reading habits significantly slow the rate of cognitive decline and correlate to lowered lifetime risks of age-related neurological diseases, providing robust long-term mental health evidence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "36aaad8f-3bfa-4feb-b4e5-ffdcc944e4da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:54.396951+00:00"
+    },
+    {
+      "id": "16b8bc84-6bfa-49e3-aa5e-ac51c448fbee",
+      "text": "Digital newsfeeds curated by proprietary algorithms filter information for billions of users daily, influencing national elections (e.g., 2016 US election, Brexit) and generating partisan echo chambers across entire populations at a scale far exceeding niche academic publishing lists.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4d1dcde7-1f70-4cf7-b2f4-8f3680b0bb06",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:54.512481+00:00"
+    },
+    {
+      "id": "5fea5826-8d28-40a8-9a2e-0378f06ecc46",
+      "text": "Legislation and permanent policy changes, such as the EU\u2019s Digital Services Act (DSA) and Section 230 debates in the US, directly respond to pressure and problems generated by viral digital discourse, demonstrating profound institutional influence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4d1dcde7-1f70-4cf7-b2f4-8f3680b0bb06",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:54.512526+00:00"
+    },
+    {
+      "id": "ef11ab4a-0573-4df1-b588-b3944c689d13",
+      "text": "Textual and archaeological evidence is not rendered obsolete, as genomic data cannot interpret socio-political structures, cultural practices, or specific historical events, which still rely on contextualization provided solely by the original non-genomic sources.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "650c2842-1c11-49ff-9b20-40d535faa44c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:54.722426+00:00"
+    },
+    {
+      "id": "1984195d-7f7c-48af-b2a9-fe2b1b0db6ad",
+      "text": "Extensive reading of complex fiction demonstrably enhances \"Theory of Mind\" capabilities, which is the necessary skill of interpreting and predicting human intent. This perspective-taking ability is the direct foundation of practical social mastery required for effective negotiation, leadership, and teamwork.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "65edce3f-f2d4-48d3-b29e-fa6887b38fe9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:54.773182+00:00"
+    },
+    {
+      "id": "e551fc09-c01b-40e8-961e-380d0066f94b",
+      "text": "Only foundational texts provide the necessary primary source analysis skills and the ability to track the development of complex, sustained arguments, a critical academic skill lost when relying solely on fragmented, pre-interpreted secondary excerpts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "05027c91-890e-46ad-803c-1ed4896f0c0d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:55.023353+00:00"
+    },
+    {
+      "id": "d9073b65-b184-4d8c-a777-68a16da3ec0b",
+      "text": "Skipping foundational texts creates knowledge gaps, forcing more instructional time to be spent later on remedial efforts to explain the core concepts (like Newtonian mechanics) necessary to genuinely understand modern topics such as general relativity or quantum corrections.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "05027c91-890e-46ad-803c-1ed4896f0c0d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:55.023424+00:00"
+    },
+    {
+      "id": "5e5ac223-0daa-4d1b-846d-bc20d699148c",
+      "text": "The argument mistakenly compares distinct health metrics; superiority cannot be declared without a defined, shared metric that weights the value of cardiovascular function equally against cognitive benefits like memory retention or complex reasoning skills. Absent this metric, the claim of \\u201cquantifiable superior outcomes\\u201d is arbitrary and non-falsifiable.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b4f6a3e8-18d5-48af-8eb6-9c2ca5a49f81",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:55.570973+00:00"
+    },
+    {
+      "id": "d71bd8ae-589c-4e89-8afe-cae68c396fa2",
+      "text": "Reading (especially literary fiction) is scientifically shown to enhance 'Theory of Mind' and empathy by simulating complex social interactions, a specific, high-level neurological benefit that is entirely distinct from, and not inferior to, the cellular neurogenesis promoted by exercise. The argument incorrectly limits reading's benefit only to generalized psychological stress reduction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b4f6a3e8-18d5-48af-8eb6-9c2ca5a49f81",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:55.570999+00:00"
+    },
+    {
+      "id": "ef6ff228-a2b8-49b0-aec2-ab53e8ed8122",
+      "text": "The Socratic method in university curricula, particularly in law schools, explicitly requires students to argue intensely for pre-assigned positions, demonstrating that the adversarial practice of rhetorical defense is the primary tool used to forge advanced critical thinking skills.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cbb51d9e-e142-42c5-b60e-53cd1a047432",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:56.914657+00:00"
+    },
+    {
+      "id": "ba2ad072-8418-4278-8c61-506f495dc19a",
+      "text": "Normative philosophy, such as defining moral systems like utilitarianism or deontology, addresses conceptual questions of what *ought* to be done, which cannot be invalidated by empirical scientific findings describing only what *is*.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:56.944134+00:00"
+    },
+    {
+      "id": "a18a75ec-ecfe-4cfc-9e93-c2d64d47186d",
+      "text": "Core foundational works, such as Descartes\u2019 *Meditations* or Hume\u2019s work on causality, provide the conceptual vocabulary and historical framework that subsequent scientific discoveries clarify and refine, rather than being rendered totally obsolete.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:56.944177+00:00"
+    },
+    {
+      "id": "f0114220-e6b3-47cc-8b0f-3c8e46854a85",
+      "text": "Philosophical strands like existentialism or certain types of non-reductive physicalism do not rely on fragile, pre-scientific assumptions about agency, as they already anticipate and integrate challenges to traditional notions of the self.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:56.944199+00:00"
+    },
+    {
+      "id": "6a08bdb0-7ec2-4bea-819a-441e16390316",
+      "text": "Reading foundational texts reveals the historical conceptual struggles and non-obvious paths of discovery, which modern textbooks often erase by presenting scientific history as a linear march toward current knowledge. For example, studying Kepler\u2019s original astronomical laws clarifies the intense, non-linear process of discarding earlier, flawed models, an insight critical for developing advanced scientific discernment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e10b39a8-d7ea-4b58-9e5f-d29f4014f4ed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:56.965729+00:00"
+    },
+    {
+      "id": "13cd9094-09c5-4a38-ad20-b7009cb3bd5e",
+      "text": "Video games utilize immediate feedback loops and continuous rewards within their structure, driving sustained, intense visual and auditory attention for hours in millions of non-compensated users, demonstrating the digital environment's capacity to cultivate prolonged focus.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8f4f8b02-7101-4128-89bd-258d66dc2895",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:55:58.218161+00:00"
+    },
+    {
+      "id": "13e89d87-5ce1-4b92-ae34-3d7fb3f0782f",
+      "text": "The long-term development of robust, high-order cognitive schemas (germane load) results precisely from the effort needed to resolve complex, initially confusing syntax, fostering superior pattern recognition and analytical abilities over time. Exposure to \"desirable difficulties,\" such as complex text structures, increases depth of processing and long-term retention, contradicting the goal of minimizing all immediate effort.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "bb3327e9-bf66-4825-96e5-cf42b9d111b8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:56:04.829571+00:00"
+    },
+    {
+      "id": "daaf8e54-eee3-40d1-a6f9-3f7c94b22e80",
+      "text": "Digital media reports show prolonged engagement in activities like dedicated video gaming and long-form streaming (e.g., watching movies or educational content) constitutes significant daily user time, requiring sustained focus for hours, not rapid context switching.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "187c7917-1bb2-4758-bc6d-585ef8f4b604",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:56:05.397379+00:00"
+    },
+    {
+      "id": "6e7e3207-e210-4b4a-b310-e45b414ee849",
+      "text": "Deep, analytical reading builds cognitive capacities for synthesizing disparate conceptual models and applying knowledge to novel, complex problems, which is a qualitative output entirely missed by raw percentage retention metrics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2377f44d-1dca-4f86-85ba-0b46c2e59e7e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T23:56:05.714505+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "0d35a186-94f4-4ee9-a6a8-221cdb806346",
+      "target": "c7da84a3-c340-46ee-babb-7c42badc90c8",
+      "type": "objection"
+    },
+    {
+      "source": "0d35a186-94f4-4ee9-a6a8-221cdb806346",
+      "target": "a5bcb483-3709-4642-9863-63eee5fb88d6",
+      "type": "objection"
+    },
+    {
+      "source": "311b1bc2-7a7a-4ba2-9f47-60fc3a617fb0",
+      "target": "2d72fceb-bc25-4ec3-831c-21e1be80757e",
+      "type": "objection"
+    },
+    {
+      "source": "311b1bc2-7a7a-4ba2-9f47-60fc3a617fb0",
+      "target": "5691715d-f0bb-4ef7-bfc0-8dd19be8a7f5",
+      "type": "objection"
+    },
+    {
+      "source": "232dcda8-0967-479f-b182-b60ec858b972",
+      "target": "853bff3e-239b-4a74-b88d-2e8972ef370e",
+      "type": "objection"
+    },
+    {
+      "source": "232dcda8-0967-479f-b182-b60ec858b972",
+      "target": "647e91a2-e3ea-4b27-923a-3ff8afad41a2",
+      "type": "objection"
+    },
+    {
+      "source": "18cbc993-5e8b-46cf-b257-0acd5456b3c6",
+      "target": "876c2393-a76d-4e3c-98c7-4f8020a56a07",
+      "type": "objection"
+    },
+    {
+      "source": "18cbc993-5e8b-46cf-b257-0acd5456b3c6",
+      "target": "153c318a-82d2-4a21-98ed-51876c5c4e7e",
+      "type": "objection"
+    },
+    {
+      "source": "7fdd04e3-957c-49f3-b31f-a5cb3c51831a",
+      "target": "b3cef734-693e-4d92-9168-e05d61054e85",
+      "type": "objection"
+    },
+    {
+      "source": "7fdd04e3-957c-49f3-b31f-a5cb3c51831a",
+      "target": "9d5340e3-bee9-49f5-a840-b4a568cbfccb",
+      "type": "objection"
+    },
+    {
+      "source": "c0970d53-1202-4f44-bc44-3c2b316f834c",
+      "target": "a1365d13-6291-4ac1-b808-4a22f7f8e6a6",
+      "type": "objection"
+    },
+    {
+      "source": "c0970d53-1202-4f44-bc44-3c2b316f834c",
+      "target": "c71fce78-cd3d-4e2b-aecb-2fdd0eaf10a4",
+      "type": "objection"
+    },
+    {
+      "source": "2d72fceb-bc25-4ec3-831c-21e1be80757e",
+      "target": "aa398a67-a571-43a2-b1c4-11f51e43b721",
+      "type": "response"
+    },
+    {
+      "source": "2d72fceb-bc25-4ec3-831c-21e1be80757e",
+      "target": "21023e5f-6437-406c-b9ef-b8b530e5131e",
+      "type": "response"
+    },
+    {
+      "source": "a5bcb483-3709-4642-9863-63eee5fb88d6",
+      "target": "df711401-d54b-4f5c-b9c3-8d461e9a6456",
+      "type": "response"
+    },
+    {
+      "source": "a5bcb483-3709-4642-9863-63eee5fb88d6",
+      "target": "8d37cbc4-dcf3-42e0-a8f0-cbcccc55e8c6",
+      "type": "response"
+    },
+    {
+      "source": "647e91a2-e3ea-4b27-923a-3ff8afad41a2",
+      "target": "301aa053-d6c7-4fc9-880f-650e1fdcdd49",
+      "type": "response"
+    },
+    {
+      "source": "647e91a2-e3ea-4b27-923a-3ff8afad41a2",
+      "target": "440c0911-86f6-4153-a283-3b9bf423b79d",
+      "type": "response"
+    },
+    {
+      "source": "b3cef734-693e-4d92-9168-e05d61054e85",
+      "target": "bd788cfa-54c5-41dc-8120-ae257e2e3b54",
+      "type": "response"
+    },
+    {
+      "source": "b3cef734-693e-4d92-9168-e05d61054e85",
+      "target": "be9d25a3-7ad1-4064-b28a-5f89ef2ea498",
+      "type": "response"
+    },
+    {
+      "source": "153c318a-82d2-4a21-98ed-51876c5c4e7e",
+      "target": "d4e1798b-3198-45ab-bbd8-adf0ed4d2b81",
+      "type": "response"
+    },
+    {
+      "source": "153c318a-82d2-4a21-98ed-51876c5c4e7e",
+      "target": "e1779219-cd3f-4f1a-9a74-39831d34ef71",
+      "type": "response"
+    },
+    {
+      "source": "21023e5f-6437-406c-b9ef-b8b530e5131e",
+      "target": "283c5b11-c5fe-4f6b-85a1-eb07d3975ba6",
+      "type": "response"
+    },
+    {
+      "source": "8d37cbc4-dcf3-42e0-a8f0-cbcccc55e8c6",
+      "target": "bf2c86a8-ee7f-4198-8dce-ffeb296e67d6",
+      "type": "response"
+    },
+    {
+      "source": "8d37cbc4-dcf3-42e0-a8f0-cbcccc55e8c6",
+      "target": "030f8f50-2005-4a0a-a51a-ad5add453bf5",
+      "type": "response"
+    },
+    {
+      "source": "853bff3e-239b-4a74-b88d-2e8972ef370e",
+      "target": "1ba55ca1-e730-4c71-a25d-e1f977fb257b",
+      "type": "response"
+    },
+    {
+      "source": "853bff3e-239b-4a74-b88d-2e8972ef370e",
+      "target": "1e1d9f63-514a-475c-85b3-818db12e0493",
+      "type": "response"
+    },
+    {
+      "source": "c71fce78-cd3d-4e2b-aecb-2fdd0eaf10a4",
+      "target": "82dd745c-d415-4755-970d-6c953dad71af",
+      "type": "response"
+    },
+    {
+      "source": "c71fce78-cd3d-4e2b-aecb-2fdd0eaf10a4",
+      "target": "805b4fbe-07b1-463d-93cb-3ef4a7f55b0d",
+      "type": "response"
+    },
+    {
+      "source": "876c2393-a76d-4e3c-98c7-4f8020a56a07",
+      "target": "a8f6ab2d-9888-46ec-bc87-67f96b07e5c0",
+      "type": "response"
+    },
+    {
+      "source": "876c2393-a76d-4e3c-98c7-4f8020a56a07",
+      "target": "92763b0a-f1b4-4618-8a9d-95e626396027",
+      "type": "response"
+    },
+    {
+      "source": "aa398a67-a571-43a2-b1c4-11f51e43b721",
+      "target": "f2472383-735b-4f1e-8cb6-25a1cdd9d090",
+      "type": "response"
+    },
+    {
+      "source": "df711401-d54b-4f5c-b9c3-8d461e9a6456",
+      "target": "3b8fafe6-e0fd-48a6-8989-c6a21747bc44",
+      "type": "response"
+    },
+    {
+      "source": "df711401-d54b-4f5c-b9c3-8d461e9a6456",
+      "target": "5473be01-1fe7-4ea4-ad7d-b5b06c849fdc",
+      "type": "response"
+    },
+    {
+      "source": "301aa053-d6c7-4fc9-880f-650e1fdcdd49",
+      "target": "5ceb7dd9-9295-4e36-88d2-2fb2e5958fa1",
+      "type": "response"
+    },
+    {
+      "source": "301aa053-d6c7-4fc9-880f-650e1fdcdd49",
+      "target": "da0e20d0-8df6-4904-9dd8-7e370dae1202",
+      "type": "response"
+    },
+    {
+      "source": "d4e1798b-3198-45ab-bbd8-adf0ed4d2b81",
+      "target": "35e0aa2f-f61c-4822-897c-b8a10707e499",
+      "type": "response"
+    },
+    {
+      "source": "d4e1798b-3198-45ab-bbd8-adf0ed4d2b81",
+      "target": "af002bb4-2c84-407d-a151-6f65f41bec36",
+      "type": "response"
+    },
+    {
+      "source": "440c0911-86f6-4153-a283-3b9bf423b79d",
+      "target": "ea5e10c4-e408-465c-b08c-226ba8ad352a",
+      "type": "response"
+    },
+    {
+      "source": "82dd745c-d415-4755-970d-6c953dad71af",
+      "target": "d97179e4-2ef3-4c59-b928-94e798bf3822",
+      "type": "response"
+    },
+    {
+      "source": "e1779219-cd3f-4f1a-9a74-39831d34ef71",
+      "target": "36b85f7a-27e2-4e72-bb7b-be4792a53930",
+      "type": "response"
+    },
+    {
+      "source": "e1779219-cd3f-4f1a-9a74-39831d34ef71",
+      "target": "d357277f-7fb6-436c-9044-0276bcdef298",
+      "type": "response"
+    },
+    {
+      "source": "1ba55ca1-e730-4c71-a25d-e1f977fb257b",
+      "target": "c8a750ed-a6c6-41f7-9545-afeb493c0143",
+      "type": "response"
+    },
+    {
+      "source": "92763b0a-f1b4-4618-8a9d-95e626396027",
+      "target": "ce49c7b7-d4e9-4530-9a23-278e230ff9ae",
+      "type": "response"
+    },
+    {
+      "source": "92763b0a-f1b4-4618-8a9d-95e626396027",
+      "target": "61d6b7a9-f435-427e-8fe7-62ed502a6e54",
+      "type": "response"
+    },
+    {
+      "source": "805b4fbe-07b1-463d-93cb-3ef4a7f55b0d",
+      "target": "8c637fb1-f2c2-4aba-b1a9-44040ed8eb58",
+      "type": "response"
+    },
+    {
+      "source": "bd788cfa-54c5-41dc-8120-ae257e2e3b54",
+      "target": "3cb18083-b71c-4464-8028-687d56330a05",
+      "type": "response"
+    },
+    {
+      "source": "bd788cfa-54c5-41dc-8120-ae257e2e3b54",
+      "target": "96cda131-98c0-44fc-8d95-a341027af154",
+      "type": "response"
+    },
+    {
+      "source": "a8f6ab2d-9888-46ec-bc87-67f96b07e5c0",
+      "target": "51c2bb0f-7e9d-4ebf-90bb-00770342641b",
+      "type": "response"
+    },
+    {
+      "source": "1e1d9f63-514a-475c-85b3-818db12e0493",
+      "target": "3a7a72b7-aad9-4a6f-9d8c-aa3a2ae3d992",
+      "type": "response"
+    },
+    {
+      "source": "1e1d9f63-514a-475c-85b3-818db12e0493",
+      "target": "dd0b9c9f-d7d3-475c-a6bf-c124c373da0e",
+      "type": "response"
+    },
+    {
+      "source": "be9d25a3-7ad1-4064-b28a-5f89ef2ea498",
+      "target": "6059d28d-f5fe-43fa-8026-7e88329002f8",
+      "type": "response"
+    },
+    {
+      "source": "5a8011a1-87b9-4313-9cff-5db9c80f16d8",
+      "target": "4520e371-ecad-415b-be8d-09e8823b7915",
+      "type": "objection"
+    },
+    {
+      "source": "5a8011a1-87b9-4313-9cff-5db9c80f16d8",
+      "target": "b8b96442-f6bb-4002-be02-b88dbfc0c02e",
+      "type": "objection"
+    },
+    {
+      "source": "5bf0d2eb-dd9f-4407-aee0-c43cd7af1a5e",
+      "target": "f7f0dbce-a882-44cf-8e4f-5ab9714819f0",
+      "type": "objection"
+    },
+    {
+      "source": "5bf0d2eb-dd9f-4407-aee0-c43cd7af1a5e",
+      "target": "4f2bb113-2e9a-4f88-81d8-ee9f8d9c6350",
+      "type": "objection"
+    },
+    {
+      "source": "f1f5a00b-1070-4282-adb8-b3fa901bc4ea",
+      "target": "d2a5f347-6811-40fc-960e-d511e981118d",
+      "type": "objection"
+    },
+    {
+      "source": "f1f5a00b-1070-4282-adb8-b3fa901bc4ea",
+      "target": "878d2d48-5b0a-4f62-b784-82afe88e6022",
+      "type": "objection"
+    },
+    {
+      "source": "aa303dbf-538f-4230-b408-d53f44ba2e53",
+      "target": "ad5f3f58-6c28-4bca-bf2c-9ea4c8e6afe5",
+      "type": "objection"
+    },
+    {
+      "source": "aa303dbf-538f-4230-b408-d53f44ba2e53",
+      "target": "10e3ec91-9c96-4c6b-9379-578441d9fe2c",
+      "type": "objection"
+    },
+    {
+      "source": "dcda8ff9-e8f7-43ca-8dfd-dbea32aeebe6",
+      "target": "7d771c04-6997-409a-a70d-0dff9ff3a7d7",
+      "type": "objection"
+    },
+    {
+      "source": "dcda8ff9-e8f7-43ca-8dfd-dbea32aeebe6",
+      "target": "b9f5c6ea-81a5-4d65-bebe-b0c1f37e169c",
+      "type": "objection"
+    },
+    {
+      "source": "4151bcfa-3980-4d0d-a484-d406de8c64b8",
+      "target": "8672b628-4f52-467a-a66d-5343348e9171",
+      "type": "objection"
+    },
+    {
+      "source": "4151bcfa-3980-4d0d-a484-d406de8c64b8",
+      "target": "c8ed698d-b153-4b4e-8d96-da087d3ffc8e",
+      "type": "objection"
+    },
+    {
+      "source": "f7f0dbce-a882-44cf-8e4f-5ab9714819f0",
+      "target": "c4ff5b36-db76-4a9d-b10f-54206cb43d4b",
+      "type": "response"
+    },
+    {
+      "source": "f7f0dbce-a882-44cf-8e4f-5ab9714819f0",
+      "target": "28940933-c88a-4bd7-8d0c-7384729d9d29",
+      "type": "response"
+    },
+    {
+      "source": "4520e371-ecad-415b-be8d-09e8823b7915",
+      "target": "bb15c0d1-5bb6-4c4c-8113-989174ff5d5a",
+      "type": "response"
+    },
+    {
+      "source": "4520e371-ecad-415b-be8d-09e8823b7915",
+      "target": "4d1dcde7-1f70-4cf7-b2f4-8f3680b0bb06",
+      "type": "response"
+    },
+    {
+      "source": "b8b96442-f6bb-4002-be02-b88dbfc0c02e",
+      "target": "cbb51d9e-e142-42c5-b60e-53cd1a047432",
+      "type": "response"
+    },
+    {
+      "source": "b8b96442-f6bb-4002-be02-b88dbfc0c02e",
+      "target": "5c27f2de-bbd0-4a80-a2f3-273467dd0e7d",
+      "type": "response"
+    },
+    {
+      "source": "7d771c04-6997-409a-a70d-0dff9ff3a7d7",
+      "target": "187c7917-1bb2-4758-bc6d-585ef8f4b604",
+      "type": "response"
+    },
+    {
+      "source": "7d771c04-6997-409a-a70d-0dff9ff3a7d7",
+      "target": "8f4f8b02-7101-4128-89bd-258d66dc2895",
+      "type": "response"
+    },
+    {
+      "source": "ad5f3f58-6c28-4bca-bf2c-9ea4c8e6afe5",
+      "target": "e10b39a8-d7ea-4b58-9e5f-d29f4014f4ed",
+      "type": "response"
+    },
+    {
+      "source": "ad5f3f58-6c28-4bca-bf2c-9ea4c8e6afe5",
+      "target": "05027c91-890e-46ad-803c-1ed4896f0c0d",
+      "type": "response"
+    },
+    {
+      "source": "c8ed698d-b153-4b4e-8d96-da087d3ffc8e",
+      "target": "a545e486-2515-4623-a76a-08e0982cc001",
+      "type": "response"
+    },
+    {
+      "source": "c8ed698d-b153-4b4e-8d96-da087d3ffc8e",
+      "target": "65edce3f-f2d4-48d3-b29e-fa6887b38fe9",
+      "type": "response"
+    },
+    {
+      "source": "10e3ec91-9c96-4c6b-9379-578441d9fe2c",
+      "target": "650c2842-1c11-49ff-9b20-40d535faa44c",
+      "type": "response"
+    },
+    {
+      "source": "10e3ec91-9c96-4c6b-9379-578441d9fe2c",
+      "target": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "type": "response"
+    },
+    {
+      "source": "4f2bb113-2e9a-4f88-81d8-ee9f8d9c6350",
+      "target": "36aaad8f-3bfa-4feb-b4e5-ffdcc944e4da",
+      "type": "response"
+    },
+    {
+      "source": "4f2bb113-2e9a-4f88-81d8-ee9f8d9c6350",
+      "target": "b4f6a3e8-18d5-48af-8eb6-9c2ca5a49f81",
+      "type": "response"
+    },
+    {
+      "source": "b9f5c6ea-81a5-4d65-bebe-b0c1f37e169c",
+      "target": "2377f44d-1dca-4f86-85ba-0b46c2e59e7e",
+      "type": "response"
+    },
+    {
+      "source": "b9f5c6ea-81a5-4d65-bebe-b0c1f37e169c",
+      "target": "bb3327e9-bf66-4825-96e5-cf42b9d111b8",
+      "type": "response"
+    },
+    {
+      "source": "c4ff5b36-db76-4a9d-b10f-54206cb43d4b",
+      "target": "9ed642b1-256a-4833-8eb3-18aa5237095e",
+      "type": "response"
+    },
+    {
+      "source": "bb15c0d1-5bb6-4c4c-8113-989174ff5d5a",
+      "target": "5bd2fd89-2c78-47bb-8de7-1dee732d93c8",
+      "type": "response"
+    },
+    {
+      "source": "bb15c0d1-5bb6-4c4c-8113-989174ff5d5a",
+      "target": "c2cd9c5b-63c0-4d2b-ae3b-62eec0d3533a",
+      "type": "response"
+    },
+    {
+      "source": "28940933-c88a-4bd7-8d0c-7384729d9d29",
+      "target": "e201e73c-d2b5-4b7f-bb49-6160e00fa0a9",
+      "type": "response"
+    },
+    {
+      "source": "28940933-c88a-4bd7-8d0c-7384729d9d29",
+      "target": "adda2db2-3d72-495d-8c04-d49a9a5c85e9",
+      "type": "response"
+    },
+    {
+      "source": "5c27f2de-bbd0-4a80-a2f3-273467dd0e7d",
+      "target": "5f2da156-f821-42e0-a0b9-2861bb948120",
+      "type": "response"
+    },
+    {
+      "source": "a545e486-2515-4623-a76a-08e0982cc001",
+      "target": "db09f500-2f20-4721-b088-8eb5f3810ee9",
+      "type": "response"
+    },
+    {
+      "source": "a545e486-2515-4623-a76a-08e0982cc001",
+      "target": "f8f25f2c-146f-4b20-8757-66d934c8e0a1",
+      "type": "response"
+    },
+    {
+      "source": "36aaad8f-3bfa-4feb-b4e5-ffdcc944e4da",
+      "target": "c178bbe0-c6bf-481e-a238-20e20c9df26f",
+      "type": "response"
+    },
+    {
+      "source": "4d1dcde7-1f70-4cf7-b2f4-8f3680b0bb06",
+      "target": "16b8bc84-6bfa-49e3-aa5e-ac51c448fbee",
+      "type": "response"
+    },
+    {
+      "source": "4d1dcde7-1f70-4cf7-b2f4-8f3680b0bb06",
+      "target": "5fea5826-8d28-40a8-9a2e-0378f06ecc46",
+      "type": "response"
+    },
+    {
+      "source": "650c2842-1c11-49ff-9b20-40d535faa44c",
+      "target": "ef11ab4a-0573-4df1-b588-b3944c689d13",
+      "type": "response"
+    },
+    {
+      "source": "65edce3f-f2d4-48d3-b29e-fa6887b38fe9",
+      "target": "1984195d-7f7c-48af-b2a9-fe2b1b0db6ad",
+      "type": "response"
+    },
+    {
+      "source": "05027c91-890e-46ad-803c-1ed4896f0c0d",
+      "target": "e551fc09-c01b-40e8-961e-380d0066f94b",
+      "type": "response"
+    },
+    {
+      "source": "05027c91-890e-46ad-803c-1ed4896f0c0d",
+      "target": "d9073b65-b184-4d8c-a777-68a16da3ec0b",
+      "type": "response"
+    },
+    {
+      "source": "b4f6a3e8-18d5-48af-8eb6-9c2ca5a49f81",
+      "target": "5e5ac223-0daa-4d1b-846d-bc20d699148c",
+      "type": "response"
+    },
+    {
+      "source": "b4f6a3e8-18d5-48af-8eb6-9c2ca5a49f81",
+      "target": "d71bd8ae-589c-4e89-8afe-cae68c396fa2",
+      "type": "response"
+    },
+    {
+      "source": "cbb51d9e-e142-42c5-b60e-53cd1a047432",
+      "target": "ef6ff228-a2b8-49b0-aec2-ab53e8ed8122",
+      "type": "response"
+    },
+    {
+      "source": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "target": "ba2ad072-8418-4278-8c61-506f495dc19a",
+      "type": "response"
+    },
+    {
+      "source": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "target": "a18a75ec-ecfe-4cfc-9e93-c2d64d47186d",
+      "type": "response"
+    },
+    {
+      "source": "413026fc-8dcb-43f1-8602-6bd0f54180f0",
+      "target": "f0114220-e6b3-47cc-8b0f-3c8e46854a85",
+      "type": "response"
+    },
+    {
+      "source": "e10b39a8-d7ea-4b58-9e5f-d29f4014f4ed",
+      "target": "6a08bdb0-7ec2-4bea-819a-441e16390316",
+      "type": "response"
+    },
+    {
+      "source": "8f4f8b02-7101-4128-89bd-258d66dc2895",
+      "target": "13cd9094-09c5-4a38-ad20-b7009cb3bd5e",
+      "type": "response"
+    },
+    {
+      "source": "bb3327e9-bf66-4825-96e5-cf42b9d111b8",
+      "target": "13e89d87-5ce1-4b92-ae34-3d7fb3f0782f",
+      "type": "response"
+    },
+    {
+      "source": "187c7917-1bb2-4758-bc6d-585ef8f4b604",
+      "target": "daaf8e54-eee3-40d1-a6f9-3f7c94b22e80",
+      "type": "response"
+    },
+    {
+      "source": "2377f44d-1dca-4f86-85ba-0b46c2e59e7e",
+      "target": "6e7e3207-e210-4b4a-b310-e45b414ee849",
+      "type": "response"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Character limits based on depth
+            const limits = {
+                0: 100,  // Root nodes - show more
+                1: 80,
+                2: 60,
+                3: 40,
+                4: 30,
+                5: 25
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            const widths = {
+                0: 180,
+                1: 150,
+                2: 130,
+                3: 100,
+                4: 80,
+                5: 70
+            };
+
+            const heights = {
+                0: 60,
+                1: 50,
+                2: 45,
+                3: 40,
+                4: 35,
+                5: 30
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 70,
+                height: heights[Math.min(d.depth, 5)] || 30
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Create force simulation with improved parameters
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Longer links for deeper nodes
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return 120 + (depth * 20);
+            }))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            });
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes with improved tooltips
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showNodeDetails(d);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation();
+                toggleSubtree(d);
+            })
+            .append("title")
+            .text(d => getTooltipText(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height);
+
+            // Create HTML content with badge and text
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center");
+
+            // Add badge (only for depth 0-1 to avoid clutter)
+            if (d.depth <= 1) {
+                div.append("xhtml:div")
+                    .attr("class", `node-badge ${d.type}`)
+                    .text(d.type);
+            }
+
+            // Add text content
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.depth === 0 ? "13px" : (d.depth <= 2 ? "11px" : "10px"))
+                .style("font-weight", d.depth === 0 ? "600" : "500")
+                .text(displayText);
+        });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebar-content");
+
+            let html = `
+                <h2>Argument Details</h2>
+                <div class="node-text">${d.text}</div>
+                <div class="node-meta"><strong>Type:</strong> ${d.type}</div>
+                <div class="node-meta"><strong>Side:</strong> ${d.side}</div>
+                <div class="node-meta"><strong>Depth:</strong> ${d.depth}</div>
+                <div class="node-meta"><strong>Children:</strong> ${d.children_count}</div>
+                <div class="node-meta"><strong>Source:</strong> ${d.source}</div>
+            `;
+
+            if (d.references && d.references.length > 0) {
+                html += '<div class="node-meta"><strong>References:</strong></div><ul>';
+                d.references.forEach(ref => {
+                    html += `<li style="margin-left: 20px; font-size: 0.85em;"><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+                html += '</ul>';
+            }
+
+            content.innerHTML = html;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset view
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+        }
+
+        // Fit graph to view
+        function fitToView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.9;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

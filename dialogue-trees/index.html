@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialogue Trees - Index</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Index-specific styles */
+
+        .index-intro {
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            margin: 1.5em 0;
+            font-size: 1em;
+            line-height: 1.6;
+            border-radius: 0;
+        }
+
+        .debate-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .debate-item {
+            background: #fff;
+            padding: 8px 10px;
+            margin: 4px 0;
+            border-radius: 0;
+            border-left: 2px solid #0645ad;
+            transition: all 0.15s;
+            border: 1px solid #eaecf0;
+            border-left: 2px solid #0645ad;
+        }
+
+        .debate-item:hover {
+            background: #f8f9fa;
+            border-left-width: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .debate-title {
+            font-size: 0.95em;
+            font-weight: 400;
+            margin-bottom: 3px;
+            line-height: 1.4;
+        }
+
+        .debate-title a {
+            color: #0645ad;
+            text-decoration: none;
+        }
+
+        .debate-title a:hover {
+            text-decoration: underline;
+        }
+
+        .debate-meta {
+            font-size: 0.8em;
+            color: #72777d;
+            margin-top: 2px;
+        }
+
+        .debate-stats {
+            display: inline;
+            margin-left: 6px;
+        }
+
+        .stat {
+            display: inline;
+            margin-right: 8px;
+            color: #72777d;
+        }
+
+        .stat::before {
+            content: "• ";
+            margin-right: 3px;
+        }
+
+        .stat:first-child::before {
+            content: "";
+            margin-right: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #72777d;
+            background: #f8f9fa;
+            border-radius: 0;
+            margin: 2em 0;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state code {
+            background: #eaecf0;
+            padding: 2px 6px;
+            border-radius: 0;
+            font-size: 0.9em;
+        }
+
+        .section-heading {
+            font-size: 1.3em;
+            font-weight: 400;
+            margin: 2em 0 1em 0;
+            padding-bottom: 0.2em;
+            border-bottom: 1px solid #a2a9b1;
+            color: #202122;
+        }
+
+        .debate-count {
+            color: #54595d;
+            font-weight: 400;
+            font-size: 0.85em;
+            margin-left: 8px;
+        }
+
+        /* Category sections - 3 column layout */
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1em;
+            margin: 1.5em 0;
+        }
+
+        .category-section {
+            margin: 0;
+            background: #fafafa;
+            padding: 10px;
+            border-radius: 0;
+            border: 1px solid #d1d5db;
+        }
+
+        .category-header {
+            font-size: 1.05em;
+            font-weight: 400;
+            color: #202122;
+            margin: 0 0 0.6em 0;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-left: 3px solid #202122;
+            border-radius: 0;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s;
+        }
+
+        .category-header:hover {
+            background: #eaecf0;
+        }
+
+        /* Category-specific colors */
+        #category-politics-and-governance .category-header {
+            border-left-color: #4a90e2;
+        }
+        #category-politics-and-governance .category-header:hover {
+            background: #e3f2fd;
+        }
+
+        #category-ethics-and-philosophy .category-header {
+            border-left-color: #9b59b6;
+        }
+        #category-ethics-and-philosophy .category-header:hover {
+            background: #f3e5f5;
+        }
+
+        #category-technology-and-computing .category-header {
+            border-left-color: #16a085;
+        }
+        #category-technology-and-computing .category-header:hover {
+            background: #e0f2f1;
+        }
+
+        #category-economics-and-finance .category-header {
+            border-left-color: #27ae60;
+        }
+        #category-economics-and-finance .category-header:hover {
+            background: #e8f5e9;
+        }
+
+        #category-science-and-research .category-header {
+            border-left-color: #e67e22;
+        }
+        #category-science-and-research .category-header:hover {
+            background: #fff3e0;
+        }
+
+        #category-environment-and-climate .category-header {
+            border-left-color: #2ecc71;
+        }
+        #category-environment-and-climate .category-header:hover {
+            background: #e8f5e9;
+        }
+
+        #category-society-and-culture .category-header {
+            border-left-color: #e74c3c;
+        }
+        #category-society-and-culture .category-header:hover {
+            background: #ffebee;
+        }
+
+        #category-future-and-innovation .category-header {
+            border-left-color: #8e44ad;
+        }
+        #category-future-and-innovation .category-header:hover {
+            background: #f3e5f5;
+        }
+
+        .category-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .category-icon {
+            font-size: 1.1em;
+            flex-shrink: 0;
+            color: #54595d;
+            font-weight: 400;
+        }
+
+        .category-name {
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.01em;
+        }
+
+        .category-description {
+            display: none;
+        }
+
+        .category-count {
+            background: #fff;
+            color: #54595d;
+            padding: 2px 7px;
+            border-radius: 0;
+            font-size: 0.75em;
+            font-weight: 400;
+            border: 1px solid #c8ccd1;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .category-debates {
+            margin-left: 0;
+            margin-top: 0.5em;
+            max-height: none;
+            overflow: visible;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapse-indicator {
+            font-size: 0.8em;
+            color: #72777d;
+            transition: transform 0.2s;
+            font-weight: 700;
+        }
+
+        .category-section.collapsed .category-debates {
+            max-height: 180px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .category-section.collapsed .category-debates::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to bottom, rgba(250, 250, 250, 0), rgba(250, 250, 250, 1));
+            pointer-events: none;
+        }
+
+        .category-section.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+
+        /* Enhanced Logo Design */
+        .logo-container {
+            text-align: center;
+            margin: 0 0 2em 0;
+            padding: 3em 1em 2em 1em;
+            background: linear-gradient(135deg, #fafafa 0%, #f3f4f6 100%);
+            border-bottom: 2px solid #d1d5db;
+            position: relative;
+        }
+
+        .logo-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent 0%, #0645ad 50%, transparent 100%);
+        }
+
+        .logo-main {
+            max-width: 800px;
+            margin: 0 auto;
+            font-family: 'Fira Code', monospace;
+            text-align: center;
+        }
+
+        .logo-tree-art {
+            font-size: 1.1em;
+            line-height: 1.5;
+            color: #6b7280;
+            white-space: pre;
+            margin-bottom: 1em;
+            display: inline-block;
+            text-align: left;
+            position: relative;
+        }
+
+        .logo-branch {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .logo-text {
+            font-family: 'Fira Code', monospace;
+            font-size: 2.8em;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #1f2937;
+            text-shadow: 2px 2px 0px rgba(6, 69, 173, 0.1);
+            display: inline-block;
+            position: relative;
+        }
+
+        .logo-text.dialogue {
+            color: #0645ad;
+        }
+
+        .logo-text.trees {
+            color: #059669;
+        }
+
+        .logo-accent {
+            color: #6b7280;
+            font-size: 0.6em;
+            vertical-align: middle;
+            margin: 0 0.2em;
+        }
+
+        .logo-subtitle {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95em;
+            color: #6b7280;
+            margin-top: 0.8em;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .logo-decorative-line {
+            margin: 0.8em auto;
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, #d1d5db 20%, #9ca3af 50%, #d1d5db 80%, transparent 100%);
+        }
+
+
+        /* Override default h1 for index page */
+        .container > h1 {
+            display: none;
+        }
+
+        /* Adjust main content for both sidebars */
+        body .main-content {
+            margin-left: 240px;
+            margin-right: 280px;
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 1400px) {
+            .debates-sidebar {
+                display: none;
+            }
+
+            body .main-content {
+                margin-right: auto;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .categories-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .categories-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                display: block !important;
+            }
+
+            .container {
+                max-width: 100% !important;
+                padding: 20px;
+            }
+
+            .logo-container {
+                margin: 0 0 1.5em 0;
+                padding: 2em 0.5em 1.5em 0.5em;
+            }
+
+            .logo-tree-art {
+                font-size: 0.5em;
+                line-height: 1.4;
+            }
+
+            .logo-text {
+                font-size: 1.8em;
+            }
+
+            .logo-subtitle {
+                font-size: 0.75em;
+            }
+
+            .logo-decorative-line {
+                width: 80%;
+            }
+        }
+
+        /* Enhanced Sidebar Styles */
+        .sidebar-search {
+            margin-bottom: 15px;
+        }
+
+        .sidebar-search input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            border-radius: 2px;
+            font-size: 0.9em;
+            font-family: inherit;
+            background: #fff;
+            transition: border-color 0.15s;
+        }
+
+        .sidebar-search input:focus {
+            outline: none;
+            border-color: #0645ad;
+            box-shadow: 0 0 0 1px #0645ad;
+        }
+
+        .sidebar-overview-panel {
+            background: #fff;
+            border: 1px solid #a2a9b1;
+            border-radius: 2px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .sidebar-overview-header {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #202122;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #eaecf0;
+        }
+
+        .sidebar-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .sidebar-stat-item {
+            text-align: center;
+        }
+
+        .sidebar-stat-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #0645ad;
+            line-height: 1.2;
+        }
+
+        .sidebar-stat-label {
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        .sidebar-section {
+            background: #fff;
+            border: 1px solid #a2a9b1;
+            border-radius: 2px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .sidebar-section-header {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #202122;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #eaecf0;
+        }
+
+        .sidebar-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-nav li {
+            margin: 0;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            color: #202122;
+            text-decoration: none;
+            border-radius: 2px;
+            font-size: 0.85em;
+            transition: background 0.15s;
+        }
+
+        .sidebar-nav a:hover {
+            background: #eaecf0;
+        }
+
+        .sidebar-category-icon {
+            margin-right: 6px;
+            font-size: 1em;
+        }
+
+        .sidebar-category-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-category-badge {
+            background: #eaecf0;
+            color: #54595d;
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 0.85em;
+            font-weight: 500;
+            margin-left: 6px;
+        }
+
+        .sidebar-debates-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-debates-list li {
+            margin: 0;
+        }
+
+        .sidebar-debates-list a {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            color: #0645ad;
+            text-decoration: none;
+            border-radius: 2px;
+            font-size: 0.8em;
+            line-height: 1.3;
+            transition: background 0.15s;
+            gap: 6px;
+        }
+
+        .sidebar-debates-list a:hover {
+            background: #eaecf0;
+        }
+
+        .sidebar-debate-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-debate-badge {
+            background: #e6f3ff;
+            color: #0066cc;
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 0.85em;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-search,
+            .sidebar-overview-panel,
+            .sidebar-section {
+                margin-bottom: 10px;
+            }
+
+            .sidebar-stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Collect all debates once for reuse -->
+    
+    
+    
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    
+        
+            
+        
+            
+        
+            
+        
+    
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    
+        
+            
+        
+    
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    
+    
+    
+    
+
+    <!-- Table of Contents Sidebar -->
+    <div class="toc-sidebar" id="toc-sidebar">
+        <!-- Search Box -->
+        <div class="sidebar-search">
+            <input type="text" id="debate-search" placeholder="Search debates..." />
+        </div>
+
+        <!-- Overview Panel -->
+        <div class="sidebar-overview-panel">
+            <div class="sidebar-overview-header">Overview</div>
+            
+            
+            
+            <div class="sidebar-stats-grid">
+                <div class="sidebar-stat-item">
+                    <div class="sidebar-stat-value">50</div>
+                    <div class="sidebar-stat-label">Total Debates</div>
+                </div>
+                <div class="sidebar-stat-item">
+                    <div class="sidebar-stat-value">5181</div>
+                    <div class="sidebar-stat-label">Total Arguments</div>
+                </div>
+                <div class="sidebar-stat-item">
+                    <div class="sidebar-stat-value">9</div>
+                    <div class="sidebar-stat-label">Categories</div>
+                </div>
+                <div class="sidebar-stat-item">
+                    <div class="sidebar-stat-value">2.9</div>
+                    <div class="sidebar-stat-label">Avg Depth</div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Categories Navigation -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">Categories</div>
+            <nav class="sidebar-nav">
+                <ul>
+                    
+                    
+                    <li>
+                        <a href="#category-politics-and-governance">
+                            <span class="sidebar-category-icon">⚖</span>
+                            <span class="sidebar-category-name">Politics &amp; Governance</span>
+                            <span class="sidebar-category-badge">7</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-philosophy">
+                            <span class="sidebar-category-icon">Φ</span>
+                            <span class="sidebar-category-name">Philosophy</span>
+                            <span class="sidebar-category-badge">7</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-ethics">
+                            <span class="sidebar-category-icon">◈</span>
+                            <span class="sidebar-category-name">Ethics</span>
+                            <span class="sidebar-category-badge">15</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-artificial-intelligence">
+                            <span class="sidebar-category-icon">🤖</span>
+                            <span class="sidebar-category-name">Artificial Intelligence</span>
+                            <span class="sidebar-category-badge">4</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-technology-and-innovation">
+                            <span class="sidebar-category-icon">⚡</span>
+                            <span class="sidebar-category-name">Technology &amp; Innovation</span>
+                            <span class="sidebar-category-badge">3</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-economics-and-finance">
+                            <span class="sidebar-category-icon">$</span>
+                            <span class="sidebar-category-name">Economics &amp; Finance</span>
+                            <span class="sidebar-category-badge">4</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-science">
+                            <span class="sidebar-category-icon">⚙</span>
+                            <span class="sidebar-category-name">Science</span>
+                            <span class="sidebar-category-badge">4</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-health-and-medicine">
+                            <span class="sidebar-category-icon">✚</span>
+                            <span class="sidebar-category-name">Health &amp; Medicine</span>
+                            <span class="sidebar-category-badge">1</span>
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="#category-society-and-culture">
+                            <span class="sidebar-category-icon">◆</span>
+                            <span class="sidebar-category-name">Society &amp; Culture</span>
+                            <span class="sidebar-category-badge">5</span>
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Popular Debates -->
+        
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">Most Arguments</div>
+            <ul class="sidebar-debates-list">
+                
+                
+                <li>
+                    <a href="debates/capitalism-is-better-than-socialism.html">
+                        <span class="sidebar-debate-title">Capitalism is better than socialism</span>
+                        <span class="sidebar-debate-badge">306</span>
+                    </a>
+                </li>
+                
+                
+                
+                <li>
+                    <a href="debates/electric-cars-are-better-than-gasoline-cars.html">
+                        <span class="sidebar-debate-title">Electric cars are better than gasoline...</span>
+                        <span class="sidebar-debate-badge">257</span>
+                    </a>
+                </li>
+                
+                
+                
+                <li>
+                    <a href="debates/artificial-general-intelligence-will-be-achieved-by-2030.html">
+                        <span class="sidebar-debate-title">Artificial general intelligence will be...</span>
+                        <span class="sidebar-debate-badge">220</span>
+                    </a>
+                </li>
+                
+                
+                
+                <li>
+                    <a href="debates/artificial-intelligence-poses-an-existential-risk-to-humanity.html">
+                        <span class="sidebar-debate-title">Artificial intelligence poses an...</span>
+                        <span class="sidebar-debate-badge">206</span>
+                    </a>
+                </li>
+                
+                
+                
+                <li>
+                    <a href="debates/universal-basic-income-would-reduce-poverty.html">
+                        <span class="sidebar-debate-title">Universal basic income would reduce...</span>
+                        <span class="sidebar-debate-badge">158</span>
+                    </a>
+                </li>
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+            </ul>
+        </div>
+        
+
+        <!-- Quick Links -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">Quick Links</div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#debates">All Debates</a></li>
+                    <li><a href="#about">About</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Right Sidebar - Alphabetical Debate List -->
+    <div class="debates-sidebar">
+        <div class="debates-sidebar-header">All Debates (A-Z)</div>
+        
+        
+            <div class="alpha-separator">A</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/abortion-after-the-third-trimester-is-immoral.html">Abortion after the third trimester is immoral</a>
+                </li>
+                
+                <li>
+                    <a href="debates/abortion-is-morally-permissible.html">Abortion is morally permissible</a>
+                </li>
+                
+                <li>
+                    <a href="debates/animals-have-moral-rights.html">Animals have moral rights</a>
+                </li>
+                
+                <li>
+                    <a href="debates/artificial-general-intelligence-should-be-developed.html">Artificial general intelligence should be developed</a>
+                </li>
+                
+                <li>
+                    <a href="debates/artificial-general-intelligence-will-be-achieved-by-2030.html">Artificial general intelligence will be achieved by 2030</a>
+                </li>
+                
+                <li>
+                    <a href="debates/artificial-intelligence-poses-an-existential-risk-to-humanity.html">Artificial intelligence poses an existential risk to humanity</a>
+                </li>
+                
+                <li>
+                    <a href="debates/artificial-intelligence-will-replace-most-human-jobs.html">Artificial intelligence will replace most human jobs</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">C</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/capitalism-is-better-than-socialism.html">Capitalism is better than socialism</a>
+                </li>
+                
+                <li>
+                    <a href="debates/cats-are-better-than-dogs.html">Cats are better than dogs</a>
+                </li>
+                
+                <li>
+                    <a href="debates/censorship-can-be-morally-justified.html">Censorship can be morally justified</a>
+                </li>
+                
+                <li>
+                    <a href="debates/climate-change-mitigation-should-prioritize-adaptation-over-prevention.html">Climate change mitigation should prioritize adaptation over prevention</a>
+                </li>
+                
+                <li>
+                    <a href="debates/college-education-should-be-free-for-all-citizens.html">College education should be free for all citizens</a>
+                </li>
+                
+                <li>
+                    <a href="debates/consciousness-can-be-fully-explained-by-neuroscience.html">Consciousness can be fully explained by neuroscience</a>
+                </li>
+                
+                <li>
+                    <a href="debates/cryptocurrency-should-be-regulated-like-traditional-currencies.html">Cryptocurrency should be regulated like traditional currencies</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">D</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/democracy-is-the-best-form-of-government.html">Democracy is the best form of government</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">E</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/eating-honey-is-ethically-acceptable.html">Eating honey is ethically acceptable</a>
+                </li>
+                
+                <li>
+                    <a href="debates/economic-inequality-is-inherently-unjust.html">Economic inequality is inherently unjust</a>
+                </li>
+                
+                <li>
+                    <a href="debates/electric-cars-are-better-than-gasoline-cars.html">Electric cars are better than gasoline cars</a>
+                </li>
+                
+                <li>
+                    <a href="debates/euthanasia-should-be-legal.html">Euthanasia should be legal</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">F</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/free-will-is-an-illusion.html">Free will is an illusion</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">G</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/gene-editing-for-human-enhancement-should-be-permitted.html">Gene editing for human enhancement should be permitted</a>
+                </li>
+                
+                <li>
+                    <a href="debates/globalization-benefits-humanity.html">Globalization benefits humanity</a>
+                </li>
+                
+                <li>
+                    <a href="debates/god-exists.html">God exists</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">H</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/humans-should-colonize-mars.html">Humans should colonize Mars</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">I</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/idealism-is-the-best-metaphysical-theory.html">Idealism is the best metaphysical theory</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">M</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/meat-consumption-should-be-banned.html">Meat consumption should be banned</a>
+                </li>
+                
+                <li>
+                    <a href="debates/moral-relativism-is-correct.html">Moral relativism is correct</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">N</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/nuclear-energy-is-necessary-for-combating-climate-change.html">Nuclear energy is necessary for combating climate change</a>
+                </li>
+                
+                <li>
+                    <a href="debates/nuclear-energy-is-the-best-solution-to-climate-change.html">Nuclear energy is the best solution to climate change</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">O</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/objective-moral-truths-exist.html">Objective moral truths exist</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">P</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/pascals-wager-is-a-sound-argument-for-believing-in-god.html">Pascal&#39;s Wager is a sound argument for believing in God</a>
+                </li>
+                
+                <li>
+                    <a href="debates/philosophy-should-be-a-mandatory-subject-in-schools.html">Philosophy should be a mandatory subject in schools</a>
+                </li>
+                
+                <li>
+                    <a href="debates/physicalism-is-the-best-metaphysical-theory.html">Physicalism is the best metaphysical theory</a>
+                </li>
+                
+                <li>
+                    <a href="debates/privacy-is-more-important-than-national-security.html">Privacy is more important than national security</a>
+                </li>
+                
+                <li>
+                    <a href="debates/private-space-exploration-benefits-humanity.html">Private space exploration benefits humanity</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">Q</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/quantum-mechanics-proves-consciousness-is-fundamental.html">Quantum mechanics proves consciousness is fundamental</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">R</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/remote-work-is-better-than-office-work.html">Remote work is better than office work</a>
+                </li>
+                
+                <li>
+                    <a href="debates/retributive-punishment-is-justified.html">Retributive punishment is justified</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">S</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/social-media-companies-should-be-held-liable-for-user-generated-content.html">Social media companies should be held liable for user-generated content</a>
+                </li>
+                
+                <li>
+                    <a href="debates/social-media-does-more-harm-than-good.html">Social media does more harm than good</a>
+                </li>
+                
+                <li>
+                    <a href="debates/space-exploration-should-be-privatized-rather-than-government-funded.html">Space exploration should be privatized rather than government-funded</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">T</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/taxation-is-morally-equivalent-to-theft.html">Taxation is morally equivalent to theft</a>
+                </li>
+                
+                <li>
+                    <a href="debates/the-death-penalty-is-morally-justified.html">The death penalty is morally justified</a>
+                </li>
+                
+                <li>
+                    <a href="debates/the-mind-is-identical-to-the-brain.html">The mind is identical to the brain</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">U</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/universal-basic-income-is-economically-viable.html">Universal basic income is economically viable</a>
+                </li>
+                
+                <li>
+                    <a href="debates/universal-basic-income-reduces-poverty.html">Universal basic income reduces poverty</a>
+                </li>
+                
+                <li>
+                    <a href="debates/universal-basic-income-would-reduce-poverty.html">Universal basic income would reduce poverty</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">V</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/vaccines-are-safe.html">Vaccines are safe</a>
+                </li>
+                
+                <li>
+                    <a href="debates/voting-should-be-mandatory-in-democratic-countries.html">Voting should be mandatory in democratic countries</a>
+                </li>
+                
+            </ul>
+        
+            <div class="alpha-separator">W</div>
+            <ul>
+                
+                <li>
+                    <a href="debates/war-can-be-morally-justified.html">War can be morally justified</a>
+                </li>
+                
+            </ul>
+        
+        
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" style="display: flex; justify-content: center;">
+        <div class="container" style="max-width: 1400px; width: 100%;">
+            <h1>Dialogue Trees</h1>
+
+            <!-- Logo -->
+            <div class="logo-container">
+                <div class="logo-main">
+                    <div class="logo-tree-art">                     <span class="logo-branch">╔═══════════════╗</span>
+                     <span class="logo-branch">║</span>   <span class="logo-text dialogue">Dialogue</span>   <span class="logo-branch">║</span>
+         <span class="logo-branch">╔═══════╩═══════════════╩═══════╗</span>
+         <span class="logo-branch">║</span>                               <span class="logo-branch">║</span>
+    <span class="logo-branch">┌────╨────┐</span>                   <span class="logo-branch">┌────╨────┐</span>
+    <span class="logo-branch">│</span> <span class="logo-accent">Pro</span> <span class="logo-branch">│</span>  <span class="logo-text trees">Trees</span>  <span class="logo-branch">│</span> <span class="logo-accent">Con</span> <span class="logo-branch">│</span>
+    <span class="logo-branch">└─────────┘</span>                   <span class="logo-branch">└─────────┘</span></div>
+                    <div class="logo-decorative-line"></div>
+                    <div class="logo-subtitle">⚡ Structured debate & argumentation</div>
+                </div>
+            </div>
+
+            
+            <h2 class="section-heading" id="debates">
+                Available Debates
+                <span class="debate-count">(50 total)</span>
+            </h2>
+
+            <div class="categories-grid">
+            
+            
+            <div class="category-section" id="category-politics-and-governance">
+                <div class="category-header" onclick="toggleCategory('politics-and-governance')">
+                    <div class="category-header-left">
+                        <span class="category-icon">⚖</span>
+                        <div>
+                            <span class="category-name">Politics &amp; Governance</span>
+                            <span class="category-description">— Debates about political systems, policy, and governance</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">7</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/democracy-is-the-best-form-of-government.html">
+                                    Democracy is the best form of government
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v6</span>
+                                    <span class="stat">135 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/capitalism-is-better-than-socialism.html">
+                                    Capitalism is better than socialism
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v5</span>
+                                    <span class="stat">306 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/globalization-benefits-humanity.html">
+                                    Globalization benefits humanity
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">76 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/philosophy-should-be-a-mandatory-subject-in-schools.html">
+                                    Philosophy should be a mandatory subject in schools
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">51 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/privacy-is-more-important-than-national-security.html">
+                                    Privacy is more important than national security
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">120 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/universal-basic-income-reduces-poverty.html">
+                                    Universal basic income reduces poverty
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">84 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/voting-should-be-mandatory-in-democratic-countries.html">
+                                    Voting should be mandatory in democratic countries
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">42 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-philosophy">
+                <div class="category-header" onclick="toggleCategory('philosophy')">
+                    <div class="category-header-left">
+                        <span class="category-icon">Φ</span>
+                        <div>
+                            <span class="category-name">Philosophy</span>
+                            <span class="category-description">— Philosophical debates about knowledge, reality, and mind</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">7</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/free-will-is-an-illusion.html">
+                                    Free will is an illusion
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v5</span>
+                                    <span class="stat">84 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/god-exists.html">
+                                    God exists
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">69 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/idealism-is-the-best-metaphysical-theory.html">
+                                    Idealism is the best metaphysical theory
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">129 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/pascals-wager-is-a-sound-argument-for-believing-in-god.html">
+                                    Pascal&#39;s Wager is a sound argument for believing in God
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">60 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/physicalism-is-the-best-metaphysical-theory.html">
+                                    Physicalism is the best metaphysical theory
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">141 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/quantum-mechanics-proves-consciousness-is-fundamental.html">
+                                    Quantum mechanics proves consciousness is fundamental
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">60 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/the-mind-is-identical-to-the-brain.html">
+                                    The mind is identical to the brain
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">133 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-ethics">
+                <div class="category-header" onclick="toggleCategory('ethics')">
+                    <div class="category-header-left">
+                        <span class="category-icon">◈</span>
+                        <div>
+                            <span class="category-name">Ethics</span>
+                            <span class="category-description">— Moral and ethical debates about right and wrong</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">15</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/the-death-penalty-is-morally-justified.html">
+                                    The death penalty is morally justified
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">33 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/abortion-after-the-third-trimester-is-immoral.html">
+                                    Abortion after the third trimester is immoral
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">32 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/abortion-is-morally-permissible.html">
+                                    Abortion is morally permissible
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">118 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/animals-have-moral-rights.html">
+                                    Animals have moral rights
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">123 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/censorship-can-be-morally-justified.html">
+                                    Censorship can be morally justified
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">132 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/eating-honey-is-ethically-acceptable.html">
+                                    Eating honey is ethically acceptable
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">112 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/economic-inequality-is-inherently-unjust.html">
+                                    Economic inequality is inherently unjust
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">115 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/euthanasia-should-be-legal.html">
+                                    Euthanasia should be legal
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">110 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/gene-editing-for-human-enhancement-should-be-permitted.html">
+                                    Gene editing for human enhancement should be permitted
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">40 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/meat-consumption-should-be-banned.html">
+                                    Meat consumption should be banned
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">44 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/moral-relativism-is-correct.html">
+                                    Moral relativism is correct
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">129 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/objective-moral-truths-exist.html">
+                                    Objective moral truths exist
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">130 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/retributive-punishment-is-justified.html">
+                                    Retributive punishment is justified
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">128 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/taxation-is-morally-equivalent-to-theft.html">
+                                    Taxation is morally equivalent to theft
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">80 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/war-can-be-morally-justified.html">
+                                    War can be morally justified
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v2</span>
+                                    <span class="stat">145 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-artificial-intelligence">
+                <div class="category-header" onclick="toggleCategory('artificial-intelligence')">
+                    <div class="category-header-left">
+                        <span class="category-icon">🤖</span>
+                        <div>
+                            <span class="category-name">Artificial Intelligence</span>
+                            <span class="category-description">— Debates about AI development, capabilities, risks, and societal impact</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">4</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/artificial-intelligence-poses-an-existential-risk-to-humanity.html">
+                                    Artificial intelligence poses an existential risk to humanity
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v7</span>
+                                    <span class="stat">206 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/artificial-general-intelligence-should-be-developed.html">
+                                    Artificial general intelligence should be developed
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">100 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/artificial-general-intelligence-will-be-achieved-by-2030.html">
+                                    Artificial general intelligence will be achieved by 2030
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v5</span>
+                                    <span class="stat">220 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/artificial-intelligence-will-replace-most-human-jobs.html">
+                                    Artificial intelligence will replace most human jobs
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">157 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-technology-and-innovation">
+                <div class="category-header" onclick="toggleCategory('technology-and-innovation')">
+                    <div class="category-header-left">
+                        <span class="category-icon">⚡</span>
+                        <div>
+                            <span class="category-name">Technology &amp; Innovation</span>
+                            <span class="category-description">— Technology, computing, space exploration, and future innovation</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">3</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/humans-should-colonize-mars.html">
+                                    Humans should colonize Mars
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">50 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/private-space-exploration-benefits-humanity.html">
+                                    Private space exploration benefits humanity
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">145 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/space-exploration-should-be-privatized-rather-than-government-funded.html">
+                                    Space exploration should be privatized rather than government-funded
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">47 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-economics-and-finance">
+                <div class="category-header" onclick="toggleCategory('economics-and-finance')">
+                    <div class="category-header-left">
+                        <span class="category-icon">$</span>
+                        <div>
+                            <span class="category-name">Economics &amp; Finance</span>
+                            <span class="category-description">— Economic policy, finance, and market debates</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">4</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/cryptocurrency-should-be-regulated-like-traditional-currencies.html">
+                                    Cryptocurrency should be regulated like traditional currencies
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">126 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/nuclear-energy-is-necessary-for-combating-climate-change.html">
+                                    Nuclear energy is necessary for combating climate change
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v5</span>
+                                    <span class="stat">141 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/universal-basic-income-is-economically-viable.html">
+                                    Universal basic income is economically viable
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">75 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/universal-basic-income-would-reduce-poverty.html">
+                                    Universal basic income would reduce poverty
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">158 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-science">
+                <div class="category-header" onclick="toggleCategory('science')">
+                    <div class="category-header-left">
+                        <span class="category-icon">⚙</span>
+                        <div>
+                            <span class="category-name">Science</span>
+                            <span class="category-description">— Scientific research, environmental science, and empirical debates</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">4</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/climate-change-mitigation-should-prioritize-adaptation-over-prevention.html">
+                                    Climate change mitigation should prioritize adaptation over prevention
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v5</span>
+                                    <span class="stat">43 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/consciousness-can-be-fully-explained-by-neuroscience.html">
+                                    Consciousness can be fully explained by neuroscience
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v5</span>
+                                    <span class="stat">73 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/electric-cars-are-better-than-gasoline-cars.html">
+                                    Electric cars are better than gasoline cars
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">257 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/nuclear-energy-is-the-best-solution-to-climate-change.html">
+                                    Nuclear energy is the best solution to climate change
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">42 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-health-and-medicine">
+                <div class="category-header" onclick="toggleCategory('health-and-medicine')">
+                    <div class="category-header-left">
+                        <span class="category-icon">✚</span>
+                        <div>
+                            <span class="category-name">Health &amp; Medicine</span>
+                            <span class="category-description">— Healthcare, medical treatments, public health, and disease prevention</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">1</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/vaccines-are-safe.html">
+                                    Vaccines are safe
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">54 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            
+            <div class="category-section" id="category-society-and-culture">
+                <div class="category-header" onclick="toggleCategory('society-and-culture')">
+                    <div class="category-header-left">
+                        <span class="category-icon">◆</span>
+                        <div>
+                            <span class="category-name">Society &amp; Culture</span>
+                            <span class="category-description">— Social issues, culture, lifestyle, and everyday choices</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="category-count">5</span>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                </div>
+                <div class="category-debates">
+                    <ul class="debate-list">
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/cats-are-better-than-dogs.html">
+                                    Cats are better than dogs
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">67 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/college-education-should-be-free-for-all-citizens.html">
+                                    College education should be free for all citizens
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">62 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/remote-work-is-better-than-office-work.html">
+                                    Remote work is better than office work
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">56 arguments</span>
+                                    <span class="stat">depth 2</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/social-media-companies-should-be-held-liable-for-user-generated-content.html">
+                                    Social media companies should be held liable for user-generated content
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-10
+                                <span class="debate-stats">
+                                    <span class="stat">v3</span>
+                                    <span class="stat">46 arguments</span>
+                                    <span class="stat">depth 3</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                        <li class="debate-item">
+                            <div class="debate-title">
+                                <a href="debates/social-media-does-more-harm-than-good.html">
+                                    Social media does more harm than good
+                                </a>
+                            </div>
+                            <div class="debate-meta">
+                                2025-10-11
+                                <span class="debate-stats">
+                                    <span class="stat">v4</span>
+                                    <span class="stat">95 arguments</span>
+                                    <span class="stat">depth 4</span>
+                                </span>
+                            </div>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+            </div>
+
+            <!-- Recent Debates Section -->
+            
+            <h2 class="section-heading" style="margin-top: 3em;">
+                Recent Debates
+                <span class="debate-count">(newest first)</span>
+            </h2>
+
+            <ul class="debate-list" style="margin-top: 1em;">
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/free-will-is-an-illusion.html">
+                            Free will is an illusion
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v5</span>
+                            <span class="stat">84 arguments</span>
+                            <span class="stat">depth 2</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/the-mind-is-identical-to-the-brain.html">
+                            The mind is identical to the brain
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">133 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/censorship-can-be-morally-justified.html">
+                            Censorship can be morally justified
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">132 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/war-can-be-morally-justified.html">
+                            War can be morally justified
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">145 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/objective-moral-truths-exist.html">
+                            Objective moral truths exist
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">130 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/economic-inequality-is-inherently-unjust.html">
+                            Economic inequality is inherently unjust
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">115 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/retributive-punishment-is-justified.html">
+                            Retributive punishment is justified
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">128 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/moral-relativism-is-correct.html">
+                            Moral relativism is correct
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">129 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/euthanasia-should-be-legal.html">
+                            Euthanasia should be legal
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">110 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                <li class="debate-item">
+                    <div class="debate-title">
+                        <a href="debates/animals-have-moral-rights.html">
+                            Animals have moral rights
+                        </a>
+                    </div>
+                    <div class="debate-meta">
+                        2025-10-11
+                        <span class="debate-stats">
+                            <span class="stat">v2</span>
+                            <span class="stat">123 arguments</span>
+                            <span class="stat">depth 3</span>
+                        </span>
+                    </div>
+                </li>
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+            </ul>
+            
+
+            <!-- About Section -->
+            <div class="index-intro" id="about" style="margin-top: 3em;">
+                <p><strong>Dialogue Trees</strong> is a structured approach to exploring complex propositions through nested arguments and objections. Each debate follows the <a href="https://en.wikiversity.org/wiki/Wikidebate" target="_blank">Wikidebate</a> format, emphasizing:</p>
+                <ul style="margin: 8px 0; padding-left: 20px;">
+                    <li>Neutral point of view</li>
+                    <li>Concise, well-reasoned arguments</li>
+                    <li>Logical objections and responses</li>
+                    <li>Citations and references where applicable</li>
+                </ul>
+            </div>
+            
+
+            <div class="footer">
+                Generated by <a href="https://github.com/yourusername/dialogue-trees">Dialogue Trees</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle category expansion/collapse
+        function toggleCategory(categoryId) {
+            const section = document.getElementById('category-' + categoryId);
+            if (section) {
+                section.classList.toggle('collapsed');
+            }
+        }
+
+        // Initialize all categories as collapsed on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const categories = document.querySelectorAll('.category-section');
+            categories.forEach(function(category) {
+                category.classList.add('collapsed');
+            });
+        });
+
+        // Search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('debate-search');
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+
+                // Search in category sections
+                const debateItems = document.querySelectorAll('.debate-item');
+                const categories = document.querySelectorAll('.category-section');
+
+                if (query === '') {
+                    // Show all debates and re-collapse categories
+                    debateItems.forEach(item => {
+                        item.style.display = '';
+                    });
+                    categories.forEach(cat => {
+                        cat.classList.add('collapsed');
+                    });
+                    return;
+                }
+
+                // Expand all categories when searching
+                categories.forEach(cat => {
+                    cat.classList.remove('collapsed');
+                });
+
+                // Filter debates
+                debateItems.forEach(item => {
+                    const title = item.querySelector('.debate-title').textContent.toLowerCase();
+                    if (title.includes(query)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                // Hide empty categories
+                categories.forEach(cat => {
+                    const visibleDebates = cat.querySelectorAll('.debate-item:not([style*="display: none"])');
+                    if (visibleDebates.length === 0) {
+                        cat.style.display = 'none';
+                    } else {
+                        cat.style.display = '';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,3682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moral relativism is correct - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Moral relativism is correct</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            129 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/moral-relativism-is-correct.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">129</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "cadbd335-0097-41dd-ae2d-d9475ae6b94e",
+      "text": "Anthropological evidence confirms that diverse cultures hold fundamentally conflicting norms regarding core issues like property, liberty, and life. Practices like honor killings in some societies or strict collective ownership contrast sharply with Western individualism, demonstrating the untenability of universal moral claims.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Anthropological data on varied kinship structures",
+        "Studies of collective ownership in indigenous cultures"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:21.683468+00:00"
+    },
+    {
+      "id": "b6ba420f-91f3-4309-898b-64327b767079",
+      "text": "There is no objective, scientifically verifiable criterion to establish one moral framework, such as deontology or utilitarianism, as universally correct. The inability to resolve fundamental moral disagreements through empirical observation or non-circular pure reason undermines claims of moral absolutism.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:21.684250+00:00"
+    },
+    {
+      "id": "010097ec-54c9-4e67-b7a7-c80881d21b40",
+      "text": "The rapid and radical historical shifts in moral consensus within the same society, such as the abolition of slavery or the granting of women's suffrage, demonstrate morality's mutability. These profound changes show that moral codes are contingent social constructions rather than eternal, objective truths.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Abolition of slavery in the 19th century",
+        "Historical shifts in views on same-sex marriage"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:21.684778+00:00"
+    },
+    {
+      "id": "9d0b2806-5dfa-4014-aee1-18055c75ae21",
+      "text": "Moral relativism fosters peace and tolerance by discouraging moral imperialism and the imposition of one group's values onto another. This perspective reduces the ideological justification for conflicts that arise from rigid claims of moral superiority and fanaticism.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Historical examples of colonial moral imperialism",
+        "Religious conflicts based on absolute dogma"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:21.685226+00:00"
+    },
+    {
+      "id": "452ab23c-50ad-4451-a50f-f1c3112dd2cb",
+      "text": "Moral rules function primarily as practical social mechanisms for coordination and group survival, which must adapt to specific constraints. Rules regarding resource sharing or family structure are tailored to the particular ecological and demographic realities, such as historical infanticide practices in extremely resource-scarce environments.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Varying resource management norms and social structures"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:21.685815+00:00"
+    },
+    {
+      "id": "43cf931d-8454-4635-9be9-637a07858d4b",
+      "text": "Evolutionary psychology suggests that moral judgments are contingent, adaptive emotional and cognitive responses evolved to solve social coordination problems like cooperation and resource sharing. Recent neuroscience studies confirm that moral decision-making often stems from evolved intuitive mechanisms rather than purely objective rational principles.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Neuroscience studies of moral intuition (e.g., trolley problem research)",
+        "Evolutionary psychology models of reciprocity and cooperation"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:21.686256+00:00"
+    },
+    {
+      "id": "a52b92e0-f338-4233-82d5-55c5f4d7ef77",
+      "text": "Major international conflicts, such as resource wars or geopolitical power struggles (e.g., the conflict in Ukraine), are driven primarily by political and economic interests, not merely claims of moral superiority; moral relativism does not resolve these non-ideological drivers.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9d0b2806-5dfa-4014-aee1-18055c75ae21",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:31.264194+00:00"
+    },
+    {
+      "id": "db113a7f-e69f-4c0e-8bc2-7a65e42ba18b",
+      "text": "Moral relativism actively undermines tolerance when it forbids intervention in gross human rights abuses, such as the Rwandan genocide, by treating the perpetrators' actions as merely an alternative cultural moral framework.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9d0b2806-5dfa-4014-aee1-18055c75ae21",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:31.264951+00:00"
+    },
+    {
+      "id": "e1a99376-0b5d-44ba-94b7-00a520e343ed",
+      "text": "The shift toward abolition and suffrage can be interpreted as a societal convergence toward a pre-existing moral truth about human equality, not the truth itself changing. The historical record demonstrates the mutability of human **understanding** of morality, not necessarily the contingency of moral **reality**.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "010097ec-54c9-4e67-b7a7-c80881d21b40",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:32.208004+00:00"
+    },
+    {
+      "id": "3bc99e3a-4418-4616-b28d-90baff3a621b",
+      "text": "Focusing solely on evolving social issues like suffrage ignores the existence of stable, near-universal moral prohibitions such as the ban on arbitrary torture or the abandonment of dependent infants. These transnational constants point to non-contingent moral foundations.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "010097ec-54c9-4e67-b7a7-c80881d21b40",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:32.208509+00:00"
+    },
+    {
+      "id": "1d3892a5-c158-4ba7-ba1e-e60436946077",
+      "text": "Ancient cultures widely believed the Earth was flat or that diseases were caused by malevolent spirits, but these historical descriptive disagreements never negated the universal physical and biological truths governing reality.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cadbd335-0097-41dd-ae2d-d9475ae6b94e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:37.780071+00:00"
+    },
+    {
+      "id": "0aa980a9-41fa-4fb8-a153-d923b67636c3",
+      "text": "Anthropological research lists numerous human universals, including rules of justice, reciprocity, and prohibition against murder of ingroup members, demonstrating that a deep moral substrate exists beneath cultural variations.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cadbd335-0097-41dd-ae2d-d9475ae6b94e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:37.780603+00:00"
+    },
+    {
+      "id": "92e270ff-9606-4c65-ac20-21509b944702",
+      "text": "Specific moral prohibitions, such as the ban on eating pork in Islam or the strict enforcement of Sunday blue laws in historical Puritanical Massachusetts, derive their adherence from religious ideology or tradition, not material utility or immediate coordination requirements.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "452ab23c-50ad-4451-a50f-f1c3112dd2cb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:40.773112+00:00"
+    },
+    {
+      "id": "19bdac43-e8e6-4c5f-8d24-bc00aae321bf",
+      "text": "The descriptive fact that high infant mortality or necessary infanticide existed in resource-scarce environments like early Inuit communities does not make the practice morally permissible or socially required in affluent, modern societies today.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "452ab23c-50ad-4451-a50f-f1c3112dd2cb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:40.773982+00:00"
+    },
+    {
+      "id": "98898a41-aeb6-4e39-bcf8-b33a2e72de27",
+      "text": "The prohibition of gratuitous violence and the rule against incest are verified sociological universals across nearly all recorded human cultures, suggesting a shared, absolute moral truth necessary for social function.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b6ba420f-91f3-4309-898b-64327b767079",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:40.905865+00:00"
+    },
+    {
+      "id": "8be05d5c-26d4-4975-a00e-6a1249cc0614",
+      "text": "Absolute truths in mathematics, such as the truth of the Pythagorean theorem or the law of non-contradiction, are universally correct yet are not established through scientific verifiability or empirical observation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b6ba420f-91f3-4309-898b-64327b767079",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:40.906808+00:00"
+    },
+    {
+      "id": "e765d74f-3dd6-4310-b59e-fb9f30a22946",
+      "text": "The existence of innate human biases like in-group preference, documented across cultures, does not invalidate the objective moral principle established by the 1948 Universal Declaration of Human Rights that all individuals possess equal moral worth.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "43cf931d-8454-4635-9be9-637a07858d4b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:41.411804+00:00"
+    },
+    {
+      "id": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "text": "Neuroimaging shows that resolving complex moral dilemmas activates the dorsolateral prefrontal cortex (DLPFC), a region for cognitive control, overriding initial emotional responses. Controlled mental reasoning, not primary intuition, determines the final action in conflict scenarios like the footbridge trolley problem.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "43cf931d-8454-4635-9be9-637a07858d4b",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:41.412665+00:00"
+    },
+    {
+      "id": "68ef42dd-65c6-41d5-a26e-7b342fa2951e",
+      "text": "Widespread moral constants signal powerful evolutionary pressures for species survival and social stability, such as the need to protect offspring, rather than invoking objective, non-contingent moral truths.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3bc99e3a-4418-4616-b28d-90baff3a621b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:42.465472+00:00"
+    },
+    {
+      "id": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "text": "The supposed \u201cnear-universal\u201d moral constants fail under historical scrutiny; for example, selective infanticide was an accepted practice in ancient Sparta and Rome, showing the prohibition is contingent on resource availability and cultural norms.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3bc99e3a-4418-4616-b28d-90baff3a621b",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:42.466456+00:00"
+    },
+    {
+      "id": "bfb10dd3-13b2-4eb0-be07-2902051d465f",
+      "text": "Moral relativism does not forbid intervention; it simply means the intervening parties are acting based on their own powerful, yet relative, moral framework (e.g., the globally recognized human rights doctrine) rather than an objectively universal truth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "db113a7f-e69f-4c0e-8bc2-7a65e42ba18b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:43.454284+00:00"
+    },
+    {
+      "id": "737c1d56-4893-4cf2-8d8c-17ed82f7b427",
+      "text": "The lack of international intervention during events like the Rwandan genocide was demonstrably due to political factors like national self-interest and lack of will, not adherence to a philosophical doctrine like moral relativism.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "db113a7f-e69f-4c0e-8bc2-7a65e42ba18b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:43.454897+00:00"
+    },
+    {
+      "id": "8c25068a-931d-4f9a-b0c1-65f61c3e5838",
+      "text": "The prohibition on pork is rooted in material utility, as demonstrated by historical anthropology linking the ban in the Middle East to the high cost, inefficiency, and disease risk of raising pigs in arid environments.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "92e270ff-9606-4c65-ac20-21509b944702",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:50.410517+00:00"
+    },
+    {
+      "id": "03024c39-b77f-4bc7-902a-8268566593b9",
+      "text": "Sunday blue laws in Puritanical Massachusetts served as crucial coordination mechanisms that established a mandatory public rhythm and reinforced community social hierarchy, contributing significantly to adherence beyond mere ideology.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "92e270ff-9606-4c65-ac20-21509b944702",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:50.411371+00:00"
+    },
+    {
+      "id": "372a0687-ff26-460d-af0e-7f6bc33cab23",
+      "text": "The Pythagorean theorem is not universally correct but is conditional, holding only within the specific axiomatic system of Euclidean geometry; for example, it fails when measuring distances on spherical or hyperbolic surfaces.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8be05d5c-26d4-4975-a00e-6a1249cc0614",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:52.440321+00:00"
+    },
+    {
+      "id": "58a00397-2842-4b31-9ebf-07e7313b2a28",
+      "text": "The absolute truth of the Law of Non-Contradiction is challenged by certain logical systems, such as paraconsistent logic, which allows for contradictions without reducing to triviality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8be05d5c-26d4-4975-a00e-6a1249cc0614",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:52.440867+00:00"
+    },
+    {
+      "id": "b279e43d-0148-408a-b875-6cfb94106648",
+      "text": "Societal convergence occurred regarding state-sponsored eugenics programs, which were legally implemented by the US, Canada, and Sweden during the 1920s and 30s. Such historical agreement on morally reprehensible actions demonstrates that collective understanding does not reliably track a fixed moral truth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e1a99376-0b5d-44ba-94b7-00a520e343ed",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:52.974817+00:00"
+    },
+    {
+      "id": "a99c5a4b-185e-4ad8-9a59-69ea9caf4afe",
+      "text": "Unlike the laws of physics or chemistry, which are discoverable and universally consistent, no independent, empirical evidence exists for a moral reality outside of human thought. The irreconcilable differences between utilitarian ethics and Kantian deontology demonstrate that basic moral frameworks are structurally contingent, not discovered facts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e1a99376-0b5d-44ba-94b7-00a520e343ed",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:52.975662+00:00"
+    },
+    {
+      "id": "86d31411-aee2-4f37-ac24-b2a6c2b919e2",
+      "text": "The existence of cultural exceptions like selective infanticide does not disprove a moral constant, as \"near-universal\" allows for variance without invalidating a fundamental biological or social foundation for the rule.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:53.376890+00:00"
+    },
+    {
+      "id": "80d42c1c-99dd-40c3-8f0f-64655f800a4f",
+      "text": "Both ancient Rome and Sparta maintained strong prohibitions against the murder of adult citizens and legally recognized children, confirming that a general moral norm against unwarranted killing still applied within the scope of the society.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:53.376944+00:00"
+    },
+    {
+      "id": "b356bf8f-3136-4b49-bf49-af74e35061e1",
+      "text": "The conclusion that the practice is contingent on \"resource availability\" is an unsupported causal claim, as Spartan infanticide was primarily a state-sanctioned eugenics practice driven by military necessity, not simple Malthusian scarcity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:53.376970+00:00"
+    },
+    {
+      "id": "1e8a87aa-b551-4834-ba73-b45d53f83e6f",
+      "text": "If the human rights doctrine is only a relative framework, intervention based on it is indistinguishable from one culture using coercive power to impose its values on another, removing genuine moral justification. This renders the intervention an act of power politics rather than a moral imperative, as highlighted by the international debate surrounding the 2003 Iraq intervention.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bfb10dd3-13b2-4eb0-be07-2902051d465f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:53.897997+00:00"
+    },
+    {
+      "id": "21596697-6a98-4e00-80ba-e67ff1949459",
+      "text": "Evolutionary psychology explains reciprocity and ingroup protection through kin selection and group survival, demonstrating these behavioral universals arise from pragmatic, not innate moral, necessity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0aa980a9-41fa-4fb8-a153-d923b67636c3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:54.628908+00:00"
+    },
+    {
+      "id": "60aceae1-fbaa-415c-882b-d95c57540701",
+      "text": "Ethical prohibitions limited only to ingroup members contradict the idea of a universal moral substrate, as historically, groups like the ancient Spartans legalized the systematic killing and enslavement of defined outgroup populations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0aa980a9-41fa-4fb8-a153-d923b67636c3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:54.629792+00:00"
+    },
+    {
+      "id": "f1291777-3231-4a53-b39d-7cffe749a0d8",
+      "text": "The principle of state sovereignty and non-interference, enshrined in the UN Charter, provides a legal and philosophical framework that enables nations to rationalize self-interested non-intervention in tragedies such as the Rwandan genocide. Philosophical doctrines are rarely the primary cause, but they provide the necessary rhetorical justification to bypass the moral imperative for intervention.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "737c1d56-4893-4cf2-8d8c-17ed82f7b427",
+      "children_count": 0,
+      "references": [
+        "UN Charter Article 2, Section 7"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:56.413771+00:00"
+    },
+    {
+      "id": "b27e27a8-4572-4d10-bf42-faea41692605",
+      "text": "The universal human avoidance of incest is functionally explained by evolutionary pressures and inbreeding depression, which is a descriptive fact of biology, not evidence for a metaphysical moral truth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "98898a41-aeb6-4e39-bcf8-b33a2e72de27",
+      "children_count": 1,
+      "references": [
+        "Edmund Leach's anthropological work on incest taboos and evolutionary biology research on inbreeding depression"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:57.555691+00:00"
+    },
+    {
+      "id": "1db0e881-9ad3-4c6a-8b0b-feb769bd411f",
+      "text": "Many historical cultures, such as the Aztec civilization, practiced large-scale ritual human sacrifice and warfare considered necessary for cosmic order, demonstrating radical cultural variation in what constitutes \"gratuitous\" violence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "98898a41-aeb6-4e39-bcf8-b33a2e72de27",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:57.556424+00:00"
+    },
+    {
+      "id": "7f242fac-189b-482e-83b8-3fcef4c3d8be",
+      "text": "The evolutionary explanation for the human capacity to understand mathematics and logic (e.g., counting for survival) does not make the resulting mathematical laws contingent truths; the principle that 2+2=4 remains true regardless of human belief.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "68ef42dd-65c6-41d5-a26e-7b342fa2951e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:59.005258+00:00"
+    },
+    {
+      "id": "0297bc3d-94d8-4ed4-9737-86f783ea1c60",
+      "text": "Universal moral outrage against historical events like the Holocaust or the Rwandan Genocide extends condemnation far beyond local kin protection or immediate social stability, indicating reliance on non-contingent moral truths.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "68ef42dd-65c6-41d5-a26e-7b342fa2951e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:37:59.005289+00:00"
+    },
+    {
+      "id": "f9ee8afb-d95b-4667-ae47-c9075dd13b51",
+      "text": "The widespread international condemnation of acts like genocide and slavery, institutionalized through documents like the Universal Declaration of Human Rights and the prosecution at the International Criminal Court, indicates a cross-cultural objective morality that contradicts pure relativism.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "372a0687-ff26-460d-af0e-7f6bc33cab23",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:00.889467+00:00"
+    },
+    {
+      "id": "1e069d67-989c-412c-97c2-dd96e588f334",
+      "text": "The prohibition persists for centuries among Jewish and Muslim communities living in temperate regions like Europe and North America where pig farming is economically efficient. This persistence shows the ban is sustained by theological and social identity reasons independent of the original material utility.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8c25068a-931d-4f9a-b0c1-65f61c3e5838",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:01.154400+00:00"
+    },
+    {
+      "id": "47b6055d-3264-4f4a-af1a-e094989b5fa7",
+      "text": "Paraconsistent systems do not reject the Law of Non-Contradiction universally; rather, they introduce specialized, inconsistent structures whose utility and analysis are still governed by classical logic at the meta-level. The LNC remains essential for the coherence of the underlying logical framework used to define and evaluate these deviations.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "58a00397-2842-4b31-9ebf-07e7313b2a28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:04.506485+00:00"
+    },
+    {
+      "id": "2e750e56-d252-40df-9aba-3750630d8717",
+      "text": "Damage to the ventromedial prefrontal cortex (VMPFC) impairs emotional feedback, showing that patients with preserved DLPFC function still make profoundly irrational real-world moral and practical choices, proving emotion is prerequisite, not merely overridden.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:07.149674+00:00"
+    },
+    {
+      "id": "9212f246-f8fc-4229-b778-e0feeef05f89",
+      "text": "In impersonal moral dilemmas like the standard \"switch\" version of the trolley problem, minimal DLPFC activation is required, showing that less complex or personal issues rely heavily on rapid, intuitive assessments.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:07.150516+00:00"
+    },
+    {
+      "id": "279a288f-285b-4f99-9831-7da2ec38957a",
+      "text": "Brain research and psychological studies show that decisions are often made rapidly by intuition, and the subsequent DLPFC activity represents the construction of a justifying reason rather than the determinant of the choice itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:07.151016+00:00"
+    },
+    {
+      "id": "9da4ee36-d99d-4ccd-98ca-9f67d296f664",
+      "text": "Evolutionary pressures selected for innate, hardwired moral intuitions, such as universal empathy and a sense of fairness, precisely because these mechanisms reliably enforce the necessary pragmatic behaviors like reciprocity and kin protection.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "21596697-6a98-4e00-80ba-e67ff1949459",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:07.600583+00:00"
+    },
+    {
+      "id": "2c6158ac-d331-421b-b949-5774d58ac088",
+      "text": "The primary social function of the blue laws was explicitly theological, demonstrated by the Massachusetts Bay Colony's relentless persecution and banishment of religious dissenters like Anne Hutchinson and Quakers for ideological non-conformity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "03024c39-b77f-4bc7-902a-8268566593b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:08.249792+00:00"
+    },
+    {
+      "id": "83b102a3-1441-4108-a4dc-cd54cda26198",
+      "text": "Strict Sunday laws were not crucial for societal coordination, as alternative early American colonies like Rhode Island and Quaker Pennsylvania achieved stable public rhythm and economic success without mandatory prohibitions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "03024c39-b77f-4bc7-902a-8268566593b9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:08.249843+00:00"
+    },
+    {
+      "id": "1f09436a-d237-4a0c-921c-75a9a903aca1",
+      "text": "The near-universal adoption of the UN Declaration of Human Rights since 1948 demonstrates collective moral convergence toward protecting fundamental liberties, showing that moral understanding reliably tracks truth over generational timeframes.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b279e43d-0148-408a-b875-6cfb94106648",
+      "children_count": 0,
+      "references": [
+        "UN Declaration of Human Rights (1948)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:11.034734+00:00"
+    },
+    {
+      "id": "70bc01ba-583b-4d85-b2b8-762ee435c48d",
+      "text": "The swift, global moral reversal and condemnation of state-sponsored eugenics following World War II, formalized in documents like the 1947 Nuremberg Code, demonstrates that the prior consensus was an identifiable, fixed moral error.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b279e43d-0148-408a-b875-6cfb94106648",
+      "children_count": 0,
+      "references": [
+        "Nuremberg Code (1947)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:11.034789+00:00"
+    },
+    {
+      "id": "cfe6e64b-dd0b-4a59-961e-1dd8c4edb0a2",
+      "text": "The UN Universal Declaration of Human Rights (1948) codifies inherent human dignity and rights, demonstrating a global consensus on a universal moral structure. Systematic violation of these rights by multiple signatory nations, such as the use of forced labor, demonstrates a failure of moral application, not the absence of the underlying principles.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "60aceae1-fbaa-415c-882b-d95c57540701",
+      "children_count": 0,
+      "references": [
+        "UN Universal Declaration of Human Rights (1948)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:11.422644+00:00"
+    },
+    {
+      "id": "de5929b9-ca6c-4a8e-b93f-1e77a3c2f455",
+      "text": "Anthropological research shows that prohibitions against unjustified murder of ingroup members and incest are present in nearly all known human societies, from tribal to modern. This widespread pattern suggests a common moral substrate for fundamental interpersonal prohibitions, despite variations in outgroup treatment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "60aceae1-fbaa-415c-882b-d95c57540701",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:11.422694+00:00"
+    },
+    {
+      "id": "926db01c-fef9-490c-a727-3b1f0cb09df2",
+      "text": "Evolutionary biology demonstrates that social animals, including humans across all surveyed cultures, possess innate mechanisms for reciprocal altruism and aversion to in-group murder, suggesting basic moral structures are biologically constrained and not purely contingent thought.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a99c5a4b-185e-4ad8-9a59-69ea9caf4afe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:12.094478+00:00"
+    },
+    {
+      "id": "4955ce21-77a6-4000-b72a-1d6c810428dd",
+      "text": "The 19th-century debate between wave and particle theories of light featured irreconcilable differences, yet light possessed an objective, discoverable physical nature, demonstrating that theoretical disagreement does not prove structural contingency.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a99c5a4b-185e-4ad8-9a59-69ea9caf4afe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:12.094545+00:00"
+    },
+    {
+      "id": "244fd386-aedb-4cdc-9183-78e96138574f",
+      "text": "The UDHR is a 1948 political document negotiated by 50 UN member states, not an independent moral standard. The Soviet bloc and South Africa notably abstained from the final vote, demonstrating that the supposed objective principle was not universally accepted positive law.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e765d74f-3dd6-4310-b59e-fb9f30a22946",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:13.151227+00:00"
+    },
+    {
+      "id": "b80a17f7-c639-4aa1-8ea7-57eda2fb752a",
+      "text": "Confucian morality, influential in East Asia, establishes moral worth based on familial and social hierarchy, prioritizing collective harmony over the UDHR's principle of universal, individual moral equality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e765d74f-3dd6-4310-b59e-fb9f30a22946",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:13.152104+00:00"
+    },
+    {
+      "id": "d20022a6-68a7-4b46-8a0a-40191d745ca7",
+      "text": "Despite the biological Westermarck effect, all major religious and legal traditions, such as Catholic Church canon law and historical Roman civil codes, establish strict incest prohibitions based on transcendent moral or social order. This universal, institutionalized moral enforcement suggests the moral truth derived from the avoidance is not reducible solely to descriptive biological mechanisms.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b27e27a8-4572-4d10-bf42-faea41692605",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:16.865383+00:00"
+    },
+    {
+      "id": "b991daf1-482f-441d-91f3-1eea6b703e14",
+      "text": "While the Aztecs justified large-scale killing through necessary ritual, true acts of gratuitous violence, such as non-ritualistic torture of infants or kin, are condemned by the legal codes and social norms of virtually all known cultures, ancient and modern.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1db0e881-9ad3-4c6a-8b0b-feb769bd411f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:17.696825+00:00"
+    },
+    {
+      "id": "fa3bdae5-cc9b-44ca-8bf2-4cd4d1f1244b",
+      "text": "Moral anthropologist Donald Brown identified hundreds of \"human universals,\" including prohibitions on in-group violence and concepts of fairness, contradicting the idea that cultural variation is truly radical in its moral core.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1db0e881-9ad3-4c6a-8b0b-feb769bd411f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:17.696882+00:00"
+    },
+    {
+      "id": "bf66682d-bace-4a3c-96b1-bf4df29a9d7e",
+      "text": "Impersonal moral calculations, such as the effortful cost-benefit analysis required for medical triage during the COVID-19 pandemic or military drone targeting, rely on controlled, high-effort executive function, contradicting the universality of rapid, intuitive assessment for all impersonal issues.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9212f246-f8fc-4229-b778-e0feeef05f89",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:24.280914+00:00"
+    },
+    {
+      "id": "21f0ad1e-473f-4c47-ae2d-f60ead0f6430",
+      "text": "Low DLPFC activation often indicates an automated response rather than a moral intuition; for instance, the immediate, low-effort adherence to universally understood social norms, like obeying traffic laws or the Japanese custom of bowing, is a trained cultural script, not a rapid moral assessment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9212f246-f8fc-4229-b778-e0feeef05f89",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:24.280970+00:00"
+    },
+    {
+      "id": "52493ea0-df12-44b7-9631-44ad856ace84",
+      "text": "The UDHR's political origin does not negate its current moral authority, as its principles form the constitutional basis for specific binding treaties, such as the International Covenant on Civil and Political Rights (ICCPR).",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "244fd386-aedb-4cdc-9183-78e96138574f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:25.182478+00:00"
+    },
+    {
+      "id": "ce3bc619-f4e7-4069-926c-b38e382b34b9",
+      "text": "The initial abstention of 8 nations in 1948 fails to negate the UDHR's current near-universal acceptance, as the document is now cited as a basis for customary international law applicable to all 193 UN member states.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "244fd386-aedb-4cdc-9183-78e96138574f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:25.182522+00:00"
+    },
+    {
+      "id": "a37432f8-a3a4-4cd0-80ec-e4d8e916f9f3",
+      "text": "Damasio's research shows that VMPFC damage prevents the generation of somatic markers, meaning the DLPFC lacks crucial, context-dependent emotional input for effective risk assessment, not that rationality itself is impaired. The DLPFC's core logical processing capacity remains intact, but it is rendered ineffective due to missing predictive data.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2e750e56-d252-40df-9aba-3750630d8717",
+      "children_count": 0,
+      "references": [
+        "Antonio Damasio's research",
+        "Somatic Marker Hypothesis"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:27.525836+00:00"
+    },
+    {
+      "id": "514bf867-4316-489a-a5ec-b84536e1beb1",
+      "text": "Individuals with Autism Spectrum Disorder often exhibit high levels of strictly logical and strategic calculation in domains like mathematics or engineering, showing that exceptional rationality can be highly effective even with reduced emotional input. This contradicts the necessity of emotion as a prerequisite for all effective high-level reasoning.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2e750e56-d252-40df-9aba-3750630d8717",
+      "children_count": 0,
+      "references": [
+        "Autism Spectrum Disorder studies",
+        "High-functioning autism characteristics"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:27.525914+00:00"
+    },
+    {
+      "id": "204c0664-dc90-4b18-9613-d5d9aa49612c",
+      "text": "Functional Magnetic Resonance Imaging (fMRI) studies of human subjects performing impersonal moral dilemmas, such as the trolley problem, show the DLPFC is preferentially recruited when subjects override initial emotional responses to make a difficult, utilitarian choice. This specific activation pattern before the final decision demonstrates the DLPFC's causal role in decision determination, not merely post-hoc construction.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "279a288f-285b-4f99-9831-7da2ec38957a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:28.066031+00:00"
+    },
+    {
+      "id": "13e2af09-956d-45c9-b161-955a69630c08",
+      "text": "Modern democratic societies like South Korea and Taiwan maintain robust constitutional protections for universal individual rights while operating within a culture that emphasizes Confucian relational duties, demonstrating that integration, not just conflict, is possible.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b80a17f7-c639-4aa1-8ea7-57eda2fb752a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:32.976605+00:00"
+    },
+    {
+      "id": "0e554170-a935-4563-b6e4-a3867f1fa56f",
+      "text": "The universal assertion that \"all morality is relative\" is itself a privileged, non-relative claim about the nature of morality, thereby creating an inherent performative contradiction for the theory.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:32.976962+00:00"
+    },
+    {
+      "id": "a60f65ff-7138-426d-8d20-597c63217af6",
+      "text": "If all moral systems are equally valid, concepts like the worldwide abolition of slavery or the dismantling of apartheid constitute mere shifts in social preference, not genuine moral progress away from an objectively worse state.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:32.977944+00:00"
+    },
+    {
+      "id": "1f1267f7-40c4-4d31-be85-6623270989c3",
+      "text": "Universal frameworks like the UN Declaration of Human Rights presuppose objective moral obligations, which lose all non-negotiable force if concepts like freedom from torture are deemed culturally relative norms.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:32.978520+00:00"
+    },
+    {
+      "id": "e3cafed6-3bff-44b6-a011-860e3840efa8",
+      "text": "Moral relativism hinders international intervention against state-accepted atrocities, such as the Rwandan genocide, because condemnation is logically prohibited if such acts are deemed morally permissible within their cultural context.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:32.979035+00:00"
+    },
+    {
+      "id": "24d6c671-d310-43ba-ac37-291d23a9d1e9",
+      "text": "Functional legal institutions and international bodies like the International Criminal Court (ICC) rely on the shared assumption that core violations like war crimes and genocide are objectively wrong, preventing justice from being reduced to arbitrary exercises of power.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:32.979496+00:00"
+    },
+    {
+      "id": "6b6debce-190b-46f6-bc9d-e2eb88c661e5",
+      "text": "Extensive anthropological research demonstrates that prohibitions against unjustified killing, deceit, and failures of reciprocity are nearly stable and universal across diverse cultures, suggesting common moral foundations rooted in shared human nature.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:32.979953+00:00"
+    },
+    {
+      "id": "40d56e62-6b9e-439d-a6ed-c7644b65348b",
+      "text": "Intervention is governed by codified international law like the UN Genocide Convention and R2P, which mandate condemnation and action regardless of conflicting cultural perspectives.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e3cafed6-3bff-44b6-a011-860e3840efa8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:45.865326+00:00"
+    },
+    {
+      "id": "e639ea4c-53a1-47ca-b7ef-7ff11b0b4f37",
+      "text": "The failure to intervene in the Rwandan genocide was widely attributable to a lack of political will, insufficient resources, and complex geopolitical interests of powerful UN Security Council members, not philosophical paralysis stemming from moral relativism.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e3cafed6-3bff-44b6-a011-860e3840efa8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:45.865783+00:00"
+    },
+    {
+      "id": "590628fd-6bfb-4c5d-a913-2717bf16a708",
+      "text": "The non-negotiable force of universal rights primarily stems from state binding treaties and global political consensus, independent of establishing metaphysical objective morality. Treaties like the Geneva Conventions derive their authority from ratification and legal precedent, not solely from philosophical universalism.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "1f1267f7-40c4-4d31-be85-6623270989c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:45.882872+00:00"
+    },
+    {
+      "id": "382dd651-b698-461a-a11d-ea4258fad9bc",
+      "text": "Cultural relativity debates do not eliminate the subsequent *legal* and *institutional* obligations established by frameworks that form the basis of hard international law once signed. The practical enforceability of the ICCPR's prohibition on torture obligates signatory states regardless of whether they define the right as an objective or a culturally agreed-upon norm.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "1f1267f7-40c4-4d31-be85-6623270989c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:45.883592+00:00"
+    },
+    {
+      "id": "52e7f2ee-0976-49a5-98ce-79fafde44566",
+      "text": "The concept of \"unjustified\" is highly unstable, as demonstrated by the variability in cultural norms; for example, traditional Yanomam\u00f6 society defined revenge murder as justified, while historical Roman Law permitted the killing of slave property.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6b6debce-190b-46f6-bc9d-e2eb88c661e5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:50.001685+00:00"
+    },
+    {
+      "id": "8f7020a0-4a58-4c31-98e2-3b88dba771cb",
+      "text": "Reciprocity and prohibitions against deceit emerged independently across diverse societies, such as those governed by Hammurabi\u2019s Code and the trade networks of the ancient Indus Valley, because these rules are necessary for the successful functioning of any complex social or economic system.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6b6debce-190b-46f6-bc9d-e2eb88c661e5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:50.002151+00:00"
+    },
+    {
+      "id": "668d1cd5-a919-4203-a5b9-ef301e57c44c",
+      "text": "Jeremy Bentham\u2019s utilitarian framework defines moral success by the empirical reduction of suffering and the maximization of well-being. The abolition of slavery worldwide, beginning with the British Empire in 1833, constitutes moral progress because it demonstrably minimized pain for millions, irrespective of external objective moral truth.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a60f65ff-7138-426d-8d20-597c63217af6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:53.421492+00:00"
+    },
+    {
+      "id": "fc5268c1-6458-44eb-b38f-8a73f7785ff7",
+      "text": "Under contractualist theories, like that proposed by John Rawls in A Theory of Justice, moral progress is achieved when social rules move toward greater internal consistency and universality. The Civil Rights Movement in the US and the dismantling of Jim Crow laws (a shift in legal preference) created a more coherent and just application of the foundational principle of equality, which is a key metric of moral truth.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a60f65ff-7138-426d-8d20-597c63217af6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:53.422156+00:00"
+    },
+    {
+      "id": "93825de3-0760-4219-9de5-7b900729bdbf",
+      "text": "The ICC\u2019s case history shows political selectivity, focusing investigations and indictments heavily on African nations like Sudan and Kenya while major powers actively refuse to ratify the Rome Statute and remain immune from effective prosecution.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "24d6c671-d310-43ba-ac37-291d23a9d1e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:54.649878+00:00"
+    },
+    {
+      "id": "3fbef746-a3d5-4ef3-9426-82ff158cddad",
+      "text": "International bodies rely on legal codification and state agreement, not objective morality, evidenced by the United States passing the American Service-Members' Protection Act, which authorizes force to prevent US citizens from being tried in The Hague.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "24d6c671-d310-43ba-ac37-291d23a9d1e9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:54.650630+00:00"
+    },
+    {
+      "id": "b61179d1-9c58-4447-9e02-6e461b8497d0",
+      "text": "The \u201clack of political will\u201d is often rooted in the philosophical prioritization of national self-interest and strict state sovereignty over humanitarian duty in foreign conflicts. This prioritization was codified in the US Presidential Decision Directive 25 (PDD-25), which set restrictive criteria for peacekeeping missions.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e639ea4c-53a1-47ca-b7ef-7ff11b0b4f37",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:59.518547+00:00"
+    },
+    {
+      "id": "9238f681-5e38-425b-86fb-a1e3f312737a",
+      "text": "The hesitation to label the event as \"genocide\" stemmed from a specific philosophical and legal avoidance of the treaty obligations that would compel intervention. The collective memory of the 1993 intervention failures in Somalia created a powerful, philosophically-driven aversion to military risk, known as the \"Mogadishu Line.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e639ea4c-53a1-47ca-b7ef-7ff11b0b4f37",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:59.519257+00:00"
+    },
+    {
+      "id": "627a5ab0-1585-4954-bbbc-8b384e5988c7",
+      "text": "The Responsibility to Protect (R2P) is a political declaration from the 2005 UN World Summit, and thus lacks the binding legal authority of codified treaties like the UN Genocide Convention of 1948.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "40d56e62-6b9e-439d-a6ed-c7644b65348b",
+      "children_count": 1,
+      "references": [
+        "UN World Summit 2005 Outcome Document",
+        "Convention on the Prevention and Punishment of the Crime of Genocide 1948"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:59.577984+00:00"
+    },
+    {
+      "id": "a7d19051-9004-47fd-a4e4-6252dcd165bd",
+      "text": "The UN Security Council veto power renders mandatory military action impossible, as demonstrated by Russia and China consistently blocking resolutions concerning the mass atrocities in Syria after 2011.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "40d56e62-6b9e-439d-a6ed-c7644b65348b",
+      "children_count": 1,
+      "references": [
+        "UN Security Council Records"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:38:59.578745+00:00"
+    },
+    {
+      "id": "62573af6-751a-4dad-8a97-13bd0323a110",
+      "text": "Legal systems from Hammurabi's Code to modern US jurisprudence all require coherent reasoning, adherence to established premises, and procedural consistency to justify a verdict. This universal reliance on a logical structure demonstrates the underlying concept of justification is stable, regardless of the moral content of the laws themselves.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "52e7f2ee-0976-49a5-98ce-79fafde44566",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:05.929760+00:00"
+    },
+    {
+      "id": "14be55ec-dd4a-43c1-a8b1-a51ae6dbdd82",
+      "text": "Despite variability in specific extreme cases, core prohibitions against theft, deceit, and unprovoked violence are found across diverse cultures studied by anthropology, including the Maasai and the Inuit. This cross-cultural agreement on fundamental acts points to a stable conceptual baseline for what is uniformly unjustified.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "52e7f2ee-0976-49a5-98ce-79fafde44566",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:05.930469+00:00"
+    },
+    {
+      "id": "c9feb374-cba2-47f3-bfc9-50e5455d1b58",
+      "text": "Cognitive science research, using experiments like the Ultimatum Game, consistently shows humans possess innate, emotionally-driven responses to detect and punish non-reciprocity, suggesting a cognitive mechanism, not purely systemic necessity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8f7020a0-4a58-4c31-98e2-3b88dba771cb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:07.519251+00:00"
+    },
+    {
+      "id": "3c27aae6-c119-4acc-b078-769580abe089",
+      "text": "Highly successful, complex societies like the Roman Empire maintained stability and advanced trade for centuries while institutionalizing deceit and extreme non-reciprocity (slavery) against large subjugated populations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8f7020a0-4a58-4c31-98e2-3b88dba771cb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:07.519728+00:00"
+    },
+    {
+      "id": "e06ec56b-676e-4aa6-abbd-f130d45c9cad",
+      "text": "The Southern legal system under Jim Crow consistently applied the doctrine of \"separate but equal\" across all public life, including education and public transportation, demonstrating high internal consistency for decades. Moral progress in the 1960s resulted from abandoning the consistently applied, but substantively unjust, principle of racial separation, not from greater formal coherence within that principle.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fc5268c1-6458-44eb-b38f-8a73f7785ff7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:10.149927+00:00"
+    },
+    {
+      "id": "3691f9b3-172f-4e30-9565-0710229f6eb0",
+      "text": "Moral frameworks based purely on internal consistency can lead to morally abhorrent conclusions if the initial premises are flawed, as demonstrated by the consistent application of Nazi racial laws in 1930s Germany. The Nuremberg Laws were internally consistent in defining and isolating specific populations, yet represented a massive moral regression, not progress.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fc5268c1-6458-44eb-b38f-8a73f7785ff7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:10.150418+00:00"
+    },
+    {
+      "id": "dab99936-eb59-4d64-ae85-892456c5e01d",
+      "text": "The Rome Statute has been ratified by 124 states, maintaining legal jurisdiction over major crimes like those committed in Sudan, demonstrating international bodies function through widespread consensus rather than relying on one state's compliance.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3fbef746-a3d5-4ef3-9426-82ff158cddad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:13.353831+00:00"
+    },
+    {
+      "id": "b94333ab-cb44-42bb-a223-5026b583dda0",
+      "text": "The International Court of Justice recognizes *jus cogens* norms, such as the absolute prohibition of torture and genocide, which are overriding principles of international law derived from universal moral consensus, not mere state agreement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3fbef746-a3d5-4ef3-9426-82ff158cddad",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:13.354288+00:00"
+    },
+    {
+      "id": "5fe99555-f175-477f-a230-5e240801337d",
+      "text": "Lack of political will is often a response to immediate domestic political costs, not just philosophical self-interest, as demonstrated by the US withdrawal from Somalia only months after the 1993 Battle of Mogadishu due to public intolerance for high casualty counts. The prioritization of national self-interest is frequently secondary to urgent concerns over military risk and domestic support in conflict zones, even for UN missions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b61179d1-9c58-4447-9e02-6e461b8497d0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:14.630077+00:00"
+    },
+    {
+      "id": "2643ebdf-ed95-4344-ac26-114086fed85a",
+      "text": "Non-intervention in tragedies like the 1994 Rwandan genocide was primarily due to a lack of vital strategic interest, a calculus distinct from the tactical risk aversion of the Mogadishu Line; US-led intervention in the 1991 Gulf War, by contrast, secured tangible economic assets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9238f681-5e38-425b-86fb-a1e3f312737a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:15.001432+00:00"
+    },
+    {
+      "id": "200fa07a-f7e3-4728-892c-ca01a6a87fdf",
+      "text": "The severe economic depression and subsequent widespread suffering among individuals and dependent colonial economies, particularly in the British West Indies after 1833, constitutes a negative utility that must be included in the moral success calculation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "668d1cd5-a919-4203-a5b9-ef301e57c44c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:15.843010+00:00"
+    },
+    {
+      "id": "f3fdec63-1aa5-483a-99cb-01a33dd91b9b",
+      "text": "A full utilitarian assessment is impossible because the reduction of physical pain was often replaced by systemic economic subjugation, such as the sharecropping system in the post-Civil War American South.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "668d1cd5-a919-4203-a5b9-ef301e57c44c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:15.843539+00:00"
+    },
+    {
+      "id": "e425bcfe-0e4a-4795-ba9e-76c879622b6e",
+      "text": "The US-led invasion of Iraq in 2003 and the NATO intervention in Kosovo in 1999 demonstrate that vetoes only prevent Chapter VII authorized action. Major military operations remain possible when powerful states choose to act unilaterally or with a coalition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a7d19051-9004-47fd-a4e4-6252dcd165bd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:17.390722+00:00"
+    },
+    {
+      "id": "50f0d293-370a-466e-9e22-0e848628e685",
+      "text": "The existence of global legal consensus, such as the International Criminal Court's mandate to prosecute genocide and war crimes, demonstrates the recognition of objective moral wrongs that transcend cultural relativism. The nearly universal adoption of the Universal Declaration of Human Rights in 1948 further establishes a foundational moral baseline that is not purely contingent on specific national views.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "627a5ab0-1585-4954-bbbc-8b384e5988c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:17.625959+00:00"
+    },
+    {
+      "id": "9aa7f647-7f2d-4f84-b830-d35d14487567",
+      "text": "The supposed stability was continually eroded by the institutionalized oppression, as evidenced by massive internal disruptions like the Sicilian Slave Wars and the widespread Spartacus rebellion (73\u201371 BC), proving that non-reciprocity is inherently destabilizing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3c27aae6-c119-4acc-b078-769580abe089",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:19.130851+00:00"
+    },
+    {
+      "id": "e92f0cef-4871-4350-bfb4-16956061f4b4",
+      "text": "The identified cognitive biases for reciprocity must co-evolve with and be reinforced by social systems, meaning the dichotomy between \"cognitive mechanism\" and \"systemic necessity\" is artificial and misleading.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c9feb374-cba2-47f3-bfc9-50e5455d1b58",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:19.876533+00:00"
+    },
+    {
+      "id": "d6bb5476-7d2c-49e1-9fef-c4fe5e5d6e19",
+      "text": "Cross-cultural research on the Ultimatum Game demonstrates significant variability; for example, the Peruvian Machiguenga often accept low offers, indicating local economic integration and cooperative norms, not a universal innate response, drive outcomes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c9feb374-cba2-47f3-bfc9-50e5455d1b58",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:19.876588+00:00"
+    },
+    {
+      "id": "04556cb1-1dfa-4e58-9549-67988dbff9af",
+      "text": "The legal system of Nazi Germany applied the Nuremberg Laws (1935) with strict procedural consistency through its own courts, demonstrating that formal coherence is separable from moral or legitimate justification.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "62573af6-751a-4dad-8a97-13bd0323a110",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:22.261021+00:00"
+    },
+    {
+      "id": "c91c3466-cf6a-4f1d-a43f-cf2abc71c539",
+      "text": "The source of legal justification is unstable, radically shifting from divine decree (e.g., medieval European monarchies) to secular concepts of popular sovereignty (e.g., the U.S. Constitution).",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "62573af6-751a-4dad-8a97-13bd0323a110",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:22.261075+00:00"
+    },
+    {
+      "id": "0287e26e-bd1c-4863-a8bc-dab120cb2085",
+      "text": "Anthropological evidence shows that prohibitions against violence and theft are often drastically relaxed or reversed when applied to out-groups, such as the historical acceptance of headhunting among the Ilongot or Roman permissibility toward pillaging non-citizen provinces.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "14be55ec-dd4a-43c1-a8b1-a51ae6dbdd82",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:24.117078+00:00"
+    },
+    {
+      "id": "5f2020b0-1935-428d-8ad3-855607e772b5",
+      "text": "The universal prohibition of extreme violence stems from the minimum necessary conditions for any cooperative society to survive, a functional reality described by philosopher H.L.A. Hart as the \"minimum content of natural law.\" This functional requirement does not establish intrinsic justification.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "14be55ec-dd4a-43c1-a8b1-a51ae6dbdd82",
+      "children_count": 0,
+      "references": [
+        "H.L.A. Hart, The Concept of Law (1961)"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:24.117110+00:00"
+    },
+    {
+      "id": "5ef87133-9482-4629-b418-a2ddb248d074",
+      "text": "When viewing moral conflict anthropologically, the observation that traditional Inuit society permitted resource-based infanticide while modern law prohibits it remains a non-moral, descriptive statement about cultural variation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0e554170-a935-4563-b6e4-a3867f1fa56f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:26.816516+00:00"
+    },
+    {
+      "id": "e0ef3ab8-435d-419d-9fe6-9bc30bc99cd4",
+      "text": "The classical relativist Protagoras held his core assertion, \"Man is the measure of all things,\" was true only relative to his own judgment, meaning the statement itself is not a claim of universal, non-relative objective truth.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0e554170-a935-4563-b6e4-a3867f1fa56f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:26.816988+00:00"
+    },
+    {
+      "id": "9d3521f1-d27a-442d-aa6e-ad20924f1320",
+      "text": "Utilitarian assessment is regularly applied to complex, non-physical metrics like economic welfare and reduced opportunity, as demonstrated through the widespread use of Quality Adjusted Life Years (QALYs) in healthcare rationing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f3fdec63-1aa5-483a-99cb-01a33dd91b9b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:27.414100+00:00"
+    },
+    {
+      "id": "c5c74b1a-558d-4847-93af-17479738c4d4",
+      "text": "The global abolition of the transatlantic slave trade in the 19th century demonstrates a definitive net improvement in human welfare, proving that removing a major source of suffering does not inevitably lead to an equally devastating systemic replacement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f3fdec63-1aa5-483a-99cb-01a33dd91b9b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:27.414146+00:00"
+    },
+    {
+      "id": "6b910b35-909f-4582-af1b-787672838218",
+      "text": "The Vienna Convention on the Law of Treaties (Article 53) defines *jus cogens* as a norm which must be \"accepted and recognized by the international community of States as a whole.\" Therefore, the legal force of the prohibition against aggression relies critically on formal state recognition and acceptance, not solely on abstract moral consensus.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b94333ab-cb44-42bb-a223-5026b583dda0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:27.979497+00:00"
+    },
+    {
+      "id": "3ad482a2-d063-4999-90a7-0679f77babe1",
+      "text": "The International Criminal Court maintains outstanding arrest warrants for figures like former Sudanese President Omar al-Bashir, but has no independent means to execute them, demonstrating a critical dependence on specific state compliance for functional enforcement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dab99936-eb59-4d64-ae85-892456c5e01d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:29.021305+00:00"
+    },
+    {
+      "id": "a52c8d82-d828-42f6-b35c-d6fe2b702955",
+      "text": "The UN Security Council, the primary body for enforcing international law, grants veto power to P5 members, enabling Russia to block actions in Syria despite overwhelming consensus, proving some international structures rely on one state\u2019s compliance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dab99936-eb59-4d64-ae85-892456c5e01d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:29.021346+00:00"
+    },
+    {
+      "id": "1ebae25e-b179-47f5-ba89-ba809e5b39e7",
+      "text": "The Supreme Court ruling in Brown v. Board of Education (1954) explicitly found that segregated educational facilities were inherently unequal, proving the \"separate but equal\" doctrine lacked the claimed internal consistency for over fifty years.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e06ec56b-676e-4aa6-abbd-f130d45c9cad",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:29.685128+00:00"
+    },
+    {
+      "id": "6d521994-60d7-4cbd-8043-02f2bae8ed41",
+      "text": "The moral shift was precipitated by legal challenges, such as the NAACP exploiting the systemic failure of facilities to be equal in cases like Sweatt v. Painter (1950), demonstrating that exposing the internal incoherence drove the eventual abandonment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e06ec56b-676e-4aa6-abbd-f130d45c9cad",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:29.685163+00:00"
+    },
+    {
+      "id": "ac9aa8a9-f8dd-4e5a-baec-7a71d9249b6b",
+      "text": "Immanuel Kant's categorical imperative holds that the moral success of emancipation is derived from the non-negotiable duty to treat enslaved persons as ends in themselves, making the subsequent economic loss in the British West Indies morally irrelevant to the rightness of the act.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "200fa07a-f7e3-4728-892c-ca01a6a87fdf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:32.685078+00:00"
+    },
+    {
+      "id": "e3e2c220-1e2e-4ad7-bd39-247b6e590828",
+      "text": "The Convention on the Rights of the Child (1989), ratified by nearly all nations, establishes a universal, non-negotiable right to life, meaning the observation of infanticide engages codified international moral and legal standards.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5ef87133-9482-4629-b418-a2ddb248d074",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:44.740404+00:00"
+    },
+    {
+      "id": "04f10e2a-42cb-4cd1-aa0c-8ff3aa6beb51",
+      "text": "The American Anthropological Association Code of Ethics requires researchers to prioritize the dignity and welfare of subjects, making a purely non-moral stance impossible for anthropologists observing life-threatening practices.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5ef87133-9482-4629-b418-a2ddb248d074",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:44.740886+00:00"
+    },
+    {
+      "id": "55431f7c-1cb0-4cdd-916b-556464428807",
+      "text": "The evaluation that the Nazi premises were \"flawed\" depends entirely on applying a competing moral framework, such as the egalitarian principles of universal human rights found in post-WWII Western democracies, reflecting the relative nature of moral judgment. In societies like ancient Sparta, consistency in applying premises centered on state supremacy and selective infanticide was judged as moral strength necessary for cultural survival, not regression.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3691f9b3-172f-4e30-9565-0710229f6eb0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:45.372047+00:00"
+    },
+    {
+      "id": "bbffdec9-8963-438e-8b6e-0bfb760338ce",
+      "text": "Plato, in the Theaetetus dialogue, interprets Protagoras' dictum as applying universally to all individuals, meaning that \"Man\" refers to each person as the measure of their own truth, not merely Protagoras' personal opinion.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e0ef3ab8-435d-419d-9fe6-9bc30bc99cd4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:47.942556+00:00"
+    },
+    {
+      "id": "699f3210-7334-4f5b-8bc5-f954f7ab3512",
+      "text": "If Protagoras\u2019 statement is only true for him, then he must concede that the philosopher who asserts objectivism is universally true has made a statement that is true for them, which undermines the utility of the relativist doctrine, as argued in the Socratic Peritrope.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e0ef3ab8-435d-419d-9fe6-9bc30bc99cd4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:47.943294+00:00"
+    },
+    {
+      "id": "c6df92f7-e544-4b22-843a-28fb85d06ccb",
+      "text": "The Convention's universality is undermined by the radically divergent interpretations of the \"right to life\" among signatory states, notably concerning legal voluntary euthanasia and varying gestational limits for abortion in countries like the Netherlands and Canada, demonstrating practical moral relativism trumping codified uniformity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "e3e2c220-1e2e-4ad7-bd39-247b6e590828",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:57.261971+00:00"
+    },
+    {
+      "id": "5516fbca-5d7e-44b9-9987-19bc7e0d909c",
+      "text": "The condemnation of historically widespread practices like slavery or genocide by bodies such as the UN and the ICC relies on the existence of objective moral wrongs that transcend any individual's perception of their own \"truth.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "bbffdec9-8963-438e-8b6e-0bfb760338ce",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:39:58.377249+00:00"
+    },
+    {
+      "id": "d90b95d3-54ac-433b-b492-a89a678df74f",
+      "text": "Adherence to the Common Rule for Human Subjects Protection is often a pragmatic administrative requirement for university funding, not an internalized moral stance against observed practices. This external compliance does not prevent an anthropologist from analyzing customs like the historical practice of Sati in India from a purely detached, non-moral analytical viewpoint focusing on their social function.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "04f10e2a-42cb-4cd1-aa0c-8ff3aa6beb51",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:06.955543+00:00"
+    },
+    {
+      "id": "6e00950e-3687-4d6e-9cad-2e847cd3f139",
+      "text": "The definition of \"life-threatening practices\" includes structural violence, such as systematic malnutrition and lack of necessary medical care resulting in premature death in marginalized communities. Anthropologists routinely analyze these systemic threats in regions like rural Appalachia or the favelas of Brazil using detached, non-moral frameworks focused on economic and political drivers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "04f10e2a-42cb-4cd1-aa0c-8ff3aa6beb51",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:06.955593+00:00"
+    },
+    {
+      "id": "1e809aad-8198-4c64-a125-2b6137e83780",
+      "text": "Pyrrhonian skeptics, like Sextus Empiricus, show that utility is maintained: suspending judgment (*epoch\u0113*) leads to tranquility (*ataraxia*), demonstrating that a self-referentially applied doctrine can achieve its practical goal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "699f3210-7334-4f5b-8bc5-f954f7ab3512",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:14.414470+00:00"
+    },
+    {
+      "id": "abeb5aaa-f367-48d8-9b6e-980c3d09511e",
+      "text": "Protagoras's relativism found practical utility in 5th century BCE Athens by providing a framework for Sophists to win rhetorical and political disputes, a benefit unrelated to satisfying philosophical demands for universal consistency.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "699f3210-7334-4f5b-8bc5-f954f7ab3512",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:14.414508+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:37:21.683392+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:37:21.683392+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "9d0b2806-5dfa-4014-aee1-18055c75ae21",
+      "target": "a52b92e0-f338-4233-82d5-55c5f4d7ef77",
+      "type": "objection"
+    },
+    {
+      "source": "9d0b2806-5dfa-4014-aee1-18055c75ae21",
+      "target": "db113a7f-e69f-4c0e-8bc2-7a65e42ba18b",
+      "type": "objection"
+    },
+    {
+      "source": "010097ec-54c9-4e67-b7a7-c80881d21b40",
+      "target": "e1a99376-0b5d-44ba-94b7-00a520e343ed",
+      "type": "objection"
+    },
+    {
+      "source": "010097ec-54c9-4e67-b7a7-c80881d21b40",
+      "target": "3bc99e3a-4418-4616-b28d-90baff3a621b",
+      "type": "objection"
+    },
+    {
+      "source": "cadbd335-0097-41dd-ae2d-d9475ae6b94e",
+      "target": "1d3892a5-c158-4ba7-ba1e-e60436946077",
+      "type": "objection"
+    },
+    {
+      "source": "cadbd335-0097-41dd-ae2d-d9475ae6b94e",
+      "target": "0aa980a9-41fa-4fb8-a153-d923b67636c3",
+      "type": "objection"
+    },
+    {
+      "source": "452ab23c-50ad-4451-a50f-f1c3112dd2cb",
+      "target": "92e270ff-9606-4c65-ac20-21509b944702",
+      "type": "objection"
+    },
+    {
+      "source": "452ab23c-50ad-4451-a50f-f1c3112dd2cb",
+      "target": "19bdac43-e8e6-4c5f-8d24-bc00aae321bf",
+      "type": "objection"
+    },
+    {
+      "source": "b6ba420f-91f3-4309-898b-64327b767079",
+      "target": "98898a41-aeb6-4e39-bcf8-b33a2e72de27",
+      "type": "objection"
+    },
+    {
+      "source": "b6ba420f-91f3-4309-898b-64327b767079",
+      "target": "8be05d5c-26d4-4975-a00e-6a1249cc0614",
+      "type": "objection"
+    },
+    {
+      "source": "43cf931d-8454-4635-9be9-637a07858d4b",
+      "target": "e765d74f-3dd6-4310-b59e-fb9f30a22946",
+      "type": "objection"
+    },
+    {
+      "source": "43cf931d-8454-4635-9be9-637a07858d4b",
+      "target": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "type": "objection"
+    },
+    {
+      "source": "3bc99e3a-4418-4616-b28d-90baff3a621b",
+      "target": "68ef42dd-65c6-41d5-a26e-7b342fa2951e",
+      "type": "response"
+    },
+    {
+      "source": "3bc99e3a-4418-4616-b28d-90baff3a621b",
+      "target": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "type": "response"
+    },
+    {
+      "source": "db113a7f-e69f-4c0e-8bc2-7a65e42ba18b",
+      "target": "bfb10dd3-13b2-4eb0-be07-2902051d465f",
+      "type": "response"
+    },
+    {
+      "source": "db113a7f-e69f-4c0e-8bc2-7a65e42ba18b",
+      "target": "737c1d56-4893-4cf2-8d8c-17ed82f7b427",
+      "type": "response"
+    },
+    {
+      "source": "92e270ff-9606-4c65-ac20-21509b944702",
+      "target": "8c25068a-931d-4f9a-b0c1-65f61c3e5838",
+      "type": "response"
+    },
+    {
+      "source": "92e270ff-9606-4c65-ac20-21509b944702",
+      "target": "03024c39-b77f-4bc7-902a-8268566593b9",
+      "type": "response"
+    },
+    {
+      "source": "8be05d5c-26d4-4975-a00e-6a1249cc0614",
+      "target": "372a0687-ff26-460d-af0e-7f6bc33cab23",
+      "type": "response"
+    },
+    {
+      "source": "8be05d5c-26d4-4975-a00e-6a1249cc0614",
+      "target": "58a00397-2842-4b31-9ebf-07e7313b2a28",
+      "type": "response"
+    },
+    {
+      "source": "e1a99376-0b5d-44ba-94b7-00a520e343ed",
+      "target": "b279e43d-0148-408a-b875-6cfb94106648",
+      "type": "response"
+    },
+    {
+      "source": "e1a99376-0b5d-44ba-94b7-00a520e343ed",
+      "target": "a99c5a4b-185e-4ad8-9a59-69ea9caf4afe",
+      "type": "response"
+    },
+    {
+      "source": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "target": "86d31411-aee2-4f37-ac24-b2a6c2b919e2",
+      "type": "response"
+    },
+    {
+      "source": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "target": "80d42c1c-99dd-40c3-8f0f-64655f800a4f",
+      "type": "response"
+    },
+    {
+      "source": "37ebd7ca-aa26-45f1-a59c-bed18104f729",
+      "target": "b356bf8f-3136-4b49-bf49-af74e35061e1",
+      "type": "response"
+    },
+    {
+      "source": "bfb10dd3-13b2-4eb0-be07-2902051d465f",
+      "target": "1e8a87aa-b551-4834-ba73-b45d53f83e6f",
+      "type": "response"
+    },
+    {
+      "source": "0aa980a9-41fa-4fb8-a153-d923b67636c3",
+      "target": "21596697-6a98-4e00-80ba-e67ff1949459",
+      "type": "response"
+    },
+    {
+      "source": "0aa980a9-41fa-4fb8-a153-d923b67636c3",
+      "target": "60aceae1-fbaa-415c-882b-d95c57540701",
+      "type": "response"
+    },
+    {
+      "source": "737c1d56-4893-4cf2-8d8c-17ed82f7b427",
+      "target": "f1291777-3231-4a53-b39d-7cffe749a0d8",
+      "type": "response"
+    },
+    {
+      "source": "98898a41-aeb6-4e39-bcf8-b33a2e72de27",
+      "target": "b27e27a8-4572-4d10-bf42-faea41692605",
+      "type": "response"
+    },
+    {
+      "source": "98898a41-aeb6-4e39-bcf8-b33a2e72de27",
+      "target": "1db0e881-9ad3-4c6a-8b0b-feb769bd411f",
+      "type": "response"
+    },
+    {
+      "source": "68ef42dd-65c6-41d5-a26e-7b342fa2951e",
+      "target": "7f242fac-189b-482e-83b8-3fcef4c3d8be",
+      "type": "response"
+    },
+    {
+      "source": "68ef42dd-65c6-41d5-a26e-7b342fa2951e",
+      "target": "0297bc3d-94d8-4ed4-9737-86f783ea1c60",
+      "type": "response"
+    },
+    {
+      "source": "372a0687-ff26-460d-af0e-7f6bc33cab23",
+      "target": "f9ee8afb-d95b-4667-ae47-c9075dd13b51",
+      "type": "response"
+    },
+    {
+      "source": "8c25068a-931d-4f9a-b0c1-65f61c3e5838",
+      "target": "1e069d67-989c-412c-97c2-dd96e588f334",
+      "type": "response"
+    },
+    {
+      "source": "58a00397-2842-4b31-9ebf-07e7313b2a28",
+      "target": "47b6055d-3264-4f4a-af1a-e094989b5fa7",
+      "type": "response"
+    },
+    {
+      "source": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "target": "2e750e56-d252-40df-9aba-3750630d8717",
+      "type": "response"
+    },
+    {
+      "source": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "target": "9212f246-f8fc-4229-b778-e0feeef05f89",
+      "type": "response"
+    },
+    {
+      "source": "b062c771-642b-4fc9-ada4-edc72cd48ea4",
+      "target": "279a288f-285b-4f99-9831-7da2ec38957a",
+      "type": "response"
+    },
+    {
+      "source": "21596697-6a98-4e00-80ba-e67ff1949459",
+      "target": "9da4ee36-d99d-4ccd-98ca-9f67d296f664",
+      "type": "response"
+    },
+    {
+      "source": "03024c39-b77f-4bc7-902a-8268566593b9",
+      "target": "2c6158ac-d331-421b-b949-5774d58ac088",
+      "type": "response"
+    },
+    {
+      "source": "03024c39-b77f-4bc7-902a-8268566593b9",
+      "target": "83b102a3-1441-4108-a4dc-cd54cda26198",
+      "type": "response"
+    },
+    {
+      "source": "b279e43d-0148-408a-b875-6cfb94106648",
+      "target": "1f09436a-d237-4a0c-921c-75a9a903aca1",
+      "type": "response"
+    },
+    {
+      "source": "b279e43d-0148-408a-b875-6cfb94106648",
+      "target": "70bc01ba-583b-4d85-b2b8-762ee435c48d",
+      "type": "response"
+    },
+    {
+      "source": "60aceae1-fbaa-415c-882b-d95c57540701",
+      "target": "cfe6e64b-dd0b-4a59-961e-1dd8c4edb0a2",
+      "type": "response"
+    },
+    {
+      "source": "60aceae1-fbaa-415c-882b-d95c57540701",
+      "target": "de5929b9-ca6c-4a8e-b93f-1e77a3c2f455",
+      "type": "response"
+    },
+    {
+      "source": "a99c5a4b-185e-4ad8-9a59-69ea9caf4afe",
+      "target": "926db01c-fef9-490c-a727-3b1f0cb09df2",
+      "type": "response"
+    },
+    {
+      "source": "a99c5a4b-185e-4ad8-9a59-69ea9caf4afe",
+      "target": "4955ce21-77a6-4000-b72a-1d6c810428dd",
+      "type": "response"
+    },
+    {
+      "source": "e765d74f-3dd6-4310-b59e-fb9f30a22946",
+      "target": "244fd386-aedb-4cdc-9183-78e96138574f",
+      "type": "response"
+    },
+    {
+      "source": "e765d74f-3dd6-4310-b59e-fb9f30a22946",
+      "target": "b80a17f7-c639-4aa1-8ea7-57eda2fb752a",
+      "type": "response"
+    },
+    {
+      "source": "b27e27a8-4572-4d10-bf42-faea41692605",
+      "target": "d20022a6-68a7-4b46-8a0a-40191d745ca7",
+      "type": "response"
+    },
+    {
+      "source": "1db0e881-9ad3-4c6a-8b0b-feb769bd411f",
+      "target": "b991daf1-482f-441d-91f3-1eea6b703e14",
+      "type": "response"
+    },
+    {
+      "source": "1db0e881-9ad3-4c6a-8b0b-feb769bd411f",
+      "target": "fa3bdae5-cc9b-44ca-8bf2-4cd4d1f1244b",
+      "type": "response"
+    },
+    {
+      "source": "9212f246-f8fc-4229-b778-e0feeef05f89",
+      "target": "bf66682d-bace-4a3c-96b1-bf4df29a9d7e",
+      "type": "response"
+    },
+    {
+      "source": "9212f246-f8fc-4229-b778-e0feeef05f89",
+      "target": "21f0ad1e-473f-4c47-ae2d-f60ead0f6430",
+      "type": "response"
+    },
+    {
+      "source": "244fd386-aedb-4cdc-9183-78e96138574f",
+      "target": "52493ea0-df12-44b7-9631-44ad856ace84",
+      "type": "response"
+    },
+    {
+      "source": "244fd386-aedb-4cdc-9183-78e96138574f",
+      "target": "ce3bc619-f4e7-4069-926c-b38e382b34b9",
+      "type": "response"
+    },
+    {
+      "source": "2e750e56-d252-40df-9aba-3750630d8717",
+      "target": "a37432f8-a3a4-4cd0-80ec-e4d8e916f9f3",
+      "type": "response"
+    },
+    {
+      "source": "2e750e56-d252-40df-9aba-3750630d8717",
+      "target": "514bf867-4316-489a-a5ec-b84536e1beb1",
+      "type": "response"
+    },
+    {
+      "source": "279a288f-285b-4f99-9831-7da2ec38957a",
+      "target": "204c0664-dc90-4b18-9613-d5d9aa49612c",
+      "type": "response"
+    },
+    {
+      "source": "b80a17f7-c639-4aa1-8ea7-57eda2fb752a",
+      "target": "13e2af09-956d-45c9-b161-955a69630c08",
+      "type": "response"
+    },
+    {
+      "source": "e3cafed6-3bff-44b6-a011-860e3840efa8",
+      "target": "40d56e62-6b9e-439d-a6ed-c7644b65348b",
+      "type": "objection"
+    },
+    {
+      "source": "e3cafed6-3bff-44b6-a011-860e3840efa8",
+      "target": "e639ea4c-53a1-47ca-b7ef-7ff11b0b4f37",
+      "type": "objection"
+    },
+    {
+      "source": "1f1267f7-40c4-4d31-be85-6623270989c3",
+      "target": "590628fd-6bfb-4c5d-a913-2717bf16a708",
+      "type": "objection"
+    },
+    {
+      "source": "1f1267f7-40c4-4d31-be85-6623270989c3",
+      "target": "382dd651-b698-461a-a11d-ea4258fad9bc",
+      "type": "objection"
+    },
+    {
+      "source": "6b6debce-190b-46f6-bc9d-e2eb88c661e5",
+      "target": "52e7f2ee-0976-49a5-98ce-79fafde44566",
+      "type": "objection"
+    },
+    {
+      "source": "6b6debce-190b-46f6-bc9d-e2eb88c661e5",
+      "target": "8f7020a0-4a58-4c31-98e2-3b88dba771cb",
+      "type": "objection"
+    },
+    {
+      "source": "a60f65ff-7138-426d-8d20-597c63217af6",
+      "target": "668d1cd5-a919-4203-a5b9-ef301e57c44c",
+      "type": "objection"
+    },
+    {
+      "source": "a60f65ff-7138-426d-8d20-597c63217af6",
+      "target": "fc5268c1-6458-44eb-b38f-8a73f7785ff7",
+      "type": "objection"
+    },
+    {
+      "source": "24d6c671-d310-43ba-ac37-291d23a9d1e9",
+      "target": "93825de3-0760-4219-9de5-7b900729bdbf",
+      "type": "objection"
+    },
+    {
+      "source": "24d6c671-d310-43ba-ac37-291d23a9d1e9",
+      "target": "3fbef746-a3d5-4ef3-9426-82ff158cddad",
+      "type": "objection"
+    },
+    {
+      "source": "e639ea4c-53a1-47ca-b7ef-7ff11b0b4f37",
+      "target": "b61179d1-9c58-4447-9e02-6e461b8497d0",
+      "type": "response"
+    },
+    {
+      "source": "e639ea4c-53a1-47ca-b7ef-7ff11b0b4f37",
+      "target": "9238f681-5e38-425b-86fb-a1e3f312737a",
+      "type": "response"
+    },
+    {
+      "source": "40d56e62-6b9e-439d-a6ed-c7644b65348b",
+      "target": "627a5ab0-1585-4954-bbbc-8b384e5988c7",
+      "type": "response"
+    },
+    {
+      "source": "40d56e62-6b9e-439d-a6ed-c7644b65348b",
+      "target": "a7d19051-9004-47fd-a4e4-6252dcd165bd",
+      "type": "response"
+    },
+    {
+      "source": "52e7f2ee-0976-49a5-98ce-79fafde44566",
+      "target": "62573af6-751a-4dad-8a97-13bd0323a110",
+      "type": "response"
+    },
+    {
+      "source": "52e7f2ee-0976-49a5-98ce-79fafde44566",
+      "target": "14be55ec-dd4a-43c1-a8b1-a51ae6dbdd82",
+      "type": "response"
+    },
+    {
+      "source": "8f7020a0-4a58-4c31-98e2-3b88dba771cb",
+      "target": "c9feb374-cba2-47f3-bfc9-50e5455d1b58",
+      "type": "response"
+    },
+    {
+      "source": "8f7020a0-4a58-4c31-98e2-3b88dba771cb",
+      "target": "3c27aae6-c119-4acc-b078-769580abe089",
+      "type": "response"
+    },
+    {
+      "source": "fc5268c1-6458-44eb-b38f-8a73f7785ff7",
+      "target": "e06ec56b-676e-4aa6-abbd-f130d45c9cad",
+      "type": "response"
+    },
+    {
+      "source": "fc5268c1-6458-44eb-b38f-8a73f7785ff7",
+      "target": "3691f9b3-172f-4e30-9565-0710229f6eb0",
+      "type": "response"
+    },
+    {
+      "source": "3fbef746-a3d5-4ef3-9426-82ff158cddad",
+      "target": "dab99936-eb59-4d64-ae85-892456c5e01d",
+      "type": "response"
+    },
+    {
+      "source": "3fbef746-a3d5-4ef3-9426-82ff158cddad",
+      "target": "b94333ab-cb44-42bb-a223-5026b583dda0",
+      "type": "response"
+    },
+    {
+      "source": "b61179d1-9c58-4447-9e02-6e461b8497d0",
+      "target": "5fe99555-f175-477f-a230-5e240801337d",
+      "type": "response"
+    },
+    {
+      "source": "9238f681-5e38-425b-86fb-a1e3f312737a",
+      "target": "2643ebdf-ed95-4344-ac26-114086fed85a",
+      "type": "response"
+    },
+    {
+      "source": "668d1cd5-a919-4203-a5b9-ef301e57c44c",
+      "target": "200fa07a-f7e3-4728-892c-ca01a6a87fdf",
+      "type": "response"
+    },
+    {
+      "source": "668d1cd5-a919-4203-a5b9-ef301e57c44c",
+      "target": "f3fdec63-1aa5-483a-99cb-01a33dd91b9b",
+      "type": "response"
+    },
+    {
+      "source": "a7d19051-9004-47fd-a4e4-6252dcd165bd",
+      "target": "e425bcfe-0e4a-4795-ba9e-76c879622b6e",
+      "type": "response"
+    },
+    {
+      "source": "627a5ab0-1585-4954-bbbc-8b384e5988c7",
+      "target": "50f0d293-370a-466e-9e22-0e848628e685",
+      "type": "response"
+    },
+    {
+      "source": "3c27aae6-c119-4acc-b078-769580abe089",
+      "target": "9aa7f647-7f2d-4f84-b830-d35d14487567",
+      "type": "response"
+    },
+    {
+      "source": "c9feb374-cba2-47f3-bfc9-50e5455d1b58",
+      "target": "e92f0cef-4871-4350-bfb4-16956061f4b4",
+      "type": "response"
+    },
+    {
+      "source": "c9feb374-cba2-47f3-bfc9-50e5455d1b58",
+      "target": "d6bb5476-7d2c-49e1-9fef-c4fe5e5d6e19",
+      "type": "response"
+    },
+    {
+      "source": "62573af6-751a-4dad-8a97-13bd0323a110",
+      "target": "04556cb1-1dfa-4e58-9549-67988dbff9af",
+      "type": "response"
+    },
+    {
+      "source": "62573af6-751a-4dad-8a97-13bd0323a110",
+      "target": "c91c3466-cf6a-4f1d-a43f-cf2abc71c539",
+      "type": "response"
+    },
+    {
+      "source": "14be55ec-dd4a-43c1-a8b1-a51ae6dbdd82",
+      "target": "0287e26e-bd1c-4863-a8bc-dab120cb2085",
+      "type": "response"
+    },
+    {
+      "source": "14be55ec-dd4a-43c1-a8b1-a51ae6dbdd82",
+      "target": "5f2020b0-1935-428d-8ad3-855607e772b5",
+      "type": "response"
+    },
+    {
+      "source": "0e554170-a935-4563-b6e4-a3867f1fa56f",
+      "target": "5ef87133-9482-4629-b418-a2ddb248d074",
+      "type": "objection"
+    },
+    {
+      "source": "0e554170-a935-4563-b6e4-a3867f1fa56f",
+      "target": "e0ef3ab8-435d-419d-9fe6-9bc30bc99cd4",
+      "type": "objection"
+    },
+    {
+      "source": "f3fdec63-1aa5-483a-99cb-01a33dd91b9b",
+      "target": "9d3521f1-d27a-442d-aa6e-ad20924f1320",
+      "type": "response"
+    },
+    {
+      "source": "f3fdec63-1aa5-483a-99cb-01a33dd91b9b",
+      "target": "c5c74b1a-558d-4847-93af-17479738c4d4",
+      "type": "response"
+    },
+    {
+      "source": "b94333ab-cb44-42bb-a223-5026b583dda0",
+      "target": "6b910b35-909f-4582-af1b-787672838218",
+      "type": "response"
+    },
+    {
+      "source": "dab99936-eb59-4d64-ae85-892456c5e01d",
+      "target": "3ad482a2-d063-4999-90a7-0679f77babe1",
+      "type": "response"
+    },
+    {
+      "source": "dab99936-eb59-4d64-ae85-892456c5e01d",
+      "target": "a52c8d82-d828-42f6-b35c-d6fe2b702955",
+      "type": "response"
+    },
+    {
+      "source": "e06ec56b-676e-4aa6-abbd-f130d45c9cad",
+      "target": "1ebae25e-b179-47f5-ba89-ba809e5b39e7",
+      "type": "response"
+    },
+    {
+      "source": "e06ec56b-676e-4aa6-abbd-f130d45c9cad",
+      "target": "6d521994-60d7-4cbd-8043-02f2bae8ed41",
+      "type": "response"
+    },
+    {
+      "source": "200fa07a-f7e3-4728-892c-ca01a6a87fdf",
+      "target": "ac9aa8a9-f8dd-4e5a-baec-7a71d9249b6b",
+      "type": "response"
+    },
+    {
+      "source": "5ef87133-9482-4629-b418-a2ddb248d074",
+      "target": "e3e2c220-1e2e-4ad7-bd39-247b6e590828",
+      "type": "response"
+    },
+    {
+      "source": "5ef87133-9482-4629-b418-a2ddb248d074",
+      "target": "04f10e2a-42cb-4cd1-aa0c-8ff3aa6beb51",
+      "type": "response"
+    },
+    {
+      "source": "3691f9b3-172f-4e30-9565-0710229f6eb0",
+      "target": "55431f7c-1cb0-4cdd-916b-556464428807",
+      "type": "response"
+    },
+    {
+      "source": "e0ef3ab8-435d-419d-9fe6-9bc30bc99cd4",
+      "target": "bbffdec9-8963-438e-8b6e-0bfb760338ce",
+      "type": "response"
+    },
+    {
+      "source": "e0ef3ab8-435d-419d-9fe6-9bc30bc99cd4",
+      "target": "699f3210-7334-4f5b-8bc5-f954f7ab3512",
+      "type": "response"
+    },
+    {
+      "source": "e3e2c220-1e2e-4ad7-bd39-247b6e590828",
+      "target": "c6df92f7-e544-4b22-843a-28fb85d06ccb",
+      "type": "response"
+    },
+    {
+      "source": "bbffdec9-8963-438e-8b6e-0bfb760338ce",
+      "target": "5516fbca-5d7e-44b9-9987-19bc7e0d909c",
+      "type": "response"
+    },
+    {
+      "source": "04f10e2a-42cb-4cd1-aa0c-8ff3aa6beb51",
+      "target": "d90b95d3-54ac-433b-b492-a89a678df74f",
+      "type": "response"
+    },
+    {
+      "source": "04f10e2a-42cb-4cd1-aa0c-8ff3aa6beb51",
+      "target": "6e00950e-3687-4d6e-9cad-2e847cd3f139",
+      "type": "response"
+    },
+    {
+      "source": "699f3210-7334-4f5b-8bc5-f954f7ab3512",
+      "target": "1e809aad-8198-4c64-a125-2b6137e83780",
+      "type": "response"
+    },
+    {
+      "source": "699f3210-7334-4f5b-8bc5-f954f7ab3512",
+      "target": "abeb5aaa-f367-48d8-9b6e-980c3d09511e",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "cadbd335-0097-41dd-ae2d-d9475ae6b94e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b6ba420f-91f3-4309-898b-64327b767079",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "010097ec-54c9-4e67-b7a7-c80881d21b40",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9d0b2806-5dfa-4014-aee1-18055c75ae21",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "452ab23c-50ad-4451-a50f-f1c3112dd2cb",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "43cf931d-8454-4635-9be9-637a07858d4b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "0e554170-a935-4563-b6e4-a3867f1fa56f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a60f65ff-7138-426d-8d20-597c63217af6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "1f1267f7-40c4-4d31-be85-6623270989c3",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "e3cafed6-3bff-44b6-a011-860e3840efa8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "24d6c671-d310-43ba-ac37-291d23a9d1e9",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6b6debce-190b-46f6-bc9d-e2eb88c661e5",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

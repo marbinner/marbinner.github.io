@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meat consumption should be banned - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Meat consumption should be banned</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            44 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/meat-consumption-should-be-banned.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">44</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "4d3a68db-b9f9-4c0c-b9f2-6deafa3edb4a",
+      "text": "Livestock production generates substantial greenhouse gas emissions, particularly methane from ruminants. A consumption ban is the most effective policy mechanism to rapidly decarbonize the food system and achieve national climate commitments like those targeted by the Paris Agreement.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:23.639309"
+    },
+    {
+      "id": "019602fd-9908-4333-938e-367dfd10df5a",
+      "text": "Intensive livestock production worldwide creates high-density environments that accelerate the transmission and mutation of zoonotic diseases and drive antibiotic resistance. A consumption ban eliminates this significant global public health risk vector, preventing future pandemics and securing the efficacy of human medicine.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:23.639876"
+    },
+    {
+      "id": "c790e9c8-0b5d-4537-8904-e9e101aa7ec1",
+      "text": "Livestock agriculture is drastically inefficient, requiring the majority of global agricultural land to produce a minority of the world's calories. Banning meat consumption would free up land currently driving deforestation in critical regions, such as the Amazon basin, enhancing global resource efficiency and food security.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:23.640164"
+    },
+    {
+      "id": "d2b50e77-4610-45c0-89b1-3ab7cd47e04b",
+      "text": "The widespread use of Concentrated Animal Feeding Operations (CAFOs) subjects billions of sentient animals in places like the United States and Brazil to immense, unavoidable systematic suffering. Since incremental welfare reforms have consistently failed to eliminate industrialized cruelty, a consumption ban is the necessary ethical response to recognize animal sentience.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:23.640412"
+    },
+    {
+      "id": "7388e9b7-b16d-4384-b353-ca6b29e9a8cb",
+      "text": "Methane-reducing feed additives, such as *Asparagopsis taxiformis*, or carbon taxation are verifiable policy mechanisms that achieve rapid and substantial decarbonization without incurring the massive economic disruption of a consumer ban.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4d3a68db-b9f9-4c0c-b9f2-6deafa3edb4a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:33.380089"
+    },
+    {
+      "id": "ae89671f-0e3d-4ac0-817c-32709442ffac",
+      "text": "A total consumption ban is politically and socially infeasible, as it ignores massive economic reliance on livestock industries and guarantees severe public resistance, rendering it ineffective as an implementable policy mechanism for rapid change.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4d3a68db-b9f9-4c0c-b9f2-6deafa3edb4a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:33.380800"
+    },
+    {
+      "id": "215af966-d6b4-44e6-8f8a-9626a7979f8d",
+      "text": "The assumption that freed land will be used for efficient calorie production is flawed, as market forces often favor redirection to non-food uses like biofuels (e.g., palm oil) or commercial timber, failing to enhance global food security.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c790e9c8-0b5d-4537-8904-e9e101aa7ec1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:34.077757"
+    },
+    {
+      "id": "e89ee89c-08e4-42b3-866b-a2947ebed84f",
+      "text": "A significant portion of land used for livestock is marginal rangeland, unsuitable for the sustainable, high-yield cultivation of human-edible staple crops, meaning conversion would not significantly increase global caloric output.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c790e9c8-0b5d-4537-8904-e9e101aa7ec1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:34.078190"
+    },
+    {
+      "id": "0ca595b4-447d-449d-8d5c-6c10270605b0",
+      "text": "Disease transmission risks in intensive livestock production can be mitigated by strict regulatory changes requiring lower density, improved sanitation, and limited antibiotic use, making a total consumption ban an unnecessary and overly broad intervention.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "019602fd-9908-4333-938e-367dfd10df5a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:34.547147"
+    },
+    {
+      "id": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "text": "Since approximately 75% of new infectious diseases originate from non-domesticated wildlife and trade, banning livestock production fails to eliminate the dominant vector for future pandemics.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "019602fd-9908-4333-938e-367dfd10df5a",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:34.547594"
+    },
+    {
+      "id": "8ebd7738-a2fa-4d7b-82e3-124afbefa869",
+      "text": "A consumption ban is not the necessary response; policies like taxing CAFO production or massive public investment in developing and scaling cultivated meat offer alternative, often more effective, pathways to eliminate systematic animal suffering without removing consumer choice.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d2b50e77-4610-45c0-89b1-3ab7cd47e04b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:35.852497"
+    },
+    {
+      "id": "a669c2c4-74be-49e0-80c0-2d6e9a9de7af",
+      "text": "Regulatory changes only mitigate risk probability, but given that intensive farming created the initial conditions for severe zoonotic outbreaks like avian influenza (H5N1) and swine flu (H1N1), the resulting residual pandemic risk remains existentially unacceptable, justifying more comprehensive interventions than mere mitigation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0ca595b4-447d-449d-8d5c-6c10270605b0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:43.888092"
+    },
+    {
+      "id": "c1d10128-5f1e-47fc-904a-278bbe8b0791",
+      "text": "While rangeland may be marginal, 36% of global crop calories are currently fed to livestock, grown on prime cropland. Converting this vast acreage from feed production to cultivating human-edible crops would significantly increase global caloric output, contradicting the argument's conclusion that conversion is negligible.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e89ee89c-08e4-42b3-866b-a2947ebed84f",
+      "children_count": 0,
+      "references": [
+        "Cassidy, E. S., West, P. C. et al. (2013). Redefining agricultural yields: from tonnes to people nourished per hectare. Environmental Research Letters.",
+        "Poore, J., Nemecek, T. (2018). Reducing food\u2019s environmental impacts through producers and consumers. Science."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:44.076718"
+    },
+    {
+      "id": "da6acd7e-ce35-4f13-820f-575467c482d9",
+      "text": "Political obstacles do not negate a policy's effectiveness if eventually implemented; historically, highly opposed policies like the abolition of slavery or universal healthcare fundamentally changed societal reliance after successful adoption, proving that initial infeasibility does not mean ineffectiveness.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ae89671f-0e3d-4ac0-817c-32709442ffac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:44.679700"
+    },
+    {
+      "id": "a422b940-2a94-47c5-8e38-7b9438a5efda",
+      "text": "The conclusion mistakenly defines the policy as ineffective by requiring it to produce \"rapid change.\" Many effective, necessary policies (e.g., carbon taxes, infrastructure projects) are designed for gradual, sustained change over decades, not sudden transitions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ae89671f-0e3d-4ac0-817c-32709442ffac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:44.680184"
+    },
+    {
+      "id": "b3dc5eba-3244-4ce2-8efc-ae59fc1e7da8",
+      "text": "While promising, methane-reducing feed additives like Asparagopsis taxiformis are not yet commercially scalable globally and voluntary adoption is often too slow; this delay undermines the potential for rapid, significant decarbonization required for emergency climate action.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7388e9b7-b16d-4384-b353-ca6b29e9a8cb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:45.754506"
+    },
+    {
+      "id": "7c1eeff5-015a-4725-86b3-3f4bc1e0e1cd",
+      "text": "Implementing a carbon tax high enough to achieve \"significant decarbonization\" across multiple sectors creates massive inflationary pressures and widespread political opposition (e.g., France's Yellow Vest protests), potentially causing greater economy-wide disruption than a targeted sector ban.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7388e9b7-b16d-4384-b353-ca6b29e9a8cb",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:45.755267"
+    },
+    {
+      "id": "f35d7f8f-b49e-4336-bb8e-dab51b99dfe0",
+      "text": "Taxing CAFO production will only reduce, not eliminate, systematic animal suffering, as long as the market remains economically viable for any producer willing to absorb the tax or operate in unregulated jurisdictions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8ebd7738-a2fa-4d7b-82e3-124afbefa869",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:47.442855"
+    },
+    {
+      "id": "4af8f9fd-c283-499d-bc39-89a3ee7b0ed1",
+      "text": "Production taxes maintain legal choice but impose a regressive burden that eliminates the effective choice of affordable protein sources for low-income consumers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8ebd7738-a2fa-4d7b-82e3-124afbefa869",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:47.444033"
+    },
+    {
+      "id": "d2578db6-3ce2-464f-b214-0d4d5166ee5a",
+      "text": "Domesticated livestock are the primary intermediate hosts that amplify and transition major pandemic threats like highly pathogenic avian influenza and Nipah virus to the human population.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:48.019946"
+    },
+    {
+      "id": "143cd98d-d522-4f34-a08c-1e0918e30aee",
+      "text": "Livestock often act as intermediate 'bridge species' for diseases originating in wildlife, such as pigs in the emergence of Swine Flu strains, meaning reducing livestock density also mitigates risk from the 75% category.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:48.022206"
+    },
+    {
+      "id": "85633af0-57b2-4588-ad06-0881c253a116",
+      "text": "Intensive factory farming is a critical pandemic vector because the high density and low genetic diversity of livestock accelerate the mutation of pathogens, like Avian Flu, into human-transmissible pandemic strains.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:48.023143"
+    },
+    {
+      "id": "f159aff4-db41-4674-9fec-6e0a60261c15",
+      "text": "Claims of massive inflationary pressure fail to consider revenue recycling; policies like the Canadian federal carbon tax system demonstrate that returning revenue to households through dividends can counteract cost increases and significantly mitigate the tax\u2019s regressive impact.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7c1eeff5-015a-4725-86b3-3f4bc1e0e1cd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:58.144991"
+    },
+    {
+      "id": "44e4f727-99cf-4361-b859-dcf7c9a7ce9e",
+      "text": "A targeted sector ban, such as an outright prohibition on the sale of new internal combustion engine vehicles by a specific date, creates immediate, concentrated economic shock, large-scale capital devaluation and rapid job losses in affected industries, arguably causing greater economic friction than a gradual, predictable price signal.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7c1eeff5-015a-4725-86b3-3f4bc1e0e1cd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:20:58.145034"
+    },
+    {
+      "id": "915bbf58-829e-4f5f-8353-dc555a8c83d3",
+      "text": "The 2009 H1N1 swine flu pandemic resulted in a global mortality rate well below 0.01%, which, while severe, does not meet the necessary threshold of guaranteed human extinction to qualify as an \\",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a669c2c4-74be-49e0-80c0-2d6e9a9de7af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:00.817467"
+    },
+    {
+      "id": "2be80c18-e360-4201-9b9a-63200d554671",
+      "text": "Regulatory changes mandated the systematic depopulation of millions of livestock in European BSE and Foot-and-Mouth Disease outbreaks, proving regulation constitutes the \\",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a669c2c4-74be-49e0-80c0-2d6e9a9de7af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:00.817492"
+    },
+    {
+      "id": "5a5ddc14-f770-4e0b-82ae-019e9116c1ee",
+      "text": "Banning livestock would cause catastrophic economic disruption, immediately eliminating the primary income source for over 1.3 billion people globally, predominantly smallholder farmers in developing regions of Africa and South Asia, leading to widespread poverty.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:00.817587"
+    },
+    {
+      "id": "1ad3f3a9-fc65-4eab-baef-6bf78705cff3",
+      "text": "For vulnerable populations, including over 2 billion people suffering from micronutrient deficiencies globally, meat provides essential, highly bioavailable B12, iron, and zinc that are difficult to replace without extensive, costly international supplementation programs.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:00.818033"
+    },
+    {
+      "id": "7644d10e-2e5c-42a1-92a8-d143e552b30d",
+      "text": "Meat consumption is deeply embedded within cultural and religious practices spanning millennia, such as those observed during Eid al-Adha and traditional Indigenous diets; a ban imposes an unacceptable infringement on fundamental personal and collective freedoms.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:00.818317"
+    },
+    {
+      "id": "1dc98f22-a85d-4d8c-9bb6-e35d1089a65a",
+      "text": "Prohibition of highly desired goods is historically proven ineffective; like the US Prohibition of alcohol, a meat ban would fail to eliminate consumption, instead fueling an unregulated, dangerous black market lacking quality control or environmental oversight.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:00.818587"
+    },
+    {
+      "id": "1a580085-be34-4bc0-b174-5cb28e6d683a",
+      "text": "The analogy to alcohol Prohibition fails because meat production relies on bulky, visible infrastructure (slaughterhouses, refrigerated transport) that is significantly harder to conceal than home distillation. Furthermore, legal and widely available plant-based protein alternatives provide a massive legal substitute for meat consumption, unlike alcohol during Prohibition, reducing black market demand.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "1dc98f22-a85d-4d8c-9bb6-e35d1089a65a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:09.671739"
+    },
+    {
+      "id": "6ad9bcd9-a19f-4f16-9e82-aa7b40aed1fa",
+      "text": "Successful global regulatory actions, such as the Montreal Protocol on ozone-depleting substances and the international ivory trade ban, show that prohibitions can effectively eliminate the markets for highly desired materials.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "1dc98f22-a85d-4d8c-9bb6-e35d1089a65a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:09.672515"
+    },
+    {
+      "id": "4ca0ca4c-a227-46f0-8c77-41957d786222",
+      "text": "Cost-effective, localized public health strategies, including mandatory food fortification and biofortification of staple crops, are already utilized globally to deliver essential iron and zinc. Vitamin B12 deficiency is successfully addressed among vulnerable populations through inexpensive, decentralized oral supplementation programs, not requiring meat consumption.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "1ad3f3a9-fc65-4eab-baef-6bf78705cff3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:09.744144"
+    },
+    {
+      "id": "331e58e9-ebca-46fd-ae7f-a6315ecc8377",
+      "text": "FAO statistics indicate the majority of smallholder farmers use mixed crop-livestock systems and off-farm income, meaning a livestock ban reduces, but does not eliminate, the primary income source for most farmers in developing regions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5a5ddc14-f770-4e0b-82ae-019e9116c1ee",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:11.007347"
+    },
+    {
+      "id": "468a64ea-ca72-4762-a3d0-3ec5a3cd4842",
+      "text": "The economic disruption is mitigated by government implementation of targeted subsidies, retraining programs for synthetic meat production, and grants for shifting agricultural output to high-value, less resource-intensive crops like pulses and nuts. This structured transition retains income streams for smallholder farmers and prevents widespread poverty.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5a5ddc14-f770-4e0b-82ae-019e9116c1ee",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:11.008087"
+    },
+    {
+      "id": "94fff3fb-e544-453b-ab6e-4332f4eed358",
+      "text": "Food and biofortification methods do not sustainably address all critical deficiencies, specifically Vitamin B12, which is rarely and unreliably supplied by fortified staples alone. Relying solely on these non-meat strategies leaves large populations, particularly vegans and vegetarians, vulnerable to severe B12 deficiency.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4ca0ca4c-a227-46f0-8c77-41957d786222",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:19.064516"
+    },
+    {
+      "id": "2198c74b-5869-456c-ac01-27a94349dfbc",
+      "text": "Deep cultural practices, such as the once-common practice of Sati or certain ritual sacrifices, are prohibited globally when they conflict with fundamental human rights or public safety, demonstrating that deep embedding does not confer absolute freedom from restriction.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7644d10e-2e5c-42a1-92a8-d143e552b30d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:19.066064"
+    },
+    {
+      "id": "4721a9df-7c7f-4de8-b524-50189b164ee9",
+      "text": "Restrictions can be structured to exempt religiously mandated meat, like specialized kosher or halal slaughter as practiced during Eid al-Adha, while still regulating the non-ritual, industrial consumption which accounts for the vast majority of meat consumed.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7644d10e-2e5c-42a1-92a8-d143e552b30d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:19.066549"
+    },
+    {
+      "id": "675cad24-0e73-44e0-b8b9-e1632eb5ae2d",
+      "text": "Backyard slaughtering of domestic animals is already common and easily concealed in rural areas, creating a vast network of decentralized production comparable to home distillation, regardless of industrial infrastructure visibility.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1a580085-be34-4bc0-b174-5cb28e6d683a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:19.995800"
+    },
+    {
+      "id": "d23a1724-5906-4a37-abe0-39b6ef910847",
+      "text": "Plant-based proteins are imperfect substitutes, as they fail to satisfy the specific demands for the taste, texture, and cultural significance of actual meat (e.g., bone-in cuts or specific local dishes), meaning a substantial black market demand among existing consumers would persist.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1a580085-be34-4bc0-b174-5cb28e6d683a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:19.996580"
+    },
+    {
+      "id": "4ce09777-87a8-4fde-9796-c8fc2cc7acbb",
+      "text": "Governmental action is often limited by political constraints and fiscal shortages; for instance, the US transition away from coal saw many communities receive inadequate retraining funds, demonstrating that comprehensive and effective support is not a logical guarantee.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "468a64ea-ca72-4762-a3d0-3ec5a3cd4842",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:21.111661"
+    },
+    {
+      "id": "0b059938-cfc4-4cb7-9e11-e689bc5e8c0d",
+      "text": "Agricultural transitions are inherently slow due to specialized infrastructure, soil limitations, and long crop cycles; therefore, planned subsidies cannot realistically prevent the immediate market dislocation and financial catastrophe for producers dependent on existing output.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "468a64ea-ca72-4762-a3d0-3ec5a3cd4842",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:21.112131"
+    },
+    {
+      "id": "62f9a9d1-ec4e-402c-a076-5be70b2a04c9",
+      "text": "Studies of smallholder agriculture consistently show that the majority of income from mixed crop-livestock farming systems is derived from the livestock component, meaning dependence is indeed primary, even if not sole.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "331e58e9-ebca-46fd-ae7f-a6315ecc8377",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:27.564475"
+    },
+    {
+      "id": "fd0e4a26-2283-4248-a048-d6088daf9981",
+      "text": "The scale of immediate economic loss is measured by the value of the eliminated livelihood, not the residual income; removing the livestock sector, which holds the greatest asset value and capital savings pool for over a billion people, causes massive, simultaneous wealth destruction.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "331e58e9-ebca-46fd-ae7f-a6315ecc8377",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:21:27.565375"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:20:23.639253"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:20:23.639253"
+    }
+  ],
+  "links": [
+    {
+      "source": "4d3a68db-b9f9-4c0c-b9f2-6deafa3edb4a",
+      "target": "7388e9b7-b16d-4384-b353-ca6b29e9a8cb",
+      "type": "objection"
+    },
+    {
+      "source": "4d3a68db-b9f9-4c0c-b9f2-6deafa3edb4a",
+      "target": "ae89671f-0e3d-4ac0-817c-32709442ffac",
+      "type": "objection"
+    },
+    {
+      "source": "c790e9c8-0b5d-4537-8904-e9e101aa7ec1",
+      "target": "215af966-d6b4-44e6-8f8a-9626a7979f8d",
+      "type": "objection"
+    },
+    {
+      "source": "c790e9c8-0b5d-4537-8904-e9e101aa7ec1",
+      "target": "e89ee89c-08e4-42b3-866b-a2947ebed84f",
+      "type": "objection"
+    },
+    {
+      "source": "019602fd-9908-4333-938e-367dfd10df5a",
+      "target": "0ca595b4-447d-449d-8d5c-6c10270605b0",
+      "type": "objection"
+    },
+    {
+      "source": "019602fd-9908-4333-938e-367dfd10df5a",
+      "target": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "type": "objection"
+    },
+    {
+      "source": "d2b50e77-4610-45c0-89b1-3ab7cd47e04b",
+      "target": "8ebd7738-a2fa-4d7b-82e3-124afbefa869",
+      "type": "objection"
+    },
+    {
+      "source": "0ca595b4-447d-449d-8d5c-6c10270605b0",
+      "target": "a669c2c4-74be-49e0-80c0-2d6e9a9de7af",
+      "type": "response"
+    },
+    {
+      "source": "e89ee89c-08e4-42b3-866b-a2947ebed84f",
+      "target": "c1d10128-5f1e-47fc-904a-278bbe8b0791",
+      "type": "response"
+    },
+    {
+      "source": "ae89671f-0e3d-4ac0-817c-32709442ffac",
+      "target": "da6acd7e-ce35-4f13-820f-575467c482d9",
+      "type": "response"
+    },
+    {
+      "source": "ae89671f-0e3d-4ac0-817c-32709442ffac",
+      "target": "a422b940-2a94-47c5-8e38-7b9438a5efda",
+      "type": "response"
+    },
+    {
+      "source": "7388e9b7-b16d-4384-b353-ca6b29e9a8cb",
+      "target": "b3dc5eba-3244-4ce2-8efc-ae59fc1e7da8",
+      "type": "response"
+    },
+    {
+      "source": "7388e9b7-b16d-4384-b353-ca6b29e9a8cb",
+      "target": "7c1eeff5-015a-4725-86b3-3f4bc1e0e1cd",
+      "type": "response"
+    },
+    {
+      "source": "8ebd7738-a2fa-4d7b-82e3-124afbefa869",
+      "target": "f35d7f8f-b49e-4336-bb8e-dab51b99dfe0",
+      "type": "response"
+    },
+    {
+      "source": "8ebd7738-a2fa-4d7b-82e3-124afbefa869",
+      "target": "4af8f9fd-c283-499d-bc39-89a3ee7b0ed1",
+      "type": "response"
+    },
+    {
+      "source": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "target": "d2578db6-3ce2-464f-b214-0d4d5166ee5a",
+      "type": "response"
+    },
+    {
+      "source": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "target": "143cd98d-d522-4f34-a08c-1e0918e30aee",
+      "type": "response"
+    },
+    {
+      "source": "b836b8a5-f0d3-4922-9f3b-782ea0effebe",
+      "target": "85633af0-57b2-4588-ad06-0881c253a116",
+      "type": "response"
+    },
+    {
+      "source": "7c1eeff5-015a-4725-86b3-3f4bc1e0e1cd",
+      "target": "f159aff4-db41-4674-9fec-6e0a60261c15",
+      "type": "response"
+    },
+    {
+      "source": "7c1eeff5-015a-4725-86b3-3f4bc1e0e1cd",
+      "target": "44e4f727-99cf-4361-b859-dcf7c9a7ce9e",
+      "type": "response"
+    },
+    {
+      "source": "a669c2c4-74be-49e0-80c0-2d6e9a9de7af",
+      "target": "915bbf58-829e-4f5f-8353-dc555a8c83d3",
+      "type": "response"
+    },
+    {
+      "source": "a669c2c4-74be-49e0-80c0-2d6e9a9de7af",
+      "target": "2be80c18-e360-4201-9b9a-63200d554671",
+      "type": "response"
+    },
+    {
+      "source": "1dc98f22-a85d-4d8c-9bb6-e35d1089a65a",
+      "target": "1a580085-be34-4bc0-b174-5cb28e6d683a",
+      "type": "objection"
+    },
+    {
+      "source": "1dc98f22-a85d-4d8c-9bb6-e35d1089a65a",
+      "target": "6ad9bcd9-a19f-4f16-9e82-aa7b40aed1fa",
+      "type": "objection"
+    },
+    {
+      "source": "1ad3f3a9-fc65-4eab-baef-6bf78705cff3",
+      "target": "4ca0ca4c-a227-46f0-8c77-41957d786222",
+      "type": "objection"
+    },
+    {
+      "source": "5a5ddc14-f770-4e0b-82ae-019e9116c1ee",
+      "target": "331e58e9-ebca-46fd-ae7f-a6315ecc8377",
+      "type": "objection"
+    },
+    {
+      "source": "5a5ddc14-f770-4e0b-82ae-019e9116c1ee",
+      "target": "468a64ea-ca72-4762-a3d0-3ec5a3cd4842",
+      "type": "objection"
+    },
+    {
+      "source": "4ca0ca4c-a227-46f0-8c77-41957d786222",
+      "target": "94fff3fb-e544-453b-ab6e-4332f4eed358",
+      "type": "response"
+    },
+    {
+      "source": "7644d10e-2e5c-42a1-92a8-d143e552b30d",
+      "target": "2198c74b-5869-456c-ac01-27a94349dfbc",
+      "type": "objection"
+    },
+    {
+      "source": "7644d10e-2e5c-42a1-92a8-d143e552b30d",
+      "target": "4721a9df-7c7f-4de8-b524-50189b164ee9",
+      "type": "objection"
+    },
+    {
+      "source": "1a580085-be34-4bc0-b174-5cb28e6d683a",
+      "target": "675cad24-0e73-44e0-b8b9-e1632eb5ae2d",
+      "type": "response"
+    },
+    {
+      "source": "1a580085-be34-4bc0-b174-5cb28e6d683a",
+      "target": "d23a1724-5906-4a37-abe0-39b6ef910847",
+      "type": "response"
+    },
+    {
+      "source": "468a64ea-ca72-4762-a3d0-3ec5a3cd4842",
+      "target": "4ce09777-87a8-4fde-9796-c8fc2cc7acbb",
+      "type": "response"
+    },
+    {
+      "source": "468a64ea-ca72-4762-a3d0-3ec5a3cd4842",
+      "target": "0b059938-cfc4-4cb7-9e11-e689bc5e8c0d",
+      "type": "response"
+    },
+    {
+      "source": "331e58e9-ebca-46fd-ae7f-a6315ecc8377",
+      "target": "62f9a9d1-ec4e-402c-a076-5be70b2a04c9",
+      "type": "response"
+    },
+    {
+      "source": "331e58e9-ebca-46fd-ae7f-a6315ecc8377",
+      "target": "fd0e4a26-2283-4248-a048-d6088daf9981",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "4d3a68db-b9f9-4c0c-b9f2-6deafa3edb4a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "019602fd-9908-4333-938e-367dfd10df5a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "c790e9c8-0b5d-4537-8904-e9e101aa7ec1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d2b50e77-4610-45c0-89b1-3ab7cd47e04b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5a5ddc14-f770-4e0b-82ae-019e9116c1ee",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "1ad3f3a9-fc65-4eab-baef-6bf78705cff3",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "7644d10e-2e5c-42a1-92a8-d143e552b30d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "1dc98f22-a85d-4d8c-9bb6-e35d1089a65a",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

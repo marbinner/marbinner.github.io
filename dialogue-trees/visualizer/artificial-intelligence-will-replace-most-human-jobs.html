@@ -1,0 +1,4121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artificial intelligence will replace most human jobs - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Artificial intelligence will replace most human jobs</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            157 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/artificial-intelligence-will-replace-most-human-jobs.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">157</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "text": "Corporate profit maximization guarantees replacement, as businesses will inevitably swap expensive human salaries and benefits for cheaper, faster, and perfectly reliable software-based AI agents.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.725966+00:00"
+    },
+    {
+      "id": "97eaff59-cfcf-446d-ab4f-eb6feb84cba2",
+      "text": "Current AI advancement shows exponential growth, with Large Language Models now performing complex reasoning, strategic planning, and creative tasks previously confined to exclusively human cognitive domains.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.726687+00:00"
+    },
+    {
+      "id": "9d1345ee-f458-4c27-a624-11e182bf2e11",
+      "text": "Modern industrialized economies consist primarily of white-collar, information-processing roles\u2014such as paralegal research and financial data analysis\u2014which are fundamentally built on the pattern recognition strengths of AI.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.727125+00:00"
+    },
+    {
+      "id": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "text": "Unlike previous automation requiring costly physical robotics, AI is deployable instantly via software updates and APIs, allowing rapid, zero-marginal-cost scaling that dramatically accelerates displacement across industries simultaneously.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.727526+00:00"
+    },
+    {
+      "id": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "text": "Even in complex coordination roles, human limitations in endurance, consistency, objectivity, and simultaneous multi-tasking ensure that AI will fundamentally outperform human efficiency metrics, guaranteeing eventual replacement.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.728134+00:00"
+    },
+    {
+      "id": "98c4f5d8-7341-4ab3-9e46-b13159f02228",
+      "text": "Historically, every General Purpose Technology (GPT) has eventually eliminated established job categories; AI is the first GPT capable of automating complex cognitive labor, securing its potential to replace most knowledge-worker roles.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:49.728527+00:00"
+    },
+    {
+      "id": "051ab805-d472-447e-b753-c6b5f1f7c775",
+      "text": "Large-scale AI deployment necessitates massive initial capital expenditure on specialized hardware, such as NVIDIA H100 clusters and high-density data centers, which fundamentally restricts rapid, zero-marginal-cost scaling.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:58.202815+00:00"
+    },
+    {
+      "id": "9e32573d-0769-4bed-8912-59fbc837f329",
+      "text": "The operational cost (marginal cost) of AI inference scales directly with usage, requiring continuous expenditure on electricity and specialized compute resources (e.g., AWS/Azure/GCP usage fees), meaning scaling is far from zero-marginal-cost.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:58.203477+00:00"
+    },
+    {
+      "id": "7d1f5aa5-a54a-444f-be7b-6cfb02059314",
+      "text": "Accelerated displacement is severely hampered by regulatory hurdles (e.g., FDA approval in medicine, financial compliance) and the high costs of integrating new models into legacy IT systems, preventing simultaneous, rapid adoption across all industries.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:58.203967+00:00"
+    },
+    {
+      "id": "f21626c2-ca13-4f75-95c1-df6588f892b5",
+      "text": "The apparent exponential growth primarily reflects the increasing hardware and data capacity used, not a corresponding exponential improvement in fundamental cognitive capability, which has shown clear signs of diminishing marginal returns in research since 2021.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "97eaff59-cfcf-446d-ab4f-eb6feb84cba2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:59.689460+00:00"
+    },
+    {
+      "id": "cf61e800-96dc-4f8b-9bc9-4fae499e96c7",
+      "text": "AI statistical models achieve complex pattern recognition but fundamentally lack the causal inference, agency, and counterfactual simulation necessary for actual strategic planning or non-routine complex decision-making.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "97eaff59-cfcf-446d-ab4f-eb6feb84cba2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:06:59.690344+00:00"
+    },
+    {
+      "id": "68bc712a-819a-4c92-ad04-92e9a2383b58",
+      "text": "Replacement is not guaranteed by efficiency alone, as AI currently cannot assume the legal liability, political discretion, or human empathy required for complex coordination roles, such as approving major public policy or managing inter-personal conflicts.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:00.406975+00:00"
+    },
+    {
+      "id": "46cb4f44-deb6-492c-9e52-51d09bbd735f",
+      "text": "Complex coordination roles depend fundamentally on human abstract synthesis and adaptive creativity under novelty, skills that current AI architectures cannot replicate reliably.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:00.407694+00:00"
+    },
+    {
+      "id": "d236a995-4897-4001-8751-898ba5453b13",
+      "text": "AI\u2019s superiority in complex tasks is undermined by its inherent brittleness and inability to operate reliably outside of its training distribution (out-of-distribution data), leading to catastrophic and unpredictable failures when confronted with novel, messy real-world scenarios.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:00.408164+00:00"
+    },
+    {
+      "id": "013fe41c-2ae9-415a-af22-83c27d74e8ad",
+      "text": "The largest employment sectors in industrialized economies are in-person services (e.g., healthcare, education, retail, accommodation). In the US, the health care and social assistance sector employs nearly 20 million people, significantly dwarfing the 10 million in the combined finance and information sectors.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9d1345ee-f458-4c27-a624-11e182bf2e11",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:02.756872+00:00"
+    },
+    {
+      "id": "9cf4498f-6ce5-4596-adf4-dba6faffd87d",
+      "text": "White-collar roles like paralegal research and financial advising currently rely on human skills such as contextual judgment, client relationship management, and fiduciary responsibility, rather than being fundamentally predicated on the strengths of machine learning.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9d1345ee-f458-4c27-a624-11e182bf2e11",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:02.757585+00:00"
+    },
+    {
+      "id": "0d28c984-19b7-4a02-9ea0-444e1129cde6",
+      "text": "General Purpose Technologies historically create more complex and highly specialized jobs that complement the technology, such as the numerous new roles created by the internet, rather than simply reducing overall employment wholesale.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "98c4f5d8-7341-4ab3-9e46-b13159f02228",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:02.932992+00:00"
+    },
+    {
+      "id": "eebea986-f3ae-4763-8f28-2546fafbec6d",
+      "text": "While AI automates specific analytical tasks, it struggles significantly with unstructured knowledge work requiring high-level human judgment, complex coordination, emotional intelligence, and novel situational adaptation necessary for most senior professional roles.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "98c4f5d8-7341-4ab3-9e46-b13159f02228",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:02.933425+00:00"
+    },
+    {
+      "id": "b870d007-37a6-4c53-b04f-9e4719c0b4d4",
+      "text": "Current AI systems, particularly large language models (LLMs), frequently produce 'hallucinations' and logical errors, necessitating human expert review and validation in critical fields like medicine, law, and complex engineering.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:03.417069+00:00"
+    },
+    {
+      "id": "fd455f28-5df8-4de6-997a-3eecfc37a1db",
+      "text": "Large-scale enterprise AI requires massive capital expenditure on specialized hardware, infrastructure for continuous training, and high-cost engineering talent, offsetting or exceeding the direct savings from replacing the salaries of non-specialized employees.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:03.417826+00:00"
+    },
+    {
+      "id": "a3b2211c-88f3-4a4f-aa99-9fcdc643c8a9",
+      "text": "Profit maximization strategies often implement human-AI augmentation, where a smaller workforce uses AI tools to increase output exponentially, as this hybrid model typically yields higher productivity and customer satisfaction than fully automated replacement.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:03.418186+00:00"
+    },
+    {
+      "id": "1f2ad0ce-2eaa-4bb4-8d4f-7e5a0f15de82",
+      "text": "The historical analogy fails because advanced AI automates cognitive and decision-making tasks, allowing it to displace specialized white-collar professions (e.g., paralegals, radiologists) in ways previous GPTs, which focused primarily on physical or communication labor, could not.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0d28c984-19b7-4a02-9ea0-444e1129cde6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:13.077025+00:00"
+    },
+    {
+      "id": "1b0584fd-84fa-4bfb-a377-cb4db0f9c76e",
+      "text": "The creation of new, complex jobs does not prevent widespread structural unemployment, as workers displaced from routine tasks often lack the necessary financial capital and time for rapid retraining, resulting in persistent skill and geographical mismatch.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "0d28c984-19b7-4a02-9ea0-444e1129cde6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:13.077722+00:00"
+    },
+    {
+      "id": "a3f8d1cb-c99f-47d7-ad71-41617fbc0d1f",
+      "text": "Observed real-world gains from human-AI augmentation are primarily linear or super-linear (e.g., 10%-50% efficiency improvements), not genuinely exponential, which means output doubles repeatedly over fixed intervals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a3b2211c-88f3-4a4f-aa99-9fcdc643c8a9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.030845+00:00"
+    },
+    {
+      "id": "c3fc360f-512c-4eb6-b50e-6ae24c682d9d",
+      "text": "The choice to augment rather than fully automate is often driven by practical limitations like current AI's inability to handle liability, subjective judgment (e.g., creative tasks), or legal requirements for human oversight, not strictly superior productivity or customer satisfaction metrics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a3b2211c-88f3-4a4f-aa99-9fcdc643c8a9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.031551+00:00"
+    },
+    {
+      "id": "74f60397-aed8-4b2e-b0d4-13b1d4b9f3ed",
+      "text": "The AI sector deployed Large Language Models (e.g., ChatGPT) to 100 million users within two months across industries like media, education, and consumer technology, demonstrating rapid adoption where regulatory barriers are low.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7d1f5aa5-a54a-444f-be7b-6cfb02059314",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.377960+00:00"
+    },
+    {
+      "id": "4e047ca2-0f15-4be6-b1e9-a7bafe0f963f",
+      "text": "Many rapid technology rollouts utilize API-first development and standardized cloud services, allowing new models to interface externally with legacy IT systems without requiring expensive deep internal overhauls.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7d1f5aa5-a54a-444f-be7b-6cfb02059314",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.378616+00:00"
+    },
+    {
+      "id": "92247ae4-6508-4fc6-bfa6-61d773ea0e35",
+      "text": "AI's primary benefit is often increasing overall economic output or generating new revenue streams (e.g., automated fraud detection, optimized supply chains) rather than merely replacing salaries, meaning the ROI is calculated against revenue growth, not just cost reduction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fd455f28-5df8-4de6-997a-3eecfc37a1db",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.608877+00:00"
+    },
+    {
+      "id": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "text": "The required massive capital expenditure (CapEx) for hardware is a one-time cost amortized over many years, while the operational cost savings (OpEx) from replacing large numbers of employees are perpetual and recurring, guaranteeing a long-term positive ROI.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fd455f28-5df8-4de6-997a-3eecfc37a1db",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.609338+00:00"
+    },
+    {
+      "id": "b4d2e9ea-3b72-46d5-b714-51b1266f55cd",
+      "text": "Deploying AI via vendor APIs (e.g., OpenAI, Google Cloud) transfers the specialized hardware cost (CapEx) into usage fees (OpEx) for end-users, enabling instant, production-ready use without client-side procurement or data center build-out.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "051ab805-d472-447e-b753-c6b5f1f7c775",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.647494+00:00"
+    },
+    {
+      "id": "f742ad66-d5e8-436a-8808-c58966bbabbb",
+      "text": "Large-scale enterprise deployments often achieve required specialized performance using techniques like Retrieval-Augmented Generation (RAG) or advanced few-shot prompting, bypassing the need for extensive, high-cost model fine-tuning.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "051ab805-d472-447e-b753-c6b5f1f7c775",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:14.647914+00:00"
+    },
+    {
+      "id": "d157f46e-713e-4e51-9b61-caea7aa6102f",
+      "text": "While AI can maximize throughput in optimized tasks like assembly line production, it fundamentally fails in complex roles like diplomatic negotiation that rely on interpreting nuanced human intent and context beyond quantifiable metrics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "46cb4f44-deb6-492c-9e52-51d09bbd735f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:15.731268+00:00"
+    },
+    {
+      "id": "d8d99ebb-c952-416d-8043-ebd7cbb76fac",
+      "text": "Quantitative efficiency metrics measure cost, time, and defect rate; high-level abstract synthesis and political negotiation describe human skills that are not directly quantifiable by these standard measures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "46cb4f44-deb6-492c-9e52-51d09bbd735f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:15.731946+00:00"
+    },
+    {
+      "id": "4c68bc6f-3786-4f27-b8df-2334e0b4e5ff",
+      "text": "The generalization fails because manufacturing, not service sectors, remains the largest single employment category in certain major industrialized economies like Germany, where industrial production dominates its GDP and workforce.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "013fe41c-2ae9-415a-af22-83c27d74e8ad",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:15.816279+00:00"
+    },
+    {
+      "id": "ee839642-95df-46b4-be29-cf7996ffe882",
+      "text": "The provided US data compares health care only to finance and information; however, the US government sector employs over 22 million people, exceeding healthcare, and is largely comprised of administrative and non-in-person workers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "013fe41c-2ae9-415a-af22-83c27d74e8ad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:15.816738+00:00"
+    },
+    {
+      "id": "bfb82800-2247-419f-aaa5-ba7d3ff603d9",
+      "text": "Capabilities demonstrated by models like GPT-4 (2023) and Claude 3 Opus (2024) significantly exceed 2021 baselines in complex multi-step reasoning, coding proficiency, and zero-shot generalization, indicating continued steep exponential capability growth rather than signs of diminishing returns.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f21626c2-ca13-4f75-95c1-df6588f892b5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.083710+00:00"
+    },
+    {
+      "id": "1f4cabd9-1c32-4923-9d2a-d019b7436f05",
+      "text": "Scaling parameters and training data consistently generates unpredictable, qualitatively new cognitive abilities, such as complex reasoning and in-context learning, demonstrating that AI fundamental capability is directly proportional to computational resources.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f21626c2-ca13-4f75-95c1-df6588f892b5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.084429+00:00"
+    },
+    {
+      "id": "7fac1ff9-9d7f-4463-802c-cf518974c1a4",
+      "text": "Architectures like Bayesian Neural Networks and normalizing flows specifically quantify model uncertainty and decline to act when data falls outside the training distribution, demonstrating that OOD brittleness is not an inherent trait of all AI design.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d236a995-4897-4001-8751-898ba5453b13",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.369656+00:00"
+    },
+    {
+      "id": "f2de3001-16d5-4fa2-8dfc-a959f85ab498",
+      "text": "When Large Language Models encounter OOD prompts, the typical outcome is a non-critical degradation in response quality (e.g., generic or slightly inaccurate output), rather than the catastrophic system failure presumed by the argument.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d236a995-4897-4001-8751-898ba5453b13",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:16.370301+00:00"
+    },
+    {
+      "id": "408698d3-9b46-4954-b7f6-913d383844d6",
+      "text": "AI systems like DeepMind's AlphaFold have solved the 50-year-old protein folding prediction problem, demonstrating successful capability in novel, complex biological judgment necessary for cutting-edge medical science.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eebea986-f3ae-4763-8f28-2546fafbec6d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:17.703085+00:00"
+    },
+    {
+      "id": "05d3d690-1630-4dd9-90ec-ac443e78a469",
+      "text": "Senior professional roles in fields like advanced systems engineering and quantitative trading rely primarily on specialized analytical judgment and structured problem-solving, skills increasingly augmented by AI, rather than prioritizing emotional intelligence and complex coordination.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "eebea986-f3ae-4763-8f28-2546fafbec6d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:17.703509+00:00"
+    },
+    {
+      "id": "067236f4-90cf-4584-a648-723b894708af",
+      "text": "The scaling laws of large transformer models show that increasing size and data volume leads to emergent capabilities, such as reliable multi-step planning and theory of mind simulation, indicating that sophisticated functional equivalents of strategic thought arise directly from scaled next-token statistics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cf61e800-96dc-4f8b-9bc9-4fae499e96c7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:18.381078+00:00"
+    },
+    {
+      "id": "2706bdba-3129-4054-b623-b4e702b9e4fc",
+      "text": "AI systems like AlphaZero and MuZero rely entirely on probabilistic search and statistical valuation, yet demonstrably execute strategic planning and counterfactual analysis that exceeds human capacity in zero-sum environments like Chess and Go.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cf61e800-96dc-4f8b-9bc9-4fae499e96c7",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:18.381713+00:00"
+    },
+    {
+      "id": "32bd9cde-7d7b-44f4-9534-d48a6368c585",
+      "text": "Robo-advisors currently manage billions in assets by automating 90% of portfolio construction and rebalancing, demonstrating that machine learning is fundamental to the underlying data mechanisms of modern financial advising despite human fiduciary oversight.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9cf4498f-6ce5-4596-adf4-dba6faffd87d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:20.934723+00:00"
+    },
+    {
+      "id": "c9d815fe-6fd5-457f-8e38-b023af1f31b1",
+      "text": "Large Language Models demonstrate capabilities in advanced contextual judgment by achieving 90th percentile scores on the Uniform Bar Exam and accurately performing complex risk identification in legal contract review faster than human paralegals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9cf4498f-6ce5-4596-adf4-dba6faffd87d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:20.935148+00:00"
+    },
+    {
+      "id": "49e67556-65e1-4e7c-b6d4-632451d63f9d",
+      "text": "Augmentation in high-stakes fields like complex medical diagnosis or airline piloting achieves demonstrably superior safety and throughput metrics, not just compliance, because combining human judgment with AI efficiency outperforms the error rates and liability risks of current full automation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c3fc360f-512c-4eb6-b50e-6ae24c682d9d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:23.632592+00:00"
+    },
+    {
+      "id": "8d2d731a-152d-4be2-8cb5-5f0d37fef7d8",
+      "text": "AI CapEx is not truly one-time because hardware deprecates quickly, requiring mandated refresh cycles (typically every 3-5 years for competitive performance) and continuous infrastructure investments, transforming initial capital expenditure into a recurring necessity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:24.861171+00:00"
+    },
+    {
+      "id": "bdaf4502-1d6a-4680-a773-7e0fce5c358d",
+      "text": "OpEx savings are significantly offset by new operational costs associated with AI, specifically the immense electricity demand for computational power and the high salaries required for the specialized engineers needed to maintain and evolve complex proprietary models.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:24.861205+00:00"
+    },
+    {
+      "id": "de053385-419f-43eb-8633-e63e9b5ba18b",
+      "text": "Guaranteeing a long-term positive ROI ignores market volatility and technological risk, where rapid fundamental advancements often render multi-million dollar automation systems obsolete or require complete overhaul long before their initial projected amortization period completes.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:24.861216+00:00"
+    },
+    {
+      "id": "630ed1e1-35aa-4bfc-99c4-84f7c3654e26",
+      "text": "The generalization holds even for the cited example, as the service sector constitutes over 75% of employment and nearly 70% of GDP in Germany, dominating both the workforce and economy, not manufacturing.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4c68bc6f-3786-4f27-b8df-2334e0b4e5ff",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:24.960342+00:00"
+    },
+    {
+      "id": "1d363e1d-5b98-4c02-8fcf-75182f7607f6",
+      "text": "Enterprise adoption of AI/RPA is overwhelmingly justified by labor cost savings, where the projected cost of displaced salaries provides the clearest, risk-averse metric for calculating ROI (e.g., replacing outsourced customer service agents). This makes cost reduction a foundational, rather than secondary, benefit.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92247ae4-6508-4fc6-bfa6-61d773ea0e35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:25.699720+00:00"
+    },
+    {
+      "id": "4c109cbe-e5dc-4e4c-af8a-d3c6ea9247cb",
+      "text": "The majority of current enterprise AI investment focuses on optimizing existing processes, such as back-office automation (e.g., invoice processing, HR screening), which generates cost savings but does not inherently create new economic output or external revenue streams.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92247ae4-6508-4fc6-bfa6-61d773ea0e35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:25.699749+00:00"
+    },
+    {
+      "id": "f8872244-3628-41e7-8ffc-52992c49dd36",
+      "text": "Fine-tuning remains essential for specialized enterprise tasks requiring a change in the model's fundamental *behavior or safety profile*, such as enforcing strict PII scrubbing protocols or adapting to culturally specific communication styles that RAG cannot reliably modify.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f742ad66-d5e8-436a-8808-c58966bbabbb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:25.771845+00:00"
+    },
+    {
+      "id": "63337624-f711-42c7-952a-89390ae19ce5",
+      "text": "RAG effectively shifts the high cost from upfront model training to ongoing operational and maintenance expenses, requiring expensive engineering teams to manage complex data compliance, indexing pipelines, and vector database reliability at scale.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f742ad66-d5e8-436a-8808-c58966bbabbb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:25.771870+00:00"
+    },
+    {
+      "id": "f531c819-4f89-4445-8a88-9ee2825d7c86",
+      "text": "Reliance on vendor APIs creates irreversible vendor lock-in and subjects proprietary data to external governance, raising severe data sovereignty and regulatory risks (e.g., GDPR, HIPAA) that prevent production deployment in highly regulated industries.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b4d2e9ea-3b72-46d5-b714-51b1266f55cd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:25.912972+00:00"
+    },
+    {
+      "id": "70b544fb-d63e-4e24-af62-d105b097fbcb",
+      "text": "AlphaFold performs highly accurate structural computation based on existing physical laws and sequences; this ability to model a physical system is not equivalent to the biological judgment, interpretation of conflicting data, or novel hypothesis generation required for scientific roles.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "408698d3-9b46-4954-b7f6-913d383844d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:25.962310+00:00"
+    },
+    {
+      "id": "bee45bf5-b857-4458-b4bf-3e6dabe5b586",
+      "text": "Previous technological waves (e.g., spreadsheet software, database management, CAD programs) systematically displaced clerical, middle-management, and engineering drafting roles by automating complex cognitive tasks, rendering the distinction between current and past displacement mechanisms weak.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1f2ad0ce-2eaa-4bb4-8d4f-7e5a0f15de82",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:26.001099+00:00"
+    },
+    {
+      "id": "4f7affb5-f30b-45c9-917e-68346496b4ab",
+      "text": "The historical analogy mainly rests on the economy's eventual capacity to create entirely new sectors and jobs requiring human-centric skills (e.g., relationship management, creative synthesis), an outcome not invalidated simply because AI automates existing specialized cognitive functions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1f2ad0ce-2eaa-4bb4-8d4f-7e5a0f15de82",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:26.001125+00:00"
+    },
+    {
+      "id": "71b11b86-1686-4090-b2a0-0e3236e7e39f",
+      "text": "Exponential growth is a specific, potent form of super-linear growth; therefore, claiming efficiencies are \"super-linear but not exponential\" is a mathematical inconsistency that voids the argument's central contrast.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a3f8d1cb-c99f-47d7-ad71-41617fbc0d1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:26.303201+00:00"
+    },
+    {
+      "id": "9764d4a6-c564-4f99-a04d-ae964fe5f40e",
+      "text": "The combination of Large Language Models (LLMs) with coding assistants has demonstrably increased developer output speed by over 100% in controlled studies, indicating step-change improvements far exceeding the claimed 10-50% efficiency threshold.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a3f8d1cb-c99f-47d7-ad71-41617fbc0d1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:26.303259+00:00"
+    },
+    {
+      "id": "756fab01-ced2-4cc7-9ecb-368791b8103b",
+      "text": "While BNNs quantify uncertainty, studies show that deep learning models\u2014even those with robust uncertainty measures\u2014are susceptible to adversarial and highly distorted OOD inputs that can generate high confidence, demonstrating incomplete OOD protection.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7fac1ff9-9d7f-4463-802c-cf518974c1a4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:26.768448+00:00"
+    },
+    {
+      "id": "b2d7668b-9bb6-4592-9b34-fce758a48303",
+      "text": "Public sector employment is politically protected and institutionally slow to adopt large-scale AI automation, meaning its sheer magnitude does not invalidate data focused on faster-adopting, market-driven sectors like finance and high-tech information.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ee839642-95df-46b4-be29-cf7996ffe882",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.688286+00:00"
+    },
+    {
+      "id": "9830e4db-7836-4761-a34c-5a918ddd6773",
+      "text": "The 22 million government sector employees are not largely administrative; millions of state and local education employees, police, and fire personnel require mandated in-person presence, making them highly resistant to complete AI displacement.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "ee839642-95df-46b4-be29-cf7996ffe882",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:27.688326+00:00"
+    },
+    {
+      "id": "f5024064-b97b-484a-b841-4a32cbfdf8e7",
+      "text": "Demonstrating a large absolute gain between 2021 and 2024 only proves rapid recent progress, not the continuation of a steep exponential trajectory; technological progress often slows down as it approaches theoretical or economic limits, conforming to S-curves.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bfb82800-2247-419f-aaa5-ba7d3ff603d9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.445384+00:00"
+    },
+    {
+      "id": "7868e161-a778-4bb4-953d-fbb227aacaee",
+      "text": "While models show improved capabilities, the rate of increase in competence per unit of compute (petaflop-days) is rapidly declining. This inherent diminishing return on scaling resources will prevent the exponential efficiency growth needed to deploy AI across most sectors fast enough to replace widespread human labor.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bfb82800-2247-419f-aaa5-ba7d3ff603d9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.445411+00:00"
+    },
+    {
+      "id": "4826b8aa-0a13-4962-8180-913e3aab08a6",
+      "text": "The rapid adoption rate is explained by LLMs initially targeting consumer technology and media applications with free access, inherently operating outside the existing high-barrier regulatory frameworks governing highly controlled industries like pharmaceuticals or banking. The speed demonstrates consumer interest in utility, not the absence of future AI safety regulations.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "74f60397-aed8-4b2e-b0d4-13b1d4b9f3ed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.768745+00:00"
+    },
+    {
+      "id": "6d2fd38c-fd48-40cb-894d-f36e3999476b",
+      "text": "Successful AI integration requires massive internal data migration and restructuring (ETL/ELT), even with external APIs, because legacy relational database structures are often too rigid or slow to support the real-time, high-volume querying and vector storage demands of modern models.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4e047ca2-0f15-4be6-b1e9-a7bafe0f963f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:28.878015+00:00"
+    },
+    {
+      "id": "eef5d286-43b8-45e8-9311-e6df96a4b2e7",
+      "text": "The key functional limitations\u2014the inability to maintain consistent multi-step planning that spans long horizons and the fragility of 'Theory of Mind' simulation\u2014prevent current AI models from executing the complex strategic roles required for broad job replacement.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "067236f4-90cf-4584-a648-723b894708af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:29.439606+00:00"
+    },
+    {
+      "id": "b8bb82d5-4c11-495a-b7ff-7d58518c08bb",
+      "text": "Strategic thought requires maintaining a consistent world model and simulating causal chains across different states, a mechanism that does not arise directly from merely maximizing the statistical likelihood of contiguous tokens in a training set.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "067236f4-90cf-4584-a648-723b894708af",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:29.439631+00:00"
+    },
+    {
+      "id": "837e9199-45f2-4fa5-bd49-c7d612a36532",
+      "text": "Architectural innovations, such as the shift from recurrent to Transformer models or specific fine-tuning methods like RLHF, create qualitative leaps in capability that are independent of mere proportional increases in parameter count or data volume.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1f4cabd9-1c32-4923-9d2a-d019b7436f05",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:30.084412+00:00"
+    },
+    {
+      "id": "74823b82-046c-4699-90d2-71c2638211e3",
+      "text": "Scaling currently reveals new statistical patterns and emergent behaviors, but it does not guarantee the emergence of robust, non-brittle capabilities like accurate long-term causal planning or verifiable truthfulness, suggesting a fundamental algorithmic gap remains.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1f4cabd9-1c32-4923-9d2a-d019b7436f05",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:30.084438+00:00"
+    },
+    {
+      "id": "ccda3d82-bde7-4275-b1d3-10b1d326bdfb",
+      "text": "The critical threat of AI to professional jobs lies in its ability to automate core cognitive tasks\u2014such as synthesizing complex data, drafting legal briefs, and generating functional code\u2014not just maximizing assembly line throughput.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d157f46e-713e-4e51-9b61-caea7aa6102f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:31.149495+00:00"
+    },
+    {
+      "id": "6eed0c78-e2e6-4be3-a3cb-0b8f71c01337",
+      "text": "Denmark's \"flexicurity\" model provides robust unemployment benefits (up to 90% of former salary) and mandates government-funded retraining for job seekers, demonstrating that proactive labor market policy systematically overcomes the lack of worker capital and time.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1b0584fd-84fa-4bfb-a377-cb4db0f9c76e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:32.157593+00:00"
+    },
+    {
+      "id": "f5f7a0db-c03b-4078-884a-249dcc949f05",
+      "text": "While LLMs excel at structured, rule-based tasks like the MBE section of the Bar exam, they consistently fail in synthesizing novel legal strategies or handling conflicting client interests requiring non-statistical ethical assessment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c9d815fe-6fd5-457f-8e38-b023af1f31b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:32.307320+00:00"
+    },
+    {
+      "id": "b3ce4c27-7d7c-40b1-821b-6b807dd8da7e",
+      "text": "The successful performance cited relies on optimizing statistical correlations within massive datasets, indicating sophisticated pattern recognition, not necessarily the abstract, subjective conscious judgment required for advanced professional roles.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c9d815fe-6fd5-457f-8e38-b023af1f31b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:32.307345+00:00"
+    },
+    {
+      "id": "8ff2a472-60b0-49f0-8373-8e8749fec92f",
+      "text": "Strategic planning effectiveness (abstract synthesis) is universally measured by business Key Performance Indicators (KPIs) such as quarterly cost reduction and time-to-market acceleration, while failed political negotiation (a defect) is quantified by resulting losses in GDP and infrastructure spending.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d8d99ebb-c952-416d-8043-ebd7cbb76fac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:33.165433+00:00"
+    },
+    {
+      "id": "c020e79a-9693-4ba5-bdb7-4bc6c91ed43f",
+      "text": "LLMs deployed in sensitive contexts, such as medicine or law, frequently respond to out-of-distribution queries by generating false diagnostic information or erroneous legal precedents, constituting a critical risk far beyond slight inaccuracy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f2de3001-16d5-4fa2-8dfc-a959f85ab498",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:34.610949+00:00"
+    },
+    {
+      "id": "24fb01da-5832-4337-b8f5-5b6eb8773c2d",
+      "text": "The operative failure in generative models is not a system crash but the successful output of catastrophically harmful instructions, such as generating detailed chemical synthesis steps or executable malware code, despite the software remaining operational.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f2de3001-16d5-4fa2-8dfc-a959f85ab498",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:34.610991+00:00"
+    },
+    {
+      "id": "d4f2ffcf-ea46-41f5-815a-2cd06bd69d8d",
+      "text": "Quantitative hedge fund managers and senior engineering leads are primarily evaluated on their ability to manage client expectations, navigate inter-departmental politics, and communicate risk to non-technical stakeholders, skills rooted in emotional intelligence and complex coordination.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "05d3d690-1630-4dd9-90ec-ac443e78a469",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.250593+00:00"
+    },
+    {
+      "id": "c2ce10e0-8031-4db1-848e-067de1252e2b",
+      "text": "The integration of advanced AI into senior professional workflows generates complex challenges related to data security, model bias, and systemic accountability, requiring heightened levels of senior human judgment and organizational coordination to manage these risks.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "05d3d690-1630-4dd9-90ec-ac443e78a469",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.250638+00:00"
+    },
+    {
+      "id": "0e1553e8-a2cb-4633-b177-0deeaf6019c2",
+      "text": "AlphaZero's superior performance depends equally on the policy and value functions provided by its deep neural network, which generalizes strategy across millions of positions, rather than relying entirely on immediate statistical valuation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2706bdba-3129-4054-b623-b4e702b9e4fc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.409604+00:00"
+    },
+    {
+      "id": "780934cc-499d-43c4-9450-05370b6fab46",
+      "text": "The superior performance of these AIs applies only to domains that are fully observable and mathematically formalizable (fixed rules, perfect information). Human strategic planning involves open-ended problems, incomplete real-world data, and physical constraints not modeled by these systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2706bdba-3129-4054-b623-b4e702b9e4fc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.409630+00:00"
+    },
+    {
+      "id": "1ccdae0f-0daf-4129-80f6-1f27e83db98f",
+      "text": "The majority of automated portfolio construction relies on programmed rules and classic mean-variance optimization (Modern Portfolio Theory), not the data-driven predictive modeling characteristic of true machine learning applications.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "32bd9cde-7d7b-44f4-9534-d48a6368c585",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.600843+00:00"
+    },
+    {
+      "id": "87b6901e-64ec-4ea6-893a-3caad35180c2",
+      "text": "Trillions in high-net-worth and institutional wealth are managed primarily through complex human relationships, tax planning, and bespoke estate administration by fiduciary advisors, not standardized automated rebalancing algorithms.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "32bd9cde-7d7b-44f4-9534-d48a6368c585",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.600869+00:00"
+    },
+    {
+      "id": "e2b635dc-c626-466b-94c4-cf51954ed0b0",
+      "text": "AI systems function primarily as powerful augmentation tools, enhancing human productivity and data processing in complex roles like engineering and management, but they lack the intuitive judgment and creative synthesis necessary to fully replace human decision-makers.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.600978+00:00"
+    },
+    {
+      "id": "db327e6d-07df-45d0-b382-04562521f6d6",
+      "text": "Technological shifts historically displace specific routine tasks but concurrently create entirely new, often higher-skilled occupational categories centered around utilizing, managing, and developing the new technology, preventing long-term net mass unemployment.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.601390+00:00"
+    },
+    {
+      "id": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "text": "High-stakes roles requiring fiduciary duty, legal accountability, or ethical decision-making (e.g., legal representation, medical surgery) will remain mandated as human roles due to regulatory requirements and the necessary public trust placed in legally responsible human authority.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.601655+00:00"
+    },
+    {
+      "id": "de555265-6e38-4e12-8d69-2fc96097edc5",
+      "text": "The cost and logistical complexity required to fully automate the final \"last mile\" of exceptions, bespoke inputs, and novel scenarios for \"most jobs\" often renders full replacement less economically viable than utilizing human workers for anomaly handling.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.601891+00:00"
+    },
+    {
+      "id": "ac9bb862-5e9f-4588-add6-3258e944b7bc",
+      "text": "A significant and growing portion of the service economy is based on human-centric roles, such as teaching, nursing, and hospitality, where the intrinsic value is derived from non-algorithmic social connection, empathy, and direct human presence rather than efficiency.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.602118+00:00"
+    },
+    {
+      "id": "444bd458-79d8-41ec-9f02-621803552b10",
+      "text": "Empirical evidence from past technological revolutions, such as the diffusion of electricity and the internet, suggests that the time lag between theoretical capability and disruptive economic adoption is measured in decades, drastically slowing the rate of job replacement.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:36.602340+00:00"
+    },
+    {
+      "id": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "text": "Cost savings are achieved long before full replacement; intelligent process automation (IPA) often handles 80-95% of routine tasks, displacing most workers while retaining only a few highly paid human experts for anomaly handling.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "de555265-6e38-4e12-8d69-2fc96097edc5",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:46.768349+00:00"
+    },
+    {
+      "id": "9cc1e073-e451-48ea-87bd-a0bb1b8c4699",
+      "text": "Many high-volume job categories (e.g., warehouse fulfillment, routine data processing) consist of highly standardized, non-bespoke inputs, making the 'last mile' predictable and cost-effective to fully automate via current robotics and specialized AI.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "de555265-6e38-4e12-8d69-2fc96097edc5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:46.769298+00:00"
+    },
+    {
+      "id": "aebdab0e-56d0-427f-9aae-57507f9c173f",
+      "text": "AI is purely digital and distributed instantaneously via cloud updates, bypassing the decades-long capital investment and physical infrastructure build-out required by electrification or early internet, leading to much faster actual deployment and job displacement.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "444bd458-79d8-41ec-9f02-621803552b10",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.149123+00:00"
+    },
+    {
+      "id": "31761554-7b10-484d-9f50-de125732f730",
+      "text": "The decades-long lag usually refers to economy-wide productivity diffusion, not sector-specific replacement; mature AI models can automate narrowly defined tasks like data entry or customer service within months, causing rapid localized unemployment regardless of macro-adoption speed.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "444bd458-79d8-41ec-9f02-621803552b10",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.149583+00:00"
+    },
+    {
+      "id": "e2c88024-c25b-4ebb-ab8c-e4e68f9d244e",
+      "text": "Current AI and robotics systems automate non-routine cognitive and specialized tasks (e.g., legal discovery, diagnostic support), fundamentally differing from past industrial automation that primarily replaced routine manual roles, allowing the speed of displacement to outpace job creation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "db327e6d-07df-45d0-b382-04562521f6d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.819956+00:00"
+    },
+    {
+      "id": "dece4d1e-66e4-4249-af1d-f1ec3b5d630c",
+      "text": "The required skill gap between displaced workers (e.g., assembly line operators) and newly created high-skill technology jobs leads to persistent structural unemployment and income disparity, as large-scale, long-term retraining programs often fail to bridge skill and access barriers established by the 1980s industrial decline.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "db327e6d-07df-45d0-b382-04562521f6d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:47.820389+00:00"
+    },
+    {
+      "id": "75a4e2d0-5032-48e4-b8a9-9fa49111a582",
+      "text": "Legal systems routinely grant legal personhood and establish liability for non-human entities like corporations, demonstrating there is no inherent barrier preventing future regulations from assigning comparable accountability to sophisticated AI systems.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.721728+00:00"
+    },
+    {
+      "id": "2d516b5c-f271-4e8d-a93e-36365bb13edd",
+      "text": "Public trust is founded on reliable accountability and robust recourse mechanisms, such as comprehensive corporate liability or malpractice insurance, which can be legally mandated to cover the actions of an AI system, decoupling trust from the involvement of human personnel.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.722155+00:00"
+    },
+    {
+      "id": "72905ab0-b709-4b6b-9906-fe6d73a112ee",
+      "text": "Fiduciary responsibility in fields like robotic surgery already relies on human supervision of automated execution. The legal mandate requires a responsible human authority, not mandatory human performance of the task itself.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.722403+00:00"
+    },
+    {
+      "id": "6b55d288-d261-4367-b252-348b51bd5277",
+      "text": "High-value modern service delivery in nursing and hospitality requires both efficiency and empathy; for example, hospitals measure overall quality based on patient turnover time and adherence to time-sensitive treatment protocols rather than solely emotional connection.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ac9bb862-5e9f-4588-add6-3258e944b7bc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.882090+00:00"
+    },
+    {
+      "id": "f0f73485-d0bb-4471-a8f6-6933533b9cdd",
+      "text": "Successful patient outcomes in modern healthcare and education rely extensively on algorithmic efficiency provided by tools like Electronic Health Records (EHRs) and Learning Management Systems (LMS), which contribute essential value often independent of direct human presence.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ac9bb862-5e9f-4588-add6-3258e944b7bc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:49.882598+00:00"
+    },
+    {
+      "id": "e2734da6-605d-4a6d-b395-f44dbee138de",
+      "text": "Large language models generate novel artistic works, architectural plans, and pharmaceutical compounds that pass peer review, demonstrating capacity for \"creative synthesis\" arguably indistinguishable from human output.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e2b635dc-c626-466b-94c4-cf51954ed0b0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:51.981983+00:00"
+    },
+    {
+      "id": "8c6c7492-3b22-47e6-a553-cd8a9ce1ca43",
+      "text": "AI algorithms already fully manage high-frequency stock trading, credit approval, and complex logistics routing, replacing human analysts in roles defined by rapid, data-driven, and repeatable decision-making processes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e2b635dc-c626-466b-94c4-cf51954ed0b0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:51.982755+00:00"
+    },
+    {
+      "id": "f27ddf92-bf0b-401e-b38f-b77f70795561",
+      "text": "AI distribution does not bypass capital investment; it depends entirely on physical infrastructure like multi-billion-dollar data centers for training and inference, powered by thousands of specialized and expensive GPUs (e.g., Nvidia H100s) demanding massive energy inputs.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aebdab0e-56d0-427f-9aae-57507f9c173f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:57.506442+00:00"
+    },
+    {
+      "id": "de978733-610c-411a-9004-458add6ba344",
+      "text": "The speed of software updates does not equate to the speed of socio-economic change; job displacement is fundamentally limited by organizational and regulatory inertia, requiring years for heavily regulated sectors (like finance or law) to restructure workflows.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aebdab0e-56d0-427f-9aae-57507f9c173f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:57.506900+00:00"
+    },
+    {
+      "id": "f24fcb6e-a4a5-4aba-a2e8-f572a4f55e48",
+      "text": "The reported automation efficiencies (80-95%) often reflect only highly structured, simple processes like data entry; complex, unstructured tasks requiring judgment typically cap automation potential much lower, rarely exceeding 40-50% in domains like knowledge work and customer service.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:58.174685+00:00"
+    },
+    {
+      "id": "28cdfdaa-ba6a-4e4f-8d2f-43be72190fb1",
+      "text": "Automating 80-95% of tasks does not equate to eliminating a corresponding percentage of workers, as the remaining non-routine tasks (e.g., strategic planning, exception handling) often constitute the core value and require increased human attention, leading more often to job augmentation than displacement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:58.175120+00:00"
+    },
+    {
+      "id": "ec8220a6-c3fb-4f30-b4b3-dea707b049bf",
+      "text": "Net cost savings are typically delayed by the substantial Total Cost of Ownership (TCO) associated with IPA, including high upfront integration costs, platform licensing fees, and the escalated salaries required to attract and retain the \"highly paid human experts\" for system maintenance and anomaly resolution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:58.175394+00:00"
+    },
+    {
+      "id": "ce7e4344-aba0-4276-b78b-6ca9b2aa99b0",
+      "text": "The \"last mile,\" represented by tasks requiring fine motor skills or adaptation to slight variability (e.g., bin picking of diverse items in logistics centers), remains prohibitively expensive and technically unreliable for full automation compared to flexible human labor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9cc1e073-e451-48ea-87bd-a0bb1b8c4699",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:59.222820+00:00"
+    },
+    {
+      "id": "48002c40-f670-418c-b6cd-55a2011e0607",
+      "text": "Even standardized environments generate sufficient input variability (sensor noise, material defects, wear and tear) that necessitates human cognition for error correction and unpredictable edge cases, preventing the shift to fully autonomous systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9cc1e073-e451-48ea-87bd-a0bb1b8c4699",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:59.223264+00:00"
+    },
+    {
+      "id": "55516e5f-e320-4201-8205-bad860e1a791",
+      "text": "Unlike EHRs, which directly inform life-critical medical diagnoses and treatments, Learning Management Systems (LMS) primarily optimize administrative tasks (tracking grades, managing assignments) and show weak or inconsistent correlation with successful core student learning mastery.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f0f73485-d0bb-4471-a8f6-6933533b9cdd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:59.562620+00:00"
+    },
+    {
+      "id": "0d28de20-21a0-4c7e-8dcf-21f3656ce7c7",
+      "text": "The value of algorithmic efficiency is contingent, not independent, as successful outcomes require trained professionals to interpret the data, apply critical judgment, and mitigate errors like alert fatigue in EHRs, making human presence indispensable.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f0f73485-d0bb-4471-a8f6-6933533b9cdd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:07:59.563241+00:00"
+    },
+    {
+      "id": "d797d6be-3901-4591-817c-d55b245a61d8",
+      "text": "Corporate legal personhood functions because liability ultimately rests on human agents (directors, officers) or shareholder assets that can be penalized through fines and dissolution. Autonomous AI lacks these accountable human intermediaries and exploitable assets, creating a substantive practical barrier to comparable accountability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75a4e2d0-5032-48e4-b8a9-9fa49111a582",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:01.796522+00:00"
+    },
+    {
+      "id": "fc1802e6-84e9-42b9-bc2e-e367a7d7703e",
+      "text": "Liability for non-human entities typically relies on imputing intent (*mens rea*) based on the actions and structure of human management. Sophisticated AI currently lacks the capacity for legal intent, which is a necessary inherent barrier for establishing accountability in tort and criminal matters.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75a4e2d0-5032-48e4-b8a9-9fa49111a582",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:01.797100+00:00"
+    },
+    {
+      "id": "d53e406b-30f7-4fb8-b6fc-c5c083e9d55b",
+      "text": "Historically, automation lowers consumer costs and spurs demand, creating entirely new industries that successfully absorb displaced labor. This suggests the overall net velocity of job creation often keeps pace despite localized job displacement speed.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e2c88024-c25b-4ebb-ab8c-e4e68f9d244e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:02.217100+00:00"
+    },
+    {
+      "id": "9e2a03f2-5757-44a5-a415-10534ade5312",
+      "text": "AI displacement is not solely focused on non-routine roles; many early applications target predictable, routine cognitive tasks (like data entry and simple code generation). The actual speed of displacement is limited by the often slow and complex integration of these specialized tools into existing organizational workflows.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e2c88024-c25b-4ebb-ab8c-e4e68f9d244e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:02.217814+00:00"
+    },
+    {
+      "id": "c076294f-c5fd-4db5-b599-eef915e614d6",
+      "text": "Trust requires assurance of ethical design and systemic safety protocols, which financial recourse alone fails to guarantee; for example, AI used in critical infrastructure demands human assurances that mere insurance compensation cannot replace.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2d516b5c-f271-4e8d-a93e-36365bb13edd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:02.808914+00:00"
+    },
+    {
+      "id": "d24037cc-12cb-4d9c-968d-43afc1d7759f",
+      "text": "Corporate liability mechanisms ultimately trace responsibility back to human executives, designers, and shareholders through legal doctrines like negligence or product liability, thus reinforcing the dependence on human governance rather than decoupling trust.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2d516b5c-f271-4e8d-a93e-36365bb13edd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:02.809638+00:00"
+    },
+    {
+      "id": "b79f46c4-91bf-447f-8b68-a5b2366221f0",
+      "text": "LLM-generated pharmaceutical candidates only provide initial leads; they must undergo multi-year, multi-phase clinical trials and regulatory review (FDA/EMA) to validate safety and efficacy, a process LLMs do not currently perform or bypass.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e2734da6-605d-4a6d-b395-f44dbee138de",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:03.757056+00:00"
+    },
+    {
+      "id": "9bb0bcae-c5e4-4396-9a50-c38eae02dba5",
+      "text": "LLMs generate output via statistical prediction and high-dimensional pattern matching, not through conscious understanding, intentionality, or lived experience, thus making the underlying generative capacity fundamentally distinguishable from human creative synthesis.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e2734da6-605d-4a6d-b395-f44dbee138de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:03.757491+00:00"
+    },
+    {
+      "id": "0b200983-a6fb-4a97-be31-319010770b12",
+      "text": "Da Vinci surgical systems are teleoperated tools that require continuous, real-time human performance and input, meaning the surgeon executes the task, not an automated system.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "72905ab0-b709-4b6b-9906-fe6d73a112ee",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:03.865034+00:00"
+    },
+    {
+      "id": "0b3133dc-6358-4251-b8b4-2cbbbba8f32e",
+      "text": "When a truly autonomous system makes a novel error beyond the human supervisor's capacity to predict or intervene (e.g., in Level 5 autonomous driving), existing negligence and liability laws struggle to assign fault, undermining the assumption of stable human responsibility.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "72905ab0-b709-4b6b-9906-fe6d73a112ee",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:03.866153+00:00"
+    },
+    {
+      "id": "60b96db4-f87c-45b6-ba77-7b52257e05d5",
+      "text": "Major hospital quality assessment tools (e.g., US HCAHPS surveys) heavily weigh patient-reported communication, responsiveness, and pain management scores, demonstrating that measures of emotional connection are essential metrics for institutional quality and reimbursement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6b55d288-d261-4367-b252-348b51bd5277",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:04.954819+00:00"
+    },
+    {
+      "id": "44136dd7-dce6-48a2-93dc-2bd1533f58ac",
+      "text": "Studies link low patient-provider empathy during discharge to higher 30-day readmission rates, demonstrating that high efficiency (fast turnover time) results in poor clinical and financial outcomes unless quality includes empathetic processes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6b55d288-d261-4367-b252-348b51bd5277",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:04.955254+00:00"
+    },
+    {
+      "id": "3ade948b-5393-4d5d-bd82-a9b993fd8617",
+      "text": "Centralized cloud infrastructure distributes the capital cost via low-marginal-cost APIs and subscriptions, allowing millions of smaller businesses worldwide to bypass their *own* physical build-out and rapidly deploy job-replacing AI services without significant upfront investment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f27ddf92-bf0b-401e-b38f-b77f70795561",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:06.766435+00:00"
+    },
+    {
+      "id": "8d67ed2e-970c-436f-9f12-3c1c9b6a98b2",
+      "text": "Financial regulators, including the SEC and the FCA, mandate designated human 'risk officers' to set parameters and manually override algorithms during volatile market events, disproving AI fully manages these systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8c6c7492-3b22-47e6-a553-cd8a9ce1ca43",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:06.896731+00:00"
+    },
+    {
+      "id": "a001263d-ef2a-47e1-ac3c-5228a869b9f2",
+      "text": "AI excels at optimized repetition, whereas adapting business strategy to novel regulatory frameworks (e.g., GDPR, Dodd-Frank) or handling rare operational exceptions requires uniquely human, non-repeatable strategic judgment.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8c6c7492-3b22-47e6-a553-cd8a9ce1ca43",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:06.897141+00:00"
+    },
+    {
+      "id": "bd452d12-2dfa-45c6-960c-c9c70c4ecd9c",
+      "text": "Displacement results from external, AI-driven competitors collapsing established organizations (creative destruction), which bypasses organizational inertia entirely. The rapid obsolescence of travel agents due to online booking platforms demonstrates this mechanism of speed.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "de978733-610c-411a-9004-458add6ba344",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:09.094462+00:00"
+    },
+    {
+      "id": "8f27e7d2-9928-46b7-bdae-c266f4033917",
+      "text": "The inertia of heavily regulated sectors like finance does not apply to vast, less regulated fields, such as entry-level content creation or remote data processing, where AI systems can be deployed globally and near-instantly.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "de978733-610c-411a-9004-458add6ba344",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:09.094500+00:00"
+    },
+    {
+      "id": "e69c007e-a67e-4dfa-baeb-4d5314bf45b9",
+      "text": "GenAI and Large Language Models (LLMs) now automate complex, unstructured knowledge work\u2014such as writing specialized code, synthesizing technical reports, and drafting legal first-pass responses\u2014with efficiencies often exceeding 60-70%, contradicting the notion that complex tasks cap low at 40-50%.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f24fcb6e-a4a5-4aba-a2e8-f572a4f55e48",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:09.982887+00:00"
+    },
+    {
+      "id": "584c7a83-4f79-412f-a767-d6368ec844bf",
+      "text": "Learning Management Systems (LMS) platforms like Canvas and Moodle are essential for core pedagogy, facilitating critical functions such as synchronous class delivery, hosting interactive simulations, and managing core content delivery for modern blended or online university courses.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "55516e5f-e320-4201-8205-bad860e1a791",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:10.258576+00:00"
+    },
+    {
+      "id": "311ecbd7-2b08-4409-b78c-955bd23ec8cb",
+      "text": "Generative models (e.g., GPT-4, Claude) target non-routine expert roles like creative writing and legal analysis, achieving near-instantaneous adoption through API integration rather than slow integration into legacy systems, thereby accelerating displacement beyond organizational friction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9e2a03f2-5757-44a5-a415-10534ade5312",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:10.577708+00:00"
+    },
+    {
+      "id": "ea80b0cf-43ee-4b63-bab9-e90ef56eda4c",
+      "text": "Automating 90% of routine tasks means a 10-person team performing those tasks can be consolidated into 1-2 specialized employees focusing on high-value exceptions. The qualitative importance of the remaining work does not negate the quantitative reduction in total required labor volume.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "28cdfdaa-ba6a-4e4f-8d2f-43be72190fb1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:11.752335+00:00"
+    },
+    {
+      "id": "658b6b47-d3ed-491b-80c2-9fd0fe30c7e6",
+      "text": "Accountability is frequently established without intent via strict liability laws, common in product safety and environmental torts. The legal focus shifts from AI's lack of *mens rea* to proving causation and establishing liability based on the harm caused.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fc1802e6-84e9-42b9-bc2e-e367a7d7703e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:12.433898+00:00"
+    },
+    {
+      "id": "71fe612c-426c-4611-84f0-cff74acd5beb",
+      "text": "Computational toxicology models and digital twin simulations, driven by AI, are gaining acceptance by regulatory bodies like the FDA to replace portions of pre-clinical and Phase 0 human trials, suggesting the \"multi-year\" validation process is not static but actively being compressed by AI's capabilities beyond merely generating initial leads.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b79f46c4-91bf-447f-8b68-a5b2366221f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:13.609621+00:00"
+    },
+    {
+      "id": "04c75850-e285-4e62-88a3-389d364e84c0",
+      "text": "The economic comparison is structurally flawed; while human labor wages (OPEX) rise and availability fluctuates over time, the initial capital expenditure (CAPEX) for automation hardware and operational AI software declines predictably due to economies of scale and technological advances.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ce7e4344-aba0-4276-b78b-6ca9b2aa99b0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:13.708620+00:00"
+    },
+    {
+      "id": "d3bf05aa-0161-40fe-8ad9-87c2bd5d048c",
+      "text": "Customized robotic arms and vision systems deployed by companies like Amazon successfully handle high-volume, variable item bin-picking in fulfillment centers, proving the technical feasibility of automating the \"last mile.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ce7e4344-aba0-4276-b78b-6ca9b2aa99b0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:13.708667+00:00"
+    },
+    {
+      "id": "50f5dd93-3185-4e3c-a775-7f362902f350",
+      "text": "Global studies of CEO decision-making, such as those by McKinsey, indicate that the financial imperative for massive efficiency gains (often exceeding 20% cost reduction) drives immediate AI deployment in sectors like customer service, demonstrating that unsettled legal liability is not currently a substantive practical barrier slowing adoption or the consequent job replacement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d797d6be-3901-4591-817c-d55b245a61d8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:14.199836+00:00"
+    },
+    {
+      "id": "69805a52-501e-464f-bb2d-9f89bfb2c330",
+      "text": "Legal systems imposing financial penalties *after* an AI failure (ex-post liability) do not require executives to maintain *active control* over the AI's complex, real-time decisions (ex-ante governance). Decoupling trust in the AI's operation can proceed while maintaining a human \"deep pocket\" for damages.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d24037cc-12cb-4d9c-968d-43afc1d7759f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:14.764778+00:00"
+    },
+    {
+      "id": "9de4eab2-60a3-42c7-b6f7-5fde9e936ae2",
+      "text": "Strict liability doctrines assign fault based on ownership or manufacturer status (e.g., self-driving car accidents), independent of direct human governance or negligence. This requires only a human *designate* for legal purposes, not *operational* dependence on their decision-making.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d24037cc-12cb-4d9c-968d-43afc1d7759f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:14.764813+00:00"
+    },
+    {
+      "id": "036ff35c-9186-4517-a856-714172b8bb97",
+      "text": "The weighting of HCAHPS scores is primarily designed to incentivize patient satisfaction and service process compliance for Medicare reimbursement (Value-Based Purchasing), not to measure essential clinical quality metrics like mortality rates or reduced readmissions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "60b96db4-f87c-45b6-ba77-7b52257e05d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:14.971701+00:00"
+    },
+    {
+      "id": "028e0010-609f-430c-b405-23124e9951e6",
+      "text": "Responsiveness reflects critical clinical safety processes, such as the timely assessment of patient deterioration or pain crises, making it an objective measure of direct care quality and safety, not merely one of \"emotional connection.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "60b96db4-f87c-45b6-ba77-7b52257e05d5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:14.971742+00:00"
+    },
+    {
+      "id": "240bab05-7adc-4e07-bab1-a3ab291216e2",
+      "text": "AI models routinely pass the USMLE and Bar exams, demonstrating they possess the sophisticated interpretive and critical judgment skills required for complex data interpretation and professional decision-making.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0d28de20-21a0-4c7e-8dcf-21f3656ce7c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:15.209028+00:00"
+    },
+    {
+      "id": "e71c6f79-3082-400a-8fc7-eac1924c90f3",
+      "text": "Surgical robots require constant human performance and are designed for augmentation, yet Level 4 autonomous vehicle systems already execute complex functional roles like dynamic path planning and operational management, requiring zero human intervention.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0b200983-a6fb-4a97-be31-319010770b12",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:15.645375+00:00"
+    },
+    {
+      "id": "9308c7ae-4bdf-436b-b16f-14c506bb0375",
+      "text": "Autonomous vehicles use real-time deep learning to adapt to drastically noisy inputs and unpredictable urban environments caused by wear, poor markings, and chaotic human behavior, demonstrating that variability is not a permanent barrier to automation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "48002c40-f670-418c-b6cd-55a2011e0607",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:16.097480+00:00"
+    },
+    {
+      "id": "80fdeb59-4b48-47e1-85b7-85e7f8c92ba5",
+      "text": "Large-scale automated systems, such as Amazon's fulfillment centers, manage millions of unique, unpredictable material flows and constantly wearing robotics with embedded self-diagnostics and autonomous error correction, showing human cognition is unnecessary for many edge cases.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "48002c40-f670-418c-b6cd-55a2011e0607",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:16.097532+00:00"
+    },
+    {
+      "id": "670d167c-ab32-4ed4-831e-342d47052c88",
+      "text": "Automation initiatives using Intelligent Process Automation (IPA) often generate substantial immediate savings from the elimination of routine labor costs, resulting in a documented Return on Investment (ROI) and full TCO payback frequently achieved within 12 to 18 months across industries like finance and logistics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ec8220a6-c3fb-4f30-b4b3-dea707b049bf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:16.661988+00:00"
+    },
+    {
+      "id": "4eec69f7-76ab-4457-b2ed-b682d5f1f006",
+      "text": "Strict product liability laws in major jurisdictions like the US and EU assign financial responsibility for product defects directly to the manufacturer. This mechanism ensures that a human enterprise remains liable for autonomous system errors, regardless of the immediate human supervisor\u2019s negligence or the novelty of the mistake.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0b3133dc-6358-4251-b8b4-2cbbbba8f32e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:20.494700+00:00"
+    },
+    {
+      "id": "b0159a20-407c-40db-ba63-4706c5d7a6c7",
+      "text": "High-volume healthcare models utilizing lean principles, such as specialized surgical units, use standardized discharge protocols that achieve rapid patient turnover while simultaneously reporting high patient satisfaction and reduced readmission rates, demonstrating that efficiency and empathetic quality are not mutually exclusive.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "44136dd7-dce6-48a2-93dc-2bd1533f58ac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:20.901794+00:00"
+    },
+    {
+      "id": "d476fa13-6a15-45b3-8b8e-0c92716a0c68",
+      "text": "Regulatory requirements stipulating a human risk officer exist primarily to maintain legal accountability and liability, not because the AI is technologically incapable of execution; AI still performs 99% of the operational functions (like automated flight systems), displacing the majority of workers previously required for manual technical management.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8d67ed2e-970c-436f-9f12-3c1c9b6a98b2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:21.148502+00:00"
+    },
+    {
+      "id": "3c262943-2174-4e04-8636-7ebe649ef3f7",
+      "text": "Human cognitive processes, studied through predictive coding models, rely on extensive hierarchical statistical pattern matching of past sensory data to generate novel thoughts. This demonstrates that statistical generation systems are fundamentally capable of the synthesis traditionally associated with consciousness.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9bb0bcae-c5e4-4396-9a50-c38eae02dba5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:21.216219+00:00"
+    },
+    {
+      "id": "92ecfcad-4438-4316-819f-fd13ba1de14b",
+      "text": "LLMs have generated complex works, including musical scores and patentable designs, judged by experts to be novel and valuable against human-created benchmarks. The functional capacity is demonstrated by the quality and originality of the output, making the distinction in internal mechanism non-fundamental.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9bb0bcae-c5e4-4396-9a50-c38eae02dba5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:21.216260+00:00"
+    },
+    {
+      "id": "10307b0e-b6e0-4c9c-907c-f99ece45c955",
+      "text": "Liability and insurance markets inherently drive safety standards, as the financial cost of failure compels manufacturers of medical devices and aerospace technology to invest in superior ethical design and rigorous systemic protocols to minimize risk. The financial mechanism thereby acts as the primary incentive for, and guarantee of, advanced safety assurances.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c076294f-c5fd-4db5-b599-eef915e614d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:23.247659+00:00"
+    },
+    {
+      "id": "25cf1af1-0144-4522-aa3a-ced89981caba",
+      "text": "Large language models successfully analyze novel regulatory texts like GDPR and synthesize unique adaptation strategies for compliance policies, demonstrating that strategic adaptation to new rule sets is not exclusively human.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a001263d-ef2a-47e1-ac3c-5228a869b9f2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:24.621532+00:00"
+    },
+    {
+      "id": "2e8c20a1-d4ec-4f33-af0d-c566a55808ce",
+      "text": "Modern generative AI systems specializing in complex operational tasks, such as predictive maintenance or integrated circuit design, create functionally unique solutions rather than optimized repetitions of existing data or actions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a001263d-ef2a-47e1-ac3c-5228a869b9f2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:24.621558+00:00"
+    },
+    {
+      "id": "21dad9b2-ece8-40d5-b9ff-67d33950657a",
+      "text": "Past industrial revolutions displaced specific physical tasks, but contemporary AI (e.g., large language models) displaces abstract cognitive work simultaneously across both blue-collar and white-collar sectors. Historical precedents limited job displacement to localized sectors, allowing for slower absorption, while AI threatens cross-sectoral displacement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d53e406b-30f7-4fb8-b6fc-c5c083e9d55b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:27.141051+00:00"
+    },
+    {
+      "id": "0d61b8a2-329f-4025-8453-a9254bb4cbe2",
+      "text": "The mechanization of manufacturing in the US Midwest from the 1970s to 2000s led to prolonged structural unemployment and wage stagnation over 40 years. New job creation following automation often benefits a new generation in different locations rather than immediately absorbing the originally displaced, creating decades-long friction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d53e406b-30f7-4fb8-b6fc-c5c083e9d55b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:08:27.141093+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:06:49.725880+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:06:49.725880+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "target": "051ab805-d472-447e-b753-c6b5f1f7c775",
+      "type": "objection"
+    },
+    {
+      "source": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "target": "9e32573d-0769-4bed-8912-59fbc837f329",
+      "type": "objection"
+    },
+    {
+      "source": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "target": "7d1f5aa5-a54a-444f-be7b-6cfb02059314",
+      "type": "objection"
+    },
+    {
+      "source": "97eaff59-cfcf-446d-ab4f-eb6feb84cba2",
+      "target": "f21626c2-ca13-4f75-95c1-df6588f892b5",
+      "type": "objection"
+    },
+    {
+      "source": "97eaff59-cfcf-446d-ab4f-eb6feb84cba2",
+      "target": "cf61e800-96dc-4f8b-9bc9-4fae499e96c7",
+      "type": "objection"
+    },
+    {
+      "source": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "target": "68bc712a-819a-4c92-ad04-92e9a2383b58",
+      "type": "objection"
+    },
+    {
+      "source": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "target": "46cb4f44-deb6-492c-9e52-51d09bbd735f",
+      "type": "objection"
+    },
+    {
+      "source": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "target": "d236a995-4897-4001-8751-898ba5453b13",
+      "type": "objection"
+    },
+    {
+      "source": "9d1345ee-f458-4c27-a624-11e182bf2e11",
+      "target": "013fe41c-2ae9-415a-af22-83c27d74e8ad",
+      "type": "objection"
+    },
+    {
+      "source": "9d1345ee-f458-4c27-a624-11e182bf2e11",
+      "target": "9cf4498f-6ce5-4596-adf4-dba6faffd87d",
+      "type": "objection"
+    },
+    {
+      "source": "98c4f5d8-7341-4ab3-9e46-b13159f02228",
+      "target": "0d28c984-19b7-4a02-9ea0-444e1129cde6",
+      "type": "objection"
+    },
+    {
+      "source": "98c4f5d8-7341-4ab3-9e46-b13159f02228",
+      "target": "eebea986-f3ae-4763-8f28-2546fafbec6d",
+      "type": "objection"
+    },
+    {
+      "source": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "target": "b870d007-37a6-4c53-b04f-9e4719c0b4d4",
+      "type": "objection"
+    },
+    {
+      "source": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "target": "fd455f28-5df8-4de6-997a-3eecfc37a1db",
+      "type": "objection"
+    },
+    {
+      "source": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "target": "a3b2211c-88f3-4a4f-aa99-9fcdc643c8a9",
+      "type": "objection"
+    },
+    {
+      "source": "0d28c984-19b7-4a02-9ea0-444e1129cde6",
+      "target": "1f2ad0ce-2eaa-4bb4-8d4f-7e5a0f15de82",
+      "type": "response"
+    },
+    {
+      "source": "0d28c984-19b7-4a02-9ea0-444e1129cde6",
+      "target": "1b0584fd-84fa-4bfb-a377-cb4db0f9c76e",
+      "type": "response"
+    },
+    {
+      "source": "a3b2211c-88f3-4a4f-aa99-9fcdc643c8a9",
+      "target": "a3f8d1cb-c99f-47d7-ad71-41617fbc0d1f",
+      "type": "response"
+    },
+    {
+      "source": "a3b2211c-88f3-4a4f-aa99-9fcdc643c8a9",
+      "target": "c3fc360f-512c-4eb6-b50e-6ae24c682d9d",
+      "type": "response"
+    },
+    {
+      "source": "7d1f5aa5-a54a-444f-be7b-6cfb02059314",
+      "target": "74f60397-aed8-4b2e-b0d4-13b1d4b9f3ed",
+      "type": "response"
+    },
+    {
+      "source": "7d1f5aa5-a54a-444f-be7b-6cfb02059314",
+      "target": "4e047ca2-0f15-4be6-b1e9-a7bafe0f963f",
+      "type": "response"
+    },
+    {
+      "source": "fd455f28-5df8-4de6-997a-3eecfc37a1db",
+      "target": "92247ae4-6508-4fc6-bfa6-61d773ea0e35",
+      "type": "response"
+    },
+    {
+      "source": "fd455f28-5df8-4de6-997a-3eecfc37a1db",
+      "target": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "type": "response"
+    },
+    {
+      "source": "051ab805-d472-447e-b753-c6b5f1f7c775",
+      "target": "b4d2e9ea-3b72-46d5-b714-51b1266f55cd",
+      "type": "response"
+    },
+    {
+      "source": "051ab805-d472-447e-b753-c6b5f1f7c775",
+      "target": "f742ad66-d5e8-436a-8808-c58966bbabbb",
+      "type": "response"
+    },
+    {
+      "source": "46cb4f44-deb6-492c-9e52-51d09bbd735f",
+      "target": "d157f46e-713e-4e51-9b61-caea7aa6102f",
+      "type": "response"
+    },
+    {
+      "source": "46cb4f44-deb6-492c-9e52-51d09bbd735f",
+      "target": "d8d99ebb-c952-416d-8043-ebd7cbb76fac",
+      "type": "response"
+    },
+    {
+      "source": "013fe41c-2ae9-415a-af22-83c27d74e8ad",
+      "target": "4c68bc6f-3786-4f27-b8df-2334e0b4e5ff",
+      "type": "response"
+    },
+    {
+      "source": "013fe41c-2ae9-415a-af22-83c27d74e8ad",
+      "target": "ee839642-95df-46b4-be29-cf7996ffe882",
+      "type": "response"
+    },
+    {
+      "source": "f21626c2-ca13-4f75-95c1-df6588f892b5",
+      "target": "bfb82800-2247-419f-aaa5-ba7d3ff603d9",
+      "type": "response"
+    },
+    {
+      "source": "f21626c2-ca13-4f75-95c1-df6588f892b5",
+      "target": "1f4cabd9-1c32-4923-9d2a-d019b7436f05",
+      "type": "response"
+    },
+    {
+      "source": "d236a995-4897-4001-8751-898ba5453b13",
+      "target": "7fac1ff9-9d7f-4463-802c-cf518974c1a4",
+      "type": "response"
+    },
+    {
+      "source": "d236a995-4897-4001-8751-898ba5453b13",
+      "target": "f2de3001-16d5-4fa2-8dfc-a959f85ab498",
+      "type": "response"
+    },
+    {
+      "source": "eebea986-f3ae-4763-8f28-2546fafbec6d",
+      "target": "408698d3-9b46-4954-b7f6-913d383844d6",
+      "type": "response"
+    },
+    {
+      "source": "eebea986-f3ae-4763-8f28-2546fafbec6d",
+      "target": "05d3d690-1630-4dd9-90ec-ac443e78a469",
+      "type": "response"
+    },
+    {
+      "source": "cf61e800-96dc-4f8b-9bc9-4fae499e96c7",
+      "target": "067236f4-90cf-4584-a648-723b894708af",
+      "type": "response"
+    },
+    {
+      "source": "cf61e800-96dc-4f8b-9bc9-4fae499e96c7",
+      "target": "2706bdba-3129-4054-b623-b4e702b9e4fc",
+      "type": "response"
+    },
+    {
+      "source": "9cf4498f-6ce5-4596-adf4-dba6faffd87d",
+      "target": "32bd9cde-7d7b-44f4-9534-d48a6368c585",
+      "type": "response"
+    },
+    {
+      "source": "9cf4498f-6ce5-4596-adf4-dba6faffd87d",
+      "target": "c9d815fe-6fd5-457f-8e38-b023af1f31b1",
+      "type": "response"
+    },
+    {
+      "source": "c3fc360f-512c-4eb6-b50e-6ae24c682d9d",
+      "target": "49e67556-65e1-4e7c-b6d4-632451d63f9d",
+      "type": "response"
+    },
+    {
+      "source": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "target": "8d2d731a-152d-4be2-8cb5-5f0d37fef7d8",
+      "type": "response"
+    },
+    {
+      "source": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "target": "bdaf4502-1d6a-4680-a773-7e0fce5c358d",
+      "type": "response"
+    },
+    {
+      "source": "dd9b918a-9bbc-4417-87df-315b6a2882ca",
+      "target": "de053385-419f-43eb-8633-e63e9b5ba18b",
+      "type": "response"
+    },
+    {
+      "source": "4c68bc6f-3786-4f27-b8df-2334e0b4e5ff",
+      "target": "630ed1e1-35aa-4bfc-99c4-84f7c3654e26",
+      "type": "response"
+    },
+    {
+      "source": "92247ae4-6508-4fc6-bfa6-61d773ea0e35",
+      "target": "1d363e1d-5b98-4c02-8fcf-75182f7607f6",
+      "type": "response"
+    },
+    {
+      "source": "92247ae4-6508-4fc6-bfa6-61d773ea0e35",
+      "target": "4c109cbe-e5dc-4e4c-af8a-d3c6ea9247cb",
+      "type": "response"
+    },
+    {
+      "source": "f742ad66-d5e8-436a-8808-c58966bbabbb",
+      "target": "f8872244-3628-41e7-8ffc-52992c49dd36",
+      "type": "response"
+    },
+    {
+      "source": "f742ad66-d5e8-436a-8808-c58966bbabbb",
+      "target": "63337624-f711-42c7-952a-89390ae19ce5",
+      "type": "response"
+    },
+    {
+      "source": "b4d2e9ea-3b72-46d5-b714-51b1266f55cd",
+      "target": "f531c819-4f89-4445-8a88-9ee2825d7c86",
+      "type": "response"
+    },
+    {
+      "source": "408698d3-9b46-4954-b7f6-913d383844d6",
+      "target": "70b544fb-d63e-4e24-af62-d105b097fbcb",
+      "type": "response"
+    },
+    {
+      "source": "1f2ad0ce-2eaa-4bb4-8d4f-7e5a0f15de82",
+      "target": "bee45bf5-b857-4458-b4bf-3e6dabe5b586",
+      "type": "response"
+    },
+    {
+      "source": "1f2ad0ce-2eaa-4bb4-8d4f-7e5a0f15de82",
+      "target": "4f7affb5-f30b-45c9-917e-68346496b4ab",
+      "type": "response"
+    },
+    {
+      "source": "a3f8d1cb-c99f-47d7-ad71-41617fbc0d1f",
+      "target": "71b11b86-1686-4090-b2a0-0e3236e7e39f",
+      "type": "response"
+    },
+    {
+      "source": "a3f8d1cb-c99f-47d7-ad71-41617fbc0d1f",
+      "target": "9764d4a6-c564-4f99-a04d-ae964fe5f40e",
+      "type": "response"
+    },
+    {
+      "source": "7fac1ff9-9d7f-4463-802c-cf518974c1a4",
+      "target": "756fab01-ced2-4cc7-9ecb-368791b8103b",
+      "type": "response"
+    },
+    {
+      "source": "ee839642-95df-46b4-be29-cf7996ffe882",
+      "target": "b2d7668b-9bb6-4592-9b34-fce758a48303",
+      "type": "response"
+    },
+    {
+      "source": "ee839642-95df-46b4-be29-cf7996ffe882",
+      "target": "9830e4db-7836-4761-a34c-5a918ddd6773",
+      "type": "response"
+    },
+    {
+      "source": "bfb82800-2247-419f-aaa5-ba7d3ff603d9",
+      "target": "f5024064-b97b-484a-b841-4a32cbfdf8e7",
+      "type": "response"
+    },
+    {
+      "source": "bfb82800-2247-419f-aaa5-ba7d3ff603d9",
+      "target": "7868e161-a778-4bb4-953d-fbb227aacaee",
+      "type": "response"
+    },
+    {
+      "source": "74f60397-aed8-4b2e-b0d4-13b1d4b9f3ed",
+      "target": "4826b8aa-0a13-4962-8180-913e3aab08a6",
+      "type": "response"
+    },
+    {
+      "source": "4e047ca2-0f15-4be6-b1e9-a7bafe0f963f",
+      "target": "6d2fd38c-fd48-40cb-894d-f36e3999476b",
+      "type": "response"
+    },
+    {
+      "source": "067236f4-90cf-4584-a648-723b894708af",
+      "target": "eef5d286-43b8-45e8-9311-e6df96a4b2e7",
+      "type": "response"
+    },
+    {
+      "source": "067236f4-90cf-4584-a648-723b894708af",
+      "target": "b8bb82d5-4c11-495a-b7ff-7d58518c08bb",
+      "type": "response"
+    },
+    {
+      "source": "1f4cabd9-1c32-4923-9d2a-d019b7436f05",
+      "target": "837e9199-45f2-4fa5-bd49-c7d612a36532",
+      "type": "response"
+    },
+    {
+      "source": "1f4cabd9-1c32-4923-9d2a-d019b7436f05",
+      "target": "74823b82-046c-4699-90d2-71c2638211e3",
+      "type": "response"
+    },
+    {
+      "source": "d157f46e-713e-4e51-9b61-caea7aa6102f",
+      "target": "ccda3d82-bde7-4275-b1d3-10b1d326bdfb",
+      "type": "response"
+    },
+    {
+      "source": "1b0584fd-84fa-4bfb-a377-cb4db0f9c76e",
+      "target": "6eed0c78-e2e6-4be3-a3cb-0b8f71c01337",
+      "type": "response"
+    },
+    {
+      "source": "c9d815fe-6fd5-457f-8e38-b023af1f31b1",
+      "target": "f5f7a0db-c03b-4078-884a-249dcc949f05",
+      "type": "response"
+    },
+    {
+      "source": "c9d815fe-6fd5-457f-8e38-b023af1f31b1",
+      "target": "b3ce4c27-7d7c-40b1-821b-6b807dd8da7e",
+      "type": "response"
+    },
+    {
+      "source": "d8d99ebb-c952-416d-8043-ebd7cbb76fac",
+      "target": "8ff2a472-60b0-49f0-8373-8e8749fec92f",
+      "type": "response"
+    },
+    {
+      "source": "f2de3001-16d5-4fa2-8dfc-a959f85ab498",
+      "target": "c020e79a-9693-4ba5-bdb7-4bc6c91ed43f",
+      "type": "response"
+    },
+    {
+      "source": "f2de3001-16d5-4fa2-8dfc-a959f85ab498",
+      "target": "24fb01da-5832-4337-b8f5-5b6eb8773c2d",
+      "type": "response"
+    },
+    {
+      "source": "05d3d690-1630-4dd9-90ec-ac443e78a469",
+      "target": "d4f2ffcf-ea46-41f5-815a-2cd06bd69d8d",
+      "type": "response"
+    },
+    {
+      "source": "05d3d690-1630-4dd9-90ec-ac443e78a469",
+      "target": "c2ce10e0-8031-4db1-848e-067de1252e2b",
+      "type": "response"
+    },
+    {
+      "source": "2706bdba-3129-4054-b623-b4e702b9e4fc",
+      "target": "0e1553e8-a2cb-4633-b177-0deeaf6019c2",
+      "type": "response"
+    },
+    {
+      "source": "2706bdba-3129-4054-b623-b4e702b9e4fc",
+      "target": "780934cc-499d-43c4-9450-05370b6fab46",
+      "type": "response"
+    },
+    {
+      "source": "32bd9cde-7d7b-44f4-9534-d48a6368c585",
+      "target": "1ccdae0f-0daf-4129-80f6-1f27e83db98f",
+      "type": "response"
+    },
+    {
+      "source": "32bd9cde-7d7b-44f4-9534-d48a6368c585",
+      "target": "87b6901e-64ec-4ea6-893a-3caad35180c2",
+      "type": "response"
+    },
+    {
+      "source": "de555265-6e38-4e12-8d69-2fc96097edc5",
+      "target": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "type": "objection"
+    },
+    {
+      "source": "de555265-6e38-4e12-8d69-2fc96097edc5",
+      "target": "9cc1e073-e451-48ea-87bd-a0bb1b8c4699",
+      "type": "objection"
+    },
+    {
+      "source": "444bd458-79d8-41ec-9f02-621803552b10",
+      "target": "aebdab0e-56d0-427f-9aae-57507f9c173f",
+      "type": "objection"
+    },
+    {
+      "source": "444bd458-79d8-41ec-9f02-621803552b10",
+      "target": "31761554-7b10-484d-9f50-de125732f730",
+      "type": "objection"
+    },
+    {
+      "source": "db327e6d-07df-45d0-b382-04562521f6d6",
+      "target": "e2c88024-c25b-4ebb-ab8c-e4e68f9d244e",
+      "type": "objection"
+    },
+    {
+      "source": "db327e6d-07df-45d0-b382-04562521f6d6",
+      "target": "dece4d1e-66e4-4249-af1d-f1ec3b5d630c",
+      "type": "objection"
+    },
+    {
+      "source": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "target": "75a4e2d0-5032-48e4-b8a9-9fa49111a582",
+      "type": "objection"
+    },
+    {
+      "source": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "target": "2d516b5c-f271-4e8d-a93e-36365bb13edd",
+      "type": "objection"
+    },
+    {
+      "source": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "target": "72905ab0-b709-4b6b-9906-fe6d73a112ee",
+      "type": "objection"
+    },
+    {
+      "source": "ac9bb862-5e9f-4588-add6-3258e944b7bc",
+      "target": "6b55d288-d261-4367-b252-348b51bd5277",
+      "type": "objection"
+    },
+    {
+      "source": "ac9bb862-5e9f-4588-add6-3258e944b7bc",
+      "target": "f0f73485-d0bb-4471-a8f6-6933533b9cdd",
+      "type": "objection"
+    },
+    {
+      "source": "e2b635dc-c626-466b-94c4-cf51954ed0b0",
+      "target": "e2734da6-605d-4a6d-b395-f44dbee138de",
+      "type": "objection"
+    },
+    {
+      "source": "e2b635dc-c626-466b-94c4-cf51954ed0b0",
+      "target": "8c6c7492-3b22-47e6-a553-cd8a9ce1ca43",
+      "type": "objection"
+    },
+    {
+      "source": "aebdab0e-56d0-427f-9aae-57507f9c173f",
+      "target": "f27ddf92-bf0b-401e-b38f-b77f70795561",
+      "type": "response"
+    },
+    {
+      "source": "aebdab0e-56d0-427f-9aae-57507f9c173f",
+      "target": "de978733-610c-411a-9004-458add6ba344",
+      "type": "response"
+    },
+    {
+      "source": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "target": "f24fcb6e-a4a5-4aba-a2e8-f572a4f55e48",
+      "type": "response"
+    },
+    {
+      "source": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "target": "28cdfdaa-ba6a-4e4f-8d2f-43be72190fb1",
+      "type": "response"
+    },
+    {
+      "source": "f94f2e0e-3f8b-4ae2-af18-8a58245c40e9",
+      "target": "ec8220a6-c3fb-4f30-b4b3-dea707b049bf",
+      "type": "response"
+    },
+    {
+      "source": "9cc1e073-e451-48ea-87bd-a0bb1b8c4699",
+      "target": "ce7e4344-aba0-4276-b78b-6ca9b2aa99b0",
+      "type": "response"
+    },
+    {
+      "source": "9cc1e073-e451-48ea-87bd-a0bb1b8c4699",
+      "target": "48002c40-f670-418c-b6cd-55a2011e0607",
+      "type": "response"
+    },
+    {
+      "source": "f0f73485-d0bb-4471-a8f6-6933533b9cdd",
+      "target": "55516e5f-e320-4201-8205-bad860e1a791",
+      "type": "response"
+    },
+    {
+      "source": "f0f73485-d0bb-4471-a8f6-6933533b9cdd",
+      "target": "0d28de20-21a0-4c7e-8dcf-21f3656ce7c7",
+      "type": "response"
+    },
+    {
+      "source": "75a4e2d0-5032-48e4-b8a9-9fa49111a582",
+      "target": "d797d6be-3901-4591-817c-d55b245a61d8",
+      "type": "response"
+    },
+    {
+      "source": "75a4e2d0-5032-48e4-b8a9-9fa49111a582",
+      "target": "fc1802e6-84e9-42b9-bc2e-e367a7d7703e",
+      "type": "response"
+    },
+    {
+      "source": "e2c88024-c25b-4ebb-ab8c-e4e68f9d244e",
+      "target": "d53e406b-30f7-4fb8-b6fc-c5c083e9d55b",
+      "type": "response"
+    },
+    {
+      "source": "e2c88024-c25b-4ebb-ab8c-e4e68f9d244e",
+      "target": "9e2a03f2-5757-44a5-a415-10534ade5312",
+      "type": "response"
+    },
+    {
+      "source": "2d516b5c-f271-4e8d-a93e-36365bb13edd",
+      "target": "c076294f-c5fd-4db5-b599-eef915e614d6",
+      "type": "response"
+    },
+    {
+      "source": "2d516b5c-f271-4e8d-a93e-36365bb13edd",
+      "target": "d24037cc-12cb-4d9c-968d-43afc1d7759f",
+      "type": "response"
+    },
+    {
+      "source": "e2734da6-605d-4a6d-b395-f44dbee138de",
+      "target": "b79f46c4-91bf-447f-8b68-a5b2366221f0",
+      "type": "response"
+    },
+    {
+      "source": "e2734da6-605d-4a6d-b395-f44dbee138de",
+      "target": "9bb0bcae-c5e4-4396-9a50-c38eae02dba5",
+      "type": "response"
+    },
+    {
+      "source": "72905ab0-b709-4b6b-9906-fe6d73a112ee",
+      "target": "0b200983-a6fb-4a97-be31-319010770b12",
+      "type": "response"
+    },
+    {
+      "source": "72905ab0-b709-4b6b-9906-fe6d73a112ee",
+      "target": "0b3133dc-6358-4251-b8b4-2cbbbba8f32e",
+      "type": "response"
+    },
+    {
+      "source": "6b55d288-d261-4367-b252-348b51bd5277",
+      "target": "60b96db4-f87c-45b6-ba77-7b52257e05d5",
+      "type": "response"
+    },
+    {
+      "source": "6b55d288-d261-4367-b252-348b51bd5277",
+      "target": "44136dd7-dce6-48a2-93dc-2bd1533f58ac",
+      "type": "response"
+    },
+    {
+      "source": "f27ddf92-bf0b-401e-b38f-b77f70795561",
+      "target": "3ade948b-5393-4d5d-bd82-a9b993fd8617",
+      "type": "response"
+    },
+    {
+      "source": "8c6c7492-3b22-47e6-a553-cd8a9ce1ca43",
+      "target": "8d67ed2e-970c-436f-9f12-3c1c9b6a98b2",
+      "type": "response"
+    },
+    {
+      "source": "8c6c7492-3b22-47e6-a553-cd8a9ce1ca43",
+      "target": "a001263d-ef2a-47e1-ac3c-5228a869b9f2",
+      "type": "response"
+    },
+    {
+      "source": "de978733-610c-411a-9004-458add6ba344",
+      "target": "bd452d12-2dfa-45c6-960c-c9c70c4ecd9c",
+      "type": "response"
+    },
+    {
+      "source": "de978733-610c-411a-9004-458add6ba344",
+      "target": "8f27e7d2-9928-46b7-bdae-c266f4033917",
+      "type": "response"
+    },
+    {
+      "source": "f24fcb6e-a4a5-4aba-a2e8-f572a4f55e48",
+      "target": "e69c007e-a67e-4dfa-baeb-4d5314bf45b9",
+      "type": "response"
+    },
+    {
+      "source": "55516e5f-e320-4201-8205-bad860e1a791",
+      "target": "584c7a83-4f79-412f-a767-d6368ec844bf",
+      "type": "response"
+    },
+    {
+      "source": "9e2a03f2-5757-44a5-a415-10534ade5312",
+      "target": "311ecbd7-2b08-4409-b78c-955bd23ec8cb",
+      "type": "response"
+    },
+    {
+      "source": "28cdfdaa-ba6a-4e4f-8d2f-43be72190fb1",
+      "target": "ea80b0cf-43ee-4b63-bab9-e90ef56eda4c",
+      "type": "response"
+    },
+    {
+      "source": "fc1802e6-84e9-42b9-bc2e-e367a7d7703e",
+      "target": "658b6b47-d3ed-491b-80c2-9fd0fe30c7e6",
+      "type": "response"
+    },
+    {
+      "source": "b79f46c4-91bf-447f-8b68-a5b2366221f0",
+      "target": "71fe612c-426c-4611-84f0-cff74acd5beb",
+      "type": "response"
+    },
+    {
+      "source": "ce7e4344-aba0-4276-b78b-6ca9b2aa99b0",
+      "target": "04c75850-e285-4e62-88a3-389d364e84c0",
+      "type": "response"
+    },
+    {
+      "source": "ce7e4344-aba0-4276-b78b-6ca9b2aa99b0",
+      "target": "d3bf05aa-0161-40fe-8ad9-87c2bd5d048c",
+      "type": "response"
+    },
+    {
+      "source": "d797d6be-3901-4591-817c-d55b245a61d8",
+      "target": "50f5dd93-3185-4e3c-a775-7f362902f350",
+      "type": "response"
+    },
+    {
+      "source": "d24037cc-12cb-4d9c-968d-43afc1d7759f",
+      "target": "69805a52-501e-464f-bb2d-9f89bfb2c330",
+      "type": "response"
+    },
+    {
+      "source": "d24037cc-12cb-4d9c-968d-43afc1d7759f",
+      "target": "9de4eab2-60a3-42c7-b6f7-5fde9e936ae2",
+      "type": "response"
+    },
+    {
+      "source": "60b96db4-f87c-45b6-ba77-7b52257e05d5",
+      "target": "036ff35c-9186-4517-a856-714172b8bb97",
+      "type": "response"
+    },
+    {
+      "source": "60b96db4-f87c-45b6-ba77-7b52257e05d5",
+      "target": "028e0010-609f-430c-b405-23124e9951e6",
+      "type": "response"
+    },
+    {
+      "source": "0d28de20-21a0-4c7e-8dcf-21f3656ce7c7",
+      "target": "240bab05-7adc-4e07-bab1-a3ab291216e2",
+      "type": "response"
+    },
+    {
+      "source": "0b200983-a6fb-4a97-be31-319010770b12",
+      "target": "e71c6f79-3082-400a-8fc7-eac1924c90f3",
+      "type": "response"
+    },
+    {
+      "source": "48002c40-f670-418c-b6cd-55a2011e0607",
+      "target": "9308c7ae-4bdf-436b-b16f-14c506bb0375",
+      "type": "response"
+    },
+    {
+      "source": "48002c40-f670-418c-b6cd-55a2011e0607",
+      "target": "80fdeb59-4b48-47e1-85b7-85e7f8c92ba5",
+      "type": "response"
+    },
+    {
+      "source": "ec8220a6-c3fb-4f30-b4b3-dea707b049bf",
+      "target": "670d167c-ab32-4ed4-831e-342d47052c88",
+      "type": "response"
+    },
+    {
+      "source": "0b3133dc-6358-4251-b8b4-2cbbbba8f32e",
+      "target": "4eec69f7-76ab-4457-b2ed-b682d5f1f006",
+      "type": "response"
+    },
+    {
+      "source": "44136dd7-dce6-48a2-93dc-2bd1533f58ac",
+      "target": "b0159a20-407c-40db-ba63-4706c5d7a6c7",
+      "type": "response"
+    },
+    {
+      "source": "8d67ed2e-970c-436f-9f12-3c1c9b6a98b2",
+      "target": "d476fa13-6a15-45b3-8b8e-0c92716a0c68",
+      "type": "response"
+    },
+    {
+      "source": "9bb0bcae-c5e4-4396-9a50-c38eae02dba5",
+      "target": "3c262943-2174-4e04-8636-7ebe649ef3f7",
+      "type": "response"
+    },
+    {
+      "source": "9bb0bcae-c5e4-4396-9a50-c38eae02dba5",
+      "target": "92ecfcad-4438-4316-819f-fd13ba1de14b",
+      "type": "response"
+    },
+    {
+      "source": "c076294f-c5fd-4db5-b599-eef915e614d6",
+      "target": "10307b0e-b6e0-4c9c-907c-f99ece45c955",
+      "type": "response"
+    },
+    {
+      "source": "a001263d-ef2a-47e1-ac3c-5228a869b9f2",
+      "target": "25cf1af1-0144-4522-aa3a-ced89981caba",
+      "type": "response"
+    },
+    {
+      "source": "a001263d-ef2a-47e1-ac3c-5228a869b9f2",
+      "target": "2e8c20a1-d4ec-4f33-af0d-c566a55808ce",
+      "type": "response"
+    },
+    {
+      "source": "d53e406b-30f7-4fb8-b6fc-c5c083e9d55b",
+      "target": "21dad9b2-ece8-40d5-b9ff-67d33950657a",
+      "type": "response"
+    },
+    {
+      "source": "d53e406b-30f7-4fb8-b6fc-c5c083e9d55b",
+      "target": "0d61b8a2-329f-4025-8453-a9254bb4cbe2",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "4a2148ed-4145-47e4-a457-6087a110d15f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "97eaff59-cfcf-446d-ab4f-eb6feb84cba2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9d1345ee-f458-4c27-a624-11e182bf2e11",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "bc996492-a7d4-4b35-b81f-52c21913a7f2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "389894ee-ecf3-4fc7-8a37-0123efcea760",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "98c4f5d8-7341-4ab3-9e46-b13159f02228",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "e2b635dc-c626-466b-94c4-cf51954ed0b0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "db327e6d-07df-45d0-b382-04562521f6d6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "097aa9c5-36a8-4890-ba4e-05eab128e94c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "de555265-6e38-4e12-8d69-2fc96097edc5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ac9bb862-5e9f-4588-add6-3258e944b7bc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "444bd458-79d8-41ec-9f02-621803552b10",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

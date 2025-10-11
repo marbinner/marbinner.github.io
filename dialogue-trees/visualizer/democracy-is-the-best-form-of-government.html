@@ -1,0 +1,3747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Democracy is the best form of government - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Democracy is the best form of government</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            135 total nodes • Max depth: 4 •
+            Version 6
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/democracy-is-the-best-form-of-government.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">135</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "42867c07-2d3a-4571-b462-c53de25c9f69",
+      "text": "Democracy uniquely institutionalizes a peaceful mechanism for removing corrupt or failing leaders through regular, free elections. This system of accountability ensures governmental stability and prevents the revolutionary violence often required to effect change in autocratic regimes.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:10.426839"
+    },
+    {
+      "id": "3b4ae8c4-3b00-4be3-928b-f3294bfc45c0",
+      "text": "Established democracies consistently correlate with higher standards of living, robust economic growth, and superior public health outcomes. The sustained prosperity and low income inequality of nations like Norway, Denmark, and Switzerland exemplify this long-term societal benefit.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:10.427450"
+    },
+    {
+      "id": "4f6bbd86-8f94-452e-9f53-97e85913ab84",
+      "text": "Democratic systems incorporate essential error-correction mechanisms through independent judiciaries, legislative checks, and a free press. This distributed power structure prevents policy disasters by exposing corruption and flawed decisions, unlike centralized autocratic states which historically allowed errors to escalate into widespread humanitarian crises.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:10.427829"
+    },
+    {
+      "id": "7de5a012-e887-4c29-ad01-ab847a296c27",
+      "text": "Democracy excels at managing profound societal conflicts and diverse interests by requiring compromise and representation for various groups. The continued, though sometimes politically difficult, unity of ethnically and religiously diverse nations like India and Canada highlights the superior stability provided by inclusive governance.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:10.428097"
+    },
+    {
+      "id": "24cd3e2f-108e-4465-8c5f-dead648bb2e7",
+      "text": "The observed correlation may reflect reverse causality, where pre-existing wealth and robust institutions solidify democracy, rather than democracy being the primary cause of prosperity. This neglects confounding variables inherent in developed post-industrial states.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3b4ae8c4-3b00-4be3-928b-f3294bfc45c0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:19.820997"
+    },
+    {
+      "id": "8a62a54d-a5f8-482c-9665-b0a5966f2c97",
+      "text": "Established democracies like India, Brazil, and South Africa contend with profound, persistent economic inequality and public health crises, refuting the necessary link between democratic status and superior societal outcomes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3b4ae8c4-3b00-4be3-928b-f3294bfc45c0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:19.821927"
+    },
+    {
+      "id": "c5f4d607-0956-49f0-88ed-4d1e6b2b27e3",
+      "text": "The removal of corrupt or failing leaders is not unique to democracies; many single-party or authoritarian states, such as China, have established institutionalized, peaceful succession mechanisms through party procedures or internal elite consensus movements.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "42867c07-2d3a-4571-b462-c53de25c9f69",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:20.027215"
+    },
+    {
+      "id": "978060d3-7b0c-4a7d-8808-52d832af4b5f",
+      "text": "Democratic elections frequently become flashpoints for violence and constitutional crises when results are disputed, failing to guarantee stability across both emerging and established systems (e.g., Kenya 2007, US 2021).",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "42867c07-2d3a-4571-b462-c53de25c9f69",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:20.027757"
+    },
+    {
+      "id": "7ec5ac52-7425-429f-b583-9a1269c3e05c",
+      "text": "Democratic error-correction mechanisms are often paralyzed by hyper-partisanship and political capture, leading to protracted policy failures, such as the US's inefficient response to the 2008 financial crisis and persistent infrastructure decline, demonstrating that the *existence* of checks does not guarantee their *effectiveness* against systemic disasters.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4f6bbd86-8f94-452e-9f53-97e85913ab84",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:21.186843"
+    },
+    {
+      "id": "a9bd3d62-5bc7-4567-bb2d-24c08047caf5",
+      "text": "Highly centralized states can sometimes execute rapid and effective policy correction, avoiding the inertia that plagues distributed systems; for example, Singapore's successful long-term urban planning or China's massive, swift poverty reduction campaigns contrast with the slow pace of policy change in many democracies.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4f6bbd86-8f94-452e-9f53-97e85913ab84",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:21.187558"
+    },
+    {
+      "id": "e6acdcf1-ba74-48bf-8289-8211a9852cc4",
+      "text": "Democracy does not inherently guarantee stability in diverse nations; the collapse of federal Yugoslavia and the peaceful separation of democratic Czechoslovakia demonstrate that inclusive governance can fail to prevent dissolution.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7de5a012-e887-4c29-ad01-ab847a296c27",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:21.797365"
+    },
+    {
+      "id": "13644cf4-f72e-49e3-8948-4251d805c719",
+      "text": "The complex stability of diverse nations like Canada and India is heavily dependent on specific institutional structures, such as powerful federalism and codified linguistic rights, not merely the abstract concept of democratic representation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7de5a012-e887-4c29-ad01-ab847a296c27",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:21.797864"
+    },
+    {
+      "id": "98e2c077-517e-4d1e-b703-852c8af5ea7e",
+      "text": "The system's inherent stabilizing function is proven by the hundreds of successful democratic elections held annually in states like India and Brazil, which institutionalize peaceful power transitions despite high polarization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "978060d3-7b0c-4a7d-8808-52d832af4b5f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:29.996533"
+    },
+    {
+      "id": "48766470-ae75-4333-b7a1-3ec6f426024b",
+      "text": "Instability is usually caused by pre-existing deep societal divisions (ethnic, economic) or elite rejection of democratic norms, not the electoral mechanism itself; the election merely serves as the required flashpoint for these underlying conflicts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "978060d3-7b0c-4a7d-8808-52d832af4b5f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:29.996992"
+    },
+    {
+      "id": "d875ad3d-ff9e-413e-9664-ad6820bbbe05",
+      "text": "Authoritarian 'succession mechanisms' concern scheduled power transfer, not the forced, institutionalized removal of a currently sitting supreme leader accused of corruption or failure; this forced removal of a top leader is a key feature unique to stable democratic systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c5f4d607-0956-49f0-88ed-4d1e6b2b27e3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:30.557277"
+    },
+    {
+      "id": "4a2a48a0-be25-4940-ad61-5badb0f3ddc0",
+      "text": "Authoritarian institutions claiming stable succession are contingent, not binding; the abolition of presidential term limits in China in 2018 demonstrates that mechanisms for peaceful transfer or elite consensus are easily overridden at the current leader's discretion.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c5f4d607-0956-49f0-88ed-4d1e6b2b27e3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:30.558038"
+    },
+    {
+      "id": "bd9c681b-2d2a-42cf-ab93-aef8e5722f03",
+      "text": "Centralized speed is a liability, not an asset, when feedback is suppressed; China's Great Leap Forward famine (1958\u20131962) demonstrates how rapid execution without democratic deliberation leads to catastrophic policy errors, similar to the Soviet Aral Sea destruction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9bd3d62-5bc7-4567-bb2d-24c08047caf5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:32.702244"
+    },
+    {
+      "id": "7eacb735-aa28-4d5e-815b-ab1279cbbbb9",
+      "text": "Policy inertia in distributed systems is necessary for deliberation, wider political buy-in, and long-term legitimacy, making successful outcomes more stable and durable. Policies rapidly enacted without consultation often lack this legitimacy, leading to social instability or policy reversal despite their initial speed.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a9bd3d62-5bc7-4567-bb2d-24c08047caf5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:32.702666"
+    },
+    {
+      "id": "f876c53e-1100-4018-8e3b-380e35acfd3a",
+      "text": "The US policy failures cited are not solely attributable to hyper-partisanship, but are complex outcomes rooted in decades of financial deregulation (e.g., Gramm-Leach-Bliley Act of 1999) and global economic factors. Attributing these systemic issues purely to partisan paralysis is an oversimplification of multifactorial causes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7ec5ac52-7425-429f-b583-9a1269c3e05c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:33.086500"
+    },
+    {
+      "id": "31b1a017-2686-4716-95c9-225f84c49ef0",
+      "text": "Characterizing the 2008 response as mechanism *paralysis* is inaccurate, as major state interventions, including the swift passage of TARP and massive Federal Reserve action, were executed decisively. Inefficiency or bias in the policy choices does not equate to a complete political shutdown.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7ec5ac52-7425-429f-b583-9a1269c3e05c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:33.087284"
+    },
+    {
+      "id": "435c3823-d95e-4b73-92ab-6b258e084d1d",
+      "text": "The dissolution of Yugoslavia was primarily driven by deep ethnic and nationalist tensions suppressed during decades of communist authoritarian rule, not the failure of an established democratic system to manage diversity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e6acdcf1-ba74-48bf-8289-8211a9852cc4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:35.411492"
+    },
+    {
+      "id": "9ac22e1f-17b9-458f-a5c8-8fdb5610edcc",
+      "text": "The peaceful separation of democratic Czechoslovakia in 1993 demonstrates a key structural advantage of democracy: the ability to resolve irreconcilable internal conflicts without resorting to violence, unlike many authoritarian collapses.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e6acdcf1-ba74-48bf-8289-8211a9852cc4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:35.411964"
+    },
+    {
+      "id": "40f727b8-3799-4758-a709-c6c7e2f4d56b",
+      "text": "The significant challenges in Brazil, India, and South Africa are heavily influenced by factors like severe historical inequality and persistent corruption, not the inherent failure of their democratic systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a62a54d-a5f8-482c-9665-b0a5966f2c97",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:36.972771"
+    },
+    {
+      "id": "144b1807-54af-4f85-a5e1-4ec303809106",
+      "text": "Established democracies, even those with substantial economic struggles, consistently maintain higher levels of press freedom, political stability, and famine avoidance than comparative non-democracies facing similar economic conditions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8a62a54d-a5f8-482c-9665-b0a5966f2c97",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:36.973194"
+    },
+    {
+      "id": "1c3f8209-1247-40f4-a7c8-6b31121355d3",
+      "text": "Powerful federalism and codified rights were insufficient to guarantee stability or prevent civil war in diverse nations like the former Yugoslavia and Ethiopia, showing these structures are not a universal mechanism for peace.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "13644cf4-f72e-49e3-8948-4251d805c719",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:40.663587"
+    },
+    {
+      "id": "97e18a35-b154-461f-838f-1697913d8312",
+      "text": "Stability relies heavily on foundational economic factors, such as sustained growth and non-discriminatory commerical law, which provide the economic security necessary for complex political compromises to endure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "13644cf4-f72e-49e3-8948-4251d805c719",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:40.664379"
+    },
+    {
+      "id": "01f3e7da-24e7-4597-9bd8-368dd16dd236",
+      "text": "The peaceful separation was primarily facilitated by the high degree of ethnic homogeneity, minimal prior historical conflict between Czechs and Slovaks, and a consensus among political elites, suggesting the outcome was situational, not a guaranteed structural advantage of democracy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9ac22e1f-17b9-458f-a5c8-8fdb5610edcc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:48.534018"
+    },
+    {
+      "id": "729f7886-8036-438c-96dc-13e0bcb806b0",
+      "text": "The dissolution of Yugoslavia and the subsequent wars of independence occurred during a period of transition toward competitive democratic processes, demonstrating that a movement toward democracy does not inherently prevent large-scale violence during state separation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "9ac22e1f-17b9-458f-a5c8-8fdb5610edcc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:48.534044"
+    },
+    {
+      "id": "d6beba75-eacf-4049-845a-78d4ea702eb5",
+      "text": "Non-democratic governance, such as that seen in Singapore, demonstrates superior efficiency in long-term economic planning and infrastructure development, as leaders are not constrained by disruptive electoral cycles. The prerequisite for consensus in democracies frequently results in legislative gridlock or costly delays, impairing rapid response to crises or market shifts.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:49.206687"
+    },
+    {
+      "id": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "text": "The electoral incentive structure compels democratic leaders toward short-term, populist spending programs and avoidance of necessary but painful reforms. This systemic focus on immediate gratification often results in unsustainable national debt and chronic fiscal pressure across many established Western democracies.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:49.207217"
+    },
+    {
+      "id": "dd3ea31d-56a1-4ba0-a69e-f078f53107fc",
+      "text": "Relying on the principle of simple majority rule inherently risks the \"tyranny of the majority,\" where the interests and fundamental rights of vulnerable minority groups are actively suppressed or overlooked. Historical examples demonstrate that simple majoritarian votes do not guarantee the most just form of governance for all populations.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:49.207483"
+    },
+    {
+      "id": "2111c0e8-2719-4df8-a0b6-c28066ac15de",
+      "text": "Democratic systems are highly vulnerable to corruption from powerful vested interests and coordinated external manipulation, compromising the principle of informed consent. Vested financial and lobbying interests often exert disproportionate influence on policy through campaign finance, ensuring outcomes prioritize donor concerns over the general public.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:49.207737"
+    },
+    {
+      "id": "4cafa82e-d3e7-461d-89cc-cfda1514d61c",
+      "text": "The concept of \"informed consent\" misapplies an individual ethical standard, typically used in medical or contractual settings, to complex collective political processes which fundamentally rely on majority rule and representation, not universal pre-policy agreement.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2111c0e8-2719-4df8-a0b6-c28066ac15de",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:58.525496"
+    },
+    {
+      "id": "af1bcf82-0cf6-45c7-8d9b-1b1eb330e5b4",
+      "text": "Generalizing from Singapore's success fails when considering the majority of non-democratic states, such as Venezuela or Zimbabwe, where the absence of oversight leads to severe instability, high corruption, and economic collapse rather than efficient planning.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d6beba75-eacf-4049-845a-78d4ea702eb5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:59.809308"
+    },
+    {
+      "id": "130d761e-aa9b-4087-9206-b9289626df99",
+      "text": "The lack of electoral accountability bypasses critical feedback necessary to prevent catastrophic resource misallocation; many autocratic regimes favor politically driven vanity projects over necessary long-term infrastructure (e.g., China's ghost cities).",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d6beba75-eacf-4049-845a-78d4ea702eb5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:16:59.809818"
+    },
+    {
+      "id": "345687b1-c79b-44ae-9815-b24524da4617",
+      "text": "Democratic leaders frequently implement politically painful, long-term structural changes, such as Germany's Agenda 2010 (Hartz reforms) and extensive pension overhauls in France, showing they are not strictly compelled by short-term electoral cycles to avoid them.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:06.813347"
+    },
+    {
+      "id": "f5f1583a-f332-43e4-82aa-2703bab1eb21",
+      "text": "Major debt increases are often the result of unavoidable, non-electoral economic shocks, such as emergency bank bailouts during the 2008 financial crisis or massive pandemic spending, which cannot be solely attributed to systemic political short-termism.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:06.814061"
+    },
+    {
+      "id": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "text": "Chronic fiscal pressure is dominantly structural, driven by aging populations that significantly increase mandatory spending on healthcare and defined-benefit pensions, outpacing stable tax revenue growth irrespective of short-term populist political cycles.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:06.814683"
+    },
+    {
+      "id": "f78489c9-62e5-4cf8-b9b3-7be044072487",
+      "text": "The political adaptation of \"informed consent\" focuses on procedural safeguards, such as government transparency laws (e.g., FOIA) and mandatory public consultation, which are essential for establishing the ethical legitimacy of collective policy decisions beyond simple majority rule.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4cafa82e-d3e7-461d-89cc-cfda1514d61c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:09.826412"
+    },
+    {
+      "id": "8ce0a456-4a6d-44a8-8212-ee437ae48ca8",
+      "text": "Applying \"informed consent\" principles in politics justifies constitutional checks and balances that prevent the \"tyranny of the majority\" by ensuring that fundamental rights are not violated through uninformed or opaque collective processes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4cafa82e-d3e7-461d-89cc-cfda1514d61c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:09.827177"
+    },
+    {
+      "id": "a7514dd2-281c-405a-b9c3-dea52a479b56",
+      "text": "Authoritarian states like Singapore and the UAE bypass electoral feedback through rigorous technocratic planning to execute successful long-term infrastructure projects (e.g., centralized public housing), demonstrating effective resource allocation without democratic input.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "130d761e-aa9b-4087-9206-b9289626df99",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:10.092837"
+    },
+    {
+      "id": "0d7e4382-646b-47e0-8708-24fad235f9e9",
+      "text": "Democratic systems frequently suffer costly resource misallocation driven by short-term electoral cycles and political incentives, such as wasteful \"pork barrel\" spending projects like the U.S. \"Bridge to Nowhere,\" showing accountability does not guarantee efficiency.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "130d761e-aa9b-4087-9206-b9289626df99",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:10.093591"
+    },
+    {
+      "id": "8a6e5df8-d67d-4d04-bef1-46fb6200a198",
+      "text": "Non-democratic states like China and the UAE maintain high economic stability and rapid growth, showing that non-democratic structures do not inherently result in the widespread corruption seen in Venezuela or Zimbabwe.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "af1bcf82-0cf6-45c7-8d9b-1b1eb330e5b4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:11.050679"
+    },
+    {
+      "id": "768051fe-188d-44d5-96ca-311cddf4671b",
+      "text": "The economic failures cited are primarily attributable to specific, destructive policies such as resource nationalization and unchecked hyperinflation, rather than the general lack of democratic oversight inherent in the system.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "af1bcf82-0cf6-45c7-8d9b-1b1eb330e5b4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:11.051099"
+    },
+    {
+      "id": "423ba3e5-805a-4220-b2df-9def82e75ca2",
+      "text": "The crises cited were not unavoidable economic shocks but rather predictable consequences of political short-termism, such as the 1999 repeal of Glass-Steagall and lax housing deregulation leading directly to the 2008 financial crisis.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f5f1583a-f332-43e4-82aa-2703bab1eb21",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:15.907151"
+    },
+    {
+      "id": "9b4773b5-1b84-4d2c-8db1-c4e3926fbac5",
+      "text": "Chronic fiscal pressure in many nations is dominated not by aging, but by mandatory interest payments on soaring public debt, which often consumes a larger and less flexible share of the budget than demographic pressures.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:19.133292"
+    },
+    {
+      "id": "0fa9a0bf-09c6-4d5f-a762-c0cd6e77c830",
+      "text": "The assumption of stable tax revenue growth is flawed, as structural tax reforms\u2014such as implementing a national VAT or global minimum corporate tax agreements (Pillar Two)\u2014can dramatically increase the revenue base to meet rising spending demands.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:19.134075"
+    },
+    {
+      "id": "6bf73580-ed28-47b4-be0b-da430db99bc9",
+      "text": "Government policy is not irrelevant, as structural changes to mandatory spending\u2014like raising the retirement age or shifting from defined-benefit to defined-contribution pensions\u2014directly and sustainably alter the projected fiscal trajectory.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:19.134572"
+    },
+    {
+      "id": "20576c94-380c-48e5-8675-fd6776a4264e",
+      "text": "The lack of democratic oversight is precisely what enables destructive policies like unrestrained resource nationalization in Venezuela to persist despite clear economic collapse, as there are no free elections or independent institutions to force effective policy reversals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "768051fe-188d-44d5-96ca-311cddf4671b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:20.443966"
+    },
+    {
+      "id": "7e4ab18a-69f7-482f-aa1a-4cfa625c9a52",
+      "text": "Authoritarianism inherently grants political leaders discretion over contracts and property rights, fostering systemic corruption and policy uncertainty that deters investment, making this structural factor a primary cause of economic stagnation independent of specific policy disasters.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "768051fe-188d-44d5-96ca-311cddf4671b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:20.443994"
+    },
+    {
+      "id": "8a0c7c8e-6857-4afc-9349-d16bbc6c833d",
+      "text": "Informed consent in politics is primarily actualized through institutional transparency, freedom of the press, and comprehensive public education, none of which necessitate complex constitutional checks and balances to function effectively.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8ce0a456-4a6d-44a8-8212-ee437ae48ca8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:22.732873"
+    },
+    {
+      "id": "3713442e-fc0b-4a33-95c5-0b0b3574d89c",
+      "text": "Constitutional checks often lead to procedural gridlock, forcing critical policy decisions into opaque backroom negotiations between legislative and executive leaders, which actively counteracts the goal of ensuring informed or transparent collective processes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8ce0a456-4a6d-44a8-8212-ee437ae48ca8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:22.732916"
+    },
+    {
+      "id": "958bcb56-e47d-4181-95b9-7bbd1baeb9a5",
+      "text": "A significant portion of soaring public debt in advanced economies like Japan and Italy is incurred specifically to finance mandated, unfunded pension and healthcare liabilities, making demographic pressure the fundamental, underlying *cause* of the subsequent high interest payment obligations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9b4773b5-1b84-4d2c-8db1-c4e3926fbac5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:34.108241"
+    },
+    {
+      "id": "7ffffed7-c70e-484d-bf97-f5fc14a0c520",
+      "text": "Focusing on current interest payments ignores the accelerating, structural nature of demographic costs; while debt servicing fluctuates with interest rates, OECD projections show aging-related spending on healthcare and long-term care will create a larger, non-discretionary fiscal gap by 2050 than typical interest rate volatility.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9b4773b5-1b84-4d2c-8db1-c4e3926fbac5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:17:34.108267"
+    },
+    {
+      "id": "4b8f7149-03c5-4910-8bba-f62839cb888d",
+      "text": "The Czech Republic and Poland experienced significant economic growth after transitioning to democracy in 1990 while not possessing high pre-existing wealth, demonstrating that democratic institutions can drive prosperity, not just follow it. Economic modeling by Acemoglu, Robinson, and others shows that the establishment of inclusive institutions, a key democratic feature, leads to growth over the long term.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "24cd3e2f-108e-4465-8c5f-dead648bb2e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:36.206580+00:00"
+    },
+    {
+      "id": "94caf686-cebb-4a90-b768-dcd28726e488",
+      "text": "Authoritarian regimes like Venezuela and Nigeria previously possessed immense resource wealth and basic state institutions, yet their lack of democratic accountability led to repeated economic collapse and kleptocracy. Democracy is essential for protecting private property rights institutionally and distributing wealth widely, which sustains long-term prosperity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "24cd3e2f-108e-4465-8c5f-dead648bb2e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:36.206625+00:00"
+    },
+    {
+      "id": "8af18649-3e5a-440d-8978-614f9e64282f",
+      "text": "Constitutional democracies protect minorities with institutional checks like judicial review and enumerated rights, limiting simple majority power. In the United States, judicial decisions such as Brown v. Board of Education demonstrated the ability of courts to overturn laws passed by democratic majorities that infringed upon minority rights.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dd3ea31d-56a1-4ba0-a69e-f078f53107fc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:49.697135+00:00"
+    },
+    {
+      "id": "613613f9-1825-4b9c-bbcf-06fb0b0d9ce0",
+      "text": "Autocratic regimes, the alternative to democracy, empower a non-accountable ruling minority that historically persecutes ethnic and political opponents without recourse or internal checks. For example, the systematic repression of regional minorities, such as Tibetans and Uyghurs in modern China, demonstrates a far greater risk of state-sanctioned injustice than majoritarian systems with established checks and balances.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "dd3ea31d-56a1-4ba0-a69e-f078f53107fc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:49.697163+00:00"
+    },
+    {
+      "id": "8acc9d71-eeb7-4ad5-b519-1599f1e49ade",
+      "text": "The political parties and leaders who implemented these structural changes, such as Gerhard Schr\u00f6der\u2019s SPD after Agenda 2010, frequently faced severe subsequent electoral defeats, demonstrating that voter punitive action remains a powerful constraint on democratic reform. True long-term structural changes, if implemented, are almost always front-loaded immediately after an election to maximize recovery time before the next cycle, confirming the decisive influence of electoral timing.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "345687b1-c79b-44ae-9815-b24524da4617",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:56.289274+00:00"
+    },
+    {
+      "id": "ad60a8e6-3e5e-4621-b1ce-98ba2f4039f6",
+      "text": "The cited reforms are rare exceptions compared to the systemic failure of most democracies to address critical long-term issues, such as severely unfunded entitlements and necessary climate change mitigation costs, which are consistently deferred due to electoral risk aversion. If the constraint of the electoral cycle were truly absent, fundamental structural reforms would be commonplace rather than highly unusual landmarks used to prove their possibility.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "345687b1-c79b-44ae-9815-b24524da4617",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:56.289300+00:00"
+    },
+    {
+      "id": "7e6dc469-23cd-446d-bb53-d24ae8eebabd",
+      "text": "Peaceful electoral transitions concern only the executive function; they do not prevent chronic systemic instability arising from policy immobilism, legislative gridlock, or widespread civil unrest. For instance, Italy had 70 governments in 77 years despite regular, peaceful elections.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "98e2c077-517e-4d1e-b703-852c8af5ea7e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:07.756913+00:00"
+    },
+    {
+      "id": "df112d57-8093-481a-87f4-bd5db87905ad",
+      "text": "The examples contradict the premise, as nations like Brazil (January 8, 2023, anti-democratic riots) and the United States (January 6, 2021, Capitol attack) demonstrate that even peaceful power transfers can be immediately followed by severe, destabilizing institutional crises and challenges to democratic legitimacy.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "98e2c077-517e-4d1e-b703-852c8af5ea7e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:07.757368+00:00"
+    },
+    {
+      "id": "32d5a935-49ef-4e22-a9c4-47e5deccbb14",
+      "text": "The ability of US and Brazilian democratic institutions to quickly prosecute rioters and reaffirm election results demonstrates their resilience; in non-democracies, similar challenges often lead to sustained state collapse or immediate violent authoritarian takeovers, as seen in Myanmar (2021).",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "df112d57-8093-481a-87f4-bd5db87905ad",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:23.023631+00:00"
+    },
+    {
+      "id": "cecfd648-552a-411c-81dd-def90b453bf4",
+      "text": "Peaceful electoral processes include legislative elections, which mandate policy shifts by changing ruling party coalitions and legislative majorities. The Spanish parliamentary system, for example, uses snap elections and no-confidence votes precisely to resolve legislative gridlock and prevent chronic systemic immobilization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "7e6dc469-23cd-446d-bb53-d24ae8eebabd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:24.466237+00:00"
+    },
+    {
+      "id": "2b5c79d4-3ff6-4d3d-8bce-f5822a69e53b",
+      "text": "Proportional representation systems demonstrate the electoral design is a structural cause of stability or instability, not a neutral trigger. Winner-take-all mechanisms, such as those that institutionalized conflict in post-Saddam Iraq, systematically exclude large, identity-defined groups from power, making perpetual instability unavoidable regardless of pre-existing divisions.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "48766470-ae75-4333-b7a1-3ec6f426024b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:39.979766+00:00"
+    },
+    {
+      "id": "389930c6-b3d5-4e0c-8d5a-0d346b94e3bd",
+      "text": "Stable democracies like the United Kingdom and Canada utilize winner-take-all electoral systems, demonstrating that political stability is fundamentally determined by national unity and established political culture, not mandatory avoidance of WTA systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "2b5c79d4-3ff6-4d3d-8bce-f5822a69e53b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:56.810443+00:00"
+    },
+    {
+      "id": "8aeea972-691e-421b-85ed-470b92d334f7",
+      "text": "Instability in post-Saddam Iraq stems from its mandated consociational government, which uses power-sharing quotas to cement sectarian identity, confirming that constitutional designs centered on group inclusion can explicitly institutionalize conflict.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "2b5c79d4-3ff6-4d3d-8bce-f5822a69e53b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:56.810470+00:00"
+    },
+    {
+      "id": "6e50415b-67ee-49b6-b8a6-1036df1a33da",
+      "text": "Institutionalized, forced removals of sitting leaders are not unique to democracies; for instance, the Soviet Communist Party\u2019s Politburo removed Nikita Khrushchev in 1964 and the Chinese Communist Party effectively removed Hua Guofeng in 1981 via elite consensus.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d875ad3d-ff9e-413e-9664-ad6820bbbe05",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:09.108728+00:00"
+    },
+    {
+      "id": "bf7b876f-1779-4172-93a0-7832fb365357",
+      "text": "Many stable authoritarian systems possess formalized, institutional mechanisms to strip power from an acting supreme leader who has lost elite support, which involves more than just scheduled succession; Saudi Arabia's Royal Allegiance Council can remove a crown prince deemed unfit.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d875ad3d-ff9e-413e-9664-ad6820bbbe05",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:09.109179+00:00"
+    },
+    {
+      "id": "b4efdb01-fdc4-46ec-8a8f-783133d9bfd6",
+      "text": "The removals of Khrushchev and Hua Guofeng relied on informal elite consensus and opaque internal power struggles, fundamentally lacking the transparent, publicly codified legal or constitutional procedures that define institutionalized removal in true democracies.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "6e50415b-67ee-49b6-b8a6-1036df1a33da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:18.848108+00:00"
+    },
+    {
+      "id": "8f20a76a-40e5-4a50-84f0-66999bee3766",
+      "text": "Unlike the theoretical Saudi mechanism for a Crown Prince, the Chinese Communist Party's Politburo Standing Committee failed to remove Chairman Mao or later prevent Xi Jinping from abolishing term limits, showing that actual supreme leaders routinely override or dismantle institutional removal processes in authoritarian states.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "bf7b876f-1779-4172-93a0-7832fb365357",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:24.354425+00:00"
+    },
+    {
+      "id": "3f1a9416-09c2-47ce-8228-4f38db32d0f4",
+      "text": "Succession in many established single-party authoritarian states, such as Vietnam or Cuba, remains stable and predictable due to powerful party institutions, contradicting the generalization that all such transfers are easily overridden at the current leader's discretion based solely on the China 2018 case.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4a2a48a0-be25-4940-ad61-5badb0f3ddc0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:36.679463+00:00"
+    },
+    {
+      "id": "826e743c-5f99-48a5-94d0-52047467afcf",
+      "text": "The abolition of term limits in China followed years of intensive anti-corruption purges and political consolidation, indicating the maneuver was administratively difficult and required substantial effort to neutralize rival factions, not merely an \"easy\" stroke of individual discretion.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "4a2a48a0-be25-4940-ad61-5badb0f3ddc0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:36.679894+00:00"
+    },
+    {
+      "id": "c96bdc28-56c5-48ff-8e16-48bee1d6f029",
+      "text": "Political consolidation proves the immense effort required to gain the authority, but not the subsequent difficulty of using that authority; the final constitutional amendment was an uncontested formality passed by a secured majority.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "826e743c-5f99-48a5-94d0-52047467afcf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:48.117837+00:00"
+    },
+    {
+      "id": "ba96f4b7-c1e6-4d45-abd6-ffc2d3467626",
+      "text": "The success of the anti-corruption purges and faction-neutralization meant that effective political opposition to the term limit change had already been eliminated, making the final administrative vote virtually guaranteed and highly discretionary.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "826e743c-5f99-48a5-94d0-52047467afcf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:48.117863+00:00"
+    },
+    {
+      "id": "138927f5-e9b9-4c5d-aeca-ad39b7685866",
+      "text": "While succession may appear routine, the institutional legitimacy of single-party states is brittle; the Soviet Union\u2019s collapse in 1991 occurred despite powerful party structures, unlike democracies like India that consistently manage peaceful transfers of power through routine elections.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "3f1a9416-09c2-47ce-8228-4f38db32d0f4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:54.188904+00:00"
+    },
+    {
+      "id": "a3bf18f6-6893-4493-9850-595683a6bc6f",
+      "text": "Decentralized systems are prone to policy paralysis that prevents effective policy correction over long periods; for instance, the US political system has failed to pass comprehensive immigration reform for two decades, ensuring sustained economic and social costs.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bd9c681b-2d2a-42cf-ab93-aef8e5722f03",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:12.624230+00:00"
+    },
+    {
+      "id": "3c51b2d5-da2a-499a-abd2-49b6c4e306cd",
+      "text": "Decentralized systems outside the US successfully implement complex, long-term reforms; for example, the highly decentralized governmental structure of Switzerland achieved near-universal healthcare coverage through continuous federalist consensus building.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a3bf18f6-6893-4493-9850-595683a6bc6f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:26.046434+00:00"
+    },
+    {
+      "id": "6ef33015-d240-4e8b-ad5f-4106c1f1cc2f",
+      "text": "The failure of US immigration reform is primarily due to deep partisan polarization and electoral incentives, which often paralyze even centralized systems, rather than the structural decentralization itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a3bf18f6-6893-4493-9850-595683a6bc6f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:26.046465+00:00"
+    },
+    {
+      "id": "ead4db10-45ae-4614-ac95-828e47abf7d0",
+      "text": "Rapid policy enactment often achieves immediate and broad legitimacy during acute national crises, such as the US instituting the Lend-Lease Act in 1941, successfully mobilizing critical resources without prolonged inertial debate.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7eacb735-aa28-4d5e-815b-ab1279cbbbb9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:43.816470+00:00"
+    },
+    {
+      "id": "3b4b9dcf-cfa4-476f-ac72-d0ea29ce5983",
+      "text": "Policy inertia imposes high opportunity costs, as demonstrated by the years of delay in establishing robust flood defenses in New Orleans before Hurricane Katrina in 2005; the stable bureaucratic process resulted in disaster rather than success.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7eacb735-aa28-4d5e-815b-ab1279cbbbb9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:43.817120+00:00"
+    },
+    {
+      "id": "fd8ad365-4e2b-4359-8021-29ae33769483",
+      "text": "The New Orleans levee failure stemmed from unstable Congressional funding cuts and specific engineering flaws by the Army Corps of Engineers, not just general policy inertia or a universally \"stable bureaucratic process.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "3b4b9dcf-cfa4-476f-ac72-d0ea29ce5983",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:54.874877+00:00"
+    },
+    {
+      "id": "6be136a7-87f0-4ff2-9faf-2a92c7c88308",
+      "text": "Stable, often slow policymaking prevents severe systemic risks by buffering against rapid, ill-conceived political shifts; for instance, the decades-long institutional stability of the US Social Security system prevents widespread poverty that rapid political overhauls could cause.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "3b4b9dcf-cfa4-476f-ac72-d0ea29ce5983",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:54.874904+00:00"
+    },
+    {
+      "id": "87139cbe-56c5-4700-aa4d-de61ff2cce14",
+      "text": "The Lend-Lease Act faced three months of hostile Congressional debate and was passed by narrow majorities (260\u2013165 in the House) amidst intense isolationist opposition, demonstrating significant political conflict rather than immediate and broad legitimacy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ead4db10-45ae-4614-ac95-828e47abf7d0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:08.819173+00:00"
+    },
+    {
+      "id": "0cb6635f-c351-4014-ab6d-50b491d43d04",
+      "text": "Rapid policy enactment does not guarantee legitimacy, as the immediate imposition of US Prohibition in 1920 failed to gain broad public consent and instead catalyzed massive organized crime and widespread non-compliance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ead4db10-45ae-4614-ac95-828e47abf7d0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:08.819200+00:00"
+    },
+    {
+      "id": "b5a1867d-dfea-40fa-aa6a-861ab6c26c13",
+      "text": "Hyper-partisanship is not merely an alternative cause but the political mechanism that prevents corrective action, meaning structural issues like deregulation and global factors persist and compound because necessary policy adjustments (e.g., adequate post-2008 financial reform or climate action) cannot achieve sufficient consensus.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f876c53e-1100-4018-8e3b-380e35acfd3a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:18.017343+00:00"
+    },
+    {
+      "id": "353816ff-269f-4d2e-b24d-ee307ee41dbc",
+      "text": "Deep-seated ideological disagreement, not mere partisan gridlock, determines policy feasibility; for instance, the US achieved the Dodd-Frank Act, but many argue that only a full reinstatement of Glass-Steagall constitutes \"adequate\" post-2008 financial reform, illustrating a fundamental conflict over goals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "b5a1867d-dfea-40fa-aa6a-861ab6c26c13",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:33.889313+00:00"
+    },
+    {
+      "id": "5694b0a8-2e67-49c4-9aee-c252f4a37f96",
+      "text": "Hyper-partisanship is a symptom of underlying structural divisions, specifically the massive regional and class wealth disparities caused by deindustrialization and globalization in the US and UK after 1980. This deep ideological conflict, exemplified by Brexit's anti-globalist sentiment, forms the primary barrier to consensus, not political mechanism alone.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "b5a1867d-dfea-40fa-aa6a-861ab6c26c13",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:33.889340+00:00"
+    },
+    {
+      "id": "b9d4b453-7ac5-42d8-a1f7-8e01d2099628",
+      "text": "The political paralysis observed in 2008 was the inability of the US Congress to pass major structural reforms, such as restoring Glass-Steagall or breaking up Too-Big-To-Fail banks, for years. This left underlying systemic risks unaddressed by decisive legislative action, despite the swift liquidity injections by the Federal Reserve and Treasury.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "31b1a017-2686-4716-95c9-225f84c49ef0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:51.986463+00:00"
+    },
+    {
+      "id": "fc9492c2-ee07-455e-8e3a-ef3f3fe81a27",
+      "text": "The US Congress passed the Dodd-Frank Act in 2010, establishing the Financial Stability Oversight Council and significantly increasing bank capital requirements on large institutions, demonstrating decisive legislative action regarding systemic risk reduction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "b9d4b453-7ac5-42d8-a1f7-8e01d2099628",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:58:18.656436+00:00"
+    },
+    {
+      "id": "32c5bf65-2c91-406e-a668-fa5959add8dd",
+      "text": "The US government rapidly deployed the $700 billion Troubled Asset Relief Program (TARP) in late 2008 and authorized massive Federal Reserve liquidity programs, demonstrating immediate, decisive political capability regarding crisis management.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "b9d4b453-7ac5-42d8-a1f7-8e01d2099628",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:58:18.656463+00:00"
+    },
+    {
+      "id": "38a7061b-7bfd-4960-b537-96fa438bab7f",
+      "text": "Yugoslavia's final disintegration occurred after multi-party elections were introduced in the republics around 1990, demonstrating a critical failure of the new democratic transition itself. Nationalist leaders like Slobodan Milo\u0161evi\u0107 and Franjo Tu\u0111man leveraged these newly created democratic mechanisms and media freedom to rally support and pursue secessionist agendas, proving these institutions were ineffective managers of diversity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "435c3823-d95e-4b73-92ab-6b258e084d1d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:58:35.944876+00:00"
+    },
+    {
+      "id": "bfea817a-7caf-45f2-8c29-7db082be2e26",
+      "text": "The disintegration of Yugoslavia was primarily driven by decades of unresolved structural ethnic antagonisms and the deep economic crisis of the 1980s, which the elections only allowed to become visible. Slobodan Milo\u0161evi\u0107's 1989 revocation of autonomy for Kosovo and Vojvodina, a non-democratic authoritarian move, was a critical preemptive act that fueled secessionism.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "38a7061b-7bfd-4960-b537-96fa438bab7f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:58:52.533179+00:00"
+    },
+    {
+      "id": "fc5069fd-5242-42b6-ae7c-7087de3425e3",
+      "text": "India, with over 22 official languages and six major religions, has maintained a stable federal democracy since 1947, demonstrating that democratic institutions successfully manage profound societal diversity. The 1990s failure in Yugoslavia was specific to a highly volatile post-communist state lacking critical democratic preconditions like separation of powers and strong civil society.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "38a7061b-7bfd-4960-b537-96fa438bab7f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:58:52.533206+00:00"
+    },
+    {
+      "id": "dd1b5978-2f5a-4673-877b-10bfabf1078e",
+      "text": "If a democratic system consistently permits severe historical inequality and institutional corruption to undermine governance over decades, as seen in South Africa's State Capture, then the system's practical application has demonstrably failed to deliver effective governance.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "40f727b8-3799-4758-a709-c6c7e2f4d56b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:59:02.902437+00:00"
+    },
+    {
+      "id": "e19bcd51-daa3-44c7-8406-42fd57599274",
+      "text": "The consistent failure of autocratic systems like China and Russia to expose or prosecute high-level corruption internally demonstrates their structural weakness. In contrast, democratic institutions like South Africa's Zondo Commission provide a constitutional mechanism for exposing systemic State Capture, proving the system's inherent capacity for self-correction.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "dd1b5978-2f5a-4673-877b-10bfabf1078e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:59:18.133754+00:00"
+    },
+    {
+      "id": "561806f8-c2d2-4dce-853b-58ef0aa597aa",
+      "text": "Non-democracies like Singapore and China have exhibited decades of high policy continuity and institutional stability, challenging the idea that established democracies must maintain higher political stability, noting that countries like Italy and Israel frequently face legislative deadlock and government collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "144b1807-54af-4f85-a5e1-4ec303809106",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:59:44.859561+00:00"
+    },
+    {
+      "id": "a400472a-46c9-4737-a62c-010ba05d37f8",
+      "text": "Comparing only \"established\" democracies ignores the high failure rate of democratic transitions, such as the rapid collapse of the Weimar Republic or Venezuela's descent from a multi-party system into authoritarianism, demonstrating the fragility of many democratic systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "144b1807-54af-4f85-a5e1-4ec303809106",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:59:44.860134+00:00"
+    },
+    {
+      "id": "a09bb21f-eaae-4ac5-afa2-165f45eef8c7",
+      "text": "Authoritarian 'stability' relies on coercive power and the suppression of dissent, making it fundamentally brittle and vulnerable to catastrophic collapse or violent succession crises, in contrast to the sustained institutional resilience of democracies like the US or UK across centuries.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "561806f8-c2d2-4dce-853b-58ef0aa597aa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:59:55.588164+00:00"
+    },
+    {
+      "id": "ca2279c4-a204-4ac7-a5a9-8e798f382415",
+      "text": "The comparison unfairly selects parliamentary democracies prone to coalition instability (Italy, Israel), ignoring established democracies like Germany or Canada which demonstrate continuous policy stability coupled with peaceful, legitimate transfers of power.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "561806f8-c2d2-4dce-853b-58ef0aa597aa",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:59:55.588189+00:00"
+    },
+    {
+      "id": "1fa0b025-a8c1-4151-9691-9658c0144d90",
+      "text": "The democratic transitions in South Korea (1987) and Taiwan (1990s) prove that fragile systems can consolidate successfully into robust democracies, achieving decades of stability despite significant internal and external conflict.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "a400472a-46c9-4737-a62c-010ba05d37f8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:59:58.519129+00:00"
+    },
+    {
+      "id": "bd5534bd-9c3a-43bf-84f2-a343c748bea7",
+      "text": "The federalism in both nations was nominal and lacked the essential democratic foundation, judicial independence, and genuine power distribution (e.g., Yugoslavia's Titoism, Ethiopia's EPRDF dominance) required for these institutional structures to function as stabilizing mechanisms.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1c3f8209-1247-40f4-a7c8-6b31121355d3",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:00:08.002574+00:00"
+    },
+    {
+      "id": "2d44ccfc-7452-45fa-8274-84d36073e5f0",
+      "text": "Genuine, democratic federalism, such as the arrangement between the Czech and Slovak Republics after 1989, can still lead to state dissolution when national groups harbor distinct and strong aspirations. The ultimate separation of Czechoslovakia, despite its democratic foundation and judicial independence, shows that federalism's stabilizing function is often secondary to deeply held ethnic or national identities.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "bd5534bd-9c3a-43bf-84f2-a343c748bea7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:00:29.302438+00:00"
+    },
+    {
+      "id": "ecd873af-5a76-441d-9310-e63b98bc8d9e",
+      "text": "South Africa\u2019s political stability post-1994 was secured by the complex power-sharing compromises focused on avoiding civil war, even when faced with persistently high unemployment and profound economic insecurity. Political stability can thus be founded on non-economic imperatives like crisis avoidance, not just sustained economic growth.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "97e18a35-b154-461f-838f-1697913d8312",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:00:46.096383+00:00"
+    },
+    {
+      "id": "fd1d7fe5-4099-4505-8455-81b4d7020a4f",
+      "text": "The compromise stability was enabled by pre-existing economic factors, specifically South Africa's industrial base and strong institutional capacity (e.g., independent central bank, courts). This means the stability was not founded purely on non-economic crisis avoidance but on minimal economic viability inherited from the previous regime.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ecd873af-5a76-441d-9310-e63b98bc8d9e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:00:58.956555+00:00"
+    },
+    {
+      "id": "ae1ea128-2c9d-4168-b1a8-b5caad94fe19",
+      "text": "Stability based only on crisis avoidance is proving fragile, not foundational, as persistent economic insecurity has led to recurring violent service delivery protests and increasing political extremism, threatening the post-1994 settlement more acutely now than in previous decades.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ecd873af-5a76-441d-9310-e63b98bc8d9e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:00:58.956580+00:00"
+    },
+    {
+      "id": "221742fa-65e8-424b-b4e6-52539fe64153",
+      "text": "Political legitimacy often derives from substantive delivery of services and outcomes, such as China's CCP securing general consent by lifting 800 million citizens out of poverty since 1980, rather than relying primarily on procedural transparency laws like FOIA.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f78489c9-62e5-4cf8-b9b3-7be044072487",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:14.857509+00:00"
+    },
+    {
+      "id": "463f70eb-5fbe-4f9b-b710-89cc78a86fc4",
+      "text": "Ethical legitimacy is primarily established by fundamental constitutional frameworks that guarantee minority protections and independent judicial review, existing independently of procedural safeguards. For instance, the legitimacy of the US Supreme Court's decisions rests on its constitutional authority and adherence to legal precedent, not mandatory public consultation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f78489c9-62e5-4cf8-b9b3-7be044072487",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:14.857940+00:00"
+    },
+    {
+      "id": "36cdfe53-7843-43dd-84de-f0a5492cee38",
+      "text": "The CCP's sustained political control relies heavily on state coercion, pervasive censorship, and the systematic suppression of all political opposition and media freedom, rendering the notion of \"general consent\" fundamentally inaccurate.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "221742fa-65e8-424b-b4e6-52539fe64153",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:25.505757+00:00"
+    },
+    {
+      "id": "6f5b9f1a-8a1d-4d23-baa3-6812d36ad242",
+      "text": "The lack of procedural transparency and democratic accountability mechanisms allows endemic corruption and massive resource misallocation, which historically undermines the capacity of authoritarian regimes to maintain long-term substantive delivery, as seen in the collapse of the Soviet Union.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "221742fa-65e8-424b-b4e6-52539fe64153",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:25.505786+00:00"
+    },
+    {
+      "id": "4b642a8d-2a6e-4cf8-ab55-80e240745023",
+      "text": "Constitutional systems relying solely on legal text often lack ethical legitimacy, as demonstrated by the Weimar Republic, whose legal framework failed to secure adherence or public consent when threatened by popular authoritarian movements. The stability of a system requires perceived fairness derived from democratic procedures and shared social norms, not just judicial insulation.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "463f70eb-5fbe-4f9b-b710-89cc78a86fc4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:32.158103+00:00"
+    },
+    {
+      "id": "71c4eeb1-c4bf-4547-8ac6-fd29f9f81735",
+      "text": "Core constitutional protections like the US Fifth Amendment's Due Process Clause are fundamentally procedural safeguards defining how the government must act (e.g., right to counsel, fair trial). Judicial review is a procedure for enforcing these procedures; it is not an independent, non-procedural basis for legitimacy.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "463f70eb-5fbe-4f9b-b710-89cc78a86fc4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:32.158130+00:00"
+    },
+    {
+      "id": "3798acd0-0d58-4920-915d-0609463e2a2a",
+      "text": "Effective governance relies on expert technocratic feedback for planning, which is distinct from the free political speech and press freedom that provides critical public accountability. Suppressing political dissent, as routinely done in non-electoral regimes, prevents the necessary public feedback required for self-correction in policy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a7514dd2-281c-405a-b9c3-dea52a479b56",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:44.772120+00:00"
+    },
+    {
+      "id": "4ff56f67-a89a-4a32-bd8d-abd0f3cd51ac",
+      "text": "Citing small, wealthy outliers like Singapore and the UAE ignores the statistical reality that most non-electoral regimes suffer chronic economic mismanagement and governance failures. Examples like Venezuela and Zimbabwe demonstrate that effective long-term planning is generally the exception, not the rule, in autocracies.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a7514dd2-281c-405a-b9c3-dea52a479b56",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:01:44.772802+00:00"
+    },
+    {
+      "id": "74ba4bfb-9e1d-48ed-985a-7b1de9226fd8",
+      "text": "Authoritarian states like China utilize specialized internal mechanisms, such as the Development Research Center of the State Council and extensive internal party polling, allowing for significant policy self-correction and rapid shifts in national strategy despite suppressing public political dissent. Singapore maintains internationally recognized high standards of governance and bureaucratic quality through rigorous internal performance metrics and expert consultation, contradicting the necessity of free political speech as the only source of effective policy feedback.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "3798acd0-0d58-4920-915d-0609463e2a2a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:00.269337+00:00"
+    },
+    {
+      "id": "e8208f0c-a19c-453a-bb83-02630f9b78c5",
+      "text": "Vietnam and Rwanda are non-electoral regimes that have maintained stable, high rates of GDP growth (above 6% annually for many years) while successfully reducing poverty, demonstrating that chronic economic mismanagement is not universal in autocracies.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "4ff56f67-a89a-4a32-bd8d-abd0f3cd51ac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:05.589479+00:00"
+    },
+    {
+      "id": "151a2b53-911a-43ed-9f92-cd9ed450e57f",
+      "text": "Authoritarian nations like Saudi Arabia, Kazakhstan, and Ethiopia maintain functioning states and stable economies with moderate growth but restrictive political systems, showing that the developmental outcomes of non-electoral regimes are not limited to catastrophic failures or outlier wealth.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "4ff56f67-a89a-4a32-bd8d-abd0f3cd51ac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:05.589505+00:00"
+    },
+    {
+      "id": "81f72000-591b-484f-9a5b-0b718aa695f9",
+      "text": "Decentralized \"pork barrel\" spending, like the U.S. \"Bridge to Nowhere,\" reflects a failure of specific fiscal transparency rules rather than accountability itself. Countries like New Zealand, which maintain centralized and transparent democratic budgetary processes, consistently rank among the most efficient and least corrupt nations globally according to Transparency International.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0d7e4382-646b-47e0-8708-24fad235f9e9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:25.541200+00:00"
+    },
+    {
+      "id": "f8684d7a-f7a0-4f25-aa17-0b4a72ff79d9",
+      "text": "When fiscal information is deliberately obscured, as in the Russian Federation's state-owned enterprises (SOEs) budgets, direct public monitoring is impossible, thereby nullifying any mechanism of democratic accountability before it can be enforced.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "81f72000-591b-484f-9a5b-0b718aa695f9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:42.423405+00:00"
+    },
+    {
+      "id": "cf2b1490-9d47-40b2-8468-93ea6ba5b108",
+      "text": "Brazil operates with a highly centralized federal budget process, yet Transparency International consistently reports high levels of corruption due to weak judicial enforcement and endemic political patronage, showing centralization alone does not guarantee clean governance.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "81f72000-591b-484f-9a5b-0b718aa695f9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:42.423434+00:00"
+    },
+    {
+      "id": "149edab5-9d13-48e6-9c69-f389624d7540",
+      "text": "China and the UAE rely on robust, centralized technocratic planning and internal anti-corruption measures, representing an *alternative* form of powerful state oversight, not the fundamental lack of oversight found in personalistic kleptocracies like Venezuela.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8a6e5df8-d67d-4d04-bef1-46fb6200a198",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:54.451370+00:00"
+    },
+    {
+      "id": "99088bfb-92e9-4d39-aa93-c94b621037ed",
+      "text": "Citing current economic stability ignores the inherent, elevated long-term systemic risk in non-democracies, as they lack peaceful succession mechanisms and external checks to correct catastrophic policy errors before they lead to collapse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8a6e5df8-d67d-4d04-bef1-46fb6200a198",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:02:54.451809+00:00"
+    },
+    {
+      "id": "a90fa70b-974e-4493-88b4-b9cab8e96869",
+      "text": "Both centralized technocracies (China, UAE) and personalistic states (Venezuela) critically lack independent institutions like a free press and judiciary, meaning their \"oversight\" lacks external accountability and remains captive to the ruling elite and its political objectives.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "149edab5-9d13-48e6-9c69-f389624d7540",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:06.384989+00:00"
+    },
+    {
+      "id": "3c450119-5d91-4924-a900-4a6e8a5f7c2f",
+      "text": "In China, the \"internal anti-corruption measures\" are frequently used as a political tool to purge rivals of the central leadership, as seen in the wide-scale purges under Xi Jinping, suggesting the oversight system serves political control rather than purely technocratic governance.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "149edab5-9d13-48e6-9c69-f389624d7540",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:06.385028+00:00"
+    },
+    {
+      "id": "6aacc889-d871-4861-92eb-4f3517656915",
+      "text": "China's transitions from Jiang Zemin to Hu Jintao in 2002 and Hu Jintao to Xi Jinping in 2012 followed established party rules and internal consensus, demonstrating non-violent succession mechanisms exist outside of competitive elections.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "99088bfb-92e9-4d39-aa93-c94b621037ed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:17.546815+00:00"
+    },
+    {
+      "id": "51feda3e-71bd-48e8-9cb6-7e4ba4489c37",
+      "text": "Singapore maintains long-term political and economic stability and successfully corrects major policy errors via robust internal technocratic checks and balances, demonstrating that external democratic oversight is not always required to prevent systemic collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "99088bfb-92e9-4d39-aa93-c94b621037ed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:17.546842+00:00"
+    },
+    {
+      "id": "cb1397ea-cf33-49be-921a-b22d44a50dcc",
+      "text": "The 2008 financial crisis also required immense global capital inflows\u2014the \"global savings glut\"\u2014and the widespread flawed modeling of complex mortgage-backed securities, confirming its multifactorial nature beyond simple deregulation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "423ba3e5-805a-4220-b2df-9def82e75ca2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:37.287332+00:00"
+    },
+    {
+      "id": "1e8fe548-27f3-40ff-96eb-9bae45a8eaba",
+      "text": "Economic history contains multiple crises driven by unpredictable exogenous shocks, such as the immediate global contraction following the 1973 OPEC oil embargo and the supply chain collapse induced by the 2020 COVID-19 pandemic.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "423ba3e5-805a-4220-b2df-9def82e75ca2",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:37.288049+00:00"
+    },
+    {
+      "id": "50418b0c-ef2c-45d0-9c3f-2e2837ec03dd",
+      "text": "Contrary to the implication that crises are purely external, the 2008 Global Financial Crisis was an endogenous failure caused by systemic deregulation and moral hazard policies established within major democracies. Furthermore, the severity of the 1973 OPEC shock was amplified by policy failures stemming from the US abandoning the gold standard and enacting price controls.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "1e8fe548-27f3-40ff-96eb-9bae45a8eaba",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:46.744135+00:00"
+    },
+    {
+      "id": "6f00f97a-c7bf-4638-af98-8251970e4f0e",
+      "text": "The repeal of the Glass-Steagall Act (1999) merged commercial and investment banking, enabling institutions to use federally insured deposits for massive risk exposure. This specific policy deregulation provided the necessary prerequisite structure for the widespread creation and eventual collapse of the complex instruments cited.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "cb1397ea-cf33-49be-921a-b22d44a50dcc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:03:54.922949+00:00"
+    },
+    {
+      "id": "596ef823-4e75-402a-8eba-24874dc7a655",
+      "text": "Structural tax reforms provide only a one-time increase in the revenue base level; subsequent revenue growth rates remain tied to underlying economic growth, failing to deliver the perpetual, compounded increases required to match continually rising spending demands.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0fa9a0bf-09c6-4d5f-a762-c0cd6e77c830",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:04:08.471209+00:00"
+    },
+    {
+      "id": "de12b129-6dbb-465a-aa69-f34659096069",
+      "text": "Norway's management of oil revenue via its Government Pension Fund Global demonstrates that national wealth and social spending demands can be stabilized through responsible fiscal rules, preventing spending from perpetually exceeding underlying economic growth.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "596ef823-4e75-402a-8eba-24874dc7a655",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:04:29.431950+00:00"
+    },
+    {
+      "id": "cd04233b-9051-447b-8485-e221e4d99fc9",
+      "text": "Replacing narrow income taxes with a broad consumption tax, such as France's Value Added Tax (VAT), enhances revenue elasticity because consumption taxes inherently grow in line with nominal GDP and are harder to evade, causing the structural revenue growth rate to increase.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "596ef823-4e75-402a-8eba-24874dc7a655",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:04:29.431977+00:00"
+    },
+    {
+      "id": "051f578c-a607-4bde-ae49-17d80cc1e092",
+      "text": "In democratic systems, unpopular structural fiscal changes are often non-sustainable; electoral pressure forces subsequent governments to reverse measures, as seen when Argentina reversed its 2017 pension reform within two years due to political necessity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "6bf73580-ed28-47b4-be0b-da430db99bc9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:04:38.201733+00:00"
+    },
+    {
+      "id": "57cf3055-3e24-4cf5-902f-8b8466a047af",
+      "text": "New Zealand's radical and initially unpopular market reforms during the 1980s and 1990s were sustained by consecutive governments of different parties, demonstrating that structural fiscal changes become sustainable when the perceived economic benefits outweigh short-term electoral pressure.",
+      "type": "response",
+      "side": "con",
+      "depth": 4,
+      "parent_id": "051f578c-a607-4bde-ae49-17d80cc1e092",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T02:04:47.826417+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:16:10.426775"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T00:16:10.426775"
+    }
+  ],
+  "links": [
+    {
+      "source": "3b4ae8c4-3b00-4be3-928b-f3294bfc45c0",
+      "target": "24cd3e2f-108e-4465-8c5f-dead648bb2e7",
+      "type": "objection"
+    },
+    {
+      "source": "3b4ae8c4-3b00-4be3-928b-f3294bfc45c0",
+      "target": "8a62a54d-a5f8-482c-9665-b0a5966f2c97",
+      "type": "objection"
+    },
+    {
+      "source": "42867c07-2d3a-4571-b462-c53de25c9f69",
+      "target": "c5f4d607-0956-49f0-88ed-4d1e6b2b27e3",
+      "type": "objection"
+    },
+    {
+      "source": "42867c07-2d3a-4571-b462-c53de25c9f69",
+      "target": "978060d3-7b0c-4a7d-8808-52d832af4b5f",
+      "type": "objection"
+    },
+    {
+      "source": "4f6bbd86-8f94-452e-9f53-97e85913ab84",
+      "target": "7ec5ac52-7425-429f-b583-9a1269c3e05c",
+      "type": "objection"
+    },
+    {
+      "source": "4f6bbd86-8f94-452e-9f53-97e85913ab84",
+      "target": "a9bd3d62-5bc7-4567-bb2d-24c08047caf5",
+      "type": "objection"
+    },
+    {
+      "source": "7de5a012-e887-4c29-ad01-ab847a296c27",
+      "target": "e6acdcf1-ba74-48bf-8289-8211a9852cc4",
+      "type": "objection"
+    },
+    {
+      "source": "7de5a012-e887-4c29-ad01-ab847a296c27",
+      "target": "13644cf4-f72e-49e3-8948-4251d805c719",
+      "type": "objection"
+    },
+    {
+      "source": "978060d3-7b0c-4a7d-8808-52d832af4b5f",
+      "target": "98e2c077-517e-4d1e-b703-852c8af5ea7e",
+      "type": "response"
+    },
+    {
+      "source": "978060d3-7b0c-4a7d-8808-52d832af4b5f",
+      "target": "48766470-ae75-4333-b7a1-3ec6f426024b",
+      "type": "response"
+    },
+    {
+      "source": "c5f4d607-0956-49f0-88ed-4d1e6b2b27e3",
+      "target": "d875ad3d-ff9e-413e-9664-ad6820bbbe05",
+      "type": "response"
+    },
+    {
+      "source": "c5f4d607-0956-49f0-88ed-4d1e6b2b27e3",
+      "target": "4a2a48a0-be25-4940-ad61-5badb0f3ddc0",
+      "type": "response"
+    },
+    {
+      "source": "a9bd3d62-5bc7-4567-bb2d-24c08047caf5",
+      "target": "bd9c681b-2d2a-42cf-ab93-aef8e5722f03",
+      "type": "response"
+    },
+    {
+      "source": "a9bd3d62-5bc7-4567-bb2d-24c08047caf5",
+      "target": "7eacb735-aa28-4d5e-815b-ab1279cbbbb9",
+      "type": "response"
+    },
+    {
+      "source": "7ec5ac52-7425-429f-b583-9a1269c3e05c",
+      "target": "f876c53e-1100-4018-8e3b-380e35acfd3a",
+      "type": "response"
+    },
+    {
+      "source": "7ec5ac52-7425-429f-b583-9a1269c3e05c",
+      "target": "31b1a017-2686-4716-95c9-225f84c49ef0",
+      "type": "response"
+    },
+    {
+      "source": "e6acdcf1-ba74-48bf-8289-8211a9852cc4",
+      "target": "435c3823-d95e-4b73-92ab-6b258e084d1d",
+      "type": "response"
+    },
+    {
+      "source": "e6acdcf1-ba74-48bf-8289-8211a9852cc4",
+      "target": "9ac22e1f-17b9-458f-a5c8-8fdb5610edcc",
+      "type": "response"
+    },
+    {
+      "source": "8a62a54d-a5f8-482c-9665-b0a5966f2c97",
+      "target": "40f727b8-3799-4758-a709-c6c7e2f4d56b",
+      "type": "response"
+    },
+    {
+      "source": "8a62a54d-a5f8-482c-9665-b0a5966f2c97",
+      "target": "144b1807-54af-4f85-a5e1-4ec303809106",
+      "type": "response"
+    },
+    {
+      "source": "13644cf4-f72e-49e3-8948-4251d805c719",
+      "target": "1c3f8209-1247-40f4-a7c8-6b31121355d3",
+      "type": "response"
+    },
+    {
+      "source": "13644cf4-f72e-49e3-8948-4251d805c719",
+      "target": "97e18a35-b154-461f-838f-1697913d8312",
+      "type": "response"
+    },
+    {
+      "source": "9ac22e1f-17b9-458f-a5c8-8fdb5610edcc",
+      "target": "01f3e7da-24e7-4597-9bd8-368dd16dd236",
+      "type": "response"
+    },
+    {
+      "source": "9ac22e1f-17b9-458f-a5c8-8fdb5610edcc",
+      "target": "729f7886-8036-438c-96dc-13e0bcb806b0",
+      "type": "response"
+    },
+    {
+      "source": "2111c0e8-2719-4df8-a0b6-c28066ac15de",
+      "target": "4cafa82e-d3e7-461d-89cc-cfda1514d61c",
+      "type": "objection"
+    },
+    {
+      "source": "d6beba75-eacf-4049-845a-78d4ea702eb5",
+      "target": "af1bcf82-0cf6-45c7-8d9b-1b1eb330e5b4",
+      "type": "objection"
+    },
+    {
+      "source": "d6beba75-eacf-4049-845a-78d4ea702eb5",
+      "target": "130d761e-aa9b-4087-9206-b9289626df99",
+      "type": "objection"
+    },
+    {
+      "source": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "target": "345687b1-c79b-44ae-9815-b24524da4617",
+      "type": "objection"
+    },
+    {
+      "source": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "target": "f5f1583a-f332-43e4-82aa-2703bab1eb21",
+      "type": "objection"
+    },
+    {
+      "source": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "target": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "type": "objection"
+    },
+    {
+      "source": "4cafa82e-d3e7-461d-89cc-cfda1514d61c",
+      "target": "f78489c9-62e5-4cf8-b9b3-7be044072487",
+      "type": "response"
+    },
+    {
+      "source": "4cafa82e-d3e7-461d-89cc-cfda1514d61c",
+      "target": "8ce0a456-4a6d-44a8-8212-ee437ae48ca8",
+      "type": "response"
+    },
+    {
+      "source": "130d761e-aa9b-4087-9206-b9289626df99",
+      "target": "a7514dd2-281c-405a-b9c3-dea52a479b56",
+      "type": "response"
+    },
+    {
+      "source": "130d761e-aa9b-4087-9206-b9289626df99",
+      "target": "0d7e4382-646b-47e0-8708-24fad235f9e9",
+      "type": "response"
+    },
+    {
+      "source": "af1bcf82-0cf6-45c7-8d9b-1b1eb330e5b4",
+      "target": "8a6e5df8-d67d-4d04-bef1-46fb6200a198",
+      "type": "response"
+    },
+    {
+      "source": "af1bcf82-0cf6-45c7-8d9b-1b1eb330e5b4",
+      "target": "768051fe-188d-44d5-96ca-311cddf4671b",
+      "type": "response"
+    },
+    {
+      "source": "f5f1583a-f332-43e4-82aa-2703bab1eb21",
+      "target": "423ba3e5-805a-4220-b2df-9def82e75ca2",
+      "type": "response"
+    },
+    {
+      "source": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "target": "9b4773b5-1b84-4d2c-8db1-c4e3926fbac5",
+      "type": "response"
+    },
+    {
+      "source": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "target": "0fa9a0bf-09c6-4d5f-a762-c0cd6e77c830",
+      "type": "response"
+    },
+    {
+      "source": "f7b37bb0-cfad-432b-a0ec-f8a9b96baf32",
+      "target": "6bf73580-ed28-47b4-be0b-da430db99bc9",
+      "type": "response"
+    },
+    {
+      "source": "768051fe-188d-44d5-96ca-311cddf4671b",
+      "target": "20576c94-380c-48e5-8675-fd6776a4264e",
+      "type": "response"
+    },
+    {
+      "source": "768051fe-188d-44d5-96ca-311cddf4671b",
+      "target": "7e4ab18a-69f7-482f-aa1a-4cfa625c9a52",
+      "type": "response"
+    },
+    {
+      "source": "8ce0a456-4a6d-44a8-8212-ee437ae48ca8",
+      "target": "8a0c7c8e-6857-4afc-9349-d16bbc6c833d",
+      "type": "response"
+    },
+    {
+      "source": "8ce0a456-4a6d-44a8-8212-ee437ae48ca8",
+      "target": "3713442e-fc0b-4a33-95c5-0b0b3574d89c",
+      "type": "response"
+    },
+    {
+      "source": "9b4773b5-1b84-4d2c-8db1-c4e3926fbac5",
+      "target": "958bcb56-e47d-4181-95b9-7bbd1baeb9a5",
+      "type": "response"
+    },
+    {
+      "source": "9b4773b5-1b84-4d2c-8db1-c4e3926fbac5",
+      "target": "7ffffed7-c70e-484d-bf97-f5fc14a0c520",
+      "type": "response"
+    },
+    {
+      "source": "24cd3e2f-108e-4465-8c5f-dead648bb2e7",
+      "target": "4b8f7149-03c5-4910-8bba-f62839cb888d",
+      "type": "response"
+    },
+    {
+      "source": "24cd3e2f-108e-4465-8c5f-dead648bb2e7",
+      "target": "94caf686-cebb-4a90-b768-dcd28726e488",
+      "type": "response"
+    },
+    {
+      "source": "dd3ea31d-56a1-4ba0-a69e-f078f53107fc",
+      "target": "8af18649-3e5a-440d-8978-614f9e64282f",
+      "type": "response"
+    },
+    {
+      "source": "dd3ea31d-56a1-4ba0-a69e-f078f53107fc",
+      "target": "613613f9-1825-4b9c-bbcf-06fb0b0d9ce0",
+      "type": "response"
+    },
+    {
+      "source": "345687b1-c79b-44ae-9815-b24524da4617",
+      "target": "8acc9d71-eeb7-4ad5-b519-1599f1e49ade",
+      "type": "response"
+    },
+    {
+      "source": "345687b1-c79b-44ae-9815-b24524da4617",
+      "target": "ad60a8e6-3e5e-4621-b1ce-98ba2f4039f6",
+      "type": "response"
+    },
+    {
+      "source": "98e2c077-517e-4d1e-b703-852c8af5ea7e",
+      "target": "7e6dc469-23cd-446d-bb53-d24ae8eebabd",
+      "type": "response"
+    },
+    {
+      "source": "98e2c077-517e-4d1e-b703-852c8af5ea7e",
+      "target": "df112d57-8093-481a-87f4-bd5db87905ad",
+      "type": "response"
+    },
+    {
+      "source": "df112d57-8093-481a-87f4-bd5db87905ad",
+      "target": "32d5a935-49ef-4e22-a9c4-47e5deccbb14",
+      "type": "response"
+    },
+    {
+      "source": "7e6dc469-23cd-446d-bb53-d24ae8eebabd",
+      "target": "cecfd648-552a-411c-81dd-def90b453bf4",
+      "type": "response"
+    },
+    {
+      "source": "48766470-ae75-4333-b7a1-3ec6f426024b",
+      "target": "2b5c79d4-3ff6-4d3d-8bce-f5822a69e53b",
+      "type": "response"
+    },
+    {
+      "source": "2b5c79d4-3ff6-4d3d-8bce-f5822a69e53b",
+      "target": "389930c6-b3d5-4e0c-8d5a-0d346b94e3bd",
+      "type": "response"
+    },
+    {
+      "source": "2b5c79d4-3ff6-4d3d-8bce-f5822a69e53b",
+      "target": "8aeea972-691e-421b-85ed-470b92d334f7",
+      "type": "response"
+    },
+    {
+      "source": "d875ad3d-ff9e-413e-9664-ad6820bbbe05",
+      "target": "6e50415b-67ee-49b6-b8a6-1036df1a33da",
+      "type": "response"
+    },
+    {
+      "source": "d875ad3d-ff9e-413e-9664-ad6820bbbe05",
+      "target": "bf7b876f-1779-4172-93a0-7832fb365357",
+      "type": "response"
+    },
+    {
+      "source": "6e50415b-67ee-49b6-b8a6-1036df1a33da",
+      "target": "b4efdb01-fdc4-46ec-8a8f-783133d9bfd6",
+      "type": "response"
+    },
+    {
+      "source": "bf7b876f-1779-4172-93a0-7832fb365357",
+      "target": "8f20a76a-40e5-4a50-84f0-66999bee3766",
+      "type": "response"
+    },
+    {
+      "source": "4a2a48a0-be25-4940-ad61-5badb0f3ddc0",
+      "target": "3f1a9416-09c2-47ce-8228-4f38db32d0f4",
+      "type": "response"
+    },
+    {
+      "source": "4a2a48a0-be25-4940-ad61-5badb0f3ddc0",
+      "target": "826e743c-5f99-48a5-94d0-52047467afcf",
+      "type": "response"
+    },
+    {
+      "source": "826e743c-5f99-48a5-94d0-52047467afcf",
+      "target": "c96bdc28-56c5-48ff-8e16-48bee1d6f029",
+      "type": "response"
+    },
+    {
+      "source": "826e743c-5f99-48a5-94d0-52047467afcf",
+      "target": "ba96f4b7-c1e6-4d45-abd6-ffc2d3467626",
+      "type": "response"
+    },
+    {
+      "source": "3f1a9416-09c2-47ce-8228-4f38db32d0f4",
+      "target": "138927f5-e9b9-4c5d-aeca-ad39b7685866",
+      "type": "response"
+    },
+    {
+      "source": "bd9c681b-2d2a-42cf-ab93-aef8e5722f03",
+      "target": "a3bf18f6-6893-4493-9850-595683a6bc6f",
+      "type": "response"
+    },
+    {
+      "source": "a3bf18f6-6893-4493-9850-595683a6bc6f",
+      "target": "3c51b2d5-da2a-499a-abd2-49b6c4e306cd",
+      "type": "response"
+    },
+    {
+      "source": "a3bf18f6-6893-4493-9850-595683a6bc6f",
+      "target": "6ef33015-d240-4e8b-ad5f-4106c1f1cc2f",
+      "type": "response"
+    },
+    {
+      "source": "7eacb735-aa28-4d5e-815b-ab1279cbbbb9",
+      "target": "ead4db10-45ae-4614-ac95-828e47abf7d0",
+      "type": "response"
+    },
+    {
+      "source": "7eacb735-aa28-4d5e-815b-ab1279cbbbb9",
+      "target": "3b4b9dcf-cfa4-476f-ac72-d0ea29ce5983",
+      "type": "response"
+    },
+    {
+      "source": "3b4b9dcf-cfa4-476f-ac72-d0ea29ce5983",
+      "target": "fd8ad365-4e2b-4359-8021-29ae33769483",
+      "type": "response"
+    },
+    {
+      "source": "3b4b9dcf-cfa4-476f-ac72-d0ea29ce5983",
+      "target": "6be136a7-87f0-4ff2-9faf-2a92c7c88308",
+      "type": "response"
+    },
+    {
+      "source": "ead4db10-45ae-4614-ac95-828e47abf7d0",
+      "target": "87139cbe-56c5-4700-aa4d-de61ff2cce14",
+      "type": "response"
+    },
+    {
+      "source": "ead4db10-45ae-4614-ac95-828e47abf7d0",
+      "target": "0cb6635f-c351-4014-ab6d-50b491d43d04",
+      "type": "response"
+    },
+    {
+      "source": "f876c53e-1100-4018-8e3b-380e35acfd3a",
+      "target": "b5a1867d-dfea-40fa-aa6a-861ab6c26c13",
+      "type": "response"
+    },
+    {
+      "source": "b5a1867d-dfea-40fa-aa6a-861ab6c26c13",
+      "target": "353816ff-269f-4d2e-b24d-ee307ee41dbc",
+      "type": "response"
+    },
+    {
+      "source": "b5a1867d-dfea-40fa-aa6a-861ab6c26c13",
+      "target": "5694b0a8-2e67-49c4-9aee-c252f4a37f96",
+      "type": "response"
+    },
+    {
+      "source": "31b1a017-2686-4716-95c9-225f84c49ef0",
+      "target": "b9d4b453-7ac5-42d8-a1f7-8e01d2099628",
+      "type": "response"
+    },
+    {
+      "source": "b9d4b453-7ac5-42d8-a1f7-8e01d2099628",
+      "target": "fc9492c2-ee07-455e-8e3a-ef3f3fe81a27",
+      "type": "response"
+    },
+    {
+      "source": "b9d4b453-7ac5-42d8-a1f7-8e01d2099628",
+      "target": "32c5bf65-2c91-406e-a668-fa5959add8dd",
+      "type": "response"
+    },
+    {
+      "source": "435c3823-d95e-4b73-92ab-6b258e084d1d",
+      "target": "38a7061b-7bfd-4960-b537-96fa438bab7f",
+      "type": "response"
+    },
+    {
+      "source": "38a7061b-7bfd-4960-b537-96fa438bab7f",
+      "target": "bfea817a-7caf-45f2-8c29-7db082be2e26",
+      "type": "response"
+    },
+    {
+      "source": "38a7061b-7bfd-4960-b537-96fa438bab7f",
+      "target": "fc5069fd-5242-42b6-ae7c-7087de3425e3",
+      "type": "response"
+    },
+    {
+      "source": "40f727b8-3799-4758-a709-c6c7e2f4d56b",
+      "target": "dd1b5978-2f5a-4673-877b-10bfabf1078e",
+      "type": "response"
+    },
+    {
+      "source": "dd1b5978-2f5a-4673-877b-10bfabf1078e",
+      "target": "e19bcd51-daa3-44c7-8406-42fd57599274",
+      "type": "response"
+    },
+    {
+      "source": "144b1807-54af-4f85-a5e1-4ec303809106",
+      "target": "561806f8-c2d2-4dce-853b-58ef0aa597aa",
+      "type": "response"
+    },
+    {
+      "source": "144b1807-54af-4f85-a5e1-4ec303809106",
+      "target": "a400472a-46c9-4737-a62c-010ba05d37f8",
+      "type": "response"
+    },
+    {
+      "source": "561806f8-c2d2-4dce-853b-58ef0aa597aa",
+      "target": "a09bb21f-eaae-4ac5-afa2-165f45eef8c7",
+      "type": "response"
+    },
+    {
+      "source": "561806f8-c2d2-4dce-853b-58ef0aa597aa",
+      "target": "ca2279c4-a204-4ac7-a5a9-8e798f382415",
+      "type": "response"
+    },
+    {
+      "source": "a400472a-46c9-4737-a62c-010ba05d37f8",
+      "target": "1fa0b025-a8c1-4151-9691-9658c0144d90",
+      "type": "response"
+    },
+    {
+      "source": "1c3f8209-1247-40f4-a7c8-6b31121355d3",
+      "target": "bd5534bd-9c3a-43bf-84f2-a343c748bea7",
+      "type": "response"
+    },
+    {
+      "source": "bd5534bd-9c3a-43bf-84f2-a343c748bea7",
+      "target": "2d44ccfc-7452-45fa-8274-84d36073e5f0",
+      "type": "response"
+    },
+    {
+      "source": "97e18a35-b154-461f-838f-1697913d8312",
+      "target": "ecd873af-5a76-441d-9310-e63b98bc8d9e",
+      "type": "response"
+    },
+    {
+      "source": "ecd873af-5a76-441d-9310-e63b98bc8d9e",
+      "target": "fd1d7fe5-4099-4505-8455-81b4d7020a4f",
+      "type": "response"
+    },
+    {
+      "source": "ecd873af-5a76-441d-9310-e63b98bc8d9e",
+      "target": "ae1ea128-2c9d-4168-b1a8-b5caad94fe19",
+      "type": "response"
+    },
+    {
+      "source": "f78489c9-62e5-4cf8-b9b3-7be044072487",
+      "target": "221742fa-65e8-424b-b4e6-52539fe64153",
+      "type": "response"
+    },
+    {
+      "source": "f78489c9-62e5-4cf8-b9b3-7be044072487",
+      "target": "463f70eb-5fbe-4f9b-b710-89cc78a86fc4",
+      "type": "response"
+    },
+    {
+      "source": "221742fa-65e8-424b-b4e6-52539fe64153",
+      "target": "36cdfe53-7843-43dd-84de-f0a5492cee38",
+      "type": "response"
+    },
+    {
+      "source": "221742fa-65e8-424b-b4e6-52539fe64153",
+      "target": "6f5b9f1a-8a1d-4d23-baa3-6812d36ad242",
+      "type": "response"
+    },
+    {
+      "source": "463f70eb-5fbe-4f9b-b710-89cc78a86fc4",
+      "target": "4b642a8d-2a6e-4cf8-ab55-80e240745023",
+      "type": "response"
+    },
+    {
+      "source": "463f70eb-5fbe-4f9b-b710-89cc78a86fc4",
+      "target": "71c4eeb1-c4bf-4547-8ac6-fd29f9f81735",
+      "type": "response"
+    },
+    {
+      "source": "a7514dd2-281c-405a-b9c3-dea52a479b56",
+      "target": "3798acd0-0d58-4920-915d-0609463e2a2a",
+      "type": "response"
+    },
+    {
+      "source": "a7514dd2-281c-405a-b9c3-dea52a479b56",
+      "target": "4ff56f67-a89a-4a32-bd8d-abd0f3cd51ac",
+      "type": "response"
+    },
+    {
+      "source": "3798acd0-0d58-4920-915d-0609463e2a2a",
+      "target": "74ba4bfb-9e1d-48ed-985a-7b1de9226fd8",
+      "type": "response"
+    },
+    {
+      "source": "4ff56f67-a89a-4a32-bd8d-abd0f3cd51ac",
+      "target": "e8208f0c-a19c-453a-bb83-02630f9b78c5",
+      "type": "response"
+    },
+    {
+      "source": "4ff56f67-a89a-4a32-bd8d-abd0f3cd51ac",
+      "target": "151a2b53-911a-43ed-9f92-cd9ed450e57f",
+      "type": "response"
+    },
+    {
+      "source": "0d7e4382-646b-47e0-8708-24fad235f9e9",
+      "target": "81f72000-591b-484f-9a5b-0b718aa695f9",
+      "type": "response"
+    },
+    {
+      "source": "81f72000-591b-484f-9a5b-0b718aa695f9",
+      "target": "f8684d7a-f7a0-4f25-aa17-0b4a72ff79d9",
+      "type": "response"
+    },
+    {
+      "source": "81f72000-591b-484f-9a5b-0b718aa695f9",
+      "target": "cf2b1490-9d47-40b2-8468-93ea6ba5b108",
+      "type": "response"
+    },
+    {
+      "source": "8a6e5df8-d67d-4d04-bef1-46fb6200a198",
+      "target": "149edab5-9d13-48e6-9c69-f389624d7540",
+      "type": "response"
+    },
+    {
+      "source": "8a6e5df8-d67d-4d04-bef1-46fb6200a198",
+      "target": "99088bfb-92e9-4d39-aa93-c94b621037ed",
+      "type": "response"
+    },
+    {
+      "source": "149edab5-9d13-48e6-9c69-f389624d7540",
+      "target": "a90fa70b-974e-4493-88b4-b9cab8e96869",
+      "type": "response"
+    },
+    {
+      "source": "149edab5-9d13-48e6-9c69-f389624d7540",
+      "target": "3c450119-5d91-4924-a900-4a6e8a5f7c2f",
+      "type": "response"
+    },
+    {
+      "source": "99088bfb-92e9-4d39-aa93-c94b621037ed",
+      "target": "6aacc889-d871-4861-92eb-4f3517656915",
+      "type": "response"
+    },
+    {
+      "source": "99088bfb-92e9-4d39-aa93-c94b621037ed",
+      "target": "51feda3e-71bd-48e8-9cb6-7e4ba4489c37",
+      "type": "response"
+    },
+    {
+      "source": "423ba3e5-805a-4220-b2df-9def82e75ca2",
+      "target": "cb1397ea-cf33-49be-921a-b22d44a50dcc",
+      "type": "response"
+    },
+    {
+      "source": "423ba3e5-805a-4220-b2df-9def82e75ca2",
+      "target": "1e8fe548-27f3-40ff-96eb-9bae45a8eaba",
+      "type": "response"
+    },
+    {
+      "source": "1e8fe548-27f3-40ff-96eb-9bae45a8eaba",
+      "target": "50418b0c-ef2c-45d0-9c3f-2e2837ec03dd",
+      "type": "response"
+    },
+    {
+      "source": "cb1397ea-cf33-49be-921a-b22d44a50dcc",
+      "target": "6f00f97a-c7bf-4638-af98-8251970e4f0e",
+      "type": "response"
+    },
+    {
+      "source": "0fa9a0bf-09c6-4d5f-a762-c0cd6e77c830",
+      "target": "596ef823-4e75-402a-8eba-24874dc7a655",
+      "type": "response"
+    },
+    {
+      "source": "596ef823-4e75-402a-8eba-24874dc7a655",
+      "target": "de12b129-6dbb-465a-aa69-f34659096069",
+      "type": "response"
+    },
+    {
+      "source": "596ef823-4e75-402a-8eba-24874dc7a655",
+      "target": "cd04233b-9051-447b-8485-e221e4d99fc9",
+      "type": "response"
+    },
+    {
+      "source": "6bf73580-ed28-47b4-be0b-da430db99bc9",
+      "target": "051f578c-a607-4bde-ae49-17d80cc1e092",
+      "type": "response"
+    },
+    {
+      "source": "051f578c-a607-4bde-ae49-17d80cc1e092",
+      "target": "57cf3055-3e24-4cf5-902f-8b8466a047af",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "42867c07-2d3a-4571-b462-c53de25c9f69",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "3b4ae8c4-3b00-4be3-928b-f3294bfc45c0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "4f6bbd86-8f94-452e-9f53-97e85913ab84",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "7de5a012-e887-4c29-ad01-ab847a296c27",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d6beba75-eacf-4049-845a-78d4ea702eb5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "8aac982e-3e72-4c16-9a5a-a385c7fbdf40",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "dd3ea31d-56a1-4ba0-a69e-f078f53107fc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2111c0e8-2719-4df8-a0b6-c28066ac15de",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

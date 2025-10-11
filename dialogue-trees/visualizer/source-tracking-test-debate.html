@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Source tracking test debate - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Source tracking test debate</h1>
+        <div class="meta">
+            6 arguments for • 7 arguments against •
+            39 total nodes • Max depth: 1 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/source-tracking-test-debate.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">39</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">1</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">7</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "fe62c277-449a-4911-ac5c-6244b970249a",
+      "text": "Source tracking rapidly identifies contamination in food and pharmaceutical supply chains, directly protecting consumer safety. In cases of E. coli outbreaks, rapid tracing allows health authorities to pinpoint and isolate the source, stopping the spread and preventing mass illness.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:17.567746+00:00"
+    },
+    {
+      "id": "bccbc32c-997d-4bed-ac52-b7c30d77b170",
+      "text": "Prompt tracking of origins, such as contact tracing during pandemics, is the most effective means to mitigate public health crises. This strategy allows authorities to swiftly identify infection vectors, isolating outbreaks and saving lives more efficiently than broad confinement measures.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:17.568239+00:00"
+    },
+    {
+      "id": "b6176242-2a60-4acb-a9de-9111e9417dce",
+      "text": "National crisis responses empirically demonstrate the success of robust source tracking infrastructure. For example, South Korea's comprehensive digital contact tracing during the COVID-19 pandemic resulted in quantifiable reductions in transmission and mortality compared to nations employing minimal tracking.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "South Korea's COVID-19 response"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:17.568550+00:00"
+    },
+    {
+      "id": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "text": "Source tracking fulfills the citizen's moral right to transparency regarding the provenance of goods and services. Verifiable origin data empowers consumers to make informed ethical and consumption choices concerning environmental impact or labor practices.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:17.568834+00:00"
+    },
+    {
+      "id": "a2b5e3cc-5592-4d9b-8157-2cb3e67e4f28",
+      "text": "Widespread source tracking is a necessary continuation of the historical progression toward stricter consumer safety regulations. This modern approach parallels past movements that established mandatory nutritional labeling, ingredient disclosures, and quality control standards across major industries.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:17.569257+00:00"
+    },
+    {
+      "id": "63ba8404-9667-40cf-9779-1db8aef9457e",
+      "text": "Modern technology has made comprehensive source tracking systems pragmatic and cost-effective for global supply chains. Distributed Ledger Technology (DLT) and inexpensive IoT sensors provide immutable, auditable, and scalable product provenance data without prohibitive overhead costs.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:17.569559+00:00"
+    },
+    {
+      "id": "51a8dae8-372f-4a52-ab5f-8454877d2196",
+      "text": "Rapid tracing only begins after initial illnesses are reported, meaning widespread distribution and consumption have already occurred and mass illness is only contained, not prevented.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fe62c277-449a-4911-ac5c-6244b970249a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.117920+00:00"
+    },
+    {
+      "id": "54b2821c-b54e-4f64-a4a3-c6a7d0a57c84",
+      "text": "Effective source tracking fails when supply chains lack necessary technological integration and standardization, especially when goods cross complex international borders involving many small, untracked producers.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fe62c277-449a-4911-ac5c-6244b970249a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.117987+00:00"
+    },
+    {
+      "id": "026276c0-a71c-4081-8542-f2a7c9fa3973",
+      "text": "The overall transition cost remains prohibitive, as integrating DLT and IoT requires substantial investment in training, hardware rollout, data standardization, and maintenance across thousands of diverse, decentralized supply chain participants.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "63ba8404-9667-40cf-9779-1db8aef9457e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.341577+00:00"
+    },
+    {
+      "id": "390c3c5f-dc1d-467c-999c-0939ff20051b",
+      "text": "Current DLT implementations struggle with the necessary throughput and speed, as major public DLTs can only handle a small fraction of the millions of transactions per second required by truly high-volume global logistics networks.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "63ba8404-9667-40cf-9779-1db8aef9457e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.341606+00:00"
+    },
+    {
+      "id": "938c098d-926f-413a-9062-f2d91b9b1083",
+      "text": "South Korea's success was heavily dependent on its rapid, decentralized mass testing capacity, developed after the 2015 MERS outbreak, which provided foundational data independent of the digital tracking infrastructure.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b6176242-2a60-4acb-a9de-9111e9417dce",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.369218+00:00"
+    },
+    {
+      "id": "b794a6c3-032b-4861-af7d-57aa34c87528",
+      "text": "The compliance required for effective digital tracking is profoundly linked to high public trust and cultural norms present in South Korea and Taiwan, limiting its replicability in nations prioritizing privacy protections, such as Germany.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b6176242-2a60-4acb-a9de-9111e9417dce",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.369257+00:00"
+    },
+    {
+      "id": "5bdad7e8-f882-4fe2-93bc-5ab66a103f43",
+      "text": "Consumer safety can be equally or more effectively ensured through rigorous outcome-based testing and certification, like Underwriters Laboratories (UL) standards, without mandating costly, extensive process-based source tracking. The historical progression of safety often focused on post-market performance rather than mandated end-to-end supply chain monitoring.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a2b5e3cc-5592-4d9b-8157-2cb3e67e4f28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.395281+00:00"
+    },
+    {
+      "id": "f66d4b31-1a7a-4eb9-a40c-7419aa12a01e",
+      "text": "The analogy fails because static nutritional labeling involves only post-production disclosure, whereas widespread source tracking demands continuous, invasive monitoring across multiple corporate entities. This shift introduces radically higher compliance costs and raises significant privacy concerns for both manufacturers and consumers not present in the historical examples provided.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a2b5e3cc-5592-4d9b-8157-2cb3e67e4f28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.395340+00:00"
+    },
+    {
+      "id": "5de47b57-5990-465d-a074-6a21f8690c2e",
+      "text": "Tracking is not the most effective strategy for all public health crises; large-scale environmental health issues, such as the lead contamination crisis in Flint, Michigan, require infrastructural replacement and regulatory changes, not contact tracing.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bccbc32c-997d-4bed-ac52-b7c30d77b170",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.952900+00:00"
+    },
+    {
+      "id": "9c35b44a-6282-4595-abcb-09cbc2d2797b",
+      "text": "Tracking requires low case numbers to be effective; in initial high-transmission phases like the start of the COVID-19 pandemic, broad mobility restrictions are necessary to lower the infection rate enough for tracers to manage the volume.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bccbc32c-997d-4bed-ac52-b7c30d77b170",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.952934+00:00"
+    },
+    {
+      "id": "0e4ff1d3-bdc3-4836-bcdf-a81ae7e07e0a",
+      "text": "Asserting an expansive \"moral right to transparency\" overlooks that proprietary data, such as product formulations and supplier networks, constitute protected trade secrets and intellectual property, making absolute provenance tracking economically unfeasible.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.978185+00:00"
+    },
+    {
+      "id": "179394ec-4b93-4cb0-b51f-c67303ee51a9",
+      "text": "Source tracking systems are easily susceptible to fraud and misreporting across complex global supply chains, meaning the \"verifiable origin data\" often remains unreliable for consumers making informed ethical choices.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.978229+00:00"
+    },
+    {
+      "id": "4c042129-e79a-4e0c-afb3-0a615d7dead6",
+      "text": "Mandatory source tracking creates a severe chilling effect, deterring whistleblowers necessary for public accountability. The exposure of the Pentagon Papers and recent NSA surveillance programs demonstrates that sensitive sources require absolute confidentiality to expose high-level misconduct.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "Pentagon Papers",
+        "NSA surveillance programs"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.978331+00:00"
+    },
+    {
+      "id": "2d54df55-38b7-4c95-83f2-ffc04fdc1da7",
+      "text": "Mandatory source tracking fundamentally violates the rights to privacy, anonymous free expression, and freedom of the press. A free press, protected by constitutional provisions in many democracies, requires the ability to protect sources to fulfill its necessary democratic watchdog role.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "US First Amendment"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.979000+00:00"
+    },
+    {
+      "id": "b97491b4-0064-4fc5-9ec3-b5f7b50bdd42",
+      "text": "Historical precedence demonstrates that state mandated access to source identities is overwhelmingly used to suppress political dissent and target opponents. Authoritarian and illiberal regimes routinely use such surveillance powers to systematically harass journalists and silence critics.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "Authoritarian regimes' use of surveillance",
+        "Surveillance in Turkey and China"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.979364+00:00"
+    },
+    {
+      "id": "7d5401a0-db2a-4d4c-9167-92cc6e926653",
+      "text": "Empirical evidence shows that jurisdictions with robust legal protections for confidential sources, such as strong shield laws, correlate with higher rates of exposure of high-level government and corporate malfeasance. These protections enable journalists to pursue complex investigations without fear of prosecution or source compromise.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "OECD data on Freedom of the Press indices"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.979692+00:00"
+    },
+    {
+      "id": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "text": "Standardized source tracking systems are practically ineffective because sophisticated actors, who are often the most critical sources, can easily bypass monitoring. These actors rely on readily available encryption and anonymization tools like the Tor network and secure messaging services to protect their identities regardless of mandated tracking.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [
+        "Tor Network",
+        "End-to-end encryption tools"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.980048+00:00"
+    },
+    {
+      "id": "3a50c64a-4cbc-4ca8-a7be-f5677c9a5033",
+      "text": "Mandated source tracking destroys the essential trust relationship between independent journalists and the public, leading to cynicism and reduced reliance on media outlets. When the press is perceived as an extension of the state capable of revealing sources, citizens become less willing to share information crucial for truthful investigative reporting.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:27.980394+00:00"
+    },
+    {
+      "id": "29187f18-96b4-4784-a2f5-9b40c3930ddf",
+      "text": "The highest rates of major government and corporate scandal exposure often occur in nations like the United Kingdom, which lacks a comprehensive national shield law, suggesting that robustness of protection is not a prerequisite for high exposure.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7d5401a0-db2a-4d4c-9167-92cc6e926653",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:41.989071+00:00"
+    },
+    {
+      "id": "bbd527e9-8567-4226-ac87-e9eca28433e1",
+      "text": "Countries with high malfeasance exposure, such as Nordic nations, combine strong shield laws with excellent public access to government documents, indicating that transparency laws are the primary enabling mechanism, not solely source confidentiality.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7d5401a0-db2a-4d4c-9167-92cc6e926653",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:41.989120+00:00"
+    },
+    {
+      "id": "51cff3a3-077f-44ef-9635-6068d830488c",
+      "text": "Tracking systems still capture or deter the majority of actors who lack the expertise and resources to utilize advanced tools like Tor and compartmentalized secure messaging. Mandatory logging systems successfully reduce security incidents by up to 70% among average network users who are unwilling to circumvent established controls.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:42.444360+00:00"
+    },
+    {
+      "id": "4ca2295a-3b2b-4876-9da8-e3eb73a79573",
+      "text": "The necessity of using layered encryption, virtual private servers, and specialized compartmentalized devices significantly increases the effort and operational risk for sophisticated actors. This complexity slows down malicious operations and reduces the number of incidents across corporate networks that implement advanced data loss prevention (DLP) systems.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:42.444388+00:00"
+    },
+    {
+      "id": "33f82bbe-8d46-4325-966c-d137d53af660",
+      "text": "Standardized tracking systems are often internal Information Security programs designed for Data Loss Prevention (DLP) and Insider Threat detection, not external network monitoring. These internal systems detect anomalous data access and file downloads regardless of whether the final data exfiltration uses Tor or an encrypted platform.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:42.444399+00:00"
+    },
+    {
+      "id": "b91c3ffd-d9dd-4562-ad1a-680582e16aaa",
+      "text": "Whistleblower protections in countries like Ireland and the EU Whistleblowing Directive provide secure internal disclosure channels and severe penalties for retaliation, demonstrating that accountability does not rely solely on absolute, untraceable external leakage.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4c042129-e79a-4e0c-afb3-0a615d7dead6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:44.040203+00:00"
+    },
+    {
+      "id": "1471dbc1-3216-4b5c-9597-64bbd6b3005d",
+      "text": "Source tracking systems can be legally structured so that access to source identity is only granted under strict judicial or independent commission oversight, preventing the executive branch being exposed from identifying the source.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4c042129-e79a-4e0c-afb3-0a615d7dead6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:44.040248+00:00"
+    },
+    {
+      "id": "53d8dd65-dee4-4dd9-be85-08db16151322",
+      "text": "Public trust in media, which is below 40% in large democracies like the United States, is primarily damaged by perceived partisan bias, sensationalism in reporting, and the proliferation of misinformation across digital platforms. This significant lack of trust occurs even where legal protections for journalistic sources are robust.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3a50c64a-4cbc-4ca8-a7be-f5677c9a5033",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:44.287475+00:00"
+    },
+    {
+      "id": "53f41cb3-a5e7-4073-8cb0-3bcaff230aa8",
+      "text": "The public relies on media for utilitarian information like local news, traffic, and weather, which are independent of confidential sources and investigative reporting. This essential reliance for daily utility limits any widespread destruction of general public media engagement and overall reliance.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3a50c64a-4cbc-4ca8-a7be-f5677c9a5033",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:44.287503+00:00"
+    },
+    {
+      "id": "eeac2770-3126-4bf5-a68c-258bd57e9954",
+      "text": "Judicial review processes for compelled disclosure in nations like the United States and the United Kingdom ensure this power is used primarily for prosecuting serious crimes like organized financial fraud and trafficking, not routine political suppression.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b97491b4-0064-4fc5-9ec3-b5f7b50bdd42",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:44.946391+00:00"
+    },
+    {
+      "id": "bdaf2e84-2585-4a06-99f2-79baf6af58a2",
+      "text": "Journalist shield laws exist in most members of the European Union, requiring high judicial standards that prevent compelled source disclosure from becoming a tool for political targeting, distinguishing these states from illiberal regimes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b97491b4-0064-4fc5-9ec3-b5f7b50bdd42",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:44.946418+00:00"
+    },
+    {
+      "id": "f7971aa4-910a-4cb5-8afd-f742a0afc33a",
+      "text": "Constitutional protections for the press in the United States and many European Union member states are consistently overridden by court orders compelling source disclosure in cases of national security, terrorism, or murder. This demonstrates that the right to source protection is not treated as an absolute right in functioning democracies.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2d54df55-38b7-4c95-83f2-ffc04fdc1da7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:45.932295+00:00"
+    },
+    {
+      "id": "7e304297-fb09-4859-a3d6-71de8f54f11a",
+      "text": "The right to anonymous expression is already practically nullified because private internet service providers, social media platforms (like Meta), and data brokers systematically track, store, and monetize user source metadata and traffic flows for commercial purposes. Therefore, mandatory government tracking is incremental, not a fundamental violation of an existing right to anonymity.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2d54df55-38b7-4c95-83f2-ffc04fdc1da7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:35:45.932340+00:00"
+    },
+    {
+      "id": "3cfcbd00-f20f-4cac-beab-5e7890539c9b",
+      "text": "Source tracking mechanistically improves transparency and enhances the level of attribution within the system.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "children_count": 0,
+      "references": [],
+      "source": "extracted:chunk_1",
+      "created_at": "2025-10-11T13:36:20.688103+00:00"
+    },
+    {
+      "id": "a575672b-54c2-41bb-b693-c8e88fb6f6a3",
+      "text": "Manual tracking methods are already sufficient and negate the need for more complex automated source-tracking systems.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 0,
+      "references": [],
+      "source": "extracted:chunk_1",
+      "created_at": "2025-10-11T13:36:20.688205+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:35:17.567679+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 7,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:35:17.567679+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "fe62c277-449a-4911-ac5c-6244b970249a",
+      "target": "51a8dae8-372f-4a52-ab5f-8454877d2196",
+      "type": "objection"
+    },
+    {
+      "source": "fe62c277-449a-4911-ac5c-6244b970249a",
+      "target": "54b2821c-b54e-4f64-a4a3-c6a7d0a57c84",
+      "type": "objection"
+    },
+    {
+      "source": "63ba8404-9667-40cf-9779-1db8aef9457e",
+      "target": "026276c0-a71c-4081-8542-f2a7c9fa3973",
+      "type": "objection"
+    },
+    {
+      "source": "63ba8404-9667-40cf-9779-1db8aef9457e",
+      "target": "390c3c5f-dc1d-467c-999c-0939ff20051b",
+      "type": "objection"
+    },
+    {
+      "source": "b6176242-2a60-4acb-a9de-9111e9417dce",
+      "target": "938c098d-926f-413a-9062-f2d91b9b1083",
+      "type": "objection"
+    },
+    {
+      "source": "b6176242-2a60-4acb-a9de-9111e9417dce",
+      "target": "b794a6c3-032b-4861-af7d-57aa34c87528",
+      "type": "objection"
+    },
+    {
+      "source": "a2b5e3cc-5592-4d9b-8157-2cb3e67e4f28",
+      "target": "5bdad7e8-f882-4fe2-93bc-5ab66a103f43",
+      "type": "objection"
+    },
+    {
+      "source": "a2b5e3cc-5592-4d9b-8157-2cb3e67e4f28",
+      "target": "f66d4b31-1a7a-4eb9-a40c-7419aa12a01e",
+      "type": "objection"
+    },
+    {
+      "source": "bccbc32c-997d-4bed-ac52-b7c30d77b170",
+      "target": "5de47b57-5990-465d-a074-6a21f8690c2e",
+      "type": "objection"
+    },
+    {
+      "source": "bccbc32c-997d-4bed-ac52-b7c30d77b170",
+      "target": "9c35b44a-6282-4595-abcb-09cbc2d2797b",
+      "type": "objection"
+    },
+    {
+      "source": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "target": "0e4ff1d3-bdc3-4836-bcdf-a81ae7e07e0a",
+      "type": "objection"
+    },
+    {
+      "source": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "target": "179394ec-4b93-4cb0-b51f-c67303ee51a9",
+      "type": "objection"
+    },
+    {
+      "source": "7d5401a0-db2a-4d4c-9167-92cc6e926653",
+      "target": "29187f18-96b4-4784-a2f5-9b40c3930ddf",
+      "type": "objection"
+    },
+    {
+      "source": "7d5401a0-db2a-4d4c-9167-92cc6e926653",
+      "target": "bbd527e9-8567-4226-ac87-e9eca28433e1",
+      "type": "objection"
+    },
+    {
+      "source": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "target": "51cff3a3-077f-44ef-9635-6068d830488c",
+      "type": "objection"
+    },
+    {
+      "source": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "target": "4ca2295a-3b2b-4876-9da8-e3eb73a79573",
+      "type": "objection"
+    },
+    {
+      "source": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "target": "33f82bbe-8d46-4325-966c-d137d53af660",
+      "type": "objection"
+    },
+    {
+      "source": "4c042129-e79a-4e0c-afb3-0a615d7dead6",
+      "target": "b91c3ffd-d9dd-4562-ad1a-680582e16aaa",
+      "type": "objection"
+    },
+    {
+      "source": "4c042129-e79a-4e0c-afb3-0a615d7dead6",
+      "target": "1471dbc1-3216-4b5c-9597-64bbd6b3005d",
+      "type": "objection"
+    },
+    {
+      "source": "3a50c64a-4cbc-4ca8-a7be-f5677c9a5033",
+      "target": "53d8dd65-dee4-4dd9-be85-08db16151322",
+      "type": "objection"
+    },
+    {
+      "source": "3a50c64a-4cbc-4ca8-a7be-f5677c9a5033",
+      "target": "53f41cb3-a5e7-4073-8cb0-3bcaff230aa8",
+      "type": "objection"
+    },
+    {
+      "source": "b97491b4-0064-4fc5-9ec3-b5f7b50bdd42",
+      "target": "eeac2770-3126-4bf5-a68c-258bd57e9954",
+      "type": "objection"
+    },
+    {
+      "source": "b97491b4-0064-4fc5-9ec3-b5f7b50bdd42",
+      "target": "bdaf2e84-2585-4a06-99f2-79baf6af58a2",
+      "type": "objection"
+    },
+    {
+      "source": "2d54df55-38b7-4c95-83f2-ffc04fdc1da7",
+      "target": "f7971aa4-910a-4cb5-8afd-f742a0afc33a",
+      "type": "objection"
+    },
+    {
+      "source": "2d54df55-38b7-4c95-83f2-ffc04fdc1da7",
+      "target": "7e304297-fb09-4859-a3d6-71de8f54f11a",
+      "type": "objection"
+    },
+    {
+      "source": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "target": "3cfcbd00-f20f-4cac-beab-5e7890539c9b",
+      "type": "objection"
+    },
+    {
+      "source": "meta-pro",
+      "target": "fe62c277-449a-4911-ac5c-6244b970249a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "bccbc32c-997d-4bed-ac52-b7c30d77b170",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b6176242-2a60-4acb-a9de-9111e9417dce",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "c2fcdae0-06c3-4c8f-abcf-6b6d34f7c243",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a2b5e3cc-5592-4d9b-8157-2cb3e67e4f28",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "63ba8404-9667-40cf-9779-1db8aef9457e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "4c042129-e79a-4e0c-afb3-0a615d7dead6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2d54df55-38b7-4c95-83f2-ffc04fdc1da7",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b97491b4-0064-4fc5-9ec3-b5f7b50bdd42",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "7d5401a0-db2a-4d4c-9167-92cc6e926653",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2f1d94b7-6c07-43b6-ac31-f5820a7b4d1f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "3a50c64a-4cbc-4ca8-a7be-f5677c9a5033",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a575672b-54c2-41bb-b693-c8e88fb6f6a3",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

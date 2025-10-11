@@ -1,0 +1,2508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College education should be free for all citizens - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>College education should be free for all citizens</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            62 total nodes • Max depth: 3 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/college-education-should-be-free-for-all-citizens.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">62</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "0b480c15-fe55-4e1e-adbd-9e3af7bffdd4",
+      "text": "Free education expands the national talent pool, driving innovation and long-term economic competitiveness. Historical public investment in higher education, such as the post-World War II U.S. GI Bill, demonstrated a clear net return on investment by fueling decades of broad economic growth and increasing the tax base.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:25.139136"
+    },
+    {
+      "id": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "text": "Universal access to college is a powerful mechanism for increasing social and economic mobility by separating educational opportunities from inherited wealth. Eliminating financial barriers ensures that high-potential students from low-income backgrounds are able to acquire the skills necessary for the modern economy, directly addressing rising inequality.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:25.139678"
+    },
+    {
+      "id": "3bac1cd6-cdd7-4e06-8183-8861506ea317",
+      "text": "Higher education provides substantial positive externalities to society beyond the individual benefit, including improved public health outcomes, lower reliance on social services, and increased civic engagement. Since society benefits broadly (similar to K-12 schooling), the cost of provision should be borne by the public rather than placed primarily on the individual.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:25.139957"
+    },
+    {
+      "id": "1f622eae-cb47-4736-85fe-ee7cef5b8b88",
+      "text": "The provision of tuition-free or extremely low-cost higher education is a proven, sustainable standard in many successful developed economies, notably Germany and the Nordic countries. These international models demonstrate that public funding can support universal access while maintaining high academic quality and world-class research capacity.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:25.140198"
+    },
+    {
+      "id": "2928e4ee-50c1-4fc1-94dd-ed212895e306",
+      "text": "The post-WWII GI Bill was a targeted program for a pool of highly motivated veterans entering a rapidly expanding economy, which makes it a poor analogy for projecting the economic returns of universal free education today.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0b480c15-fe55-4e1e-adbd-9e3af7bffdd4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:36.035414"
+    },
+    {
+      "id": "91ca98e7-a542-46af-8cf3-90453ab2d6d8",
+      "text": "Asserting a \"clear net return on investment\" is logically unsound because it omits the necessary consideration of massive upfront costs, the potential dampening economic effect of the funding mechanism (e.g., increased taxes or debt), and opportunity costs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0b480c15-fe55-4e1e-adbd-9e3af7bffdd4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:36.036152"
+    },
+    {
+      "id": "ddd32e34-5b9e-46d3-8dfd-c19ca54c7e46",
+      "text": "Universal access overlooks critical non-tuition costs like living expenses and forgone wages, which disproportionately impede completion for low-income students who often cannot afford to study full-time without working.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:37.155316"
+    },
+    {
+      "id": "f9d8b620-78fa-4d59-92c9-376320d4fcfd",
+      "text": "Massively scaling admissions under universal access risks diluting the quality of education and increasing class sizes, thereby reducing the informational value of the degree as a signal for employers and weakening its power for social mobility.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:37.155773"
+    },
+    {
+      "id": "7f3d0525-f6dc-434e-92d0-67cf2ad997c7",
+      "text": "Free college primarily increases enrollment in low-utility degrees, while critical skill shortages in the modern economy are more directly and efficiently met by targeted vocational training and certification programs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:37.156237"
+    },
+    {
+      "id": "9773fe02-70d4-42e0-9cfb-b2831502822b",
+      "text": "The sustainability of tuition-free models requires high tax burdens (e.g., Denmark's 45-56% income tax) and universal social welfare programs, fiscal prerequisites absent in countries relying on private funding like the US, thus limiting system transferability.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1f622eae-cb47-4736-85fe-ee7cef5b8b88",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:37.354286"
+    },
+    {
+      "id": "42f0ffcf-c989-47ce-a301-b2a05890a2f7",
+      "text": "Assuming correlation equals causation fails by ignoring confounding variables; high academic quality in Nordic nations often stems from rigorous preparatory K-12 systems and cultural emphasis on education, not solely from the cost of university tuition.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1f622eae-cb47-4736-85fe-ee7cef5b8b88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:37.354717"
+    },
+    {
+      "id": "103d3847-5207-4e99-8765-c64016288621",
+      "text": "The average college degree yields a substantial private financial return, with college graduates earning roughly $1 million more over a lifetime than high school graduates. The massive individual monetary gain, which often exceeds the value of quantified public externalities, justifies the individual bearing the primary cost, making the analogy to universally public K-12 education flawed.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3bac1cd6-cdd7-4e06-8183-8861506ea317",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:47.098787"
+    },
+    {
+      "id": "92cf32f6-8ce6-4e89-83eb-2e621ac0feb7",
+      "text": "The cost of tuition-free university education (higher education) is only a small fraction of a country's total public budget, meaning it can be achieved through targeted budgetary reallocation or state programs, like the New York Excelsior Scholarship, without requiring the implementation of a full, universal social welfare state.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9773fe02-70d4-42e0-9cfb-b2831502822b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:47.545336"
+    },
+    {
+      "id": "4100d6de-22bf-40c4-abd8-ec89506f776f",
+      "text": "The necessary funding for tuition-free systems can be derived from alternative revenue streams, not just high personal income taxes; Germany, for instance, relies more heavily on Value Added Tax, while Norway utilizes its substantial state oil revenues and wealth taxes to fund public services.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9773fe02-70d4-42e0-9cfb-b2831502822b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:47.546262"
+    },
+    {
+      "id": "7a080799-beb0-4396-a4d9-d12c70aec77b",
+      "text": "Universal access policies, such as those implemented in Nordic countries or the post-war UK, typically mandate proportional increases in public funding and faculty hiring, ensuring educational quality does not automatically dilute with expanded enrollment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f9d8b620-78fa-4d59-92c9-376320d4fcfd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:48.557091"
+    },
+    {
+      "id": "1e86f775-4ce2-4861-8289-1959ddc3feb9",
+      "text": "Even if the average signaling value to employers slightly decreases, universal access significantly increases social mobility for underrepresented groups by providing a necessary entry credential, resulting in a net societal benefit.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f9d8b620-78fa-4d59-92c9-376320d4fcfd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:48.557508"
+    },
+    {
+      "id": "7eef1d4d-7b36-4402-b0e8-3673ebda12b5",
+      "text": "Economic Return on Investment (ROI) models are explicitly designed to integrate upfront costs, the economic effects of tax funding, and student opportunity costs when calculating a true net present value. Asserting that these foundational components are \"omitted\" misrepresents how net ROI is measured in policy analysis.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "91ca98e7-a542-46af-8cf3-90453ab2d6d8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:53.295317"
+    },
+    {
+      "id": "672eb373-0ba2-4246-9fcb-0ea117df19c7",
+      "text": "The required inclusion of macroeconomic factors like the \"dampening economic effect of the funding mechanism\" is specific to a full Social Cost-Benefit Analysis (CBA); valid project-specific ROI calculations often legally and logically exclude these external financing effects.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "91ca98e7-a542-46af-8cf3-90453ab2d6d8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:57:53.295789"
+    },
+    {
+      "id": "bb312c8e-b74f-4336-b68c-7a41dd1a3042",
+      "text": "The $1 million average masks high variance; roughly 40% of students incur debt without completing a degree and fail to realize any premium, making the blanket cost imputation unequal and high-risk for individuals.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "103d3847-5207-4e99-8765-c64016288621",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:00.411314"
+    },
+    {
+      "id": "bd7a7427-390a-46e8-940b-fda959cc2fe7",
+      "text": "The magnitude of private gain does not logically preclude public investment; subsidizing education is a mechanism to maximize positive public externalities, such as increased tax revenue and civic engagement, which benefit society regardless of individual earnings.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "103d3847-5207-4e99-8765-c64016288621",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:00.412094"
+    },
+    {
+      "id": "406d6e50-f6c9-48d1-980b-fc3f25bb3328",
+      "text": "Despite expanded enrollment, per-student funding is often not proportionally mandated and can decline in real terms due to political austerity, as seen in the UK's post-1990s shift to mass education funded by subsidized loans rather than direct grants.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7a080799-beb0-4396-a4d9-d12c70aec77b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:00.800870"
+    },
+    {
+      "id": "7e90bd51-0280-4f03-a66c-1f6e61e1b061",
+      "text": "Proportional increases in inputs like faculty hiring do not automatically ensure quality; systems in countries like France and Greece struggle with high student-to-faculty ratios and infrastructural strain in public universities, leading to criticized outcomes despite universal access.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "7a080799-beb0-4396-a4d9-d12c70aec77b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:00.800909"
+    },
+    {
+      "id": "fcf35baa-79d5-4747-bfdf-2323ce3a3770",
+      "text": "Credential inflation dictates that once the bachelor's degree becomes universal and non-selective, employers will immediately switch to requiring alternative screening metrics, such as master's degrees or long unpaid internships, thereby nullifying the claimed gain in entry-level social mobility.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1e86f775-4ce2-4861-8289-1959ddc3feb9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:01.869419"
+    },
+    {
+      "id": "d102663f-b77f-4b6f-b240-d525bf783820",
+      "text": "The immense cost of universal college requires massive tax increases; if the resulting diluted credential leads to significant graduate underemployment, that economic cost outweighs the subjective social mobility gains, resulting in a net negative fiscal return on investment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "1e86f775-4ce2-4861-8289-1959ddc3feb9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:01.869476"
+    },
+    {
+      "id": "b695b4b1-df26-4abb-b52c-8436325cfb83",
+      "text": "The New York Excelsior Scholarship applies only to families earning under $125,000 and requires continuous enrollment, meaning the substantial cost of true universal tuition-free education far exceeds this program's limited budget.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92cf32f6-8ce6-4e89-83eb-2e621ac0feb7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:07.815820"
+    },
+    {
+      "id": "88878fc8-d288-459e-a40b-04e36e8d5e77",
+      "text": "Countries that offer universal tuition-free higher education, such as Norway and Germany, fund this policy through high progressive taxation and robust centralized budgeting, making it an integrated and foundational component of their established social welfare state model.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "92cf32f6-8ce6-4e89-83eb-2e621ac0feb7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:07.815846"
+    },
+    {
+      "id": "0dfd3793-4084-40e3-9953-de9657bcd7d6",
+      "text": "Mandatory funding for universal free college requires significantly higher general taxation or increased national debt, diverting substantial public resources away from other crucial priorities like infrastructure, public safety, or specialized K-12 education. This large opportunity cost means public funds are committed to college education at the expense of other necessary public goods.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:09.065390"
+    },
+    {
+      "id": "e41d6189-4d39-4c46-82fa-77ce810f7ffd",
+      "text": "Free tuition acts as a regressive subsidy because the primary beneficiaries are disproportionately students from middle and upper-income backgrounds who are most likely to attend and successfully graduate, subsidized by the general taxpayer. General tax revenue is thus used to fund an asset that primarily enhances the future earning potential of the already privileged.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:09.065890"
+    },
+    {
+      "id": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "text": "Universal free access rapidly increases student enrollment demand, which, without proportional vast increases in infrastructure and faculty funding, inevitably leads to resource dilution. This results in overcrowded classes, overworked faculty, and a demonstrable decline in the overall quality and rigor of the education provided.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:09.066150"
+    },
+    {
+      "id": "a1e73e91-82be-4d0b-b21b-d410c6756b2b",
+      "text": "Removing all direct tuition costs reduces the perceived economic value of the education, weakening the students' financial incentive for careful program selection and timely completion. This often results in higher attrition rates and longer time-to-degree, leading to an inefficient allocation of scarce public resources.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:09.066383"
+    },
+    {
+      "id": "da4af4f9-1ac6-4bb6-a5d3-29bdcde8ae7c",
+      "text": "Tuition-free European systems explicitly manage demand through strict qualification standards and entrance exams, showing that policy design can prevent the resource dilution and quality decline claimed to be inevitable.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:19.761138"
+    },
+    {
+      "id": "244759a9-c7e5-477d-96a9-3a0c323ab568",
+      "text": "Enrollment increases can be absorbed without quality decline by leveraging technological efficiencies, such as automated administration and widespread online delivery, which significantly increase instructional capacity and reduce fixed infrastructure costs.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:19.761867"
+    },
+    {
+      "id": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "text": "The economic benefits of widespread access, even with larger class sizes, generate higher net social and economic returns than maintaining a restricted, high-cost quality education model.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:19.762322"
+    },
+    {
+      "id": "7c4afeda-e18a-455d-83dc-675da5a95063",
+      "text": "The perceived economic value of education is based on expected lifetime earning premiums, which remain a powerful incentive regardless of tuition cost. Focusing solely on tuition ignores the massive opportunity cost (lost wages) students face while attending, which still motivates timely completion.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a1e73e91-82be-4d0b-b21b-d410c6756b2b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:19.779465"
+    },
+    {
+      "id": "7e0cc24c-2c8a-4a5b-bea1-080d0e1dcabb",
+      "text": "Increased attrition and longer completion times are primarily linked to non-tuition costs (e.g., housing, books) and the need to work long hours, not the removal of direct tuition fees. For low-income students, free tuition alleviates financial stress, potentially bolstering completion rates.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a1e73e91-82be-4d0b-b21b-d410c6756b2b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:19.780519"
+    },
+    {
+      "id": "079507f0-5e47-4dde-967a-a634338e721b",
+      "text": "Universal college education functions as an investment in human capital, yielding increased lifetime earnings and a larger future tax base that studies show often offsets the initial public expenditure over time, negating the zero-sum opportunity cost premise.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0dfd3793-4084-40e3-9953-de9657bcd7d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:23.486829"
+    },
+    {
+      "id": "318af2f1-dd0c-4086-8d5a-a79e9aae5847",
+      "text": "Universal access to higher education drives significant gains in national productivity and technology innovation, thereby increasing the total pool of public tax revenue available to fund other priorities like infrastructure.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "0dfd3793-4084-40e3-9953-de9657bcd7d6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:23.487270"
+    },
+    {
+      "id": "fa10e1cb-4839-4b01-88e5-cada7b9133b6",
+      "text": "Free tuition is adopted precisely to reduce financial barriers for low-income and minority students, significantly shifting demographic enrollment patterns. For example, Nordic countries' tuition-free systems show higher tertiary education participation rates among low-income students compared to systems with high fees.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e41d6189-4d39-4c46-82fa-77ce810f7ffd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:24.528298"
+    },
+    {
+      "id": "4b4448b3-db8d-4f43-81cd-c5701c5ffa7c",
+      "text": "The subsidy's regressivity hinges on the funding mechanism, not student demographics. If free tuition is funded by highly progressive taxes, such as wealth taxes or high marginal income tax rates, the policy results in a net transfer from the wealthiest to the recipients, making it a progressive redistribution.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "e41d6189-4d39-4c46-82fa-77ce810f7ffd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:24.529167"
+    },
+    {
+      "id": "a044085d-e144-4e41-8155-782e32a2129e",
+      "text": "Tuition is a direct financial cost that subtracts from the expected lifetime earnings premium, pushing the overall return on investment toward zero, regardless of the separate opportunity cost students face while attending.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7c4afeda-e18a-455d-83dc-675da5a95063",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:28.336761"
+    },
+    {
+      "id": "6a9bda9f-6c75-4c6e-9aad-a822f2f9d60d",
+      "text": "Educational programs requiring mandatory practical components, such as clinical placements in medicine or wet labs in chemistry, cannot be substituted by online delivery, still necessitating proportional increases in specialized physical infrastructure and qualified instructors.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "244759a9-c7e5-477d-96a9-3a0c323ab568",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:30.774973"
+    },
+    {
+      "id": "7b9c942f-5458-4bcc-a541-72624f51297b",
+      "text": "Transitioning to mass technological delivery replaces physical facility costs with equivalent fixed expenditures for complex IT infrastructure, continuous software licenses, robust cybersecurity systems, and specialized technical support staff.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "244759a9-c7e5-477d-96a9-3a0c323ab568",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:30.775422"
+    },
+    {
+      "id": "e5a3de38-e851-49c1-8c41-2a4a7dd7f0a7",
+      "text": "If non-tuition costs are the primary barrier identified, eliminating tuition provides insufficient relief, as housing and living expenses often constitute 60-80% of a low-income student's total cost of attendance, leaving the bulk of the financial stress unaddressed.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7e0cc24c-2c8a-4a5b-bea1-080d0e1dcabb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:32.125526"
+    },
+    {
+      "id": "f8b1b0e6-2eb2-4f8e-9e34-42a866047085",
+      "text": "European tuition-free models often rely on highly selective secondary school tracking and pre-university examinations (e.g., Germany's Abitur) to manage university enrollment, a structural prerequisite absent in many broader-access educational systems like the US.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "da4af4f9-1ac6-4bb6-a5d3-29bdcde8ae7c",
+      "children_count": 0,
+      "references": [
+        "https://www.jstor.org/stable/44369796"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:32.651105"
+    },
+    {
+      "id": "c47aa5f4-fc60-4742-8aa9-bf0015a6935d",
+      "text": "Relying on \"stringent eligibility requirements\" as the primary moderator merely substitutes a financial barrier with substantial academic or procedural hurdles, which undermines the core policy goal of increasing access for financially disadvantaged students.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "da4af4f9-1ac6-4bb6-a5d3-29bdcde8ae7c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:32.651922"
+    },
+    {
+      "id": "5293b47b-2663-42b0-adc7-ee2a6fb99c5d",
+      "text": "The funding of critical infrastructure does not necessarily require classification as an \"essential public good\"; essential services like telecommunications, air travel, and electric utilities are often successfully financed and managed by competitive private sectors.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "318af2f1-dd0c-4086-8d5a-a79e9aae5847",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:34.423617"
+    },
+    {
+      "id": "9eeaaf59-f5ab-4c02-b0b7-3fe7d1366d3b",
+      "text": "The high economic returns currently observed for a college degree depend on its relative selectivity; universal access inherently dilutes this signaling value and saturates the labor market, reducing the claimed marginal increase in lifetime earnings.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "079507f0-5e47-4dde-967a-a634338e721b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:34.833382"
+    },
+    {
+      "id": "cc439b7f-15d6-421a-8de3-9e4bb6971852",
+      "text": "Proving the investment pays for itself (positive ROI) does not negate the zero-sum opportunity cost premise, as the funds spent still represent the foregone opportunity of potentially higher returns from alternative public investments like infrastructure or early childhood education.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "079507f0-5e47-4dde-967a-a634338e721b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:34.834119"
+    },
+    {
+      "id": "70023041-86d8-406a-9a9b-aaba2c7788aa",
+      "text": "Higher education access remains stratified, meaning students from wealthier families are disproportionately represented in enrollment even with free tuition. Therefore, the direct subsidy itself remains distributionally regressive because the benefit primarily flows to the non-poor, independent of the funding structure's net redistributive effect.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4b4448b3-db8d-4f43-81cd-c5701c5ffa7c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:35.751011"
+    },
+    {
+      "id": "ec5e8f20-9ef0-4cb2-a22c-847b1bba71f2",
+      "text": "Higher low-income participation rates in Nordic nations result less from free tuition and more from generous student stipends and robust welfare supports that address living expenses and forgone income, which constitute the largest financial barrier to tertiary education attendance.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fa10e1cb-4839-4b01-88e5-cada7b9133b6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:36.458704"
+    },
+    {
+      "id": "350391f9-d386-44e9-8e90-fbb7390f96b1",
+      "text": "Generalizing the success of the high-equality Nordic model is flawed, as implementing free tuition in highly unequal societies does not guarantee the same results; research on US state-level programs shows that \"tuition-free\" efforts may disproportionately benefit middle-income applicants without significantly altering low-income enrollment demographics.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fa10e1cb-4839-4b01-88e5-cada7b9133b6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:36.459340"
+    },
+    {
+      "id": "9099124d-79ca-4461-9c11-a76035849b0a",
+      "text": "Eliminating physical facility costs\u2014leases, maintenance, and high utility consumption\u2014results in substantial net operational savings, as these expenditures dwarf the cost of complex IT infrastructure and specialized support staff.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7b9c942f-5458-4bcc-a541-72624f51297b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:42.151354"
+    },
+    {
+      "id": "11077fec-472e-4866-9923-2d7a235a3945",
+      "text": "Cloud-based solutions and specialized staff expenses are predominantly variable costs (scaling with usage), unlike physical fixed assets, providing greater budget flexibility and allowing capital expenditures to plummet compared to maintaining infrastructure.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7b9c942f-5458-4bcc-a541-72624f51297b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:42.151416"
+    },
+    {
+      "id": "71be2e0c-31ff-49c2-924b-18561f3f51a4",
+      "text": "The Tennessee STAR study, involving thousands of students, demonstrated that smaller class sizes (13-17 students) led to significant, long-term gains in standardized testing and educational attainment compared to larger control groups (22-25 students).",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:44.336846"
+    },
+    {
+      "id": "95873f6f-0778-4a8d-a856-1b6b4af2fb8c",
+      "text": "High-performing education systems globally, such as in South Korea and Finland, demonstrate that widespread access can be combined with high-quality teaching and professional resources, invalidating the implicit trade-off between \"basic access\" and \"restricted, high-cost quality.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:44.337265"
+    },
+    {
+      "id": "01774a7e-630e-41bf-967e-891782354ef0",
+      "text": "Educational decline is primarily measured by cognitive skill acquisition and curriculum mastery, not net economic returns; severely diluted programs often fail to equip students with the advanced critical thinking skills necessary for complex tasks and civic engagement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:44.337518"
+    },
+    {
+      "id": "d6f156d1-58de-4cd0-9af5-e9be7ccda7db",
+      "text": "Academic hurdles filter based on student preparedness and K-12 educational quality, not merely financial capacity, meaning they maintain meritocracy critical for maximizing public investment in free education, unlike direct financial barriers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c47aa5f4-fc60-4742-8aa9-bf0015a6935d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:44.509750"
+    },
+    {
+      "id": "54b5ba7b-16e4-4a2a-9c08-2f50e97a3365",
+      "text": "Eligibility requirements are essential for maintaining the quality and rigor of publicly funded institutions; tuition-free systems like Germany's often employ highly selective admission requirements to manage state resources and capacity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c47aa5f4-fc60-4742-8aa9-bf0015a6935d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:44.509797"
+    },
+    {
+      "id": "c9fcc77a-b5d9-42a2-a95d-168b9ed48e45",
+      "text": "Universal access increases national productivity and innovation capacity, a mechanism empirically confirmed by the rapid tertiary education expansion in high-growth nations like South Korea and Finland. This evidence contradicts the proposition that human capital accumulation inevitably leads to labor labor market oversaturation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9eeaaf59-f5ab-4c02-b0b7-3fe7d1366d3b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:50.670590"
+    },
+    {
+      "id": "30e3bbdc-2648-4d45-9af0-d3ae75609094",
+      "text": "The selectivity value is not inherently eliminated by universal access, as the rigorous assessment standards and difficulty of degree completion still signal desirable traits like sustained effort and technical aptitude to employers. Free-tuition systems in European nations like Germany and Norway preserve demanding academic standards, maintaining the completion signal necessary for wage premia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9eeaaf59-f5ab-4c02-b0b7-3fe7d1366d3b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:58:50.670617"
+    },
+    {
+      "id": "5233d599-a15d-4eb4-b71e-789d99a5bc67",
+      "text": "The specialized resources and low faculty-to-student ratios necessary for high-quality, advanced university instruction (e.g., engineering research) are inherently more capital-intensive than general K-12 education, meaning universal access without financial selectivity often leads to quality degradation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "95873f6f-0778-4a8d-a856-1b6b4af2fb8c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:00.590924"
+    },
+    {
+      "id": "f851900f-837a-4f78-820e-323e2c860c66",
+      "text": "High-quality, widespread access systems, like tuition-free public universities in Germany or the Nordic countries, confirm the necessity of high cost by requiring massive state investment funded through high taxation, simply shifting the cost burden from student to taxpayer rather than invalidating the trade-off.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "95873f6f-0778-4a8d-a856-1b6b4af2fb8c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:59:00.590950"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:57:25.139081"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:57:25.139081"
+    }
+  ],
+  "links": [
+    {
+      "source": "0b480c15-fe55-4e1e-adbd-9e3af7bffdd4",
+      "target": "2928e4ee-50c1-4fc1-94dd-ed212895e306",
+      "type": "objection"
+    },
+    {
+      "source": "0b480c15-fe55-4e1e-adbd-9e3af7bffdd4",
+      "target": "91ca98e7-a542-46af-8cf3-90453ab2d6d8",
+      "type": "objection"
+    },
+    {
+      "source": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "target": "ddd32e34-5b9e-46d3-8dfd-c19ca54c7e46",
+      "type": "objection"
+    },
+    {
+      "source": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "target": "f9d8b620-78fa-4d59-92c9-376320d4fcfd",
+      "type": "objection"
+    },
+    {
+      "source": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "target": "7f3d0525-f6dc-434e-92d0-67cf2ad997c7",
+      "type": "objection"
+    },
+    {
+      "source": "1f622eae-cb47-4736-85fe-ee7cef5b8b88",
+      "target": "9773fe02-70d4-42e0-9cfb-b2831502822b",
+      "type": "objection"
+    },
+    {
+      "source": "1f622eae-cb47-4736-85fe-ee7cef5b8b88",
+      "target": "42f0ffcf-c989-47ce-a301-b2a05890a2f7",
+      "type": "objection"
+    },
+    {
+      "source": "3bac1cd6-cdd7-4e06-8183-8861506ea317",
+      "target": "103d3847-5207-4e99-8765-c64016288621",
+      "type": "objection"
+    },
+    {
+      "source": "9773fe02-70d4-42e0-9cfb-b2831502822b",
+      "target": "92cf32f6-8ce6-4e89-83eb-2e621ac0feb7",
+      "type": "response"
+    },
+    {
+      "source": "9773fe02-70d4-42e0-9cfb-b2831502822b",
+      "target": "4100d6de-22bf-40c4-abd8-ec89506f776f",
+      "type": "response"
+    },
+    {
+      "source": "f9d8b620-78fa-4d59-92c9-376320d4fcfd",
+      "target": "7a080799-beb0-4396-a4d9-d12c70aec77b",
+      "type": "response"
+    },
+    {
+      "source": "f9d8b620-78fa-4d59-92c9-376320d4fcfd",
+      "target": "1e86f775-4ce2-4861-8289-1959ddc3feb9",
+      "type": "response"
+    },
+    {
+      "source": "91ca98e7-a542-46af-8cf3-90453ab2d6d8",
+      "target": "7eef1d4d-7b36-4402-b0e8-3673ebda12b5",
+      "type": "response"
+    },
+    {
+      "source": "91ca98e7-a542-46af-8cf3-90453ab2d6d8",
+      "target": "672eb373-0ba2-4246-9fcb-0ea117df19c7",
+      "type": "response"
+    },
+    {
+      "source": "103d3847-5207-4e99-8765-c64016288621",
+      "target": "bb312c8e-b74f-4336-b68c-7a41dd1a3042",
+      "type": "response"
+    },
+    {
+      "source": "103d3847-5207-4e99-8765-c64016288621",
+      "target": "bd7a7427-390a-46e8-940b-fda959cc2fe7",
+      "type": "response"
+    },
+    {
+      "source": "7a080799-beb0-4396-a4d9-d12c70aec77b",
+      "target": "406d6e50-f6c9-48d1-980b-fc3f25bb3328",
+      "type": "response"
+    },
+    {
+      "source": "7a080799-beb0-4396-a4d9-d12c70aec77b",
+      "target": "7e90bd51-0280-4f03-a66c-1f6e61e1b061",
+      "type": "response"
+    },
+    {
+      "source": "1e86f775-4ce2-4861-8289-1959ddc3feb9",
+      "target": "fcf35baa-79d5-4747-bfdf-2323ce3a3770",
+      "type": "response"
+    },
+    {
+      "source": "1e86f775-4ce2-4861-8289-1959ddc3feb9",
+      "target": "d102663f-b77f-4b6f-b240-d525bf783820",
+      "type": "response"
+    },
+    {
+      "source": "92cf32f6-8ce6-4e89-83eb-2e621ac0feb7",
+      "target": "b695b4b1-df26-4abb-b52c-8436325cfb83",
+      "type": "response"
+    },
+    {
+      "source": "92cf32f6-8ce6-4e89-83eb-2e621ac0feb7",
+      "target": "88878fc8-d288-459e-a40b-04e36e8d5e77",
+      "type": "response"
+    },
+    {
+      "source": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "target": "da4af4f9-1ac6-4bb6-a5d3-29bdcde8ae7c",
+      "type": "objection"
+    },
+    {
+      "source": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "target": "244759a9-c7e5-477d-96a9-3a0c323ab568",
+      "type": "objection"
+    },
+    {
+      "source": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "target": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "type": "objection"
+    },
+    {
+      "source": "a1e73e91-82be-4d0b-b21b-d410c6756b2b",
+      "target": "7c4afeda-e18a-455d-83dc-675da5a95063",
+      "type": "objection"
+    },
+    {
+      "source": "a1e73e91-82be-4d0b-b21b-d410c6756b2b",
+      "target": "7e0cc24c-2c8a-4a5b-bea1-080d0e1dcabb",
+      "type": "objection"
+    },
+    {
+      "source": "0dfd3793-4084-40e3-9953-de9657bcd7d6",
+      "target": "079507f0-5e47-4dde-967a-a634338e721b",
+      "type": "objection"
+    },
+    {
+      "source": "0dfd3793-4084-40e3-9953-de9657bcd7d6",
+      "target": "318af2f1-dd0c-4086-8d5a-a79e9aae5847",
+      "type": "objection"
+    },
+    {
+      "source": "e41d6189-4d39-4c46-82fa-77ce810f7ffd",
+      "target": "fa10e1cb-4839-4b01-88e5-cada7b9133b6",
+      "type": "objection"
+    },
+    {
+      "source": "e41d6189-4d39-4c46-82fa-77ce810f7ffd",
+      "target": "4b4448b3-db8d-4f43-81cd-c5701c5ffa7c",
+      "type": "objection"
+    },
+    {
+      "source": "7c4afeda-e18a-455d-83dc-675da5a95063",
+      "target": "a044085d-e144-4e41-8155-782e32a2129e",
+      "type": "response"
+    },
+    {
+      "source": "244759a9-c7e5-477d-96a9-3a0c323ab568",
+      "target": "6a9bda9f-6c75-4c6e-9aad-a822f2f9d60d",
+      "type": "response"
+    },
+    {
+      "source": "244759a9-c7e5-477d-96a9-3a0c323ab568",
+      "target": "7b9c942f-5458-4bcc-a541-72624f51297b",
+      "type": "response"
+    },
+    {
+      "source": "7e0cc24c-2c8a-4a5b-bea1-080d0e1dcabb",
+      "target": "e5a3de38-e851-49c1-8c41-2a4a7dd7f0a7",
+      "type": "response"
+    },
+    {
+      "source": "da4af4f9-1ac6-4bb6-a5d3-29bdcde8ae7c",
+      "target": "f8b1b0e6-2eb2-4f8e-9e34-42a866047085",
+      "type": "response"
+    },
+    {
+      "source": "da4af4f9-1ac6-4bb6-a5d3-29bdcde8ae7c",
+      "target": "c47aa5f4-fc60-4742-8aa9-bf0015a6935d",
+      "type": "response"
+    },
+    {
+      "source": "318af2f1-dd0c-4086-8d5a-a79e9aae5847",
+      "target": "5293b47b-2663-42b0-adc7-ee2a6fb99c5d",
+      "type": "response"
+    },
+    {
+      "source": "079507f0-5e47-4dde-967a-a634338e721b",
+      "target": "9eeaaf59-f5ab-4c02-b0b7-3fe7d1366d3b",
+      "type": "response"
+    },
+    {
+      "source": "079507f0-5e47-4dde-967a-a634338e721b",
+      "target": "cc439b7f-15d6-421a-8de3-9e4bb6971852",
+      "type": "response"
+    },
+    {
+      "source": "4b4448b3-db8d-4f43-81cd-c5701c5ffa7c",
+      "target": "70023041-86d8-406a-9a9b-aaba2c7788aa",
+      "type": "response"
+    },
+    {
+      "source": "fa10e1cb-4839-4b01-88e5-cada7b9133b6",
+      "target": "ec5e8f20-9ef0-4cb2-a22c-847b1bba71f2",
+      "type": "response"
+    },
+    {
+      "source": "fa10e1cb-4839-4b01-88e5-cada7b9133b6",
+      "target": "350391f9-d386-44e9-8e90-fbb7390f96b1",
+      "type": "response"
+    },
+    {
+      "source": "7b9c942f-5458-4bcc-a541-72624f51297b",
+      "target": "9099124d-79ca-4461-9c11-a76035849b0a",
+      "type": "response"
+    },
+    {
+      "source": "7b9c942f-5458-4bcc-a541-72624f51297b",
+      "target": "11077fec-472e-4866-9923-2d7a235a3945",
+      "type": "response"
+    },
+    {
+      "source": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "target": "71be2e0c-31ff-49c2-924b-18561f3f51a4",
+      "type": "response"
+    },
+    {
+      "source": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "target": "95873f6f-0778-4a8d-a856-1b6b4af2fb8c",
+      "type": "response"
+    },
+    {
+      "source": "46bc4974-3aa6-4219-b7b8-ec2691e184d6",
+      "target": "01774a7e-630e-41bf-967e-891782354ef0",
+      "type": "response"
+    },
+    {
+      "source": "c47aa5f4-fc60-4742-8aa9-bf0015a6935d",
+      "target": "d6f156d1-58de-4cd0-9af5-e9be7ccda7db",
+      "type": "response"
+    },
+    {
+      "source": "c47aa5f4-fc60-4742-8aa9-bf0015a6935d",
+      "target": "54b5ba7b-16e4-4a2a-9c08-2f50e97a3365",
+      "type": "response"
+    },
+    {
+      "source": "9eeaaf59-f5ab-4c02-b0b7-3fe7d1366d3b",
+      "target": "c9fcc77a-b5d9-42a2-a95d-168b9ed48e45",
+      "type": "response"
+    },
+    {
+      "source": "9eeaaf59-f5ab-4c02-b0b7-3fe7d1366d3b",
+      "target": "30e3bbdc-2648-4d45-9af0-d3ae75609094",
+      "type": "response"
+    },
+    {
+      "source": "95873f6f-0778-4a8d-a856-1b6b4af2fb8c",
+      "target": "5233d599-a15d-4eb4-b71e-789d99a5bc67",
+      "type": "response"
+    },
+    {
+      "source": "95873f6f-0778-4a8d-a856-1b6b4af2fb8c",
+      "target": "f851900f-837a-4f78-820e-323e2c860c66",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "0b480c15-fe55-4e1e-adbd-9e3af7bffdd4",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "b0a1433d-8c95-4f3d-a01e-4520c03a46b8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "3bac1cd6-cdd7-4e06-8183-8861506ea317",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "1f622eae-cb47-4736-85fe-ee7cef5b8b88",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "0dfd3793-4084-40e3-9953-de9657bcd7d6",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "e41d6189-4d39-4c46-82fa-77ce810f7ffd",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a3799bc0-94c5-4c39-ab8c-40973203147e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a1e73e91-82be-4d0b-b21b-d410c6756b2b",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

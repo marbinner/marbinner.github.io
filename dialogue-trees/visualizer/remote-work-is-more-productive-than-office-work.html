@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote work is more productive than office work - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #666;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 1px solid #a2a9b1;
+            transition: right 0.3s;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #72777d;
+        }
+
+        #sidebar h2 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+            padding-right: 30px;
+        }
+
+        #sidebar .node-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #202122;
+        }
+
+        #sidebar .node-meta {
+            font-size: 0.85em;
+            color: #72777d;
+            margin-bottom: 5px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .node.pro circle {
+            fill: #00af89;
+        }
+
+        .node.con circle {
+            fill: #dd5555;
+        }
+
+        /* Depth-based styling */
+        .node circle {
+            opacity: 1;
+        }
+
+        .node.depth-1 circle {
+            opacity: 0.9;
+        }
+
+        .node.depth-2 circle {
+            opacity: 0.8;
+        }
+
+        .node.depth-3 circle {
+            opacity: 0.7;
+        }
+
+        .node.depth-4 circle,
+        .node.depth-5 circle {
+            opacity: 0.6;
+        }
+
+        .node.highlighted circle {
+            stroke: #ffd700;
+            stroke-width: 4px;
+        }
+
+        .node.selected circle {
+            stroke: #0645ad;
+            stroke-width: 4px;
+        }
+
+        /* Adaptive font sizing based on depth */
+        .node.depth-0 text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .node.depth-1 text,
+        .node.depth-2 text {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .node.depth-3 text,
+        .node.depth-4 text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .node.depth-5 text {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #00af89;
+            border-color: #00af89;
+        }
+
+        .node-badge.con {
+            color: #dd5555;
+            border-color: #dd5555;
+        }
+
+        .node-badge.objection {
+            color: #cc6600;
+            border-color: #cc6600;
+        }
+
+        .node-badge.response {
+            color: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.3;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        /* Fisheye zoom effect on hover */
+        .node {
+            transition: transform 0.2s ease;
+        }
+
+        .node:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .node:hover circle {
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.pro {
+            stroke: #00af89;
+            stroke-opacity: 0.4;
+        }
+
+        .link.con {
+            stroke: #dd5555;
+            stroke-opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Remote work is more productive than office work</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            33 total nodes • Max depth: 2 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="fitToView()">Fit to View</button>
+
+        <div id="legend">
+            <h3>Statistics</h3>
+            <div style="font-size: 0.85em; color: #72777d; margin-bottom: 10px;">
+                <div style="margin-bottom: 3px;"><strong>Nodes:</strong> 33</div>
+                <div style="margin-bottom: 3px;"><strong>Max Depth:</strong> 2</div>
+                <div style="margin-bottom: 3px;"><strong>Pro:</strong> <span style="color: #00af89;">4</span></div>
+                <div style="margin-bottom: 3px;"><strong>Con:</strong> <span style="color: #dd5555;">4</span></div>
+            </div>
+
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00af89;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dd5555;"></div>
+                <span>Con / Opposing</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "2acea252-095b-40c3-9d7a-c6465a56ecc7",
+      "text": "The elimination of daily commuting saves significant time and reduces mental fatigue, allowing energy and focus to be redistributed entirely toward professional tasks and restorative rest.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:15.412028"
+    },
+    {
+      "id": "2845abea-aead-40c8-a8ca-3fdd5d0b0e65",
+      "text": "The reduction of common office distractions, such as noise interruptions and impromptu socializing, minimizes context switching and supports extended periods of crucial 'deep work.'",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:15.412719"
+    },
+    {
+      "id": "a42c88d4-8b81-405f-bc04-9ef04518fc80",
+      "text": "Flexibility in work schedules allows employees to align complex tasks with their individual peak performance times (chronotype), resulting in optimization of focused, high-quality output.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:15.413111"
+    },
+    {
+      "id": "7242f980-ba4d-42e8-a372-4c805c3850a3",
+      "text": "Remote environments foster a results-oriented culture by shifting performance evaluation away from 'presenteeism' toward measurable outputs and deliverables.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:15.413481"
+    },
+    {
+      "id": "74093e5e-50a7-46d3-b559-ad400f131b70",
+      "text": "Remote work frequently replaces \"presenteeism\" with activity surveillance, such as keystroke logging or screen monitoring, which track employee inputs rather than valuable outputs, thus failing to create a genuinely results-oriented culture.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7242f980-ba4d-42e8-a372-4c805c3850a3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:24.912169"
+    },
+    {
+      "id": "4efbf7ad-5e9e-45d9-a019-bea4bc7a8c35",
+      "text": "Complex tasks often require real-time synchronous collaboration with colleagues or external entities, meaning an employee's chronotype alone cannot dictate the optimal time for completion.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a42c88d4-8b81-405f-bc04-9ef04518fc80",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:25.014254"
+    },
+    {
+      "id": "5036fff3-9125-48ef-9d7a-ecc632634f96",
+      "text": "While chronotype alignment may improve performance, the claim of resulting in \"optimization\" is an unjustified leap, ignoring critical external variables like resource limitations, technical constraints, and managerial oversight necessary for genuinely maximizing quality.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a42c88d4-8b81-405f-bc04-9ef04518fc80",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:25.015066"
+    },
+    {
+      "id": "9c014373-8982-4e61-b15b-24914141c139",
+      "text": "Saved commuting time and energy are frequently absorbed by necessary domestic duties or personal life distractions rather than being redistributed entirely to professional work and rest, thus diminishing the claimed efficiency and rejuvenation gains.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "2acea252-095b-40c3-9d7a-c6465a56ecc7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:28.203505"
+    },
+    {
+      "id": "3ff75f9d-b6d0-45d3-9d87-feb1816af878",
+      "text": "The argument overgeneralizes, as many successful remote models entirely eschew intrusive surveillance, relying instead on key performance indicators (KPIs) and agreed-upon outcomes to create a genuinely results-oriented focus.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "74093e5e-50a7-46d3-b559-ad400f131b70",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:35.168427"
+    },
+    {
+      "id": "87509211-5274-40d9-ad9c-0f489b433e30",
+      "text": "The use of poor input surveillance, while detrimental, does not inherently prevent a results-oriented culture, provided that ultimate advancement, compensation, and mission success remain tied to valuable outputs and business impact.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "74093e5e-50a7-46d3-b559-ad400f131b70",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:35.168458"
+    },
+    {
+      "id": "66bbd6e3-09bb-422f-9898-8e26fa0d29a0",
+      "text": "Applying a maximalist definition of \"optimization\" (requiring perfect control over all variables) sets an impossible standard, dismissing factor-specific optimization\u2014like chronotype alignment\u2014which logically improves timing efficiency in isolation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5036fff3-9125-48ef-9d7a-ecc632634f96",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:38.140030"
+    },
+    {
+      "id": "b636abd2-997b-4ffd-b389-febaa5b13cc7",
+      "text": "Spontaneous, high-bandwidth in-person interactions accelerate complex problem-solving and foster emergent synergy, which is crucial for innovation and difficult to replicate via scheduled, low-bandwidth digital communication.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:38.140121"
+    },
+    {
+      "id": "df717eba-77ce-468f-967c-5130ed84779e",
+      "text": "The inherent lack of physical separation between work and home encourages \"always-on\" work habits, increasing cognitive load and accelerating employee burnout, which ultimately undermines sustainable long-term productivity.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:38.140713"
+    },
+    {
+      "id": "4d103ad5-7c18-412c-948d-715c300df551",
+      "text": "Effective performance monitoring and immediate corrective feedback are more challenging to deliver remotely, potentially allowing for delayed intervention on productivity dips and reducing overall team accountability and speed.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:38.141098"
+    },
+    {
+      "id": "329f7863-a4ce-4ba3-8874-5aa00e5804c5",
+      "text": "Remote setups rely on heterogeneous home technical infrastructures and delayed IT support, increasing technical friction and time lost to troubleshooting network issues, hardware malfunctions, or accessing secure internal resources.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:38.141444"
+    },
+    {
+      "id": "3eaa4030-8cfb-451b-b173-47bb3191bede",
+      "text": "The premise of heterogeneous infrastructure is flawed because companies often provide standardized, company-managed hardware and software to remote employees, mitigating most major compatibility issues and centralizing IT oversight.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "329f7863-a4ce-4ba3-8874-5aa00e5804c5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:49.196706"
+    },
+    {
+      "id": "030dd760-5184-4dbc-9ca5-e4c644f21193",
+      "text": "The conclusion that technical friction is \"increased\" ignores that the substantial time saved by eliminating the daily commute often significantly outweighs any marginal time lost to troubleshooting remote technical issues.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "329f7863-a4ce-4ba3-8874-5aa00e5804c5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:49.197382"
+    },
+    {
+      "id": "8ea0675c-af52-4e79-a882-5e5e12bf77cf",
+      "text": "The characterization of digital communication as strictly \"scheduled\" and \"low-bandwidth\" is flawed, as modern real-time collaboration tools enable high-fidelity, spontaneous interactions that simulate many dynamics of co-location.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b636abd2-997b-4ffd-b389-febaa5b13cc7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:49.914487"
+    },
+    {
+      "id": "21c3ff14-f080-41da-8655-41e5896fdcc4",
+      "text": "Innovation and complex problem-solving are frequently driven by structured, solitary deep work and expert specialization, meaning \"emergent synergy\" is not universally crucial for achieving innovative outcomes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b636abd2-997b-4ffd-b389-febaa5b13cc7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:49.915136"
+    },
+    {
+      "id": "3b24ddc0-1d2d-43a8-9b73-d55feecf55e6",
+      "text": "The argument fails to account for how remote work necessitates a shift toward objective, data-driven performance metrics and project management tools, which often enable faster, more quantifiable intervention on productivity dips than subjective in-person observation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4d103ad5-7c18-412c-948d-715c300df551",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:50.021190"
+    },
+    {
+      "id": "db09c215-f1ad-466f-b41a-60b19bc742c2",
+      "text": "Reduced supervisory feedback does not universally translate to lower accountability, as remote work often fosters greater reliance on peer accountability and self-managed team structures where visible shared deliverables naturally drive collective speed.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "4d103ad5-7c18-412c-948d-715c300df551",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:50.021775"
+    },
+    {
+      "id": "fc70c8c8-6107-4b7e-bf5d-778d1eb3e17a",
+      "text": "Organizational culture and managerial expectations enforcing responsiveness are the dominant drivers of 'always-on' behavior; these factors persist and cause burnout even when adequate physical separation exists.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "df717eba-77ce-468f-967c-5130ed84779e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:52.195628"
+    },
+    {
+      "id": "19ca3471-8050-46d7-aeae-96659fd8c25d",
+      "text": "The ability to flexibly segment the workday due to a lack of physical separation can lower overall stress by allowing better integration of personal life (e.g., breaks or appointments), thus potentially reducing the risk of cognitive overload.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "df717eba-77ce-468f-967c-5130ed84779e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:52.196613"
+    },
+    {
+      "id": "3589509b-54c5-4b05-9e4e-0397ec99036a",
+      "text": "The argument relies on an unsubstantiated quantitative assumption; for employees with short commutes or those facing frequent, severe technical failures, the \"marginal\" friction loss can easily outweigh the \"substantial\" time saved, negating the supposed net benefit.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "030dd760-5184-4dbc-9ca5-e4c644f21193",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:58.663413"
+    },
+    {
+      "id": "fce25f54-4258-46df-93b9-eeeedad5d0e7",
+      "text": "The cost of \"technical friction\" is not solely measured in time lost troubleshooting; the argument ignores critical non-time based costs such as reduced productivity from workflow interruption, data security vulnerabilities, and decreased quality of virtual collaboration.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "030dd760-5184-4dbc-9ca5-e4c644f21193",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:58.663447"
+    },
+    {
+      "id": "49e221f4-2418-44d7-8244-aa4d319661b7",
+      "text": "Digital tools fundamentally lack ambient awareness, which is the ability to passively observe a team member's availability, mood, and informal non-verbal cues without explicit scheduling or interaction; this passive awareness is central to the dynamics of co-location simulation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8ea0675c-af52-4e79-a882-5e5e12bf77cf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:59.138600"
+    },
+    {
+      "id": "6447dcc8-bcf3-4fb7-b75d-8a5169a89936",
+      "text": "Remote work heterogeneity remains high because many organizations utilize Bring Your Own Device (BYOD) policies, forcing IT to manage a non-standardized array of personal hardware and operating systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3eaa4030-8cfb-451b-b173-47bb3191bede",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:59.725958"
+    },
+    {
+      "id": "bda06557-494e-4ba7-ac10-32b1a585de3f",
+      "text": "Endpoint standardization only addresses client-side heterogeneity; it ignores the fundamental complexity and inherent diversity of core server, virtualization, and multi-cloud infrastructure environments.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3eaa4030-8cfb-451b-b173-47bb3191bede",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:00:59.726003"
+    },
+    {
+      "id": "35180660-27c1-4905-aa3c-eca130475dc7",
+      "text": "The argument assumes that organizational culture and processes successfully adapt; however, many organizations implement remote work without effectively developing or maintaining the high trust and collaboration necessary for peer accountability and self-management to fully compensate for reduced supervision.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "db09c215-f1ad-466f-b41a-60b19bc742c2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:01:00.226820"
+    },
+    {
+      "id": "9e58c50e-bc85-4252-a437-6f85bf6ef7d9",
+      "text": "Remote work does not strictly necessitate the shift to objective metrics; many high-performing teams maintain subjective, trust-based management focused solely on the final quality and delivery of output.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3b24ddc0-1d2d-43a8-9b73-d55feecf55e6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:01:00.845349"
+    },
+    {
+      "id": "ec5f07ff-57b5-4bb4-83d3-f4d2391ae116",
+      "text": "Interventions based solely on faster, quantifiable data often address symptoms rather than complex root causes, failing to capture the qualitative factors (e.g., morale, friction) that subjective observation provides.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3b24ddc0-1d2d-43a8-9b73-d55feecf55e6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:01:00.845383"
+    },
+    {
+      "id": "7721b84e-b890-4d3d-acd2-d321e932714e",
+      "text": "The lack of physical separation often causes work boundaries to collapse, creating an \"always-on\" expectation that invasively increases working hours and chronic stress, potentially negating the stress-reducing benefits of flexible segmentation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "19ca3471-8050-46d7-aeae-96659fd8c25d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:01:01.752375"
+    },
+    {
+      "id": "880c6c07-4530-4217-9021-a8f157bd98ff",
+      "text": "Individual psychological factors, such as career anxiety or personal ambition, can compel employees to exhibit 'always-on' behavior independently of explicit managerial mandates, undermining the claim that organizational culture is the dominant driver.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fc70c8c8-6107-4b7e-bf5d-778d1eb3e17a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:01:02.408263"
+    }
+  ],
+  "links": [
+    {
+      "source": "7242f980-ba4d-42e8-a372-4c805c3850a3",
+      "target": "74093e5e-50a7-46d3-b559-ad400f131b70",
+      "type": "objection"
+    },
+    {
+      "source": "a42c88d4-8b81-405f-bc04-9ef04518fc80",
+      "target": "4efbf7ad-5e9e-45d9-a019-bea4bc7a8c35",
+      "type": "objection"
+    },
+    {
+      "source": "a42c88d4-8b81-405f-bc04-9ef04518fc80",
+      "target": "5036fff3-9125-48ef-9d7a-ecc632634f96",
+      "type": "objection"
+    },
+    {
+      "source": "2acea252-095b-40c3-9d7a-c6465a56ecc7",
+      "target": "9c014373-8982-4e61-b15b-24914141c139",
+      "type": "objection"
+    },
+    {
+      "source": "74093e5e-50a7-46d3-b559-ad400f131b70",
+      "target": "3ff75f9d-b6d0-45d3-9d87-feb1816af878",
+      "type": "response"
+    },
+    {
+      "source": "74093e5e-50a7-46d3-b559-ad400f131b70",
+      "target": "87509211-5274-40d9-ad9c-0f489b433e30",
+      "type": "response"
+    },
+    {
+      "source": "5036fff3-9125-48ef-9d7a-ecc632634f96",
+      "target": "66bbd6e3-09bb-422f-9898-8e26fa0d29a0",
+      "type": "response"
+    },
+    {
+      "source": "329f7863-a4ce-4ba3-8874-5aa00e5804c5",
+      "target": "3eaa4030-8cfb-451b-b173-47bb3191bede",
+      "type": "objection"
+    },
+    {
+      "source": "329f7863-a4ce-4ba3-8874-5aa00e5804c5",
+      "target": "030dd760-5184-4dbc-9ca5-e4c644f21193",
+      "type": "objection"
+    },
+    {
+      "source": "b636abd2-997b-4ffd-b389-febaa5b13cc7",
+      "target": "8ea0675c-af52-4e79-a882-5e5e12bf77cf",
+      "type": "objection"
+    },
+    {
+      "source": "b636abd2-997b-4ffd-b389-febaa5b13cc7",
+      "target": "21c3ff14-f080-41da-8655-41e5896fdcc4",
+      "type": "objection"
+    },
+    {
+      "source": "4d103ad5-7c18-412c-948d-715c300df551",
+      "target": "3b24ddc0-1d2d-43a8-9b73-d55feecf55e6",
+      "type": "objection"
+    },
+    {
+      "source": "4d103ad5-7c18-412c-948d-715c300df551",
+      "target": "db09c215-f1ad-466f-b41a-60b19bc742c2",
+      "type": "objection"
+    },
+    {
+      "source": "df717eba-77ce-468f-967c-5130ed84779e",
+      "target": "fc70c8c8-6107-4b7e-bf5d-778d1eb3e17a",
+      "type": "objection"
+    },
+    {
+      "source": "df717eba-77ce-468f-967c-5130ed84779e",
+      "target": "19ca3471-8050-46d7-aeae-96659fd8c25d",
+      "type": "objection"
+    },
+    {
+      "source": "030dd760-5184-4dbc-9ca5-e4c644f21193",
+      "target": "3589509b-54c5-4b05-9e4e-0397ec99036a",
+      "type": "response"
+    },
+    {
+      "source": "030dd760-5184-4dbc-9ca5-e4c644f21193",
+      "target": "fce25f54-4258-46df-93b9-eeeedad5d0e7",
+      "type": "response"
+    },
+    {
+      "source": "8ea0675c-af52-4e79-a882-5e5e12bf77cf",
+      "target": "49e221f4-2418-44d7-8244-aa4d319661b7",
+      "type": "response"
+    },
+    {
+      "source": "3eaa4030-8cfb-451b-b173-47bb3191bede",
+      "target": "6447dcc8-bcf3-4fb7-b75d-8a5169a89936",
+      "type": "response"
+    },
+    {
+      "source": "3eaa4030-8cfb-451b-b173-47bb3191bede",
+      "target": "bda06557-494e-4ba7-ac10-32b1a585de3f",
+      "type": "response"
+    },
+    {
+      "source": "db09c215-f1ad-466f-b41a-60b19bc742c2",
+      "target": "35180660-27c1-4905-aa3c-eca130475dc7",
+      "type": "response"
+    },
+    {
+      "source": "3b24ddc0-1d2d-43a8-9b73-d55feecf55e6",
+      "target": "9e58c50e-bc85-4252-a437-6f85bf6ef7d9",
+      "type": "response"
+    },
+    {
+      "source": "3b24ddc0-1d2d-43a8-9b73-d55feecf55e6",
+      "target": "ec5f07ff-57b5-4bb4-83d3-f4d2391ae116",
+      "type": "response"
+    },
+    {
+      "source": "19ca3471-8050-46d7-aeae-96659fd8c25d",
+      "target": "7721b84e-b890-4d3d-acd2-d321e932714e",
+      "type": "response"
+    },
+    {
+      "source": "fc70c8c8-6107-4b7e-bf5d-778d1eb3e17a",
+      "target": "880c6c07-4530-4217-9021-a8f157bd98ff",
+      "type": "response"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Character limits based on depth
+            const limits = {
+                0: 100,  // Root nodes - show more
+                1: 80,
+                2: 60,
+                3: 40,
+                4: 30,
+                5: 25
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            const widths = {
+                0: 180,
+                1: 150,
+                2: 130,
+                3: 100,
+                4: 80,
+                5: 70
+            };
+
+            const heights = {
+                0: 60,
+                1: 50,
+                2: 45,
+                3: 40,
+                4: 35,
+                5: 30
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 70,
+                height: heights[Math.min(d.depth, 5)] || 30
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Create force simulation with improved parameters
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Longer links for deeper nodes
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return 120 + (depth * 20);
+            }))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            });
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes with improved tooltips
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showNodeDetails(d);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation();
+                toggleSubtree(d);
+            })
+            .append("title")
+            .text(d => getTooltipText(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height);
+
+            // Create HTML content with badge and text
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center");
+
+            // Add badge (only for depth 0-1 to avoid clutter)
+            if (d.depth <= 1) {
+                div.append("xhtml:div")
+                    .attr("class", `node-badge ${d.type}`)
+                    .text(d.type);
+            }
+
+            // Add text content
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.depth === 0 ? "13px" : (d.depth <= 2 ? "11px" : "10px"))
+                .style("font-weight", d.depth === 0 ? "600" : "500")
+                .text(displayText);
+        });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebar-content");
+
+            let html = `
+                <h2>Argument Details</h2>
+                <div class="node-text">${d.text}</div>
+                <div class="node-meta"><strong>Type:</strong> ${d.type}</div>
+                <div class="node-meta"><strong>Side:</strong> ${d.side}</div>
+                <div class="node-meta"><strong>Depth:</strong> ${d.depth}</div>
+                <div class="node-meta"><strong>Children:</strong> ${d.children_count}</div>
+                <div class="node-meta"><strong>Source:</strong> ${d.source}</div>
+            `;
+
+            if (d.references && d.references.length > 0) {
+                html += '<div class="node-meta"><strong>References:</strong></div><ul>';
+                d.references.forEach(ref => {
+                    html += `<li style="margin-left: 20px; font-size: 0.85em;"><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+                html += '</ul>';
+            }
+
+            content.innerHTML = html;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset view
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+        }
+
+        // Fit graph to view
+        function fitToView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.9;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

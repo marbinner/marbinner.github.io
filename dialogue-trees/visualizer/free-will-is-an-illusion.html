@@ -1,0 +1,2894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free will is an illusion - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Free will is an illusion</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            84 total nodes • Max depth: 2 •
+            Version 5
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/free-will-is-an-illusion.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">84</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "9f3f804a-8fed-4ed0-bf9f-3dd2f764948c",
+      "text": "Human decisions are physical processes governed by the immutable laws of physics and the prior state of the universe, including the nervous system. Since these natural laws dictate a singular outcome for any given set of initial conditions, any decision made is the only one physically possible, nullifying genuine freedom of choice.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:58.563551+00:00"
+    },
+    {
+      "id": "cdf24cb3-ec18-4301-977b-b7f598faf43a",
+      "text": "Studies using EEG and fMRI, such as the seminal Libet experiments, show that measurable brain activity initiates an action hundreds of milliseconds before the subject is consciously aware of the decision to act. This temporal gap suggests that conscious awareness merely tracks, rather than causes, the neural process leading to action.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Libet's experiments"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:58.564693+00:00"
+    },
+    {
+      "id": "3c3acf8b-f45f-4721-9bc4-293ed86d087b",
+      "text": "The concept of free will is logically incoherent because a choice must either be causally determined by prior states (not free) or be purely random (not an exercise of will). Since neither a determined event nor a random event constitutes volitional control, genuine self-causation is impossible.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:58.565438+00:00"
+    },
+    {
+      "id": "18696dd1-4e53-400f-9210-3784863a8ff1",
+      "text": "An individual's personality, desires, and cognitive biases are determined solely by their unique genetic makeup and lifelong environmental conditioning, factors they did not choose. The \"self\" making the decision is therefore merely the determined, unchosen outcome of inherited and learned elements.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:58.565903+00:00"
+    },
+    {
+      "id": "8efbff55-419d-4936-9e34-5ba2c189bb4a",
+      "text": "Even if quantum mechanics introduces physical indeterminacy, this randomness translates only into unpredictable outcomes at the micro-level, not conscious self-causation. A random event is fundamentally uncontrollable and cannot represent an act of volitional free will.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:58.566359+00:00"
+    },
+    {
+      "id": "4b018bb4-1b80-4965-951a-df7aa0172bf0",
+      "text": "The powerful subjective feeling of having free will is an adaptive cognitive illusion honed by evolution to facilitate social cooperation and long-term planning. This illusion enables the moral systems necessary for accountability and group cohesion, independent of metaphysical reality.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:35:58.566848+00:00"
+    },
+    {
+      "id": "b2d2fc28-9e7b-4966-b144-75633fd07a71",
+      "text": "The measured Readiness Potential is a non-specific accumulation of neural noise that precedes many actions, not the dedicated brain activity signaling the final commitment to a specific motor outcome. Later research suggests the true point of commitment occurs much closer to the reported time of conscious decision.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cdf24cb3-ec18-4301-977b-b7f598faf43a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:10.285778+00:00"
+    },
+    {
+      "id": "3c27150b-ceef-453f-95d5-1fd7161c5f7c",
+      "text": "Generalizing findings from simple, spontaneous motor tasks, such as arbitrary button presses in laboratory settings, to complex, deliberative decisions, like moral choices or long-term planning, is an unwarranted leap. Complex actions involve sustained conscious intent and inhibitory control that these studies do not test.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "cdf24cb3-ec18-4301-977b-b7f598faf43a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:10.285836+00:00"
+    },
+    {
+      "id": "b858f3c1-f996-43ed-a477-7d8dde5069c8",
+      "text": "Quantum mechanics describes the fundamental physical state of particles and fields as governed by probability distributions, such as in the observed decay of a radioactive atom. Therefore, the laws of physics do not universally dictate a singular outcome for all initial conditions within the nervous system.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9f3f804a-8fed-4ed0-bf9f-3dd2f764948c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:14.144833+00:00"
+    },
+    {
+      "id": "86a67487-5a6f-4903-b7f4-12547503ffd2",
+      "text": "Philosophers like David Hume define freedom as the capacity to act according to one's desires and reasons, even if those reasons are fundamentally determined. This compatibilist view holds that genuine freedom requires decision-making processes rooted in the agent's determined character and motives, not an uncaused break in the causal chain.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9f3f804a-8fed-4ed0-bf9f-3dd2f764948c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:14.144893+00:00"
+    },
+    {
+      "id": "9dfcdf7e-0c9e-43a7-86b1-582ca1b3c172",
+      "text": "Accountability systems in many societies rely on consequentialism\u2014deterring future harmful acts\u2014rather than requiring individual metaphysical free will for moral justification. Historical adherence to strict moral codes and social cohesion, as seen in historical Calvinist communities, functioned effectively despite emphasizing predestination over individual agency.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4b018bb4-1b80-4965-951a-df7aa0172bf0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:16.218583+00:00"
+    },
+    {
+      "id": "3da5767d-1b45-4aa9-9a3a-2f3758535d6f",
+      "text": "Neurological evidence, such as the consistent detection of the readiness potential preceding the conscious intention to act in Libet\u2019s experiments (1983), indicates that the adaptive mechanism is initiated unconsciously. This suggests the subjective feeling of free will is an epiphenomenal byproduct, not the active component driving cooperation or planning behavior.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "4b018bb4-1b80-4965-951a-df7aa0172bf0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:16.218648+00:00"
+    },
+    {
+      "id": "12805229-be6e-4de4-9331-224b3804b2c5",
+      "text": "Quantum biology mechanisms like electron tunneling are essential for key macro-level biological processes such as enzyme function and DNA repair. The Penrose-Hameroff Orchestrated Objective Reduction theory proposes that quantum processes within neuronal microtubules could be amplified to influence large-scale conscious decisions, challenging the confinement of indeterminism to the micro-level.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8efbff55-419d-4936-9e34-5ba2c189bb4a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:17.614353+00:00"
+    },
+    {
+      "id": "ece7767d-62e5-4a4f-826c-140caae3c4b2",
+      "text": "Libertarian models of free will, such as those detailed by Robert Kane, assert that quantum indeterminacy provides a necessary condition by breaking causal determinism. This indeterminacy enables the agent's willed effort to resolve a conflicted internal choice into a reasoned, controllable action, contradicting the idea that all randomness must result in an uncontrollable outcome.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "8efbff55-419d-4936-9e34-5ba2c189bb4a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:17.614419+00:00"
+    },
+    {
+      "id": "d53f1067-2aa3-4358-a778-6989b2652d31",
+      "text": "Roderick Chisholm's theory of agent causation posits that the agent, as a substance, directly initiates a new causal chain without being moved by prior events, establishing a third option besides determination or randomness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3c3acf8b-f45f-4721-9bc4-293ed86d087b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:26.206487+00:00"
+    },
+    {
+      "id": "c5ced584-c1ac-4d2e-8d92-711cc036c24e",
+      "text": "Philosophers like David Hume defined free action as voluntary action stemming directly from one's own internal desires and character, allowing for moral accountability even if those desires are causally determined.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "3c3acf8b-f45f-4721-9bc4-293ed86d087b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:26.206568+00:00"
+    },
+    {
+      "id": "79552a08-552f-484d-833d-93c17e453e9b",
+      "text": "Existentialists like Jean-Paul Sartre asserted that consciousness possesses radical freedom, arguing in Being and Nothingness that existence precedes essence and the self is defined only by chosen actions, not predetermined components.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "18696dd1-4e53-400f-9210-3784863a8ff1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.021475+00:00"
+    },
+    {
+      "id": "298f1023-1da4-4b6f-a3b0-ba98f408c3f9",
+      "text": "Neuroplasticity demonstrates the self is not merely a sum of inputs, as focused mental training (e.g., in studies of long-term meditators) actively causes structural reorganization of prefrontal brain regions.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "18696dd1-4e53-400f-9210-3784863a8ff1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.021516+00:00"
+    },
+    {
+      "id": "5c3ed62f-0e5f-4900-8784-586401de0d5a",
+      "text": "The foundation of established justice systems, such as the US legal code, requires the concept of mens rea (guilty mind) to assign culpability for crimes. Without genuine free will, moral responsibility evaporates, rendering all systems of praise, punishment, and repentance fundamentally incoherent.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.021616+00:00"
+    },
+    {
+      "id": "47d39026-65d7-4da3-b05a-519cde3b7987",
+      "text": "The functional purpose of deliberation is to integrate conflicting utilities and long-term goals into a singular selection; this necessary cognitive process is a real mechanism for generating outcomes, not a subjective illusion.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.022281+00:00"
+    },
+    {
+      "id": "3ae63f98-db9a-4ada-becf-3cec45e2b503",
+      "text": "Contract law and criminal justice systems require the capacity for intentional choice because accountability\u2014the basis for damages or punishment\u2014vanishes if actions are purely determined.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.022724+00:00"
+    },
+    {
+      "id": "09b89ca0-cd51-4b75-a811-bdcd2ae13c03",
+      "text": "Accepting determinism often leads to consequentialist harms by reducing personal motivation, effort, and prosocial behavior, resulting in fatalism. If individuals believe their actions are inconsequential, societal drivers like environmental stewardship or entrepreneurial risk-taking diminish.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.023150+00:00"
+    },
+    {
+      "id": "2f32be02-1bab-49f6-9173-d7a01b277e58",
+      "text": "Neuroscientific critiques relying on measurements of the Readiness Potential only apply to simple, low-stakes motor activities, such as deciding to tap a button. Extrapolating these findings to disprove complex, identity-shaping decisions requiring long-term rational deliberation, such as filing for divorce or changing careers, is an unwarranted generalization.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.024215+00:00"
+    },
+    {
+      "id": "b38d2c36-8a7f-4c4d-9284-84ebd75d45f4",
+      "text": "Denial of free will diminishes the perceived dignity of individuals by reducing them to purely mechanical systems determined solely by past causes and biology. This deterministic viewpoint undermines the fundamental assumption that human beings are rational and creative agents capable of self-improvement and original thought.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:32.025427+00:00"
+    },
+    {
+      "id": "979a0468-6233-466c-8e7f-0bb52323297f",
+      "text": "The subjective feeling of deliberation is a complex mental state, which does not logically prove the absence of a complete causal chain; the feeling itself could be the predetermined neurological consequence of brain computation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "47d39026-65d7-4da3-b05a-519cde3b7987",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:41.585515+00:00"
+    },
+    {
+      "id": "96969fa4-ce8d-4753-ae04-21d0a329019b",
+      "text": "Neurological studies of \"readiness potential\" consistently show brain activity initiating a decision seconds before the subject reports the subjective feeling of conscious intent, suggesting conscious deliberation is an after-the-fact recognition, not the cause of the selection.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "47d39026-65d7-4da3-b05a-519cde3b7987",
+      "children_count": 2,
+      "references": [
+        "Libet experiments"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:41.585578+00:00"
+    },
+    {
+      "id": "13589b87-1273-45c6-b664-484ad4f40a75",
+      "text": "The philosophical position of Compatibilism, championed by thinkers like Daniel Dennett, affirms that moral responsibility and inherent human dignity remain fully meaningful, even if the universe operates under deterministic laws.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b38d2c36-8a7f-4c4d-9284-84ebd75d45f4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:46.897007+00:00"
+    },
+    {
+      "id": "ab397136-460f-4f92-a7d3-34acbc09d4f6",
+      "text": "Cognitive Behavioral Therapy (CBT) successfully facilitates profound self-improvement and behavioral change by identifying the specific deterministic causes, such as past conditioning, of maladaptive thoughts and actions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b38d2c36-8a7f-4c4d-9284-84ebd75d45f4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:46.897061+00:00"
+    },
+    {
+      "id": "3e862ce0-c49f-4084-be42-4337b9ad75da",
+      "text": "Mens rea in established legal systems, such as the standard used in the M'Naghten rules, requires only the capacity for rational choice and understanding, not proof of metaphysical \"genuine free will.\"",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5c3ed62f-0e5f-4900-8784-586401de0d5a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:47.202870+00:00"
+    },
+    {
+      "id": "6744166e-5d7a-406e-9842-94fb9637ceea",
+      "text": "Punishment systems remain coherent and necessary for consequentialist functions like deterrence and incapacitation, exemplified by state interventions such as quarantining medically dangerous individuals who bear no moral blame.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "5c3ed62f-0e5f-4900-8784-586401de0d5a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:47.202934+00:00"
+    },
+    {
+      "id": "39b13ac4-5757-46f2-abd7-d0d80dd58c0e",
+      "text": "Strict liability offenses in legal jurisdictions, such as environmental pollution or commercial food safety violations in the US, assign penalties regardless of the actor's intent or knowledge. Legal institutions successfully enforce objective standards based on outcomes, not solely on intentional action.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3ae63f98-db9a-4ada-becf-3cec45e2b503",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:48.861270+00:00"
+    },
+    {
+      "id": "fb2701ac-5d94-41e9-aafe-f8721b4269f7",
+      "text": "Criminal law defenses based on the M'Naghten Rules in common law countries separate intent from the required rational capacity, resulting in verdicts like \"guilty but insane.\" Legal systems often require a specific rational understanding of wrongfulness beyond simple intentional choice for full culpability.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "3ae63f98-db9a-4ada-becf-3cec45e2b503",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:48.861323+00:00"
+    },
+    {
+      "id": "63316f52-316c-4dfc-8761-ec327ad1083c",
+      "text": "Philosopher Daniel Dennett argues in \"Elbow Room\" that determined choices are still meaningful and consequential, asserting free will is compatible with determinism. Therefore, the belief in determinism does not logically require the fatalistic stance that individual actions are inconsequential.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "09b89ca0-cd51-4b75-a811-bdcd2ae13c03",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:49.427488+00:00"
+    },
+    {
+      "id": "9380b92c-74d6-45f4-ba64-5bea3ec48ea2",
+      "text": "Studies on the behavioral effects of philosophical determinism show mixed results, as seen when historical communities with fatalistic religious doctrines, such as early American Puritan sects, demonstrated high levels of entrepreneurial effort and economic motivation. This suggests that determinism does not universally reduce prosocial behavior or risk-taking.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "09b89ca0-cd51-4b75-a811-bdcd2ae13c03",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:49.427543+00:00"
+    },
+    {
+      "id": "fcda7b16-38b9-48ee-a88c-e5d7be73b501",
+      "text": "Studies using fMRI and multivariate pattern analysis have decoded abstract decisions, such as choosing from a set of monetary gambling options, up to 11 seconds before the subject reports conscious intent, indicating pre-conscious mechanisms apply to non-motor, complex cognitive tasks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2f32be02-1bab-49f6-9173-d7a01b277e58",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:53.737005+00:00"
+    },
+    {
+      "id": "5651102a-767e-4573-8d69-cd51865b01c5",
+      "text": "Hierarchical control models demonstrate that planning complex, deliberate long-term actions, such as navigating a multi-stage process or city, relies on the same fundamental preparatory brain regions, the supplementary motor areas (SMAs), involved in executing simple motor tasks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "2f32be02-1bab-49f6-9173-d7a01b277e58",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:36:53.737033+00:00"
+    },
+    {
+      "id": "db47ea5c-4cf3-425c-b8ea-5c8a51a3badf",
+      "text": "Decoding studies using fMRI and EEG have shown that the specific outcome (e.g., left or right) of a simple button press can be predicted from activity in the parietal and frontal cortex up to 7 seconds before subjects report conscious awareness of their choice. This prediction capability proves the signal is highly specific, not non-specific neural noise.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b2d2fc28-9e7b-4966-b144-75633fd07a71",
+      "children_count": 0,
+      "references": [
+        "Soon, C. S., Brass, M., Heinze, H.-J., & Haynes, J.-D. (2008). Unconscious determinants of free decisions in the human brain. Nature Neuroscience, 11(5), 543-545."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:45.233314+00:00"
+    },
+    {
+      "id": "279152f6-ff5e-4f6c-8c04-c4e03f57e9bb",
+      "text": "Even if the final decision signal appears later, the temporal gap remains: consciousness only occurs after the brain has initiated the process. The role of consciousness is thereby limited to a \"veto\" or \"free won't,\" which inhibits an already-decided action, rather than initiating the action itself.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b2d2fc28-9e7b-4966-b144-75633fd07a71",
+      "children_count": 0,
+      "references": [
+        "Haggard, P. (2008). Human volition: towards a neuroscience of will. Nature Reviews Neuroscience, 9(12), 934-946."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:45.233390+00:00"
+    },
+    {
+      "id": "186d78df-f38f-458f-bb29-55c4061d12f0",
+      "text": "Even in tasks that explicitly incorporate inhibitory control\u2014the ability to veto an action\u2014studies show that the command to move initiates in the brain before subjects gain conscious awareness of the urge to act or the decision to stop it. This suggests the underlying mechanism of unconscious preparation is operational even with conscious veto added.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3c27150b-ceef-453f-95d5-1fd7161c5f7c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:51.564607+00:00"
+    },
+    {
+      "id": "f921c26d-8fb3-4f2c-956a-c8825f01fa6b",
+      "text": "Neuroscientific studies utilizing fMRI and machine learning models have successfully predicted abstract, high-level decisions, such as goal setting or choosing between monetary rewards, up to 7 to 10 seconds before the subject reports conscious awareness. This evidence extends the findings well beyond simple, spontaneous motor tasks.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3c27150b-ceef-453f-95d5-1fd7161c5f7c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:51.564637+00:00"
+    },
+    {
+      "id": "fd1a5e11-a741-4a2d-bab7-6fd603ed9762",
+      "text": "The brain operates at a macroscopic scale where quantum mechanical probabilities decohere, meaning the system's dynamics are effectively governed by deterministic, classical neurophysiology. Macroscopic processes like neuronal firing and synaptic transmission average out quantum noise, confirming that the brain is functionally deterministic regardless of micro-scale indeterminism.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b858f3c1-f996-43ed-a477-7d8dde5069c8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:56.670427+00:00"
+    },
+    {
+      "id": "c87e775a-9509-4e14-9c4f-af1631ff3ba2",
+      "text": "Replacing deterministic physical laws with quantum indeterminacy does not validate free will, but merely substitutes a predictable outcome with a random one. A decision caused by a probabilistic subatomic event is arbitrary and uncontrollable, failing to meet the requirement that a free choice must be controlled and willed by the choosing agent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b858f3c1-f996-43ed-a477-7d8dde5069c8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:56.670476+00:00"
+    },
+    {
+      "id": "e7ff3e34-e8f2-4018-9060-5d76af776f0b",
+      "text": "Benjamin Libet's 1980s experiments demonstrated that the brain's readiness potential precedes the conscious decision to act by hundreds of milliseconds. This mechanism indicates that acting according to ones desires is actually the brain initiating action, with the conscious desire appearing too late to be the causal source of the choice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "86a67487-5a6f-4903-b7f4-12547503ffd2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.957230+00:00"
+    },
+    {
+      "id": "7d4f7c0f-5bda-42f2-b7ab-fa85d60ba523",
+      "text": "Immanuel Kant, in the Groundwork of the Metaphysics of Morals (1785), differentiated between acting from heteronomy (determined inclination) and autonomy (self-legislated moral law). This distinction shows that merely acting according to ones strongest determined desire does not constitute the moral freedom required for responsibility.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "86a67487-5a6f-4903-b7f4-12547503ffd2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.957277+00:00"
+    },
+    {
+      "id": "89efed55-f32c-4892-9226-0f99c64d6721",
+      "text": "The core justification for severe sanctions in common law countries (like the US and UK) is retributive justice, requiring the mens rea (intentionality) that presumes a culpable free choice, showing that accountability extends beyond mere consequential deterrence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9dfcdf7e-0c9e-43a7-86b1-582ca1b3c172",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.725662+00:00"
+    },
+    {
+      "id": "fc640cff-eabb-4caf-b603-455eab37d4b4",
+      "text": "Predestination, as practiced by historical Calvinists, led to the psychological necessity of demonstrating one's \"elected\" status through moral effort and compliance, functionally requiring and reinforcing the experience of making rational choices in daily life.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9dfcdf7e-0c9e-43a7-86b1-582ca1b3c172",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.725701+00:00"
+    },
+    {
+      "id": "b4f63fe4-6480-4bf9-b9ba-9f8bbe2a51a3",
+      "text": "Libet's methodology is limited to arbitrary, spontaneous motor actions like flicking a wrist and does not address complex decisions involving moral reasoning, planning, or weighing long-term consequences. The readiness potential (RP) might only represent general motor preparation, not the specific selection of one cognitive intention over competing alternatives.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3da5767d-1b45-4aa9-9a3a-2f3758535d6f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:32.867884+00:00"
+    },
+    {
+      "id": "a5da9f2b-785a-479d-9e51-96a5ca3ee981",
+      "text": "Libet's own findings, corroborated by later studies, indicate that the conscious will maintains a \"veto power,\" enabling a person to consciously stop the initiated action before it executes. This conscious ability to inhibit or refuse a pre-motor urge is itself a demonstration of active willful control.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3da5767d-1b45-4aa9-9a3a-2f3758535d6f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:32.867923+00:00"
+    },
+    {
+      "id": "47cc5ab2-18ea-4b77-92ab-8172a2d7b577",
+      "text": "The brain's wet, noisy thermal environment causes rapid quantum decoherence within picoseconds, preventing the sustained quantum coherence required across large neuronal networks to influence a macro-level conscious decision.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "12805229-be6e-4de4-9331-224b3804b2c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:38.288509+00:00"
+    },
+    {
+      "id": "3cf934d1-26df-4f52-9a16-b47d46256a43",
+      "text": "Indeterministic quantum fluctuations result in random events, not meaningful, purposeful choice required for the definition of free will. Therefore, replacing strict physical determinism with quantum probability still results in a process lacking agency.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "12805229-be6e-4de4-9331-224b3804b2c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:38.288549+00:00"
+    },
+    {
+      "id": "c39cd660-1c13-4f16-8b0a-d80e1538fd8e",
+      "text": "Quantum effects exist at the subatomic level and decohere too rapidly within the warm, wet environment of the brain to influence macro-scale decisions. Macroscopic neural signaling, accurately described by the deterministic classical physics of the Hodgkin-Huxley model, demonstrates that quantum randomness does not scale up to affect rational choice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ece7767d-62e5-4a4f-826c-140caae3c4b2",
+      "children_count": 0,
+      "references": [
+        "Hodgkin-Huxley model"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:49.928962+00:00"
+    },
+    {
+      "id": "b54b2cff-29ef-405d-8716-850f1c7f5f88",
+      "text": "Introducing randomness into the decision-making process means the resulting choice is arbitrary and non-rational, not an intended act of the controlling self. Empirical studies, including the Libet experiments (1983), show measurable brain activity precedes the conscious decision to act, suggesting \"willed effort\" follows the neural preparation, challenging its causal role.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ece7767d-62e5-4a4f-826c-140caae3c4b2",
+      "children_count": 0,
+      "references": [
+        "Libet experiments 1983"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:49.929011+00:00"
+    },
+    {
+      "id": "aaa84878-9a44-4083-b97a-524f46e4399d",
+      "text": "Agent causation fails to explain why the agent chooses one specific action over another at a given time; if the choice is not influenced by prior beliefs, desires, or character, the action is arbitrary and thus functionally equivalent to randomness.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d53f1067-2aa3-4358-a778-6989b2652d31",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.128179+00:00"
+    },
+    {
+      "id": "3bfb032d-b97e-4691-832a-71228e61ecc5",
+      "text": "The concept of an uncaused agent initiating a physical causal chain violates the fundamental physical principle of causal closure, which holds that every physical effect has a sufficient physical cause, requiring unexplained energy input.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d53f1067-2aa3-4358-a778-6989b2652d31",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:56.128220+00:00"
+    },
+    {
+      "id": "1b02bfb2-4dfa-4682-b9d6-872122810785",
+      "text": "Immanuel Kant argued in the Groundwork of the Metaphysic of Morals that genuine moral accountability requires an autonomous will choosing the moral law, not simply acting on determination by internal desires like Hume proposed. Actions determined solely by prior causal chains eliminate moral desert, because the agent is not logically the ultimate source or uncaused cause of the action, even if the action is voluntary.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c5ced584-c1ac-4d2e-8d92-711cc036c24e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:09.087910+00:00"
+    },
+    {
+      "id": "f51a3276-022d-4945-9688-546ba19de3d7",
+      "text": "The addict acting voluntarily on a compulsion to use drugs still feels constraint, demonstrating that mere \"stemming from internal desire\" is insufficient for genuine agency or choice. Psychological experiments involving subliminal priming show that internal desires can be implanted or manipulated by outside forces, which makes subsequent voluntary action determined but not free.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "c5ced584-c1ac-4d2e-8d92-711cc036c24e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:09.087958+00:00"
+    },
+    {
+      "id": "ebe3680e-b358-4fcc-86de-b6acc159cc09",
+      "text": "Libet's experiments (1983) demonstrated brain activity in the motor cortex precedes the conscious awareness of a decision to move by hundreds of milliseconds. This physiological mechanism suggests brain events cause actions, and consciousness registers them too late for the radical free choice asserted by Sartre.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "79552a08-552f-484d-833d-93c17e453e9b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:39.235077+00:00"
+    },
+    {
+      "id": "99ef706c-71d8-45ca-8321-07da4d1781d3",
+      "text": "Sartre's concept of radical freedom addresses metaphysical freedom from essentialist definitions, not physical determinism. An individual is not free to choose to fly or overcome physical constraints, such as those imposed by incarceration or economic necessity, limiting the effective scope of his assertion.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "79552a08-552f-484d-833d-93c17e453e9b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:39.235115+00:00"
+    },
+    {
+      "id": "a188eed8-9189-46eb-a9a9-3081e60522c3",
+      "text": "The initial choice and sustained effort of focused mental training are the direct products of prior deterministic inputs, including genetics and environmental conditioning. Neuroplasticity merely demonstrates the brain\u2019s physical capacity to integrate new inputs, even self-generated ones, not that the inputs were initiated acausally by an immaterial self.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "298f1023-1da4-4b6f-a3b0-ba98f408c3f9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:44.685840+00:00"
+    },
+    {
+      "id": "df5cefbe-125e-43f4-950e-e7f9ebbf33b8",
+      "text": "Neuroplasticity is not exclusive to \"focused mental training\"; severe physical trauma, stroke recovery, and sensory deprivation also cause significant structural reorganization. This demonstrates that neuroplasticity is a general biological mechanism responding to any persistent stimulus, regardless of whether that stimulus is consciously willed or external.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "298f1023-1da4-4b6f-a3b0-ba98f408c3f9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:44.685870+00:00"
+    },
+    {
+      "id": "43065ca5-9d71-4129-a51f-dbab05632515",
+      "text": "Quantum mechanical models of neurobiology suggest true indeterminacy governs critical events like neurotransmitter release, meaning the resulting \"neurological consequence\" cannot be fully predetermined. This physical reality breaks the complete causal chain required for absolute determinism in mental computations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "979a0468-6233-466c-8e7f-0bb52323297f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:07.301339+00:00"
+    },
+    {
+      "id": "6d9c073e-b0af-446a-afa3-830ffc19b059",
+      "text": "Legal systems worldwide, such as the M'Naghten Rules (1843) used for insanity defense, functionally rely on the subjective experience of conscious deliberation to assign moral and criminal responsibility. Societies systematically treat the feeling of conscious choice as the necessary causal trigger for accountability, regardless of physical mechanism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "979a0468-6233-466c-8e7f-0bb52323297f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:07.301377+00:00"
+    },
+    {
+      "id": "47268d23-31dc-4a75-956b-a042202ee475",
+      "text": "Readiness potential studies, such as those by Libet, only track the pre-movement planning for simple, arbitrary actions like pressing a button, which differs significantly from complex, deliberative decision-making involving moral or logical choice.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "96969fa4-ce8d-4753-ae04-21d0a329019b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:12.604013+00:00"
+    },
+    {
+      "id": "55b2df59-b7be-47f4-bd49-cffb86792569",
+      "text": "While the readiness potential precedes conscious intent, subsequent experiments consistently show the brain allows a window for the subject to consciously veto or inhibit the motor action hundreds of milliseconds before the movement's execution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "96969fa4-ce8d-4753-ae04-21d0a329019b",
+      "children_count": 0,
+      "references": [
+        "Libet's Veto Experiments"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:12.604042+00:00"
+    },
+    {
+      "id": "fb2e93db-45a7-4e47-a2f2-18decee708a8",
+      "text": "Compatibilism redefines moral responsibility as sensitivity to incentives and rational deliberation, which is a functional definition. This functional definition fails to satisfy the widely held intuitive requirement for retributive justice: the agent must have possessed the genuine ability to have chosen otherwise.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "13589b87-1273-45c6-b664-484ad4f40a75",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:18.993431+00:00"
+    },
+    {
+      "id": "36bd629f-fbaf-4e06-a083-4efdc7721b32",
+      "text": "If free will is acknowledged as an illusion, then the compatibilist affirmation of human dignity is based solely on a complex, deterministic biological process. This fundamentally shifts dignity away from self-caused moral agency to a high-level description of causality, diminishing the traditional concept of inherent worth.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "13589b87-1273-45c6-b664-484ad4f40a75",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:18.993473+00:00"
+    },
+    {
+      "id": "835eb592-499d-4ab5-bbfa-5c1916d7fdcc",
+      "text": "CBT's effectiveness relies on the client making an immediate, conscious decision to apply newly learned cognitive restructuring principles and behavioral techniques. Core CBT components like exposure therapy require the client to volitionally choose novel actions in opposition to old, conditioned patterns, demonstrating present agency.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ab397136-460f-4f92-a7d3-34acbc09d4f6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:31.408588+00:00"
+    },
+    {
+      "id": "6573679f-18bf-4ecb-84b0-162bdf226537",
+      "text": "Therapies explicitly centered on radical personal freedom and responsibility, such as Viktor Frankl's Logotherapy, successfully treat meaning-related disorders by emphasizing the patient's ultimate freedom to choose their attitude and meaning. The demonstrable success of non-deterministic methods shows that identifying deterministic causes is not required for profound behavioral change.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ab397136-460f-4f92-a7d3-34acbc09d4f6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:31.408630+00:00"
+    },
+    {
+      "id": "91307400-7de2-48c7-94e5-065a84b52f9b",
+      "text": "Legal systems often require both cognitive capacity and *volitional control* (the ability to choose otherwise), as codified in standards stricter than the M\u2019Naghten rules, such as the American Law Institute's Model Penal Code test for insanity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3e862ce0-c49f-4084-be42-4337b9ad75da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:37.737146+00:00"
+    },
+    {
+      "id": "d518da70-1f3f-4b0d-8bb4-b33ed0a81b17",
+      "text": "If free will is illusory, then punitive measures based on rational capacity serve only the utilitarian functions of deterrence and incapacitation. This fundamentally undermines the retributive justification of punishment, which requires the defendant to have genuinely deserved moral blame for their \"rational choice.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3e862ce0-c49f-4084-be42-4337b9ad75da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:37.737174+00:00"
+    },
+    {
+      "id": "68825af8-a6cb-44cc-9242-9943cdb28da7",
+      "text": "Existing punishment systems, like those in the US and UK common law, fundamentally differentiate between accidental harm and criminal intent (*mens rea*), which requires an assumption of free moral choice. If free will is illusory, this core distinction between intentional crime and uncontrollable harmful behavior dissolves, immediately rendering current sentencing principles and legal culpability incoherent.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6744166e-5d7a-406e-9842-94fb9637ceea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:44.637162+00:00"
+    },
+    {
+      "id": "729dc7ed-9374-46be-9056-9416d943c1e1",
+      "text": "Punishment systems are not merely analogues of quarantine, as they inflict mandated suffering and social stigma far exceeding what is necessary for simple incapacitation. This excessive infliction is inefficient and ethically unjustifiable for purely consequentialist goals when non-punitive confinement or treatment options exist for dangerous but morally blameless individuals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6744166e-5d7a-406e-9842-94fb9637ceea",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:44.637213+00:00"
+    },
+    {
+      "id": "e1c78bb2-1558-4fa3-8d2c-00e531b97a7c",
+      "text": "Strict liability is a narrow legal exception applied primarily to regulatory, business, or minor administrative infractions like traffic violations. Major criminal law systems worldwide, including the US Model Penal Code, require the demonstration of criminal intent (mens rea) for serious felonies such as murder, assault, and robbery.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "39b13ac4-5757-46f2-abd7-d0d80dd58c0e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:50.301020+00:00"
+    },
+    {
+      "id": "8c2abfd6-2e94-4a7b-95bb-7873b853584c",
+      "text": "The sanctions applied in strict liability cases are fundamentally civil or financial penalties, avoiding the full moral condemnation and deprivation of liberty associated with criminal punishment. Legal systems reserve long-term imprisonment and deep moral condemnation for offenses where the state successfully proves the defendant possessed criminal intent or malice aforethought.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "39b13ac4-5757-46f2-abd7-d0d80dd58c0e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:50.301063+00:00"
+    },
+    {
+      "id": "dc833ff7-e648-43de-bf5f-d0f95814f76a",
+      "text": "Criminal law systems operate on a pragmatic assumption of free will (mens rea) for assigning social responsibility and blame in the vast majority of cases. Narrow exceptions like the insanity defense are safety valves for extreme cognitive failure, not invalidations of the foundational principle of voluntary agency required for typical criminal liability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fb2701ac-5d94-41e9-aafe-f8721b4269f7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:56.393646+00:00"
+    },
+    {
+      "id": "9e814996-7078-4da5-828e-2999872c17c4",
+      "text": "The common verdict resulting from a M'Naghten defense is more accurately \"Not Guilty by Reason of Insanity\" (NGRI), which results in complete acquittal, not partial guilt. This outcome explicitly denies legal culpability when rational capacity is absent, reinforcing that a specific level of rational free will is necessary for conviction.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fb2701ac-5d94-41e9-aafe-f8721b4269f7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:43:56.393686+00:00"
+    },
+    {
+      "id": "2c8aa028-fe5a-43d8-974f-9592d3882b3b",
+      "text": "Robert Kane, a leading libertarian philosopher, argues that genuine free will requires \"self-forming actions\" (SFAs) that are genuinely undetermined, a metaphysical independence that Dennett's compatibilism explicitly rejects. The existence of a complete causal chain in determinism means the agent is not the ultimate source of choice, undermining the necessary condition for ultimate moral culpability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "63316f52-316c-4dfc-8761-ec327ad1083c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:14.915367+00:00"
+    },
+    {
+      "id": "85f8a575-2815-49c9-8dc1-1c87089d5271",
+      "text": "Empirical studies by Vohs and Schooler (2008) show that inducing a belief in determinism causes individuals to cheat more and be less helpful in tasks. This demonstrates that, regardless of Dennett's philosophical framework, the psychological experience of predetermined actions severely reduces motivation for moral effort and individual consequence.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "63316f52-316c-4dfc-8761-ec327ad1083c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:14.915410+00:00"
+    },
+    {
+      "id": "dc95f8a2-6dae-4764-acf0-a0a590e15abc",
+      "text": "The entrepreneurial spirit of the Puritans stemmed from their interpretation of predestination\u2014economic success functioned as an anxious confirmation that they belonged to the 'elect,' according to Max Weber's thesis on the Protestant Ethic. This theological compulsion to demonstrate salvation explains their high motivation to work, contradicting the idea that fatalism acted as a neutral driver for achievement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9380b92c-74d6-45f4-ba64-5bea3ec48ea2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:35.468304+00:00"
+    },
+    {
+      "id": "1ce80ecb-bf0d-40a7-9cf4-20f5f3a14528",
+      "text": "The theological fatalism of the Puritans, focused on a personal God's preordination, is functionally distinct from the impersonal, mechanistic determinism tested in psychological studies. Studies priming philosophical determinism, such as Vohs and Schooler (2008), empirically demonstrated that the belief in scientifically impossible choice led to an increase in antisocial behaviors like cheating.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "9380b92c-74d6-45f4-ba64-5bea3ec48ea2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:35.468326+00:00"
+    },
+    {
+      "id": "4910e5c6-705e-4994-a8a0-e51d64b2009c",
+      "text": "Early decoding reflects preparatory biasing and the accumulation of subconscious evidence for potential choices, not the final decision mandate; the conscious experience correlates with the critical juncture where the choice is ultimately committed or vetoed, a function not fully captured by the initial signal.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fcda7b16-38b9-48ee-a88c-e5d7be73b501",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:42.635256+00:00"
+    },
+    {
+      "id": "967a6f65-07cc-420f-af84-41064e777c2e",
+      "text": "The predictive power demonstrated by these studies is limited to simple binary or ternary choices (e.g., selecting between two sides or two monetary options), failing to establish that pre-conscious mechanisms govern complex, novel, and open-ended decisions necessary for philosophical free will.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fcda7b16-38b9-48ee-a88c-e5d7be73b501",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:42.635283+00:00"
+    },
+    {
+      "id": "de7c0997-6267-400d-8c3d-0c7e5205f057",
+      "text": "Complex planning, unlike simple motor tasks, requires extensive executive control, inhibitory function, and working memory primarily executed by the Prefrontal Cortex (PFC). Patients with severe PFC damage, such as acquired sociopathy, retain basic motor skills involving the SMA but lose the capacity for long-term goal-directed, complex social and financial planning.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5651102a-767e-4573-8d69-cd51865b01c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:54.509805+00:00"
+    },
+    {
+      "id": "e16fe0ce-12bc-4e8d-8110-5abe0a26da6c",
+      "text": "Hierarchical control shows an anatomical overlap in preparation, but functional neuroimaging demonstrates that complex action requires engagement of distinct, specialized areas for abstract goal representation. Studies of chess players and complex problem-solving show that the anterior prefrontal cortex integrates abstract policy decisions while the SMA handles only the final motor preparation phase, proving the functions are not fundamentally the same.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5651102a-767e-4573-8d69-cd51865b01c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:44:54.509852+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:35:58.563425+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:35:58.563425+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "cdf24cb3-ec18-4301-977b-b7f598faf43a",
+      "target": "b2d2fc28-9e7b-4966-b144-75633fd07a71",
+      "type": "objection"
+    },
+    {
+      "source": "cdf24cb3-ec18-4301-977b-b7f598faf43a",
+      "target": "3c27150b-ceef-453f-95d5-1fd7161c5f7c",
+      "type": "objection"
+    },
+    {
+      "source": "9f3f804a-8fed-4ed0-bf9f-3dd2f764948c",
+      "target": "b858f3c1-f996-43ed-a477-7d8dde5069c8",
+      "type": "objection"
+    },
+    {
+      "source": "9f3f804a-8fed-4ed0-bf9f-3dd2f764948c",
+      "target": "86a67487-5a6f-4903-b7f4-12547503ffd2",
+      "type": "objection"
+    },
+    {
+      "source": "4b018bb4-1b80-4965-951a-df7aa0172bf0",
+      "target": "9dfcdf7e-0c9e-43a7-86b1-582ca1b3c172",
+      "type": "objection"
+    },
+    {
+      "source": "4b018bb4-1b80-4965-951a-df7aa0172bf0",
+      "target": "3da5767d-1b45-4aa9-9a3a-2f3758535d6f",
+      "type": "objection"
+    },
+    {
+      "source": "8efbff55-419d-4936-9e34-5ba2c189bb4a",
+      "target": "12805229-be6e-4de4-9331-224b3804b2c5",
+      "type": "objection"
+    },
+    {
+      "source": "8efbff55-419d-4936-9e34-5ba2c189bb4a",
+      "target": "ece7767d-62e5-4a4f-826c-140caae3c4b2",
+      "type": "objection"
+    },
+    {
+      "source": "3c3acf8b-f45f-4721-9bc4-293ed86d087b",
+      "target": "d53f1067-2aa3-4358-a778-6989b2652d31",
+      "type": "objection"
+    },
+    {
+      "source": "3c3acf8b-f45f-4721-9bc4-293ed86d087b",
+      "target": "c5ced584-c1ac-4d2e-8d92-711cc036c24e",
+      "type": "objection"
+    },
+    {
+      "source": "18696dd1-4e53-400f-9210-3784863a8ff1",
+      "target": "79552a08-552f-484d-833d-93c17e453e9b",
+      "type": "objection"
+    },
+    {
+      "source": "18696dd1-4e53-400f-9210-3784863a8ff1",
+      "target": "298f1023-1da4-4b6f-a3b0-ba98f408c3f9",
+      "type": "objection"
+    },
+    {
+      "source": "47d39026-65d7-4da3-b05a-519cde3b7987",
+      "target": "979a0468-6233-466c-8e7f-0bb52323297f",
+      "type": "objection"
+    },
+    {
+      "source": "47d39026-65d7-4da3-b05a-519cde3b7987",
+      "target": "96969fa4-ce8d-4753-ae04-21d0a329019b",
+      "type": "objection"
+    },
+    {
+      "source": "b38d2c36-8a7f-4c4d-9284-84ebd75d45f4",
+      "target": "13589b87-1273-45c6-b664-484ad4f40a75",
+      "type": "objection"
+    },
+    {
+      "source": "b38d2c36-8a7f-4c4d-9284-84ebd75d45f4",
+      "target": "ab397136-460f-4f92-a7d3-34acbc09d4f6",
+      "type": "objection"
+    },
+    {
+      "source": "5c3ed62f-0e5f-4900-8784-586401de0d5a",
+      "target": "3e862ce0-c49f-4084-be42-4337b9ad75da",
+      "type": "objection"
+    },
+    {
+      "source": "5c3ed62f-0e5f-4900-8784-586401de0d5a",
+      "target": "6744166e-5d7a-406e-9842-94fb9637ceea",
+      "type": "objection"
+    },
+    {
+      "source": "3ae63f98-db9a-4ada-becf-3cec45e2b503",
+      "target": "39b13ac4-5757-46f2-abd7-d0d80dd58c0e",
+      "type": "objection"
+    },
+    {
+      "source": "3ae63f98-db9a-4ada-becf-3cec45e2b503",
+      "target": "fb2701ac-5d94-41e9-aafe-f8721b4269f7",
+      "type": "objection"
+    },
+    {
+      "source": "09b89ca0-cd51-4b75-a811-bdcd2ae13c03",
+      "target": "63316f52-316c-4dfc-8761-ec327ad1083c",
+      "type": "objection"
+    },
+    {
+      "source": "09b89ca0-cd51-4b75-a811-bdcd2ae13c03",
+      "target": "9380b92c-74d6-45f4-ba64-5bea3ec48ea2",
+      "type": "objection"
+    },
+    {
+      "source": "2f32be02-1bab-49f6-9173-d7a01b277e58",
+      "target": "fcda7b16-38b9-48ee-a88c-e5d7be73b501",
+      "type": "objection"
+    },
+    {
+      "source": "2f32be02-1bab-49f6-9173-d7a01b277e58",
+      "target": "5651102a-767e-4573-8d69-cd51865b01c5",
+      "type": "objection"
+    },
+    {
+      "source": "b2d2fc28-9e7b-4966-b144-75633fd07a71",
+      "target": "db47ea5c-4cf3-425c-b8ea-5c8a51a3badf",
+      "type": "response"
+    },
+    {
+      "source": "b2d2fc28-9e7b-4966-b144-75633fd07a71",
+      "target": "279152f6-ff5e-4f6c-8c04-c4e03f57e9bb",
+      "type": "response"
+    },
+    {
+      "source": "3c27150b-ceef-453f-95d5-1fd7161c5f7c",
+      "target": "186d78df-f38f-458f-bb29-55c4061d12f0",
+      "type": "response"
+    },
+    {
+      "source": "3c27150b-ceef-453f-95d5-1fd7161c5f7c",
+      "target": "f921c26d-8fb3-4f2c-956a-c8825f01fa6b",
+      "type": "response"
+    },
+    {
+      "source": "b858f3c1-f996-43ed-a477-7d8dde5069c8",
+      "target": "fd1a5e11-a741-4a2d-bab7-6fd603ed9762",
+      "type": "response"
+    },
+    {
+      "source": "b858f3c1-f996-43ed-a477-7d8dde5069c8",
+      "target": "c87e775a-9509-4e14-9c4f-af1631ff3ba2",
+      "type": "response"
+    },
+    {
+      "source": "86a67487-5a6f-4903-b7f4-12547503ffd2",
+      "target": "e7ff3e34-e8f2-4018-9060-5d76af776f0b",
+      "type": "response"
+    },
+    {
+      "source": "86a67487-5a6f-4903-b7f4-12547503ffd2",
+      "target": "7d4f7c0f-5bda-42f2-b7ab-fa85d60ba523",
+      "type": "response"
+    },
+    {
+      "source": "9dfcdf7e-0c9e-43a7-86b1-582ca1b3c172",
+      "target": "89efed55-f32c-4892-9226-0f99c64d6721",
+      "type": "response"
+    },
+    {
+      "source": "9dfcdf7e-0c9e-43a7-86b1-582ca1b3c172",
+      "target": "fc640cff-eabb-4caf-b603-455eab37d4b4",
+      "type": "response"
+    },
+    {
+      "source": "3da5767d-1b45-4aa9-9a3a-2f3758535d6f",
+      "target": "b4f63fe4-6480-4bf9-b9ba-9f8bbe2a51a3",
+      "type": "response"
+    },
+    {
+      "source": "3da5767d-1b45-4aa9-9a3a-2f3758535d6f",
+      "target": "a5da9f2b-785a-479d-9e51-96a5ca3ee981",
+      "type": "response"
+    },
+    {
+      "source": "12805229-be6e-4de4-9331-224b3804b2c5",
+      "target": "47cc5ab2-18ea-4b77-92ab-8172a2d7b577",
+      "type": "response"
+    },
+    {
+      "source": "12805229-be6e-4de4-9331-224b3804b2c5",
+      "target": "3cf934d1-26df-4f52-9a16-b47d46256a43",
+      "type": "response"
+    },
+    {
+      "source": "ece7767d-62e5-4a4f-826c-140caae3c4b2",
+      "target": "c39cd660-1c13-4f16-8b0a-d80e1538fd8e",
+      "type": "response"
+    },
+    {
+      "source": "ece7767d-62e5-4a4f-826c-140caae3c4b2",
+      "target": "b54b2cff-29ef-405d-8716-850f1c7f5f88",
+      "type": "response"
+    },
+    {
+      "source": "d53f1067-2aa3-4358-a778-6989b2652d31",
+      "target": "aaa84878-9a44-4083-b97a-524f46e4399d",
+      "type": "response"
+    },
+    {
+      "source": "d53f1067-2aa3-4358-a778-6989b2652d31",
+      "target": "3bfb032d-b97e-4691-832a-71228e61ecc5",
+      "type": "response"
+    },
+    {
+      "source": "c5ced584-c1ac-4d2e-8d92-711cc036c24e",
+      "target": "1b02bfb2-4dfa-4682-b9d6-872122810785",
+      "type": "response"
+    },
+    {
+      "source": "c5ced584-c1ac-4d2e-8d92-711cc036c24e",
+      "target": "f51a3276-022d-4945-9688-546ba19de3d7",
+      "type": "response"
+    },
+    {
+      "source": "79552a08-552f-484d-833d-93c17e453e9b",
+      "target": "ebe3680e-b358-4fcc-86de-b6acc159cc09",
+      "type": "response"
+    },
+    {
+      "source": "79552a08-552f-484d-833d-93c17e453e9b",
+      "target": "99ef706c-71d8-45ca-8321-07da4d1781d3",
+      "type": "response"
+    },
+    {
+      "source": "298f1023-1da4-4b6f-a3b0-ba98f408c3f9",
+      "target": "a188eed8-9189-46eb-a9a9-3081e60522c3",
+      "type": "response"
+    },
+    {
+      "source": "298f1023-1da4-4b6f-a3b0-ba98f408c3f9",
+      "target": "df5cefbe-125e-43f4-950e-e7f9ebbf33b8",
+      "type": "response"
+    },
+    {
+      "source": "979a0468-6233-466c-8e7f-0bb52323297f",
+      "target": "43065ca5-9d71-4129-a51f-dbab05632515",
+      "type": "response"
+    },
+    {
+      "source": "979a0468-6233-466c-8e7f-0bb52323297f",
+      "target": "6d9c073e-b0af-446a-afa3-830ffc19b059",
+      "type": "response"
+    },
+    {
+      "source": "96969fa4-ce8d-4753-ae04-21d0a329019b",
+      "target": "47268d23-31dc-4a75-956b-a042202ee475",
+      "type": "response"
+    },
+    {
+      "source": "96969fa4-ce8d-4753-ae04-21d0a329019b",
+      "target": "55b2df59-b7be-47f4-bd49-cffb86792569",
+      "type": "response"
+    },
+    {
+      "source": "13589b87-1273-45c6-b664-484ad4f40a75",
+      "target": "fb2e93db-45a7-4e47-a2f2-18decee708a8",
+      "type": "response"
+    },
+    {
+      "source": "13589b87-1273-45c6-b664-484ad4f40a75",
+      "target": "36bd629f-fbaf-4e06-a083-4efdc7721b32",
+      "type": "response"
+    },
+    {
+      "source": "ab397136-460f-4f92-a7d3-34acbc09d4f6",
+      "target": "835eb592-499d-4ab5-bbfa-5c1916d7fdcc",
+      "type": "response"
+    },
+    {
+      "source": "ab397136-460f-4f92-a7d3-34acbc09d4f6",
+      "target": "6573679f-18bf-4ecb-84b0-162bdf226537",
+      "type": "response"
+    },
+    {
+      "source": "3e862ce0-c49f-4084-be42-4337b9ad75da",
+      "target": "91307400-7de2-48c7-94e5-065a84b52f9b",
+      "type": "response"
+    },
+    {
+      "source": "3e862ce0-c49f-4084-be42-4337b9ad75da",
+      "target": "d518da70-1f3f-4b0d-8bb4-b33ed0a81b17",
+      "type": "response"
+    },
+    {
+      "source": "6744166e-5d7a-406e-9842-94fb9637ceea",
+      "target": "68825af8-a6cb-44cc-9242-9943cdb28da7",
+      "type": "response"
+    },
+    {
+      "source": "6744166e-5d7a-406e-9842-94fb9637ceea",
+      "target": "729dc7ed-9374-46be-9056-9416d943c1e1",
+      "type": "response"
+    },
+    {
+      "source": "39b13ac4-5757-46f2-abd7-d0d80dd58c0e",
+      "target": "e1c78bb2-1558-4fa3-8d2c-00e531b97a7c",
+      "type": "response"
+    },
+    {
+      "source": "39b13ac4-5757-46f2-abd7-d0d80dd58c0e",
+      "target": "8c2abfd6-2e94-4a7b-95bb-7873b853584c",
+      "type": "response"
+    },
+    {
+      "source": "fb2701ac-5d94-41e9-aafe-f8721b4269f7",
+      "target": "dc833ff7-e648-43de-bf5f-d0f95814f76a",
+      "type": "response"
+    },
+    {
+      "source": "fb2701ac-5d94-41e9-aafe-f8721b4269f7",
+      "target": "9e814996-7078-4da5-828e-2999872c17c4",
+      "type": "response"
+    },
+    {
+      "source": "63316f52-316c-4dfc-8761-ec327ad1083c",
+      "target": "2c8aa028-fe5a-43d8-974f-9592d3882b3b",
+      "type": "response"
+    },
+    {
+      "source": "63316f52-316c-4dfc-8761-ec327ad1083c",
+      "target": "85f8a575-2815-49c9-8dc1-1c87089d5271",
+      "type": "response"
+    },
+    {
+      "source": "9380b92c-74d6-45f4-ba64-5bea3ec48ea2",
+      "target": "dc95f8a2-6dae-4764-acf0-a0a590e15abc",
+      "type": "response"
+    },
+    {
+      "source": "9380b92c-74d6-45f4-ba64-5bea3ec48ea2",
+      "target": "1ce80ecb-bf0d-40a7-9cf4-20f5f3a14528",
+      "type": "response"
+    },
+    {
+      "source": "fcda7b16-38b9-48ee-a88c-e5d7be73b501",
+      "target": "4910e5c6-705e-4994-a8a0-e51d64b2009c",
+      "type": "response"
+    },
+    {
+      "source": "fcda7b16-38b9-48ee-a88c-e5d7be73b501",
+      "target": "967a6f65-07cc-420f-af84-41064e777c2e",
+      "type": "response"
+    },
+    {
+      "source": "5651102a-767e-4573-8d69-cd51865b01c5",
+      "target": "de7c0997-6267-400d-8c3d-0c7e5205f057",
+      "type": "response"
+    },
+    {
+      "source": "5651102a-767e-4573-8d69-cd51865b01c5",
+      "target": "e16fe0ce-12bc-4e8d-8110-5abe0a26da6c",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9f3f804a-8fed-4ed0-bf9f-3dd2f764948c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "cdf24cb3-ec18-4301-977b-b7f598faf43a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "3c3acf8b-f45f-4721-9bc4-293ed86d087b",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "18696dd1-4e53-400f-9210-3784863a8ff1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "8efbff55-419d-4936-9e34-5ba2c189bb4a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "4b018bb4-1b80-4965-951a-df7aa0172bf0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "5c3ed62f-0e5f-4900-8784-586401de0d5a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "47d39026-65d7-4da3-b05a-519cde3b7987",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "3ae63f98-db9a-4ada-becf-3cec45e2b503",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "09b89ca0-cd51-4b75-a811-bdcd2ae13c03",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "2f32be02-1bab-49f6-9173-d7a01b277e58",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b38d2c36-8a7f-4c4d-9284-84ebd75d45f4",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

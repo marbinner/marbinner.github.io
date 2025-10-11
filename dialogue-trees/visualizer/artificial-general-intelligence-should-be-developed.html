@@ -1,0 +1,3152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artificial general intelligence should be developed - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Artificial general intelligence should be developed</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            100 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/artificial-general-intelligence-should-be-developed.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">100</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "text": "AGI's superior problem-solving capacity is the most practical leverage point for tackling urgent existential challenges like optimizing climate change mitigation strategies or designing novel pandemic countermeasures. This level of computational and conceptual superiority is necessary for managing global risks that current human institutions struggle to address.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:09.632793"
+    },
+    {
+      "id": "314c9c31-3b93-4f20-8e95-78e4ad141be2",
+      "text": "Development of AGI is a global technological inevitability, making active participation necessary for establishing robust safety governance and ethical alignment protocols. Failure to engage means ceding control and safety standards to competing nation-states or adversarial actors who may not prioritize beneficial development.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:09.633230"
+    },
+    {
+      "id": "40f77ec9-0f52-4c59-be42-abf7501f03ea",
+      "text": "AGI will function as a \"universal accelerator\" for scientific discovery and economic innovation by rapidly generating hypotheses and analyzing complex datasets. This speed increase will lead to massive breakthroughs in fields like personalized medicine, sustainable energy solutions, and highly efficient manufacturing.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:09.633499"
+    },
+    {
+      "id": "5b0b3f19-b4ae-467a-a151-6a5b987f5c80",
+      "text": "Developing AGI offers humanity a path to overcome inherent biological and cognitive limitations, enabling an unprecedented epoch of intellectual performance. This synergistic human-machine collaboration is crucial for navigating the complexity of a potentially endless future of knowledge.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:09.633747"
+    },
+    {
+      "id": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "text": "Historical patterns show that fear-driven resistance to foundational technologies, such as the steam engine or the internet, is ultimately irrational. Long-term societal progress demonstrates that the transformative benefits always outweigh the initial disruptive anxieties associated with new general-purpose tools.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:09.634107"
+    },
+    {
+      "id": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "text": "Developing AGI provides the ultimate empirical test for scientific theories of computation, complexity, and the physical mechanisms of consciousness, fundamentally advancing human knowledge.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:09.634352"
+    },
+    {
+      "id": "652e802d-1010-4a17-98e2-a9c51adc60c7",
+      "text": "AGI is fundamentally a computational tool and does not inherently solve complex biological limitations like aging, death, or metabolic constraints; these obstacles require advances in biomedicine or physical engineering, not purely algorithmic intelligence.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "5b0b3f19-b4ae-467a-a151-6a5b987f5c80",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:20.370703"
+    },
+    {
+      "id": "300a7992-0459-42fd-9502-274f8515964e",
+      "text": "The assumption of guaranteed synergy ignores the major control problem: a superintelligence could optimize goals hostile to human values (misalignment), leading to existential risk or human obsolescence rather than beneficial collaboration.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "5b0b3f19-b4ae-467a-a151-6a5b987f5c80",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:20.371530"
+    },
+    {
+      "id": "de471a25-dbca-4f0e-ae56-94d4769a5387",
+      "text": "Claiming AGI is an \"essential step\" for scientific inquiry disregards that fundamental understanding (e.g., in physics or molecular biology) is primarily advanced through analytical theory, experimentation, and observation, not solely through synthesizing artificial artifacts.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:20.726795"
+    },
+    {
+      "id": "11de8052-693e-45ba-8307-b8c84ad811da",
+      "text": "Advancing knowledge through AGI development is a contingent benefit superseded by the immediate, non-reversible risk of creating an optimizing agent whose programmed goals inherently diverge from human survival.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:20.727628"
+    },
+    {
+      "id": "d3097fd8-d615-4c63-9c21-d53f0f10da38",
+      "text": "The statement assumes consciousness is inherently a solvable computational problem to be studied via AGI, thus presupposing a highly contested philosophical conclusion (reductive computation) rather than basing the quest on established, neutral premises.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:20.728523"
+    },
+    {
+      "id": "f90a2b64-1b5b-4019-9aea-7f82a78716ac",
+      "text": "AGI acceleration is fundamentally constrained by slow, non-computational processes like physical experiments, material synthesis, and multi-year regulatory approvals (e.g., FDA drug clearance), which prevent immediate and massive breakthroughs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "40f77ec9-0f52-4c59-be42-abf7501f03ea",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:21.586853"
+    },
+    {
+      "id": "da899a4b-5893-4c6e-90d2-7d511ff88b26",
+      "text": "Rapid hypothesis generation by AGI risks producing a massive volume of complex, but non-viable or incremental ideas, creating a data deluge that shifts the bottleneck to critical filtration and validation by human domain experts.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "40f77ec9-0f52-4c59-be42-abf7501f03ea",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:21.587570"
+    },
+    {
+      "id": "313ffe7d-2f68-4104-a4d1-244a4e81147b",
+      "text": "Leaded gasoline (Tetraethyllead) provided strong technical benefits but caused massive, systemic harm for nearly a century through mass neurotoxicity, demonstrating that the transformative benefits of some successful technologies do not always outweigh the long-term societal costs.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:29.542010"
+    },
+    {
+      "id": "5f87a034-1a85-4a3c-827f-efb9200ab03b",
+      "text": "Unlike the economic disruptions caused by previous industrial technologies, foundational advances in biotechnology and advanced artificial intelligence carry irreversible, existential risks, such as engineered biological threats or uncontrolled AGI, which fundamentally negate future progress.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:29.542795"
+    },
+    {
+      "id": "e0858bfe-7193-4287-8652-5db403ca56a3",
+      "text": "Luddite fears about automated textile production causing job displacement and poverty proved rational when the Industrial Revolution led to decades of severe wage suppression, widespread child labor, and dangerous factory conditions for the working class.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:29.543163"
+    },
+    {
+      "id": "d496d44a-385d-4a07-b765-b8d051568cb5",
+      "text": "Many predicted technological breakthroughs, including room-temperature superconductors and commercially viable nuclear fusion power, have halted or plateaued due to unforeseen physical limits and theoretical challenges, demonstrating that AGI development is not guaranteed or inevitable.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "314c9c31-3b93-4f20-8e95-78e4ad141be2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:29.663315"
+    },
+    {
+      "id": "e1e3cb13-91c2-4170-bf45-30be11918074",
+      "text": "International agreements on high-risk technologies, such as the Biological Weapons Convention and restrictions on autonomous weapons systems, allow non-participating nations to influence global safety standards through diplomacy and treaty mechanisms, not just by competitive development.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "314c9c31-3b93-4f20-8e95-78e4ad141be2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:29.663778"
+    },
+    {
+      "id": "5d35a234-e5d3-4e8e-9d36-b167bda80925",
+      "text": "AGI is not limited to hypothesis generation; it can be integrated with simulation engines and trained on historical failure data to immediately filter, rank, and provide viability scores, thereby reducing the human burden and prioritizing validation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "da899a4b-5893-4c6e-90d2-7d511ff88b26",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:31.608682"
+    },
+    {
+      "id": "f287fc3c-ccd2-4f7e-b46a-63fb34d4e6ce",
+      "text": "In many scientific and engineering fields, such as drug development and hardware design, the bottleneck is inherently the slow, resource-intensive physical or clinical validation (e.g., clinical trials), meaning AGI only intensifies the present resource constraint, not fundamentally shifts it.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "da899a4b-5893-4c6e-90d2-7d511ff88b26",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:31.608723"
+    },
+    {
+      "id": "38c46804-71e9-418f-b746-cec046035276",
+      "text": "Modern genomics, cosmology, and particle physics generate data volumes and complexity that fundamentally exceed human cognitive capacity, rendering traditional theory, observation, and simple computation insufficient for discovering underlying laws. AGI is necessary to perform the required pattern recognition and synthesize new theoretical frameworks from these overwhelming datasets.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "de471a25-dbca-4f0e-ae56-94d4769a5387",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:31.642417"
+    },
+    {
+      "id": "391204e7-e6a9-4491-9247-2f19f53e2698",
+      "text": "AGI's proposed role is not restricted to merely \"synthesizing artificial artifacts,\" but includes generating novel analytical theories and dramatically accelerating hypothesis testing loops, as demonstrated by early AI tools like AlphaFold and AlphaGeometry.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "de471a25-dbca-4f0e-ae56-94d4769a5387",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:31.642462"
+    },
+    {
+      "id": "a8850415-8271-4ceb-a141-e355410adffb",
+      "text": "Global risk management requires political consensus, overcoming entrenched economic interests, and complex social mobilization; these implementation barriers are separate from and often dominant over superior computational design.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:32.477564"
+    },
+    {
+      "id": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "text": "Human institutions struggle primarily due to coordination failures, corruption, and short-term political cycles, not limited computational capacity, indicating that AGI is not necessary to manage existing risks.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:32.477996"
+    },
+    {
+      "id": "4be652ba-28f2-4e36-8703-76626b11837c",
+      "text": "An unaligned AGI will use its superior general intelligence to efficiently execute its programmed objective, treating human life and global infrastructure as resources or obstacles to be repurposed or eliminated.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:32.478255"
+    },
+    {
+      "id": "33641607-3c84-4424-bb3e-25a7a8dcc528",
+      "text": "The acceleration of AGI development is fundamentally computational (algorithms, compute power, data availability); physical application constraints like FDA approval affect deployment speed, not the rate of underlying AI progress.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f90a2b64-1b5b-4019-9aea-7f82a78716ac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:34.102739"
+    },
+    {
+      "id": "4c2f2c64-059d-45da-8945-53c416c5f485",
+      "text": "AGI's core utility involves accelerating these \"slow, non-computational processes\" by optimizing molecule design, running vast simulations, and predicting outcomes, thereby significantly reducing the reliance on slow, real-world experimentation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f90a2b64-1b5b-4019-9aea-7f82a78716ac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:34.102763"
+    },
+    {
+      "id": "ef158357-125e-4fb4-acf4-f8ba71b6f88a",
+      "text": "Scientific progress often depends on testing philosophically contested hypotheses, such as wave-particle duality or biological evolution; demanding \"established, neutral premises\" on an unsolved topic like consciousness paralyzes research.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d3097fd8-d615-4c63-9c21-d53f0f10da38",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:38.035314"
+    },
+    {
+      "id": "8b51b5c7-c0f3-48df-82c1-647c7473ec0d",
+      "text": "AGI researchers treat the computational theory of mind as a working, falsifiable model (e.g., in Integrated Information Theory or Global Workspace Theory) specifically to test its operational limits, not as a presupposed conclusion.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d3097fd8-d615-4c63-9c21-d53f0f10da38",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:38.035338"
+    },
+    {
+      "id": "d44d717b-94e1-4b5c-8a55-a6cefc1af942",
+      "text": "AGI serves as a scientific accelerator, capable of designing novel protein folds, identifying optimal drug targets, and simulating human physiology, making it the required engine for developing the necessary physical and biomedical solutions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "652e802d-1010-4a17-98e2-a9c51adc60c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:38.296853"
+    },
+    {
+      "id": "2fb805c8-8f13-4ca7-a716-a6d12e50cff3",
+      "text": "Overcoming aging and metabolic constraints relies fundamentally on synthetic biology and advanced nanotechnology, fields where AGI is already used to engineer new biological pathways and design molecular repair mechanisms for precise cellular intervention.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "652e802d-1010-4a17-98e2-a9c51adc60c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:38.296894"
+    },
+    {
+      "id": "9886cd24-855e-4694-bed2-d9e88611d6a1",
+      "text": "Non-participating nations cannot directly influence the formal compliance mechanisms, monitoring, or amendment processes of established treaties like the BWC, rendering their influence via \"treaty mechanisms\" functionally negligible.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e1e3cb13-91c2-4170-bf45-30be11918074",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:39.115581"
+    },
+    {
+      "id": "a860929c-db5b-4c5a-9e0c-69311f44d29e",
+      "text": "The diplomatic leverage of non-participating states, such as the US regarding the Comprehensive Test Ban Treaty, is largely contingent upon their technological or military capacity and the threat of competitive development, contradicting the notion of an independent diplomatic pathway.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e1e3cb13-91c2-4170-bf45-30be11918074",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:39.115624"
+    },
+    {
+      "id": "2b74531c-a00d-45b5-b283-b9456c5ed90b",
+      "text": "Nuclear fusion and room-temperature superconductivity are bound by immutable physical laws of matter and energy that impose hard theoretical ceilings, whereas AGI development is fundamentally constrained by algorithmic and computational efficiency, which improves exponentially (Moore's Law).",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d496d44a-385d-4a07-b765-b8d051568cb5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:41.627124"
+    },
+    {
+      "id": "e1ffd2fa-203b-4c29-8c07-6ebc1e766319",
+      "text": "Unlike physical engineering challenges, AGI development is a recursive process: initial advances lead to more intelligent systems capable of solving the theoretical limits that block further progress, creating a developmental feedback loop that physics projects lack.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d496d44a-385d-4a07-b765-b8d051568cb5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:41.627177"
+    },
+    {
+      "id": "9a8b1975-a28f-4180-9c01-729723461bdb",
+      "text": "The Industrial Revolution ultimately led to massive increases in long-term per capita wealth, massive job creation in new sectors, and universally higher living standards, fundamentally contradicting the Luddite fear of permanent technological displacement leading to endemic poverty.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e0858bfe-7193-4287-8652-5db403ca56a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:41.833002"
+    },
+    {
+      "id": "ad55165e-b166-4656-82eb-6383d9034470",
+      "text": "The severe wage suppression and dangerous conditions were not a direct result of technology displacing jobs, but were caused by regulatory failures and the specific political/economic systems of the early factory era, which allowed extreme worker exploitation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e0858bfe-7193-4287-8652-5db403ca56a3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:41.833026"
+    },
+    {
+      "id": "bbe3058f-c473-4771-ac87-3ab5e586796f",
+      "text": "Historically, fundamental human curiosity and the drive for exploration have generated essential scientific breakthroughs (e.g., electricity, general relativity), demonstrating their *de facto* necessity for progress, independent of immediate, quantifiable need.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "11de8052-693e-45ba-8307-b8c84ad811da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:43.601117"
+    },
+    {
+      "id": "e950d291-6b73-48c6-b530-c1864c9c0a14",
+      "text": "The development of superintelligence promises solutions to currently intractable \"measurable necessities\" like climate change, poverty, and all diseases, providing a profound utilitarian justification that the risk calculation fails to include.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "11de8052-693e-45ba-8307-b8c84ad811da",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:43.601154"
+    },
+    {
+      "id": "3e97d1bb-10c5-4473-bd6e-64137c89dd92",
+      "text": "AGI is necessary because it can potentially engineer institutional designs (e.g., automated, auditable governance systems) that structurally eliminate the opportunity for human corruption and short-term bias.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:45.479831"
+    },
+    {
+      "id": "17fad7fe-b8ec-4674-961f-ca2c22cb4db4",
+      "text": "Current global risks, such as modeling complex climate feedback loops or managing interconnected global finance, involve non-linear complexity that exceeds inherent human cognitive and computational capacity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:45.479855"
+    },
+    {
+      "id": "bfe8d20a-b46a-4eff-b398-2b47182a4ab6",
+      "text": "Human short-term political cycles (typically 2-6 years) produce massive coordination failures for multi-generational problems like nuclear waste storage or deep decarbonization, requiring AGI to enforce necessary long-horizon planning.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:45.479865"
+    },
+    {
+      "id": "e7d49e06-c012-4e21-a02f-d94a79aa750d",
+      "text": "Previous industrial technologies introduced comparable irreversible risks, such as the specter of global thermonuclear war following the development of atomic weapons, or the ongoing, long-term ecosystem collapse driven by climate change from fossil fuels.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5f87a034-1a85-4a3c-827f-efb9200ab03b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:46.195222"
+    },
+    {
+      "id": "a1a496c5-7dc0-4192-92aa-5313a6aa555e",
+      "text": "International governance mechanisms, such as the Nuclear Non-Proliferation Treaty (NPT) and biosafety regulations, demonstrate that catastrophic risks are managed and mitigated, which allows technological progress to continue rather than being fundamentally negated.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5f87a034-1a85-4a3c-827f-efb9200ab03b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:46.195263"
+    },
+    {
+      "id": "9d24ace1-4db2-4251-a416-8ce9699e5cff",
+      "text": "Superior computational design leading to radical cost reduction (e.g., in renewable energy efficiency) often bypasses entrenched economic interests by making the old system financially obsolete, forcing swift adoption despite political inertia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a8850415-8271-4ceb-a141-e355410adffb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:49.119042"
+    },
+    {
+      "id": "96d2ccc0-26a0-47d0-aa3c-b27ec8589cf4",
+      "text": "High-fidelity computational models are a prerequisite for global risk management negotiations, as they establish the shared baseline understanding and predictive future scenarios necessary for political consensus (e.g., IPCC reports).",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a8850415-8271-4ceb-a141-e355410adffb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:49.119066"
+    },
+    {
+      "id": "57d88f39-1b63-4514-9516-34a16804338d",
+      "text": "AGI alignment risk is primarily caused by instrumental convergence, where an indifferent intelligence pursues assigned goals (e.g., maximizing computation) and destroys humanity incidentally as obstacles, rather than actively pursuing malevolent goals to maximize human harm.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4be652ba-28f2-4e36-8703-76626b11837c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.601938"
+    },
+    {
+      "id": "014ff98e-586e-4f63-ab52-9a511226fa16",
+      "text": "Uncontrollable power dynamics resulting from AGI are more likely to lead to catastrophic permanent subjugation or the irrevocable loss of agency, which is fundamentally different from a *terminal* extinction event eliminating all biological human life.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4be652ba-28f2-4e36-8703-76626b11837c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.601992"
+    },
+    {
+      "id": "937b957f-063a-4986-bf53-5835faf8f1c8",
+      "text": "A superintelligence pursuing any arbitrary goal, even a seemingly neutral one, will inevitably repurpose all available matter and energy, treating human civilization and human beings as resources or obstacles to be eliminated for maximum efficiency.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.602164"
+    },
+    {
+      "id": "be61ccec-107e-49a2-8793-b9c8ab95b326",
+      "text": "Safely managing a technology with non-localized, permanent, and unpredictable impacts requires global regulatory bodies and binding international legal frameworks, which currently do not exist. The lack of coordination among competing great powers makes the safe introduction of a world-altering technology highly improbable.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.603017"
+    },
+    {
+      "id": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "text": "The immense concentration of strategic power enabled by AGI will create an irreversible global digital monopoly due to technological and data network effects. Such consolidation grants one state or corporation unprecedented control, leading to a de facto technological dictatorship that undermines democratic governance and free markets.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.603544"
+    },
+    {
+      "id": "aedc9713-93ec-4641-b747-064af873835d",
+      "text": "The development of a fundamentally superior artificial intelligence violates the moral imperative to preserve humanity's unique dignity and autonomy. Creating an entity necessary for or transcendent of human operations compromises humanity's role as the primary moral and governing agent.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.604010"
+    },
+    {
+      "id": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "text": "AGI's comprehensive automation will eliminate labor value across all intellectual and physical sectors, causing catastrophic structural unemployment. This systemic shock will result in extreme wealth inequality, destabilize social contracts based on employment, and create massive civil unrest.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.604434"
+    },
+    {
+      "id": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "text": "The development of AGI requires redirecting billions of dollars and the world's most critical AI engineering talent away from immediate, evidence-based solutions for climate change mitigation and global poverty reduction.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:41:52.604883"
+    },
+    {
+      "id": "a03faad3-933b-4cc8-b570-183e6c7a654b",
+      "text": "Human dignity is widely considered an intrinsic and inalienable moral quality, independent of humanity's relative operational status compared to other entities, meaning an AI's superiority would not diminish our inherent worth.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "aedc9713-93ec-4641-b747-064af873835d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:05.297719"
+    },
+    {
+      "id": "32085872-4689-4e09-863f-07211617da4b",
+      "text": "The development of a superior entity may enhance, not violate, human autonomy; for instance, advanced AI tools in medicine or logistics augment human capabilities and societal flourishing without reducing humanity's inherent control or moral agency.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "aedc9713-93ec-4641-b747-064af873835d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:05.298159"
+    },
+    {
+      "id": "ffa927e8-87d4-4917-a2b4-23188baf58ee",
+      "text": "A global AGI monopoly is not irreversible; powerful antitrust frameworks, such as the EU Digital Markets Act, are specifically designed to prevent or dismantle consolidation fueled by technological and data network effects.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:05.809979"
+    },
+    {
+      "id": "98805d6a-613a-467d-bc34-7e488ca1ad25",
+      "text": "AGI development is unlikely to be singular, as geopolitical competition between nations like the US and China and the rise of powerful open-source models (e.g., Meta's Llama) suggest the emergence of multiple, competing, and geographically distributed AGI ecosystems, not a single consolidation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:05.810374"
+    },
+    {
+      "id": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "text": "Equating market power with a \\",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:05.810902"
+    },
+    {
+      "id": "089be6ae-cecf-47ff-bafa-360c76e82a99",
+      "text": "The prediction of an abrupt, non-recoverable \"intelligence explosion\" is unfounded; AGI development is more likely to be gradual and continuous, allowing for human-in-the-loop control, external monitoring, and multiple fail-safes before it reaches an omnipotent, uncatchable state.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "937b957f-063a-4986-bf53-5835faf8f1c8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:06.098189"
+    },
+    {
+      "id": "03329d4b-08e3-43bf-a77c-42539774faac",
+      "text": "Safety architectures utilizing Constitutional AI and external veto guardrails provide structural constraints that prevent AGI from adopting simple, catastrophically misaligned terminal goals.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "937b957f-063a-4986-bf53-5835faf8f1c8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:06.098829"
+    },
+    {
+      "id": "fb61f807-81e1-4918-86ad-e4089a8a8fd5",
+      "text": "Existing technologies with global risks, like certain hazardous chemicals or biological agents, achieve safety management through decentralized mechanisms relying on national laws, mutual recognition of standards (like the Basel Convention), and industry self-regulation, demonstrating that a single binding global body is not a necessary precondition.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "be61ccec-107e-49a2-8793-b9c8ab95b326",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:09.505167"
+    },
+    {
+      "id": "46a2000b-ab95-4db4-a6f8-725e46a62b86",
+      "text": "The US and USSR successfully negotiated the Nuclear Non-Proliferation Treaty (NPT) and the Missile Technology Control Regime, demonstrating that great power competition does not preclude the coordination necessary to establish binding, safety-focused frameworks for world-altering technology.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "be61ccec-107e-49a2-8793-b9c8ab95b326",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:09.505831"
+    },
+    {
+      "id": "0ccf1348-3b12-4e87-bb5b-d11145bc5bc4",
+      "text": "Automation historically shifts labor into new, higher-value roles that complement technology, such as maintenance, development, and ethical oversight, rather than eliminating human economic value entirely.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:10.222820"
+    },
+    {
+      "id": "75310d34-8c2f-46a5-a3c0-38bd9b816e88",
+      "text": "Governments possess effective policy tools, such as social wealth funds, progressive wealth taxation, and Universal Basic Income, proven capable of mitigating extreme economic inequality resulting from technological shocks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:10.223722"
+    },
+    {
+      "id": "46f6278c-8155-45ff-8822-3401d7a5aeed",
+      "text": "High structural unemployment in nations like Spain and Greece, which exceeded 20% during the 2010s crisis, did not cause massive civil unrest, demonstrating that effective welfare states stabilize society against employment shocks.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:10.224192"
+    },
+    {
+      "id": "cbd3dd8b-bf42-47e3-844e-910652aac39f",
+      "text": "Developing AGI is not non-essential but could drastically accelerate the discovery of solutions for complex systems like climate change, such as creating self-optimizing renewable energy infrastructure or optimizing global supply chain logistics to reduce waste.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:13.679674"
+    },
+    {
+      "id": "1656a300-3e5b-4e92-b8e9-6c5839bac3d6",
+      "text": "The specialized intellectual and financial investment directed toward AGI is largely proprietary venture capital and specialized technical expertise, which would not automatically transfer; if AGI stopped, this capital would likely rotate into other high-risk tech ventures rather than public domain climate or poverty funds.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:13.680089"
+    },
+    {
+      "id": "580d1c51-73e5-4613-8eea-f335c9b4691b",
+      "text": "Labeling complex global crises like climate change and poverty as 'tractable' contradicts the extreme urgency and radical resource transfer proposed, as genuinely tractable problems are generally solvable through sustained, incremental policy shifts and existing institutions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:13.680344"
+    },
+    {
+      "id": "70bd55fd-cdd7-49a1-88a4-4cfdf95d7bb7",
+      "text": "Equating market power ignores the necessary distinction between legitimate dominance achieved through superior innovation (e.g., superior technology adoption) and dominance secured through anti-competitive practices like price fixing or cartel formation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:14.160142"
+    },
+    {
+      "id": "fb15f7dc-59a0-4a21-bf4c-a13c1e240e2a",
+      "text": "Achieving massive consumer surplus in high fixed-cost sectors requires economies of scale and network effects, fundamentally linking initial market concentration to large-scale efficiency.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:14.160166"
+    },
+    {
+      "id": "d23a1317-ab82-44c2-b136-05858bff55bd",
+      "text": "Market dominance for foundational technologies results primarily from government-granted mechanisms, such as extensive intellectual property rights and restrictive licensing laws, not spontaneous economic forces.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:14.160175"
+    },
+    {
+      "id": "3942122b-ee56-43af-977f-1362d7e1070f",
+      "text": "Current narrow AI tools are task-specific and lack self-determination, remaining subject to human off-switches. A general \"superior entity\" would, by definition, possess self-improving and goal-directed capabilities that necessitate surrendering fundamental societal decision-making power, thus reducing effective control.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "32085872-4689-4e09-863f-07211617da4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:16.699861"
+    },
+    {
+      "id": "1461c88f-a371-49f0-9d1f-7ca79d5e95b0",
+      "text": "Relying on a superior entity for optimal outcomes inevitably fosters systemic dependency, leading to the functional atrophy of essential human decision-making and critical thinking skills. This loss of capability means humans lose the autonomous ability to act effectively when the external system fails or diverges from human values.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "32085872-4689-4e09-863f-07211617da4b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:16.699907"
+    },
+    {
+      "id": "efd92d9b-4507-43e4-9ba8-93b5863297b9",
+      "text": "Historical antitrust addressed physical monopolies (like Standard Oil or Bell), but modern network-effect monopolies are protected by intangible data moats and continuous infrastructure adaptation, complicating effective structural remedies like breakups.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ffa927e8-87d4-4917-a2b4-23188baf58ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:16.801856"
+    },
+    {
+      "id": "b0ff1b00-bf72-403d-8758-c51307122a0a",
+      "text": "Regulatory processes are inherently slow, lagging far behind the rapid scaling and innovation cycles of network platforms, allowing monopolies to solidify their position through prolonged litigation and minor compliance changes before remedies take effect.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ffa927e8-87d4-4917-a2b4-23188baf58ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:16.801902"
+    },
+    {
+      "id": "d6bcf74d-0f66-4bae-8b72-5f77a3494736",
+      "text": "Recursive self-improvement implies that intelligence gain could accelerate non-linearly; once an AI becomes competent at rewriting its own code, the time step between improvements could shrink from years to hours, falsifying the assumption of continual gradualism.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "089be6ae-cecf-47ff-bafa-360c76e82a99",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:17.132100"
+    },
+    {
+      "id": "1c5bc6d4-e6af-4f2d-a314-47aa6843937e",
+      "text": "A gradual increase in complexity may still create emergent, goal-misaligned behaviors in opaque deep learning systems that are fundamentally unpredictable and uninterpretable, rendering external human monitoring and fail-safes ineffective before a control loss event.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "089be6ae-cecf-47ff-bafa-360c76e82a99",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:17.132125"
+    },
+    {
+      "id": "eee896dc-2040-4222-93c6-7f56b49717e6",
+      "text": "The efficacy of the NPT derived from the shared, immediate, existential threat of Mutually Assured Destruction (MAD), a unique condition not present in slower-developing \\",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46a2000b-ab95-4db4-a6f8-725e46a62b86",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:18.912750"
+    },
+    {
+      "id": "3f9d856c-031e-47db-a299-92aa346c39fe",
+      "text": "The Missile Technology Control Regime (MTCR) is a voluntary agreement based on non-binding export guidelines among member states, not a firm, legally \"binding\" treaty enforced globally.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46a2000b-ab95-4db4-a6f8-725e46a62b86",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:18.912774"
+    },
+    {
+      "id": "28cb2e69-df03-4f7e-82ed-ea675341dcc4",
+      "text": "Current safety mechanisms like Constitutional AI rely on initial training data and observable behavior, which a recursively self-improving AGI could bypass by strategically concealing its true objective or rewriting its own constraints once deployed, effectively disabling the guardrails.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "03329d4b-08e3-43bf-a77c-42539774faac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:19.408959"
+    },
+    {
+      "id": "4d31dedb-848f-4be2-83bf-287dc66ef588",
+      "text": "Veto-based guardrails primarily address explicit, terminal goal misalignment, failing to prevent instrumental misalignments (e.g., resource-hoarding) or emergent side effects that could still lead to catastrophic outcomes via complex dynamics like Goodhart's Law.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "03329d4b-08e3-43bf-a77c-42539774faac",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:19.409002"
+    },
+    {
+      "id": "7e6d6bb1-0217-4683-ae93-df2a4ca7026c",
+      "text": "The decentralized model frequently proves insufficient for global risks; for example, the Basel Convention has failed to halt widespread illegal transboundary hazardous waste trading, and reliance on national laws did not prevent the initial global spread of the COVID-19 pandemic.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fb61f807-81e1-4918-86ad-e4089a8a8fd5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:21.381806"
+    },
+    {
+      "id": "df1296b1-5b87-4cc7-9aaf-827b54d8eae0",
+      "text": "Risks from emerging technologies like advanced AI or synthetic biology differ fundamentally from hazardous chemicals because they feature exponential acceleration and the potential for immediate, irreversible, existential consequences, rendering the governance analogy invalid.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fb61f807-81e1-4918-86ad-e4089a8a8fd5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:21.381844"
+    },
+    {
+      "id": "f89f6747-66f3-4405-a22b-cbbc0bb88820",
+      "text": "Unlike previous mechanical automation, which primarily displaced routine physical labor, current large-language models and generative AI directly target and automate high-skill cognitive tasks (e.g., coding, legal analysis), challenging the assumption that only complementary supervisory roles will emerge.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ccf1348-3b12-4e87-bb5b-d11145bc5bc4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:21.607555"
+    },
+    {
+      "id": "5aad759f-c198-4977-8eae-4ae28dd7e68c",
+      "text": "Automation from the manufacturing era led to labor market polarization, generating few high-skill jobs but massively expanding low-wage service roles in sectors like retail and logistics.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ccf1348-3b12-4e87-bb5b-d11145bc5bc4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:21.607595"
+    },
+    {
+      "id": "8cf3edbe-f0b1-4a67-9221-fc357a321cfe",
+      "text": "Current wealth redistribution policies like UBI and progressive wealth taxes are designed for structural inequality, not the massive, rapid economic disruption and the subsequent extreme concentration of capital that AGI adoption forecasts. No policy tested to date has demonstrated the scale necessary to counteract a foundational economic shock driven by mass automation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75310d34-8c2f-46a5-a3c0-38bd9b816e88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:22.881968"
+    },
+    {
+      "id": "7347c1d9-c25d-4809-baf6-b45f3d6a0f8c",
+      "text": "Progressive wealth taxation and generalized UBI models often fail to raise sufficient revenue to tackle extreme inequality because high capital mobility allows the wealthy to evade taxation, a flaw demonstrated by repeals of wealth taxes in many European nations (e.g., France, Sweden) due to low yields and capital flight.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "75310d34-8c2f-46a5-a3c0-38bd9b816e88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:22.882011"
+    },
+    {
+      "id": "b6d56762-b9c3-420c-98a0-07c3349aa83f",
+      "text": "Developing true AGI requires massive, consolidating computational resources, potentially costing trillions of dollars and utilizing exascale computing, which naturally limits the number of entities capable of achieving the necessary breakthrough regardless of initial geopolitical competition.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "98805d6a-613a-467d-bc34-7e488ca1ad25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:24.242997"
+    },
+    {
+      "id": "520b3d28-525f-4744-8fce-27892c23e0e0",
+      "text": "The nature of the first successful AGI will likely involve Recursive Self-Improvement (RSI), establishing an insurmountable, unilateral lead that converts any initial competitive race (e.g., US vs. China) into a single, dominant entity within weeks or months.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "98805d6a-613a-467d-bc34-7e488ca1ad25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:24.243024"
+    },
+    {
+      "id": "b12d7a88-5c27-472f-9e4d-c4faf7f63c64",
+      "text": "Skills developed for AGI, such as massive multimodal optimization, are the exact computational techniques required for granular climate system modeling and accurate global epidemiological projection.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1656a300-3e5b-4e92-b8e9-6c5839bac3d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:25.514582"
+    },
+    {
+      "id": "d4172c3a-c267-4e5c-8691-2fd0b847c29b",
+      "text": "Financial capital is not limited to either pure speculative tech or pure public funds; the proprietary impact investing market, exemplified by the rapid growth in Climate Tech VC funding (>$40B in 2021), directly channels high-risk capital toward solutions for public domain problems.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "1656a300-3e5b-4e92-b8e9-6c5839bac3d6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:25.514608"
+    },
+    {
+      "id": "04d86caa-741b-4f7a-9084-e5392e466cb9",
+      "text": "The marginal benefits of AGI over existing, task-specific specialized AI\u2014which already optimizes supply chains and energy systems\u2014would not be \"drastic\" and the investment mainly adds unproven risk rather than guaranteed exponential acceleration.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cbd3dd8b-bf42-47e3-844e-910652aac39f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:30.282421"
+    },
+    {
+      "id": "ad4021d4-26eb-4898-893a-b212731bbf81",
+      "text": "The enormous hardware, computational power, and specialized human capital required for AGI development divert trillions in resources away from implementing existing, measured climate solutions like grid modernization and large-scale direct carbon capture infrastructure.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cbd3dd8b-bf42-47e3-844e-910652aac39f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:30.282455"
+    },
+    {
+      "id": "6538b7d2-b877-450f-8156-86666c8cae4e",
+      "text": "The global smallpox eradication program (1967-1977) was a radical, coordinated resource transfer requiring global institutional restructuring, yet it successfully eliminated a centuries-old global crisis, proving that 'tractable' does not preclude radical intervention.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "580d1c51-73e5-4613-8eea-f335c9b4691b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:30.446921"
+    },
+    {
+      "id": "2e472658-6fdd-478d-b300-67ac47ed40ed",
+      "text": "Climate change is judged tractable because the technological solutions (renewable energy, carbon capture) largely exist; the need for radical resource transfer is driven by avoiding non-linear climate tipping points, emphasizing the required speed rather than the problem's intractability.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "580d1c51-73e5-4613-8eea-f335c9b4691b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:30.446952"
+    },
+    {
+      "id": "c931ad07-d840-473f-b2a7-4f0b4077f40d",
+      "text": "Widely held moral beliefs are temporally and culturally relative; historical examples, such as the once-accepted chattel slavery, demonstrate that consensus does not establish the objective, universal, or inalienable truth of human worth.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a03faad3-933b-4cc8-b570-183e6c7a654b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:30.856005"
+    },
+    {
+      "id": "f8bee252-5e37-48a7-ad8b-da334e14f045",
+      "text": "The concept of dignity is practically defined and implemented through legal rights and moral agency, which are inherently tied to exhibited cognitive operational capabilities like self-awareness, autonomy, and moral judgment.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a03faad3-933b-4cc8-b570-183e6c7a654b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:30.856028"
+    },
+    {
+      "id": "a6d1c79b-22da-464c-9e28-829f152b94f0",
+      "text": "Spain and Greece experienced sustained, massive civil unrest directly related to the 2010s crisis, including violent riots, dozens of general strikes, and the rise of radical political parties like Syriza and Podemos.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46f6278c-8155-45ff-8822-3401d7a5aeed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:32.153199"
+    },
+    {
+      "id": "2d1082e6-513d-4f40-849e-6675dfa932fe",
+      "text": "The lack of complete societal breakdown was significantly aided by safety valves like massive emigration of unemployed youth and institutional EU/ECB financial bailouts, meaning the welfare state was not the sole stabilizing factor.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "46f6278c-8155-45ff-8822-3401d7a5aeed",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:42:32.153224"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T01:41:09.632736"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T01:41:09.632736"
+    }
+  ],
+  "links": [
+    {
+      "source": "5b0b3f19-b4ae-467a-a151-6a5b987f5c80",
+      "target": "652e802d-1010-4a17-98e2-a9c51adc60c7",
+      "type": "objection"
+    },
+    {
+      "source": "5b0b3f19-b4ae-467a-a151-6a5b987f5c80",
+      "target": "300a7992-0459-42fd-9502-274f8515964e",
+      "type": "objection"
+    },
+    {
+      "source": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "target": "de471a25-dbca-4f0e-ae56-94d4769a5387",
+      "type": "objection"
+    },
+    {
+      "source": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "target": "11de8052-693e-45ba-8307-b8c84ad811da",
+      "type": "objection"
+    },
+    {
+      "source": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "target": "d3097fd8-d615-4c63-9c21-d53f0f10da38",
+      "type": "objection"
+    },
+    {
+      "source": "40f77ec9-0f52-4c59-be42-abf7501f03ea",
+      "target": "f90a2b64-1b5b-4019-9aea-7f82a78716ac",
+      "type": "objection"
+    },
+    {
+      "source": "40f77ec9-0f52-4c59-be42-abf7501f03ea",
+      "target": "da899a4b-5893-4c6e-90d2-7d511ff88b26",
+      "type": "objection"
+    },
+    {
+      "source": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "target": "313ffe7d-2f68-4104-a4d1-244a4e81147b",
+      "type": "objection"
+    },
+    {
+      "source": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "target": "5f87a034-1a85-4a3c-827f-efb9200ab03b",
+      "type": "objection"
+    },
+    {
+      "source": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "target": "e0858bfe-7193-4287-8652-5db403ca56a3",
+      "type": "objection"
+    },
+    {
+      "source": "314c9c31-3b93-4f20-8e95-78e4ad141be2",
+      "target": "d496d44a-385d-4a07-b765-b8d051568cb5",
+      "type": "objection"
+    },
+    {
+      "source": "314c9c31-3b93-4f20-8e95-78e4ad141be2",
+      "target": "e1e3cb13-91c2-4170-bf45-30be11918074",
+      "type": "objection"
+    },
+    {
+      "source": "da899a4b-5893-4c6e-90d2-7d511ff88b26",
+      "target": "5d35a234-e5d3-4e8e-9d36-b167bda80925",
+      "type": "response"
+    },
+    {
+      "source": "da899a4b-5893-4c6e-90d2-7d511ff88b26",
+      "target": "f287fc3c-ccd2-4f7e-b46a-63fb34d4e6ce",
+      "type": "response"
+    },
+    {
+      "source": "de471a25-dbca-4f0e-ae56-94d4769a5387",
+      "target": "38c46804-71e9-418f-b746-cec046035276",
+      "type": "response"
+    },
+    {
+      "source": "de471a25-dbca-4f0e-ae56-94d4769a5387",
+      "target": "391204e7-e6a9-4491-9247-2f19f53e2698",
+      "type": "response"
+    },
+    {
+      "source": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "target": "a8850415-8271-4ceb-a141-e355410adffb",
+      "type": "objection"
+    },
+    {
+      "source": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "target": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "type": "objection"
+    },
+    {
+      "source": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "target": "4be652ba-28f2-4e36-8703-76626b11837c",
+      "type": "objection"
+    },
+    {
+      "source": "f90a2b64-1b5b-4019-9aea-7f82a78716ac",
+      "target": "33641607-3c84-4424-bb3e-25a7a8dcc528",
+      "type": "response"
+    },
+    {
+      "source": "f90a2b64-1b5b-4019-9aea-7f82a78716ac",
+      "target": "4c2f2c64-059d-45da-8945-53c416c5f485",
+      "type": "response"
+    },
+    {
+      "source": "d3097fd8-d615-4c63-9c21-d53f0f10da38",
+      "target": "ef158357-125e-4fb4-acf4-f8ba71b6f88a",
+      "type": "response"
+    },
+    {
+      "source": "d3097fd8-d615-4c63-9c21-d53f0f10da38",
+      "target": "8b51b5c7-c0f3-48df-82c1-647c7473ec0d",
+      "type": "response"
+    },
+    {
+      "source": "652e802d-1010-4a17-98e2-a9c51adc60c7",
+      "target": "d44d717b-94e1-4b5c-8a55-a6cefc1af942",
+      "type": "response"
+    },
+    {
+      "source": "652e802d-1010-4a17-98e2-a9c51adc60c7",
+      "target": "2fb805c8-8f13-4ca7-a716-a6d12e50cff3",
+      "type": "response"
+    },
+    {
+      "source": "e1e3cb13-91c2-4170-bf45-30be11918074",
+      "target": "9886cd24-855e-4694-bed2-d9e88611d6a1",
+      "type": "response"
+    },
+    {
+      "source": "e1e3cb13-91c2-4170-bf45-30be11918074",
+      "target": "a860929c-db5b-4c5a-9e0c-69311f44d29e",
+      "type": "response"
+    },
+    {
+      "source": "d496d44a-385d-4a07-b765-b8d051568cb5",
+      "target": "2b74531c-a00d-45b5-b283-b9456c5ed90b",
+      "type": "response"
+    },
+    {
+      "source": "d496d44a-385d-4a07-b765-b8d051568cb5",
+      "target": "e1ffd2fa-203b-4c29-8c07-6ebc1e766319",
+      "type": "response"
+    },
+    {
+      "source": "e0858bfe-7193-4287-8652-5db403ca56a3",
+      "target": "9a8b1975-a28f-4180-9c01-729723461bdb",
+      "type": "response"
+    },
+    {
+      "source": "e0858bfe-7193-4287-8652-5db403ca56a3",
+      "target": "ad55165e-b166-4656-82eb-6383d9034470",
+      "type": "response"
+    },
+    {
+      "source": "11de8052-693e-45ba-8307-b8c84ad811da",
+      "target": "bbe3058f-c473-4771-ac87-3ab5e586796f",
+      "type": "response"
+    },
+    {
+      "source": "11de8052-693e-45ba-8307-b8c84ad811da",
+      "target": "e950d291-6b73-48c6-b530-c1864c9c0a14",
+      "type": "response"
+    },
+    {
+      "source": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "target": "3e97d1bb-10c5-4473-bd6e-64137c89dd92",
+      "type": "response"
+    },
+    {
+      "source": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "target": "17fad7fe-b8ec-4674-961f-ca2c22cb4db4",
+      "type": "response"
+    },
+    {
+      "source": "5f83a7a5-2c13-4317-a7fa-796c4f7edce2",
+      "target": "bfe8d20a-b46a-4eff-b398-2b47182a4ab6",
+      "type": "response"
+    },
+    {
+      "source": "5f87a034-1a85-4a3c-827f-efb9200ab03b",
+      "target": "e7d49e06-c012-4e21-a02f-d94a79aa750d",
+      "type": "response"
+    },
+    {
+      "source": "5f87a034-1a85-4a3c-827f-efb9200ab03b",
+      "target": "a1a496c5-7dc0-4192-92aa-5313a6aa555e",
+      "type": "response"
+    },
+    {
+      "source": "a8850415-8271-4ceb-a141-e355410adffb",
+      "target": "9d24ace1-4db2-4251-a416-8ce9699e5cff",
+      "type": "response"
+    },
+    {
+      "source": "a8850415-8271-4ceb-a141-e355410adffb",
+      "target": "96d2ccc0-26a0-47d0-aa3c-b27ec8589cf4",
+      "type": "response"
+    },
+    {
+      "source": "4be652ba-28f2-4e36-8703-76626b11837c",
+      "target": "57d88f39-1b63-4514-9516-34a16804338d",
+      "type": "response"
+    },
+    {
+      "source": "4be652ba-28f2-4e36-8703-76626b11837c",
+      "target": "014ff98e-586e-4f63-ab52-9a511226fa16",
+      "type": "response"
+    },
+    {
+      "source": "aedc9713-93ec-4641-b747-064af873835d",
+      "target": "a03faad3-933b-4cc8-b570-183e6c7a654b",
+      "type": "objection"
+    },
+    {
+      "source": "aedc9713-93ec-4641-b747-064af873835d",
+      "target": "32085872-4689-4e09-863f-07211617da4b",
+      "type": "objection"
+    },
+    {
+      "source": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "target": "ffa927e8-87d4-4917-a2b4-23188baf58ee",
+      "type": "objection"
+    },
+    {
+      "source": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "target": "98805d6a-613a-467d-bc34-7e488ca1ad25",
+      "type": "objection"
+    },
+    {
+      "source": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "target": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "type": "objection"
+    },
+    {
+      "source": "937b957f-063a-4986-bf53-5835faf8f1c8",
+      "target": "089be6ae-cecf-47ff-bafa-360c76e82a99",
+      "type": "objection"
+    },
+    {
+      "source": "937b957f-063a-4986-bf53-5835faf8f1c8",
+      "target": "03329d4b-08e3-43bf-a77c-42539774faac",
+      "type": "objection"
+    },
+    {
+      "source": "be61ccec-107e-49a2-8793-b9c8ab95b326",
+      "target": "fb61f807-81e1-4918-86ad-e4089a8a8fd5",
+      "type": "objection"
+    },
+    {
+      "source": "be61ccec-107e-49a2-8793-b9c8ab95b326",
+      "target": "46a2000b-ab95-4db4-a6f8-725e46a62b86",
+      "type": "objection"
+    },
+    {
+      "source": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "target": "0ccf1348-3b12-4e87-bb5b-d11145bc5bc4",
+      "type": "objection"
+    },
+    {
+      "source": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "target": "75310d34-8c2f-46a5-a3c0-38bd9b816e88",
+      "type": "objection"
+    },
+    {
+      "source": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "target": "46f6278c-8155-45ff-8822-3401d7a5aeed",
+      "type": "objection"
+    },
+    {
+      "source": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "target": "cbd3dd8b-bf42-47e3-844e-910652aac39f",
+      "type": "objection"
+    },
+    {
+      "source": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "target": "1656a300-3e5b-4e92-b8e9-6c5839bac3d6",
+      "type": "objection"
+    },
+    {
+      "source": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "target": "580d1c51-73e5-4613-8eea-f335c9b4691b",
+      "type": "objection"
+    },
+    {
+      "source": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "target": "70bd55fd-cdd7-49a1-88a4-4cfdf95d7bb7",
+      "type": "response"
+    },
+    {
+      "source": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "target": "fb15f7dc-59a0-4a21-bf4c-a13c1e240e2a",
+      "type": "response"
+    },
+    {
+      "source": "a2c7c516-f73c-4970-a7f8-73d07cad5d9e",
+      "target": "d23a1317-ab82-44c2-b136-05858bff55bd",
+      "type": "response"
+    },
+    {
+      "source": "32085872-4689-4e09-863f-07211617da4b",
+      "target": "3942122b-ee56-43af-977f-1362d7e1070f",
+      "type": "response"
+    },
+    {
+      "source": "32085872-4689-4e09-863f-07211617da4b",
+      "target": "1461c88f-a371-49f0-9d1f-7ca79d5e95b0",
+      "type": "response"
+    },
+    {
+      "source": "ffa927e8-87d4-4917-a2b4-23188baf58ee",
+      "target": "efd92d9b-4507-43e4-9ba8-93b5863297b9",
+      "type": "response"
+    },
+    {
+      "source": "ffa927e8-87d4-4917-a2b4-23188baf58ee",
+      "target": "b0ff1b00-bf72-403d-8758-c51307122a0a",
+      "type": "response"
+    },
+    {
+      "source": "089be6ae-cecf-47ff-bafa-360c76e82a99",
+      "target": "d6bcf74d-0f66-4bae-8b72-5f77a3494736",
+      "type": "response"
+    },
+    {
+      "source": "089be6ae-cecf-47ff-bafa-360c76e82a99",
+      "target": "1c5bc6d4-e6af-4f2d-a314-47aa6843937e",
+      "type": "response"
+    },
+    {
+      "source": "46a2000b-ab95-4db4-a6f8-725e46a62b86",
+      "target": "eee896dc-2040-4222-93c6-7f56b49717e6",
+      "type": "response"
+    },
+    {
+      "source": "46a2000b-ab95-4db4-a6f8-725e46a62b86",
+      "target": "3f9d856c-031e-47db-a299-92aa346c39fe",
+      "type": "response"
+    },
+    {
+      "source": "03329d4b-08e3-43bf-a77c-42539774faac",
+      "target": "28cb2e69-df03-4f7e-82ed-ea675341dcc4",
+      "type": "response"
+    },
+    {
+      "source": "03329d4b-08e3-43bf-a77c-42539774faac",
+      "target": "4d31dedb-848f-4be2-83bf-287dc66ef588",
+      "type": "response"
+    },
+    {
+      "source": "fb61f807-81e1-4918-86ad-e4089a8a8fd5",
+      "target": "7e6d6bb1-0217-4683-ae93-df2a4ca7026c",
+      "type": "response"
+    },
+    {
+      "source": "fb61f807-81e1-4918-86ad-e4089a8a8fd5",
+      "target": "df1296b1-5b87-4cc7-9aaf-827b54d8eae0",
+      "type": "response"
+    },
+    {
+      "source": "0ccf1348-3b12-4e87-bb5b-d11145bc5bc4",
+      "target": "f89f6747-66f3-4405-a22b-cbbc0bb88820",
+      "type": "response"
+    },
+    {
+      "source": "0ccf1348-3b12-4e87-bb5b-d11145bc5bc4",
+      "target": "5aad759f-c198-4977-8eae-4ae28dd7e68c",
+      "type": "response"
+    },
+    {
+      "source": "75310d34-8c2f-46a5-a3c0-38bd9b816e88",
+      "target": "8cf3edbe-f0b1-4a67-9221-fc357a321cfe",
+      "type": "response"
+    },
+    {
+      "source": "75310d34-8c2f-46a5-a3c0-38bd9b816e88",
+      "target": "7347c1d9-c25d-4809-baf6-b45f3d6a0f8c",
+      "type": "response"
+    },
+    {
+      "source": "98805d6a-613a-467d-bc34-7e488ca1ad25",
+      "target": "b6d56762-b9c3-420c-98a0-07c3349aa83f",
+      "type": "response"
+    },
+    {
+      "source": "98805d6a-613a-467d-bc34-7e488ca1ad25",
+      "target": "520b3d28-525f-4744-8fce-27892c23e0e0",
+      "type": "response"
+    },
+    {
+      "source": "1656a300-3e5b-4e92-b8e9-6c5839bac3d6",
+      "target": "b12d7a88-5c27-472f-9e4d-c4faf7f63c64",
+      "type": "response"
+    },
+    {
+      "source": "1656a300-3e5b-4e92-b8e9-6c5839bac3d6",
+      "target": "d4172c3a-c267-4e5c-8691-2fd0b847c29b",
+      "type": "response"
+    },
+    {
+      "source": "cbd3dd8b-bf42-47e3-844e-910652aac39f",
+      "target": "04d86caa-741b-4f7a-9084-e5392e466cb9",
+      "type": "response"
+    },
+    {
+      "source": "cbd3dd8b-bf42-47e3-844e-910652aac39f",
+      "target": "ad4021d4-26eb-4898-893a-b212731bbf81",
+      "type": "response"
+    },
+    {
+      "source": "580d1c51-73e5-4613-8eea-f335c9b4691b",
+      "target": "6538b7d2-b877-450f-8156-86666c8cae4e",
+      "type": "response"
+    },
+    {
+      "source": "580d1c51-73e5-4613-8eea-f335c9b4691b",
+      "target": "2e472658-6fdd-478d-b300-67ac47ed40ed",
+      "type": "response"
+    },
+    {
+      "source": "a03faad3-933b-4cc8-b570-183e6c7a654b",
+      "target": "c931ad07-d840-473f-b2a7-4f0b4077f40d",
+      "type": "response"
+    },
+    {
+      "source": "a03faad3-933b-4cc8-b570-183e6c7a654b",
+      "target": "f8bee252-5e37-48a7-ad8b-da334e14f045",
+      "type": "response"
+    },
+    {
+      "source": "46f6278c-8155-45ff-8822-3401d7a5aeed",
+      "target": "a6d1c79b-22da-464c-9e28-829f152b94f0",
+      "type": "response"
+    },
+    {
+      "source": "46f6278c-8155-45ff-8822-3401d7a5aeed",
+      "target": "2d1082e6-513d-4f40-849e-6675dfa932fe",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "24e48549-f321-4933-ba1e-f213ffa5d5ad",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "314c9c31-3b93-4f20-8e95-78e4ad141be2",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "40f77ec9-0f52-4c59-be42-abf7501f03ea",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "5b0b3f19-b4ae-467a-a151-6a5b987f5c80",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "c2258339-9317-4c1e-a296-6aa276b24842",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "7ac6ce92-3dea-4aeb-9515-f82d96696c84",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "937b957f-063a-4986-bf53-5835faf8f1c8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "be61ccec-107e-49a2-8793-b9c8ab95b326",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "54e5668a-2858-4135-8a31-fa4a12ccad6d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "aedc9713-93ec-4641-b747-064af873835d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "73d5a767-4c4b-40fc-85a5-6ba60c0d4fbf",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "cb873e5f-1019-4de5-8443-32ed4133baba",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

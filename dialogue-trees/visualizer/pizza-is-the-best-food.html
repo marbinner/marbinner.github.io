@@ -1,0 +1,2827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza is the best food - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #666;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 1px solid #a2a9b1;
+            transition: right 0.3s;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #72777d;
+        }
+
+        #sidebar h2 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+            padding-right: 30px;
+        }
+
+        #sidebar .node-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #202122;
+        }
+
+        #sidebar .node-meta {
+            font-size: 0.85em;
+            color: #72777d;
+            margin-bottom: 5px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .node.pro circle {
+            fill: #00af89;
+        }
+
+        .node.con circle {
+            fill: #dd5555;
+        }
+
+        /* Depth-based styling */
+        .node circle {
+            opacity: 1;
+        }
+
+        .node.depth-1 circle {
+            opacity: 0.9;
+        }
+
+        .node.depth-2 circle {
+            opacity: 0.8;
+        }
+
+        .node.depth-3 circle {
+            opacity: 0.7;
+        }
+
+        .node.depth-4 circle,
+        .node.depth-5 circle {
+            opacity: 0.6;
+        }
+
+        .node.highlighted circle {
+            stroke: #ffd700;
+            stroke-width: 4px;
+        }
+
+        .node.selected circle {
+            stroke: #0645ad;
+            stroke-width: 4px;
+        }
+
+        /* Adaptive font sizing based on depth */
+        .node.depth-0 text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .node.depth-1 text,
+        .node.depth-2 text {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .node.depth-3 text,
+        .node.depth-4 text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .node.depth-5 text {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #00af89;
+            border-color: #00af89;
+        }
+
+        .node-badge.con {
+            color: #dd5555;
+            border-color: #dd5555;
+        }
+
+        .node-badge.objection {
+            color: #cc6600;
+            border-color: #cc6600;
+        }
+
+        .node-badge.response {
+            color: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.3;
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        /* Fisheye zoom effect on hover */
+        .node {
+            transition: transform 0.2s ease;
+        }
+
+        .node:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .node:hover circle {
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.pro {
+            stroke: #00af89;
+            stroke-opacity: 0.4;
+        }
+
+        .link.con {
+            stroke: #dd5555;
+            stroke-opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Pizza is the best food</h1>
+        <div class="meta">
+            4 arguments for • 6 arguments against •
+            125 total nodes • Max depth: 4 •
+            Version 4
+        </div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="fitToView()">Fit to View</button>
+
+        <div id="legend">
+            <h3>Statistics</h3>
+            <div style="font-size: 0.85em; color: #72777d; margin-bottom: 10px;">
+                <div style="margin-bottom: 3px;"><strong>Nodes:</strong> 125</div>
+                <div style="margin-bottom: 3px;"><strong>Max Depth:</strong> 4</div>
+                <div style="margin-bottom: 3px;"><strong>Pro:</strong> <span style="color: #00af89;">4</span></div>
+                <div style="margin-bottom: 3px;"><strong>Con:</strong> <span style="color: #dd5555;">6</span></div>
+            </div>
+
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00af89;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dd5555;"></div>
+                <span>Con / Opposing</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-content"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "fc8cbcf8-cced-4ff6-ac3e-6212e46a75ec",
+      "text": "The fundamental composition of pizza (dough, sauce, cheese) permits infinite adaptation, accommodating diverse global palates and strict dietary restrictions, exemplified by widely successful regional variations and vegan alternatives.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476844"
+    },
+    {
+      "id": "c06c8f08-27a4-4973-94ff-b5bd92e4e843",
+      "text": "Pizza's ready-made, proportional slices allow for immediate and equitable sharing among groups, eliminating the disputes over portion size common with shared platters.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476884"
+    },
+    {
+      "id": "7f362234-78ce-46ac-8715-007ddf282bf3",
+      "text": "Pizza provides a perfectly balanced sensory profile, simultaneously engaging the five basic tastes\u2014sweet, sour, salty, bitter, and umami\u2014combined with a satisfying juxtaposition of textures (crisp crust, gooey cheese), maximizing palatability.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476897"
+    },
+    {
+      "id": "a9f6710b-761a-4d80-b424-18295d840575",
+      "text": "Pizza has maintained continuous historical and cultural relevance for centuries, successfully evolving from a simple Neapolitan peasant dish into a universally recognizable, foundational global staple, affirming its permanent culinary significance and endurance.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476905"
+    },
+    {
+      "id": "8147d02c-2786-4551-b828-776a5760e4ce",
+      "text": "Pizza's standard preparation yields a high concentration of saturated fats and refined carbohydrates, lacking the micronutrient and fiber variety necessary for consistent optimal health, unlike balanced meals incorporating diverse whole grains and fresh vegetables.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476941"
+    },
+    {
+      "id": "a74c353f-8667-42c9-bc3d-bd91447fa0e4",
+      "text": "The designation of any food as objectively \"best\" is logically unsound because taste and culinary quality are inherently subjective metrics, rendering an absolute judgment on food preference impossible across diverse palates and cultures.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476951"
+    },
+    {
+      "id": "8c730392-1d17-47b2-87dc-64943ecb5f95",
+      "text": "Observational data on global dietary habits confirm that pizza is primarily consumed as an occasional indulgence or treat food, rather than a superior, sustainable staple required of the \"best\" food source.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476958"
+    },
+    {
+      "id": "a935cb94-c9c6-47d3-98bf-df4e7a5639ca",
+      "text": "Compared to high-end culinary arts, pizza generally lacks the complex layering of flavors, technical difficulty, and sophisticated preparation methods necessary to rank as the undisputed pinnacle of gastronomic excellence.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476965"
+    },
+    {
+      "id": "381d2bcf-cf68-4f4e-a593-eadb0cadffda",
+      "text": "Standard pizza preparations often rely heavily on high-impact ingredients such as dairy and processed meats, meaning it cannot be considered the \u201cbest\u201d from the crucial perspective of minimizing environmental harm and maximizing ethical sustainability.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476972"
+    },
+    {
+      "id": "702b7135-5b37-4836-b0f4-e2fd92e37bad",
+      "text": "Truly superior pizza preparation necessitates specialized, high-heat ovens and high-quality, regionally distinct ingredients, creating an accessibility barrier that prevents its reliable global production or easy consumption.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": null,
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T00:59:01.476979"
+    },
+    {
+      "id": "7d6f5f14-0fb0-4498-ae5a-815deb58acac",
+      "text": "Pizza's inherent customization means any serving can be made with high-fiber whole-grain dough and loaded with diverse vegetables like spinach or peppers, achieving a balanced macronutrient profile. Neapolitan-style pizza, for instance, uses fresh mozzarella, tomatoes (rich in lycopene), and basil on a thin crust, which counters the profile of high saturated fat and refined carbohydrates.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8147d02c-2786-4551-b828-776a5760e4ce",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:45:48.454044+00:00"
+    },
+    {
+      "id": "d6f46d73-3b22-462a-a8af-47c3fa483e3a",
+      "text": "Cooked tomato sauce significantly increases the bioavailability of lycopene, an essential antioxidant for heart health, demonstrating that pizza's preparation can enhance certain micronutrient absorption above raw consumption. Furthermore, the substantial cheese component provides a complete source of protein, which is necessary for muscle and issue maintenance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8147d02c-2786-4551-b828-776a5760e4ce",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:45:48.454115+00:00"
+    },
+    {
+      "id": "2fa9eab6-8a5b-4f49-969e-ba8076ee2dcd",
+      "text": "Culinary quality is not purely subjective, as evidenced by professional metrics like technical execution, ingredient quality, and balance of flavor used in global competitions and restaurant grading systems. These objective standards demonstrate a measurable, functional consensus on superiority beyond mere personal preference.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a74c353f-8667-42c9-bc3d-bd91447fa0e4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:45:56.030582+00:00"
+    },
+    {
+      "id": "3a9e966c-f909-40cf-a37a-ab8801a0bf04",
+      "text": "The impossibility of absolute scientific consensus does not invalidate a functional definition of \"best,\" which can be established by measuring global ubiquity, successful cross-cultural adaptation, and sustained demand. Widespread appeal acts as a robust, practical proxy for objective excellence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a74c353f-8667-42c9-bc3d-bd91447fa0e4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:45:56.030606+00:00"
+    },
+    {
+      "id": "aabdc22d-2265-46b3-acb7-e0bbe2deda6f",
+      "text": "Traditional Neapolitan pizza, in its original form, is built upon staple ingredients\u2014dough, tomatoes, and olive oil\u2014and historically served as a cheap, nutritionally balanced, and common daily meal, meaning it functions as a regional staple despite the objection's generalization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8c730392-1d17-47b2-87dc-64943ecb5f95",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:01.674226+00:00"
+    },
+    {
+      "id": "41c96345-5fc5-4dc6-87ad-e8200f3c1632",
+      "text": "A food's frequency of consumption as an \"indulgence\" is often determined by cost and cultural trends, not its intrinsic quality; the exceptional versatility of pizza, allowing it to incorporate nearly any local ingredient or dietary preference globally, defines a superior food regardless of daily intake.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "8c730392-1d17-47b2-87dc-64943ecb5f95",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:01.674264+00:00"
+    },
+    {
+      "id": "ab31196a-9de9-4973-8066-24f2c38c2d25",
+      "text": "Authentic pizza, like Neapolitan or Roman styles, demands sophisticated preparation methods, including multi-day controlled fermentation, specific flour hydration ratios, and precise management of extreme heat in a wood-fired oven. This level of technical difficulty demonstrates that pizza preparation is not inherently simple compared to many dishes in other culinary arts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a935cb94-c9c6-47d3-98bf-df4e7a5639ca",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:06.885176+00:00"
+    },
+    {
+      "id": "0ec7b1c1-ef83-4f91-a7b7-403ee36fac67",
+      "text": "Gastronomic excellence is often measured by the harmonious balance and optimization of simple, high-quality ingredients, rather than sheer conceptual complexity or technique volume. Pizza achieves profound, balanced flavor layering by maximizing the natural umami from aged cheese, slow-cooked tomatoes, and high-hydration dough.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a935cb94-c9c6-47d3-98bf-df4e7a5639ca",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:06.885200+00:00"
+    },
+    {
+      "id": "33449b06-11f9-48b3-8cd7-57b566cc14a0",
+      "text": "Pizza is fundamentally customizable; high-impact ingredients like processed meats and dairy are optional, meaning a majority of the food (crust, sauce) consists of sustainable, low-impact staples like grains, tomatoes, and simple vegetables.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "381d2bcf-cf68-4f4e-a593-eadb0cadffda",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:12.471363+00:00"
+    },
+    {
+      "id": "4571fdfe-002b-4b80-aa45-d703518bf396",
+      "text": "Comparing food types, a typical pizza's footprint is often lower than many other culturally celebrated foods because its staples, such as flour, yeast, and tomatoes, require significantly fewer resources than those based entirely on high-intensity inputs like industrial beef or large-scale commercial fishing.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "381d2bcf-cf68-4f4e-a593-eadb0cadffda",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:12.471402+00:00"
+    },
+    {
+      "id": "6b6be498-379d-4522-bce0-61dbffe3705d",
+      "text": "Reliable global production of high-quality pizza is already achieved by major international chains utilizing standardized electric and gas ovens, demonstrating that specialized, high-heat ovens are not a prerequisite for widespread consumption.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "702b7135-5b37-4836-b0f4-e2fd92e37bad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:16.921512+00:00"
+    },
+    {
+      "id": "0ba02764-c6f3-4728-9ae4-474981c00673",
+      "text": "Pizza\u2019s global appeal is based on its adaptability, allowing high-quality local variations to thrive by integrating globally sourced or locally abundant ingredients rather than failing due to the shortage of specific regionally distinct components.",
+      "type": "response",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "702b7135-5b37-4836-b0f4-e2fd92e37bad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:16.921551+00:00"
+    },
+    {
+      "id": "02330057-65ef-443d-9877-e0188b9151bf",
+      "text": "Adaptation is inherently limited because the physical and chemical constraints of baking and ingredient compatibility prevent infinite modifications while maintaining the characteristic dough structure.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fc8cbcf8-cced-4ff6-ac3e-6212e46a75ec",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:27.581011+00:00"
+    },
+    {
+      "id": "cecc0b74-c4d7-4c3d-bf18-4ae7bd61dfb9",
+      "text": "Successful accommodation of strict dietary restrictions, such as veganism or gluten-free diets, requires the complete removal or substitution of one or more of the fundamental composition elements (cheese, flour), meaning success is distinct from the original ingredients' inherent adaptability.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "fc8cbcf8-cced-4ff6-ac3e-6212e46a75ec",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:27.581449+00:00"
+    },
+    {
+      "id": "824f9540-4358-41e7-9f10-99199f2775be",
+      "text": "Low-sodium diets achieve success by reducing salt and adjusting spices in inherently adaptable dishes like soups and stir-fries, demonstrating that accommodation does not universally require complete removal of a fundamental element.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cecc0b74-c4d7-4c3d-bf18-4ae7bd61dfb9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:53.784855+00:00"
+    },
+    {
+      "id": "08db0b68-8c48-4f8a-8016-bda587fc3b0c",
+      "text": "Reduced-sugar diets utilize sucrose substitutes like stevia or erythritol to maintain the structural integrity of baked goods, showing that foundational elements possess a high chemical tolerance for modification, allowing deep adaptation without removal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "cecc0b74-c4d7-4c3d-bf18-4ae7bd61dfb9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:46:53.784884+00:00"
+    },
+    {
+      "id": "b3ff68b6-963f-452f-9871-aec30e4c3e28",
+      "text": "Slicing is rarely perfectly geometric or uniform (especially in manual cuts), meaning disputes persist over perceived unequal sizes or the varied distribution of desirable ingredients between center and edge slices.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c06c8f08-27a4-4973-94ff-b5bd92e4e843",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:03.308406+00:00"
+    },
+    {
+      "id": "48938068-9990-4233-976b-885bbbcdbd85",
+      "text": "Equal proportional slicing only resolves portion size disputes, but does not eliminate conflicts arising from differing appetites, leading to intense arguments about who receives multiple slices or the final remaining piece.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "c06c8f08-27a4-4973-94ff-b5bd92e4e843",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:03.308853+00:00"
+    },
+    {
+      "id": "4671036e-82d4-4e9f-8509-1dd248a8fa4a",
+      "text": "Maximizing palatability is a subjective measure dependent on cultural food history and individual biology. Foods like highly spiced curries or fermented natto are preferred by many people globally, proving pizza is not objectively the most palatable food.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7f362234-78ce-46ac-8715-007ddf282bf3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:22.280836+00:00"
+    },
+    {
+      "id": "d106958a-f7d2-42a3-8c1d-fd1c414b3feb",
+      "text": "Standard pizza recipes overwhelmingly emphasize salty, umami, and sour tastes from cheese, meat, and tomato sauce, and generally lack a strong or identifiable bitter component necessary to satisfy the claim of significantly engaging all five basic tastes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7f362234-78ce-46ac-8715-007ddf282bf3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:22.281492+00:00"
+    },
+    {
+      "id": "181b3cf3-89b1-4072-bfea-fedf5364e0f1",
+      "text": "Standard pizza recipes inherently include significant sweetness from the caramelized sugars in the leavened dough and the naturally occurring sugars in cooked tomato sauce, a key taste component completely omitted from this analysis.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d106958a-f7d2-42a3-8c1d-fd1c414b3feb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:35.665322+00:00"
+    },
+    {
+      "id": "2dddf5b4-0822-4d13-8471-f2e12e1988e4",
+      "text": "The requirement that a taste must be \"strong or identifiable\" is an arbitrary threshold, as perceptible, subtle bitterness is often present in slightly charred cheese crust edges, oregano, and basil, which contributes significantly to the overall complex flavor profile.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d106958a-f7d2-42a3-8c1d-fd1c414b3feb",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:35.665354+00:00"
+    },
+    {
+      "id": "39116ac4-24b4-4f30-92c4-4a0db155fb35",
+      "text": "Culinary significance is inherently contingent, as evidenced by the historical decline of once-foundational global foods like garum, the Roman fermented fish sauce, which became obsolete due to changing tastes and economics, meaning historical success cannot guarantee permanence.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a9f6710b-761a-4d80-b424-18295d840575",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:46.340569+00:00"
+    },
+    {
+      "id": "6f8d721b-fe15-4aee-bf52-1f3cbe845eb8",
+      "text": "The process of commercialization and globalization has led to radical fragmentation, where contemporary variants like mass-produced frozen pizzas or non-traditional dessert styles bear little resemblance to the Neapolitan original, thus undermining the claim of continuous, unified cultural endurance.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a9f6710b-761a-4d80-b424-18295d840575",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:46.341003+00:00"
+    },
+    {
+      "id": "93aa46e4-f5cc-4c74-ad29-d10300f2bd79",
+      "text": "The existence of commercialized variants does not invalidate the original tradition; the Associazione Verace Pizza Napoletana actively preserves strict standards for authentic Neapolitan pizza, demonstrating continuous cultural endurance alongside adaptation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6f8d721b-fe15-4aee-bf52-1f3cbe845eb8",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:57.696634+00:00"
+    },
+    {
+      "id": "a2c8e394-c760-4534-b051-5059f6b94149",
+      "text": "The argument attempts to prove the fragmentation of pizza culture by confusingly mixing relevant product adaptations (frozen pizza) with irrelevant, broad evidence like \"non-traditional dessert styles,\" thereby weakening its specific claim about the Neapolitan tradition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6f8d721b-fe15-4aee-bf52-1f3cbe845eb8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:47:57.696676+00:00"
+    },
+    {
+      "id": "ed786089-8148-4779-a9cf-3b919f36af12",
+      "text": "Cauliflower, portobello mushroom, and polenta are regularly used as crusts, fundamentally replacing the traditional wheat-yeast dough while retaining the concept of pizza. Ingredient compatibility is functionally near-limitless, extending far beyond typical baking constraints.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "02330057-65ef-443d-9877-e0188b9151bf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:07.113371+00:00"
+    },
+    {
+      "id": "1b553116-d18c-461d-93e4-64fe5fcec1b2",
+      "text": "Detroit-style, Neapolitan, and New York-style pizzas intentionally employ radically different hydration levels, proofing times, and specific cooking temperatures. The resulting structures are vastly distinct (soft vs. crisp vs. deep-pan), demonstrating that the \"characteristic dough structure\" is a highly flexible family of physical properties.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "02330057-65ef-443d-9877-e0188b9151bf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:07.113394+00:00"
+    },
+    {
+      "id": "e6064245-5db6-4f30-b055-bb5c14783a12",
+      "text": "Modern commercial pizza preparation often utilizes mechanical cutters or standardized rocking slicers, guaranteeing sufficiently uniform portions for transactions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b3ff68b6-963f-452f-9871-aec30e4c3e28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:17.666672+00:00"
+    },
+    {
+      "id": "dad6b29a-2882-41d7-8ada-2b9fe6bb9567",
+      "text": "The varied distribution, such as the substantial, untrimmed cornicione in authentic Neapolitan pizza, is a culinary advantage, developing essential textural and flavor contrast.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b3ff68b6-963f-452f-9871-aec30e4c3e28",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:17.666695+00:00"
+    },
+    {
+      "id": "dbf80c4b-1272-4dc5-8af2-d67cf4b4f910",
+      "text": "Group dining etiquette often dictates that everyone must take only a single equal portion first, stabilizing the distribution. The subsequent negotiation for second servings shifts from a conflict over initial rights to a request for surplus, which is a less confrontational social dynamic documented in studies of communal resource allocation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "48938068-9990-4233-976b-885bbbcdbd85",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:28.555558+00:00"
+    },
+    {
+      "id": "cf5b28a1-c089-4135-bd81-97a99efb3eb5",
+      "text": "Standardized equal division satisfies the universal psychological need for procedural justice regarding the initial allocation. While scarcity conflict remains over the final piece, its intensity is lowered because the parties are not also arguing about the fundamental fairness of the process, as demonstrated by studies in procedural justice theory.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "48938068-9990-4233-976b-885bbbcdbd85",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:28.555599+00:00"
+    },
+    {
+      "id": "19f0af27-e4fe-47fb-8355-c8c2a789a6bf",
+      "text": "While palatability is subjective, pizza's nearly universal market penetration and success in diverse localized forms worldwide demonstrate a broad, high baseline acceptance that niche, polarizing foods like natto or intensely spiced regional curries lack.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4671036e-82d4-4e9f-8509-1dd248a8fa4a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:33.820330+00:00"
+    },
+    {
+      "id": "e9edfbac-7029-414e-8a68-40e3a6d314b6",
+      "text": "Foods with acquired tastes, such as fermented natto, rely on specific cultural conditioning, whereas pizza's foundation of fat, salt, and umami leverages universal evolutionary drivers of human food preference for immediate, widespread appeal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "4671036e-82d4-4e9f-8509-1dd248a8fa4a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:33.820355+00:00"
+    },
+    {
+      "id": "267d2dc8-1f82-4c4e-b868-d3c73f33c261",
+      "text": "Garum's obsolescence was primarily driven by economic restrictions, such as high salt taxes and complicated, large-scale fermentation logistics. In contrast, pizza's basic composition (dough, cheese, tomato) is simple, affordable, and easily adaptable to changing global ingredient availability, ensuring its resilience.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "39116ac4-24b4-4f30-92c4-4a0db155fb35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:39.387446+00:00"
+    },
+    {
+      "id": "15a12be9-198a-4d9f-853f-b70da8fc6795",
+      "text": "Simple culinary foundations based on staple grains, such as various forms of long-leavened bread and boiled rice, have maintained global significance for millennia by successfully evolving their preparation. This longevity suggests that foods built on essential, universal caloric foundations resist obsolescence much better than specialized condiments like garum.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "39116ac4-24b4-4f30-92c4-4a0db155fb35",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:39.387470+00:00"
+    },
+    {
+      "id": "7ce2ae69-4cef-4723-bac8-e0fbc233b664",
+      "text": "A traditional Neapolitan crust is made from highly-refined \"00\" wheat flour, and whole-milk mozzarella provides several grams of saturated fat per ounce. This preparation does not fundamentally counter a base profile high in saturated fat and refined carbohydrates.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7d6f5f14-0fb0-4498-ae5a-815deb58acac",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:55.333446+00:00"
+    },
+    {
+      "id": "3e8efd28-3e7b-4405-adcc-16a0cb793b17",
+      "text": "The vast majority of commercially consumed pizza, especially in the US takeaway sector, uses refined white flour and processed meats like pepperoni or sausage. These commonplace preparations negate the suggested nutritional balance achieved only via specialized high-fiber doughs and diverse vegetable toppings.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "7d6f5f14-0fb0-4498-ae5a-815deb58acac",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:48:55.333894+00:00"
+    },
+    {
+      "id": "0f1614a3-5aae-496c-8801-62e32860276b",
+      "text": "Pizza preparations like the classic Neapolitan Pizza Marinara, which contains no cheese and is heavily topped with fiber-rich tomatoes, garlic, extra virgin olive oil, and herbs, fundamentally shift the profile away from saturated fat towards potent antioxidants and beneficial monounsaturated fats.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7ce2ae69-4cef-4723-bac8-e0fbc233b664",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:06.279082+00:00"
+    },
+    {
+      "id": "fbc6f4db-d843-40b3-9131-0bce0165d81b",
+      "text": "The US Daily Reference Intakes (DRI) define nutritional status by required micronutrients and macronutrients. Pizza with cheese and tomato provides high levels of protein and calcium (from cheese), and lycopene (from sauce), fulfilling essential dietary requirements rather than inherently negating overall nutritional value.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3e8efd28-3e7b-4405-adcc-16a0cb793b17",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:10.796525+00:00"
+    },
+    {
+      "id": "af1d6e12-8750-4f1d-a12f-0158afe1b3c1",
+      "text": "Lycopene, a potent antioxidant, is significantly more bioavailable when tomatoes are cooked and consumed with fat, matching the composition of traditional pizza sauce and cheese. This substantial nutritional contribution from the cooked tomato base is ignored by focusing exclusively on the flour and processed meats.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3e8efd28-3e7b-4405-adcc-16a0cb793b17",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:10.796569+00:00"
+    },
+    {
+      "id": "60b11726-3bc5-48d9-a63d-6a887a81833a",
+      "text": "The negligible benefit from minor micronutrients is typically obscured by the primary nutritional profile, which is overwhelmingly high in refined carbohydrates and saturated fat from the crust and cheese, contributing to adverse health outcomes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d6f46d73-3b22-462a-a8af-47c3fa483e3a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:24.095036+00:00"
+    },
+    {
+      "id": "2a530689-671e-4db5-b79c-696555575a42",
+      "text": "Lycopene, while beneficial, is not classified as an \"essential\" nutrient since the human body does not suffer deficiency symptoms without it, rendering the argument's assertion of necessity false.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d6f46d73-3b22-462a-a8af-47c3fa483e3a",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:24.095462+00:00"
+    },
+    {
+      "id": "2018b6d8-f0ed-4475-8c34-233211333016",
+      "text": "A standard serving of pizza topped with vegetables like spinach, mushrooms, and peppers provides essential micronutrients such as Vitamin K and Vitamin C, directly contradicting the assertion that benefits are negligible and obscured.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "60b11726-3bc5-48d9-a63d-6a887a81833a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:37.010917+00:00"
+    },
+    {
+      "id": "7f5348d0-f3f4-46db-b5f7-1de05f5c1798",
+      "text": "The link between specific dietary profiles and adverse health outcomes depends heavily on overall dietary context and frequency; moderate consumption of pizza within a calorie-appropriate diet does not automatically lead to health degradation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "60b11726-3bc5-48d9-a63d-6a887a81833a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:37.010940+00:00"
+    },
+    {
+      "id": "adfc1c5e-5f02-4b42-808e-4fa45ecba91e",
+      "text": "Epidemiological data consistently links high dietary intake of carotenoids like lycopene (found in tomatoes) with lower incidence of chronic diseases, including prostate cancer and cardiovascular disease. This demonstrates that substances not required to prevent immediate deficiency are still necessary to maintain optimal, long-term disease-free bodily function.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2a530689-671e-4db5-b79c-696555575a42",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:41.012858+00:00"
+    },
+    {
+      "id": "9c8a39e8-0004-402f-b02c-7e21191b80f8",
+      "text": "The professional metrics cited, such as \"balance of flavor,\" create an intersubjective standard among trained experts, but remain dependent on human perception and cultural context, failing to meet the requirement for true objectivity (verifiable independently of human judgment).",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2fa9eab6-8a5b-4f49-969e-ba8076ee2dcd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:52.178499+00:00"
+    },
+    {
+      "id": "4e07253b-ee2d-46ad-bb4d-a60bc70d564c",
+      "text": "While technical execution and precision can be objectively verified (e.g., proper emulsion, precise temperature), this only proves adherence to technique, not the objective superiority of the resulting aesthetic quality, which remains a judgment based on highly variable human experience and aesthetic consensus.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "2fa9eab6-8a5b-4f49-969e-ba8076ee2dcd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:49:52.178952+00:00"
+    },
+    {
+      "id": "e5652e1c-39dd-4750-b8c3-0b08076c2498",
+      "text": "The argument employs an impossibly strict standard of \"objectivity independent of human judgment,\" yet in applied sciences like pharmaceutical trials or medical imaging, consensus among trained humans (intersubjectivity) is established as the final objective benchmark.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9c8a39e8-0004-402f-b02c-7e21191b80f8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:03.931712+00:00"
+    },
+    {
+      "id": "709af8d3-90ee-4973-9574-1dcbb91a04aa",
+      "text": "Pizza is structurally superior by combining core macronutrients (carbohydrate base, protein/fat topping) in a modular, delivery-friendly matrix, giving it objective supremacy in practical utility and cross-cultural adaptability. This suggests a functional \"best\" regardless of aesthetic variability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4e07253b-ee2d-46ad-bb4d-a60bc70d564c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:04.351428+00:00"
+    },
+    {
+      "id": "374503a5-b4b9-4987-8080-b94d44fa911e",
+      "text": "Widespread appeal often reflects market saturation, successful marketing, or historical inertia, not objective superiority. The QWERTY keyboard layout remains dominant globally despite demonstrable objective inefficiencies compared to alternatives like Dvorak.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3a9e966c-f909-40cf-a37a-ab8801a0bf04",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:18.379994+00:00"
+    },
+    {
+      "id": "1f20cc5e-b401-420c-814a-094cda3b30eb",
+      "text": "Ubiquity is not a reliable metric of objective excellence because demand can be driven by necessity, low cost, or lack of alternatives. Objectively low-quality staple foods often have the highest demand in developing nations due solely to essential caloric needs and minimal cost.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3a9e966c-f909-40cf-a37a-ab8801a0bf04",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:18.380430+00:00"
+    },
+    {
+      "id": "32625fb6-b739-4186-8495-fc53bbbd5bdc",
+      "text": "Pizza's sustained mass appeal in high-choice, developed economies like the United States, where consumers willingly pay significantly more for specialty craft pizzas than for basic staples, indicates that its ubiquity stems from objective, preferred quality, not just caloric necessity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1f20cc5e-b401-420c-814a-094cda3b30eb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:34.677376+00:00"
+    },
+    {
+      "id": "baf1c6c5-1f13-4d5a-9f0f-b24f28b32ed8",
+      "text": "QWERTY's market dominance reflects an objective superiority in network effects, reducing equipment costs and global training barriers for billions of users. This massive collective efficiency, similar to the objective advantage of the TCP/IP communication protocol suite, outweighs the marginal ergonomic gains of alternatives like Dvorak.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "374503a5-b4b9-4987-8080-b94d44fa911e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:35.111909+00:00"
+    },
+    {
+      "id": "40234676-1ea5-42cc-b6af-5b7f7ce268c7",
+      "text": "Neapolitan pizza's consumption frequency and price point have shifted; it is now typically consumed as a restaurant meal or regional specialty, making it relatively expensive compared to actual daily staples like dried pasta or bread.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aabdc22d-2265-46b3-acb7-e0bbe2deda6f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:45.466464+00:00"
+    },
+    {
+      "id": "97d8e8af-765a-4295-9f96-7c5b2ec59e66",
+      "text": "A food's function as a \"staple\" rests on its consistent, caloric dominance in the daily diet, yet modern Neapolitan diets rely primarily on standardized pasta, rice, and vegetable dishes, not daily pizza consumption.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aabdc22d-2265-46b3-acb7-e0bbe2deda6f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:50:45.467198+00:00"
+    },
+    {
+      "id": "740d3cbf-8612-4f1a-a743-cdbd731cf73e",
+      "text": "In the Neapolitan region of Italy, the high volume of pizza consumption often involves pizza a portafoglio, a folded street food version sold for typically under \u20ac3, which maintains its status as an accessible, high-frequency food option.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "40234676-1ea5-42cc-b6af-5b7f7ce268c7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:02.632720+00:00"
+    },
+    {
+      "id": "8383c1fc-da81-4737-a1e2-83f43fd67001",
+      "text": "The financial and caloric density mechanisms of pizza mean it historically offered the highest caloric return per Lire in 19th-century Naples, a function retained by today's inexpensive street food versions that still serve as primary daily caloric meals for the working class.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "97d8e8af-765a-4295-9f96-7c5b2ec59e66",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:04.666086+00:00"
+    },
+    {
+      "id": "2849488f-eee7-45b3-85ce-74015cf97ebf",
+      "text": "Defining a superior food requires assessing key intrinsic qualities like nutritional density and long-term health benefits, which often contradict the common preparation of pizza due to high saturated fat, sodium, and refined carbohydrate content.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "41c96345-5fc5-4dc6-87ad-e8200f3c1632",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:14.956798+00:00"
+    },
+    {
+      "id": "dba63165-1cc0-4dcd-90a4-7f8a92b5fa49",
+      "text": "If versatility defines superiority, then staple foods like plain rice or flatbreads (e.g., tortillas, pita) are equally or more versatile, accommodating a wider array of global cuisines and dietary restrictions, thus undermining pizza's unique claim to superiority.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "41c96345-5fc5-4dc6-87ad-e8200f3c1632",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:14.957256+00:00"
+    },
+    {
+      "id": "5852a09a-f1ab-41b0-a1eb-299905b5d4c8",
+      "text": "Superiority in food must include universal accessibility and cultural impact; pizza's global ubiquity and UNESCO-protected Neapolitan tradition demonstrate its status as a foundational, adaptable food that transcends narrow nutritional metrics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2849488f-eee7-45b3-85ce-74015cf97ebf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:26.101647+00:00"
+    },
+    {
+      "id": "24af1ea7-f38c-42d4-8e0e-336a8cf90bf8",
+      "text": "Unlike plain flatbreads or simple rice, pizza is a complex prepared food item that, in its common forms (e.g., Neapolitan or New York style), is already a nutritionally balanced, complete meal. Comparing the versatility of a finished product to that of an unseasoned carbohydrate base misrepresents the basis of its appeal.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dba63165-1cc0-4dcd-90a4-7f8a92b5fa49",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:33.223928+00:00"
+    },
+    {
+      "id": "a90ef6b0-46f2-4480-a1b4-2d1890dbeec8",
+      "text": "Pizza's perceived superiority stems from its unique level of global standardization and universal cultural recognition, consumed in nearly identical formats (crust, sauce, cheese) across continents. This standardized, cross-cultural appeal is not matched by regional staple bases, which vary widely between the pita of the Middle East and the corn tortilla of Mexico.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dba63165-1cc0-4dcd-90a4-7f8a92b5fa49",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:33.223954+00:00"
+    },
+    {
+      "id": "8ef27ec8-2fa4-4082-8aea-a380bede9fbd",
+      "text": "Most home and commercially produced pizza relies on quick-rise doughs, prepared crusts, or assembly-only methods that require minimal technical skill, demonstrating that complexity is an optional refinement, not an inherent component of the dish.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ab31196a-9de9-4973-8066-24f2c38c2d25",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:45.727075+00:00"
+    },
+    {
+      "id": "0915c92a-8370-4135-837f-bc04ab8c61d1",
+      "text": "The existence of reliable, shelf-stable commercial pizza dough mixes and canned sauces allows a novice to prepare a complete and edible meal in under 30 minutes with no specialized equipment, which undercuts the claim of universal technical difficulty.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "ab31196a-9de9-4973-8066-24f2c38c2d25",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:45.727513+00:00"
+    },
+    {
+      "id": "f7d4b7b3-5f36-4d94-b49d-c1af285eb306",
+      "text": "The inherent complexity of pizza is demonstrated by Neapolitan Pizza, which holds a Traditional Speciality Guaranteed (TSG) status from the EU, mandating specific, multi-day fermentation and high-temperature wood-fired cooking. This certified, definitive preparation shows that high technical skill is a necessary component for the traditional dish.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8ef27ec8-2fa4-4082-8aea-a380bede9fbd",
+      "children_count": 0,
+      "references": [
+        "Regulation (EU) No 97/2010"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:51:58.474103+00:00"
+    },
+    {
+      "id": "052b93a5-b767-4b1c-9789-83be5eee4e0e",
+      "text": "The technical difficulty claim pertains to preparing food from raw ingredients; assembling a shelf-stable box mix is analogous to heating a store-bought Lean Cuisine, not demonstrating ease in actual cooking skill.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0915c92a-8370-4135-837f-bc04ab8c61d1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:52:01.434415+00:00"
+    },
+    {
+      "id": "73d0bb60-bfcd-4352-951c-e215eb5d0b4c",
+      "text": "Standard home ovens require 15 minutes just to preheat to 450\u00b0F, and package instructions for commercial crusts typically add another 12 to 15 minutes of baking, making the claim of completion \"in under 30 minutes\" physically impossible.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "0915c92a-8370-4135-837f-bc04ab8c61d1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:52:01.434477+00:00"
+    },
+    {
+      "id": "4f24bc4d-0255-48b6-8013-90e9f70ebe88",
+      "text": "Dishes like Oaxacan Mole Negro, which require dozens of carefully prepped ingredients and multi-day cooking techniques, are internationally lauded for achieving profound flavor balance, showing that excellence includes extreme complexity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ec7b1c1-ef83-4f91-a7b7-403ee36fac67",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:52:23.513872+00:00"
+    },
+    {
+      "id": "619fefda-2d3e-4f10-b946-80ed3058d413",
+      "text": "Commercial, mass-produced pizzas using fast-leavened dough, pre-shredded cheese, and processed oil achieve low cost and consistency rather than maximizing natural umami, demonstrating that the category \\quot;Pizza\\quot; often lacks the defined ingredients for excellence.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ec7b1c1-ef83-4f91-a7b7-403ee36fac67",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:52:23.514305+00:00"
+    },
+    {
+      "id": "0e8ac673-8770-43a2-99c9-13f9c0f72c64",
+      "text": "The globally recognized excellence of traditional Neapolitan Margherita pizza is achieved through radical simplicity\u2014just dough, tomato, mozzarella, and basil\u2014demonstrating that peak culinary quality is defined by ingredient purity rather than extreme complexity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4f24bc4d-0255-48b6-8013-90e9f70ebe88",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:52:36.517758+00:00"
+    },
+    {
+      "id": "e9bb428d-a5ca-49a0-b36f-14cc52650b31",
+      "text": "Neapolitan-style pizza, certified by the Associazione Verace Pizza Napoletana (AVPN), requires specific Protected Designation of Origin ingredients and lengthy dough fermentation to maximize flavor, proving that high standards of excellence are integral to the category.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "619fefda-2d3e-4f10-b946-80ed3058d413",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:52:45.739525+00:00"
+    },
+    {
+      "id": "8ed3b39d-244d-4361-8a0a-b60019b004d7",
+      "text": "American regional variations like Chicago deep-dish or New Haven Apizza are celebrated for distinct textural excellence, structural integrity, and unique flavor combinations, showing that culinary merit extends beyond maximizing umami.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "619fefda-2d3e-4f10-b946-80ed3058d413",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:52:45.739553+00:00"
+    },
+    {
+      "id": "984545eb-18f5-436b-9c3c-9d867f4ef994",
+      "text": "A standard 14-inch commercially sold pizza contains large amounts of mozzarella, making the high-impact dairy and cheese constitute the majority of the finished product's weight and associated emissions footprint.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "33449b06-11f9-48b3-8cd7-57b566cc14a0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:02.732723+00:00"
+    },
+    {
+      "id": "4336da69-9a9f-4065-980c-7e0af728e571",
+      "text": "Industrial rice and wheat cultivation in regions like the US Midwest requires massive nitrogen fertilizer applications, which results in significant waterway pollution and high nitrous oxide emissions, contradicting the label of universally \"low-impact.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "33449b06-11f9-48b3-8cd7-57b566cc14a0",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:02.733157+00:00"
+    },
+    {
+      "id": "4b0d4114-4c13-4bec-bbd9-7d6dc902e56e",
+      "text": "Nutritional analyses often categorize grains as having a significantly lower environmental footprint than high-impact animal products like beef and dairy, supporting a comparative \"low-impact\" designation. The argument incorrectly holds industrial grain production to an absolute standard of zero impact rather than assessing its impact relative to major dietary alternatives, like the cheese and meat often found on pizza.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "4336da69-9a9f-4065-980c-7e0af728e571",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:15.645869+00:00"
+    },
+    {
+      "id": "88e8ac70-a0fa-4a17-97ab-f2292cf8e78c",
+      "text": "Empirical measurements of commercial 14-inch pizzas consistently show the dough and crust typically comprise 50-60% of the total baked weight. The cheese component usually accounts for only 20-30% of the mass, demonstrating the crust, not the mozzarella, is the physical majority of the product.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "984545eb-18f5-436b-9c3c-9d867f4ef994",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:21.761560+00:00"
+    },
+    {
+      "id": "77c2da17-673c-4b2b-9217-6f63b50268c2",
+      "text": "Lifecycle assessment studies (LCA) analyzing pizza production show that the required energy for high-temperature baking and freezing distributes system emissions significantly. This processing energy for the crust and entire product can account for over 30% of the total carbon footprint, meaning mass minority ingredients like cheese do not dominate emissions across all stages.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "984545eb-18f5-436b-9c3c-9d867f4ef994",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:21.761588+00:00"
+    },
+    {
+      "id": "bdaa2f69-d31f-48d5-a7b8-7fbc79cca46a",
+      "text": "Dairy production for cheese, a staple in typical pizza, requires high-intensity inputs like cattle farming which generate substantial methane; the climate footprint of cheese is estimated to be five times higher than grains or tomatoes, disputing the low resource claim.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4571fdfe-002b-4b80-aa45-d703518bf396",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:42.976276+00:00"
+    },
+    {
+      "id": "7b6962f1-9a6c-4905-8170-176b6b6c1ea9",
+      "text": "The comparison is selectively limited to industrial beef and commercial fishing, which are among the highest-impact foods. Many celebrated regional dishes, such as North African couscous or South Asian lentil dahl, are composed entirely of low-impact grains and legumes whose carbon footprints are demonstrably lower than pizza.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4571fdfe-002b-4b80-aa45-d703518bf396",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:42.977073+00:00"
+    },
+    {
+      "id": "dc7a4d1f-928b-4eb4-a570-1ac8a6be67d1",
+      "text": "The argument attacks an undefined premise labeled \"the low resource claim\"; if the claim addressed aspects like monetary cost, widespread availability, or short preparation time, the high environmental footprint of cheese is irrelevant to refuting the original assertion.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "bdaa2f69-d31f-48d5-a7b8-7fbc79cca46a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:55.044344+00:00"
+    },
+    {
+      "id": "581ac098-94ea-4882-a062-2c168dde8e30",
+      "text": "The environmental cost of most popular pizzas is dominated by industrial cheese production and meat toppings, both stemming from the same high-impact animal agriculture the argument attempts to challenge. This comparison therefore reinforces, rather than refutes, the selective targeting of animal-derived foods as the primary environmental concern.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7b6962f1-9a6c-4905-8170-176b6b6c1ea9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:53:57.825362+00:00"
+    },
+    {
+      "id": "9439c366-7f35-4fd5-b854-166f11ee4f69",
+      "text": "The Associazione Verace Pizza Napoletana (AVPN) standard for authentic Neapolitan pizza mandates a wood-fired dome oven reaching 800-900\u00b0F and prohibits the use of electric ovens, establishing a specialized requirement for historically recognized high quality.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6b6be498-379d-4522-bce0-61dbffe3705d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:16.564895+00:00"
+    },
+    {
+      "id": "8a809291-5bfc-42dd-a45e-913710992d4e",
+      "text": "Major international chains employ standardized ovens because they maximize consistent throughput, reduce unit cost, and simplify maintenance for global scalability, metrics entirely separate from the flavor contribution of high-heat sources.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6b6be498-379d-4522-bce0-61dbffe3705d",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:16.565340+00:00"
+    },
+    {
+      "id": "c85d1f57-13be-4f71-b645-594e1a06de25",
+      "text": "Flavor consistency is a direct input to the metric of \"consistent throughput,\" as customer willingness to purchase repeatedly (which drives throughput) depends directly on reliable taste. The business metrics driving standardization therefore necessarily incorporate, rather than exclude, consistent flavor quality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8a809291-5bfc-42dd-a45e-913710992d4e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:26.531495+00:00"
+    },
+    {
+      "id": "ad9e6492-0b67-4f71-9d1e-31ce6e0b4458",
+      "text": "The definition of \"high quality\" is unnecessarily limited by mandatory historical methods, as globally recognized and celebrated high-quality styles like New York and New Haven pizza utilize distinct cooking technologies, such as coal or gas-fired deck ovens. This concrete counterexample shows that specialized equipment outside the AVPN mandate can achieve equally high acceptance and quality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9439c366-7f35-4fd5-b854-166f11ee4f69",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:29.112441+00:00"
+    },
+    {
+      "id": "cfcfcc90-6e08-44ee-a9fb-0333bc6ce7e1",
+      "text": "The vast majority of pizza's global market share is held by standardized, low-cost fast-food chains like Domino's and Pizza Hut, whose success relies on global brand consistency and affordability rather than high-quality local variations.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ba02764-c6f3-4728-9ae4-474981c00673",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:40.638042+00:00"
+    },
+    {
+      "id": "48651f15-a89a-4462-acb8-e0dacd6f89a9",
+      "text": "Pizza's rapid globalization was facilitated by its logistical simplicity and high profitability for efficient mass production, suggesting its popularity hinges on low cost and speed more than the thriving of diverse, high-quality recipes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "0ba02764-c6f3-4728-9ae4-474981c00673",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:40.638468+00:00"
+    },
+    {
+      "id": "718cd00b-b15e-4eb9-810c-40b4a037fecf",
+      "text": "The global demand for pizza originated from its established reputation for flavor and tradition in Italy, indicating consumer preference was driven by the quality and taste of diverse recipes, not merely the low cost of efficient mass production.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "48651f15-a89a-4462-acb8-e0dacd6f89a9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:50.662902+00:00"
+    },
+    {
+      "id": "6145f345-1d7b-42ee-9813-9f39cebe03bc",
+      "text": "In major metropolitan areas, high-end \"Gourmet\" pizza restaurants specializing in complex, artisanal recipes and premium ingredients command high prices, proving that demand for diverse, high-quality pizza is substantial and not contingent on speed or low cost.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "48651f15-a89a-4462-acb8-e0dacd6f89a9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:50.662938+00:00"
+    },
+    {
+      "id": "0d75b606-1306-4422-b03c-2cf720071eea",
+      "text": "In Italy, the traditional birthplace of modern pizza, almost all sales are from independent, non-franchised pizzerias following specific local standards (VPN), substantially reducing the alleged global market dominance of standardization chains.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cfcfcc90-6e08-44ee-a9fb-0333bc6ce7e1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:55.475546+00:00"
+    },
+    {
+      "id": "717a0e85-d7ca-4869-9a0b-274849d08eab",
+      "text": "Domino's and Pizza Hut successfully enter diverse international markets like India and China only by creating tailored menus, such as the Paneer Makhani pizza, demonstrating that local variation is critical for market success.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cfcfcc90-6e08-44ee-a9fb-0333bc6ce7e1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:54:55.475574+00:00"
+    },
+    {
+      "id": "3550d2fe-e66c-4d2b-a280-59d768b1535e",
+      "text": "Low-sodium versions of culturally complex foods, such as traditionally cured prosciutto or aged blue cheese, often fail commercially because the reduction of salt fundamentally compromises the intended flavor and preservation profile, contradicting the asserted success of simple accommodation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "824f9540-4358-41e7-9f10-99199f2775be",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:06.944265+00:00"
+    },
+    {
+      "id": "5606a2b7-f21b-4f6a-b3a4-f9dd53bba0ef",
+      "text": "The adaptability of salt in simple cuisine does not translate to all fundamental elements; reducing the structural support (a fundamental element) of a bridge by 50% does not result in a successful, adaptable structure, but rather a catastrophic failure, restricting the claim of accommodation to only highly flexible systems.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "824f9540-4358-41e7-9f10-99199f2775be",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:06.944717+00:00"
+    },
+    {
+      "id": "3c9a3d90-2d94-4286-8c3e-4f3b0c572870",
+      "text": "The analogy is flawed because bridge safety relies on quantifiable, binary-limit physics (like shear stress tolerance), which is fundamentally incomparable to the continuous, subjective, and non-catastrophic spectrum of flavor tolerance in cuisine.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "5606a2b7-f21b-4f6a-b3a4-f9dd53bba0ef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:18.686639+00:00"
+    },
+    {
+      "id": "6bc3b4e0-12e4-4a95-9354-fceafac6900e",
+      "text": "The conclusion relies on a non-representative example, as many systems tolerate massive functional reduction: a human can function normally and survive after the surgical removal of 50% of their fundamental kidney capacity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "5606a2b7-f21b-4f6a-b3a4-f9dd53bba0ef",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:18.686672+00:00"
+    },
+    {
+      "id": "a48472d7-d748-47c1-957e-29b4954e29a6",
+      "text": "Successful low-sodium versions exist for most mass-market cultural staples, such as canned soups, packaged snacks, and soy sauce, demonstrating that adaptation is technically possible and commercially viable outside of highly specialized, structure-dependent cured products.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "3550d2fe-e66c-4d2b-a280-59d768b1535e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:20.849976+00:00"
+    },
+    {
+      "id": "7a61bc31-1276-41f6-ba09-1980ffcf0a8d",
+      "text": "Commercial failure often results from poor market segmentation, lack of effective marketing, or consumers' unwillingness to pay a higher price for novelty options, meaning the failure is market-driven, not necessarily due to unavoidable taste or preservation compromise.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "3550d2fe-e66c-4d2b-a280-59d768b1535e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:20.850024+00:00"
+    },
+    {
+      "id": "afca2f17-3f46-40dd-a91c-a0a3451a8262",
+      "text": "The assumption of high tolerance is an unwarranted generalization; replacing the foundational wheat crust of true Roman or Neapolitan pizza with alternative flours results in a chemically distinct product lacking the required gluten structure and taste profile.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "08db0b68-8c48-4f8a-8016-bda587fc3b0c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:32.851636+00:00"
+    },
+    {
+      "id": "f55dd9f9-b595-4e61-86af-6d04989baff9",
+      "text": "The use of substitutes necessarily requires the removal of the original element, directly contradicting the conclusion that deep adaptation occurs \u201cwithout removal.\u201d For example, replacing sucrose with stevia necessitates the complete absence of the original sugar.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "08db0b68-8c48-4f8a-8016-bda587fc3b0c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:32.852085+00:00"
+    },
+    {
+      "id": "ffcb76e6-a852-4e55-9da0-e2220922688a",
+      "text": "Substitution does not necessitate complete removal; industrial practice frequently uses partial replacement, such as blending 10% ethanol (the substitute) into 90% gasoline (the original element) to create E10 fuel.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "f55dd9f9-b595-4e61-86af-6d04989baff9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:43.866169+00:00"
+    },
+    {
+      "id": "16589f29-50a8-4791-8915-9f66f132f95d",
+      "text": "The widely consumed and highly praised Italian flatbread farinata is made entirely of chickpea flour, which contains no gluten, proving that chemically distinct alternative flours can establish their own successful and required taste profiles.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "afca2f17-3f46-40dd-a91c-a0a3451a8262",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:55:49.077790+00:00"
+    },
+    {
+      "id": "b4b650c3-bd85-48a4-9824-092718bac483",
+      "text": "The inherent sweetness from dough and sauce is often intentionally minimized or neutralized by the high acidity of quality tomatoes and the strong umami and saltiness of aged cheese, making this flavor profile secondary, not significant, in many acclaimed pizza styles.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "181b3cf3-89b1-4072-bfea-fedf5364e0f1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:02.848482+00:00"
+    },
+    {
+      "id": "9f3e8c3c-ec02-414b-a072-c164c555e08b",
+      "text": "In classic Vietnamese cuisine, a small amount of sugar is deliberately added to n\u01b0\u1edbc ch\u1ea5m to neutralize the intensity of lime juice and fish sauce; this balanced, minimized sweetness is fundamental to achieving the desired complex flavor profile, not insignificant.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "b4b650c3-bd85-48a4-9824-092718bac483",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:17.703844+00:00"
+    },
+    {
+      "id": "62dea3ee-3c8f-4bd4-9926-1584c43f1f07",
+      "text": "Objective flavor profiling, such as Gas Chromatography-Olfactometry (GC-O), determines flavor significance by measuring quantifiable aroma intensity, often disregarding components below an established concentration threshold, thus showing the \"strong or identifiable\" criterion is analytical, not arbitrary.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2dddf5b4-0822-4d13-8471-f2e12e1988e4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:32.223696+00:00"
+    },
+    {
+      "id": "9f4e8bab-5016-4e04-873c-e70928ff2609",
+      "text": "The flavor significance threshold used in Gas Chromatography-Olfactometry, such as the Odor Activity Value, is not universally objective; for instance, the analytical cutoff point for primary flavor compounds regularly differs between EU and FDA regulatory standards.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "62dea3ee-3c8f-4bd4-9926-1584c43f1f07",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:51.086097+00:00"
+    },
+    {
+      "id": "43e93baa-8005-4958-b6a8-fa10979dcb69",
+      "text": "GC-Olfactometry is inherently subjective because the 'O' step requires trained human panelists to smell and validate the GC effluent, confirming whether a machine-quantified compound, such as 2-acetyl-1-pyrroline in pizza crust, actually contributes to the perceived flavor.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "62dea3ee-3c8f-4bd4-9926-1584c43f1f07",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:51.086127+00:00"
+    },
+    {
+      "id": "8b693ba4-cac1-4b04-822b-f49042dc7291",
+      "text": "The ubiquity of highly commercialized, standardized American pizza chains like Domino's dominates global consumption, meaning the authentic Neapolitan tradition becomes a marginalized, niche concept rather than the prevailing cultural definition of \"pizza.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "93aa46e4-f5cc-4c74-ad29-d10300f2bd79",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:56:58.763756+00:00"
+    },
+    {
+      "id": "449e0754-ac98-411b-a77b-f311c1b0dcdb",
+      "text": "Mass-market ubiquity confuses volume with cultural ideal; for example, widely consumed factory-produced wine does not negate the cultural standard of excellence set by traditional, smaller-volume appellations like Champagne or Bordeaux. Therefore, Neapolitan pizza can remain the cultural definition of \"pizza\" despite being outsold by commercial chains.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "8b693ba4-cac1-4b04-822b-f49042dc7291",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:08.702542+00:00"
+    },
+    {
+      "id": "cda7479e-9ac9-4709-b68d-a5d7b2c3269a",
+      "text": "Major chains like Pizza Hut and Domino's globally introduce sweet dessert pizzas, such as the Cinnabon or chocolate variants, demonstrating that culturally the concept of \"pizza\" extends beyond the savory food item, significantly contributing to the fragmentation of its traditional definition.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a2c8e394-c760-4534-b051-5059f6b94149",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:31.841372+00:00"
+    },
+    {
+      "id": "ac2edfbc-4220-48f6-8c58-7552e8979d4d",
+      "text": "The global fragmentation of pizza culture is also evident in the commercial rivalry between distinct American styles, such as Chicago deep-dish and California-style pizzas; therefore, a weakness in the core supporting evidence invalidates the fragmentation argument broadly, not only the Neapolitan aspect.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "a2c8e394-c760-4534-b051-5059f6b94149",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:31.841914+00:00"
+    },
+    {
+      "id": "0c494ce3-ab94-49d7-bcd4-a6c5ab480714",
+      "text": "The term \"dessert pizza\" is a marketing nomenclature based on shape, similar to \"waffle pizza,\" and its existence does not alter the enduring legal and historical definition of traditional savory pizza in its primary markets (e.g., Italy's Associazione Verace Pizza Napoletana).",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "cda7479e-9ac9-4709-b68d-a5d7b2c3269a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:42.083283+00:00"
+    },
+    {
+      "id": "7b622e50-1e4d-4c96-97d8-0eee3f345788",
+      "text": "Dessert pizzas account for a minuscule fraction of global pizza sales, indicating they are viewed as mere co-existing novelty items rather than true fragmentations of the commercially dominant, primary savory definition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "cda7479e-9ac9-4709-b68d-a5d7b2c3269a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:42.083323+00:00"
+    },
+    {
+      "id": "334a895b-6122-4659-8203-d184ee693f2a",
+      "text": "The rivalry between Chicago deep-dish and California-style pizza is the expression of cultural fragmentation, similar to how the distinct culinary traditions of French regional cuisines, like Proven\u00e7al versus Alsatian, confirm a fragmented French gastronomy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ac2edfbc-4220-48f6-8c58-7552e8979d4d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:48.328233+00:00"
+    },
+    {
+      "id": "5010e3d7-ee9f-4f33-972d-ef937ce7a9e3",
+      "text": "Limiting global fragmentation evidence to only American regional rivalry ignores significant international variations, such as the distinct thin, Roman Pizza al taglio or the entirely unique characteristics of Turkish Pide and Lahmacun.",
+      "type": "response",
+      "side": "pro",
+      "depth": 4,
+      "parent_id": "ac2edfbc-4220-48f6-8c58-7552e8979d4d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T01:57:48.328278+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "8147d02c-2786-4551-b828-776a5760e4ce",
+      "target": "7d6f5f14-0fb0-4498-ae5a-815deb58acac",
+      "type": "response"
+    },
+    {
+      "source": "8147d02c-2786-4551-b828-776a5760e4ce",
+      "target": "d6f46d73-3b22-462a-a8af-47c3fa483e3a",
+      "type": "response"
+    },
+    {
+      "source": "a74c353f-8667-42c9-bc3d-bd91447fa0e4",
+      "target": "2fa9eab6-8a5b-4f49-969e-ba8076ee2dcd",
+      "type": "response"
+    },
+    {
+      "source": "a74c353f-8667-42c9-bc3d-bd91447fa0e4",
+      "target": "3a9e966c-f909-40cf-a37a-ab8801a0bf04",
+      "type": "response"
+    },
+    {
+      "source": "8c730392-1d17-47b2-87dc-64943ecb5f95",
+      "target": "aabdc22d-2265-46b3-acb7-e0bbe2deda6f",
+      "type": "response"
+    },
+    {
+      "source": "8c730392-1d17-47b2-87dc-64943ecb5f95",
+      "target": "41c96345-5fc5-4dc6-87ad-e8200f3c1632",
+      "type": "response"
+    },
+    {
+      "source": "a935cb94-c9c6-47d3-98bf-df4e7a5639ca",
+      "target": "ab31196a-9de9-4973-8066-24f2c38c2d25",
+      "type": "response"
+    },
+    {
+      "source": "a935cb94-c9c6-47d3-98bf-df4e7a5639ca",
+      "target": "0ec7b1c1-ef83-4f91-a7b7-403ee36fac67",
+      "type": "response"
+    },
+    {
+      "source": "381d2bcf-cf68-4f4e-a593-eadb0cadffda",
+      "target": "33449b06-11f9-48b3-8cd7-57b566cc14a0",
+      "type": "response"
+    },
+    {
+      "source": "381d2bcf-cf68-4f4e-a593-eadb0cadffda",
+      "target": "4571fdfe-002b-4b80-aa45-d703518bf396",
+      "type": "response"
+    },
+    {
+      "source": "702b7135-5b37-4836-b0f4-e2fd92e37bad",
+      "target": "6b6be498-379d-4522-bce0-61dbffe3705d",
+      "type": "response"
+    },
+    {
+      "source": "702b7135-5b37-4836-b0f4-e2fd92e37bad",
+      "target": "0ba02764-c6f3-4728-9ae4-474981c00673",
+      "type": "response"
+    },
+    {
+      "source": "fc8cbcf8-cced-4ff6-ac3e-6212e46a75ec",
+      "target": "02330057-65ef-443d-9877-e0188b9151bf",
+      "type": "objection"
+    },
+    {
+      "source": "fc8cbcf8-cced-4ff6-ac3e-6212e46a75ec",
+      "target": "cecc0b74-c4d7-4c3d-bf18-4ae7bd61dfb9",
+      "type": "objection"
+    },
+    {
+      "source": "cecc0b74-c4d7-4c3d-bf18-4ae7bd61dfb9",
+      "target": "824f9540-4358-41e7-9f10-99199f2775be",
+      "type": "response"
+    },
+    {
+      "source": "cecc0b74-c4d7-4c3d-bf18-4ae7bd61dfb9",
+      "target": "08db0b68-8c48-4f8a-8016-bda587fc3b0c",
+      "type": "response"
+    },
+    {
+      "source": "c06c8f08-27a4-4973-94ff-b5bd92e4e843",
+      "target": "b3ff68b6-963f-452f-9871-aec30e4c3e28",
+      "type": "objection"
+    },
+    {
+      "source": "c06c8f08-27a4-4973-94ff-b5bd92e4e843",
+      "target": "48938068-9990-4233-976b-885bbbcdbd85",
+      "type": "objection"
+    },
+    {
+      "source": "7f362234-78ce-46ac-8715-007ddf282bf3",
+      "target": "4671036e-82d4-4e9f-8509-1dd248a8fa4a",
+      "type": "objection"
+    },
+    {
+      "source": "7f362234-78ce-46ac-8715-007ddf282bf3",
+      "target": "d106958a-f7d2-42a3-8c1d-fd1c414b3feb",
+      "type": "objection"
+    },
+    {
+      "source": "d106958a-f7d2-42a3-8c1d-fd1c414b3feb",
+      "target": "181b3cf3-89b1-4072-bfea-fedf5364e0f1",
+      "type": "response"
+    },
+    {
+      "source": "d106958a-f7d2-42a3-8c1d-fd1c414b3feb",
+      "target": "2dddf5b4-0822-4d13-8471-f2e12e1988e4",
+      "type": "response"
+    },
+    {
+      "source": "a9f6710b-761a-4d80-b424-18295d840575",
+      "target": "39116ac4-24b4-4f30-92c4-4a0db155fb35",
+      "type": "objection"
+    },
+    {
+      "source": "a9f6710b-761a-4d80-b424-18295d840575",
+      "target": "6f8d721b-fe15-4aee-bf52-1f3cbe845eb8",
+      "type": "objection"
+    },
+    {
+      "source": "6f8d721b-fe15-4aee-bf52-1f3cbe845eb8",
+      "target": "93aa46e4-f5cc-4c74-ad29-d10300f2bd79",
+      "type": "response"
+    },
+    {
+      "source": "6f8d721b-fe15-4aee-bf52-1f3cbe845eb8",
+      "target": "a2c8e394-c760-4534-b051-5059f6b94149",
+      "type": "response"
+    },
+    {
+      "source": "02330057-65ef-443d-9877-e0188b9151bf",
+      "target": "ed786089-8148-4779-a9cf-3b919f36af12",
+      "type": "response"
+    },
+    {
+      "source": "02330057-65ef-443d-9877-e0188b9151bf",
+      "target": "1b553116-d18c-461d-93e4-64fe5fcec1b2",
+      "type": "response"
+    },
+    {
+      "source": "b3ff68b6-963f-452f-9871-aec30e4c3e28",
+      "target": "e6064245-5db6-4f30-b055-bb5c14783a12",
+      "type": "response"
+    },
+    {
+      "source": "b3ff68b6-963f-452f-9871-aec30e4c3e28",
+      "target": "dad6b29a-2882-41d7-8ada-2b9fe6bb9567",
+      "type": "response"
+    },
+    {
+      "source": "48938068-9990-4233-976b-885bbbcdbd85",
+      "target": "dbf80c4b-1272-4dc5-8af2-d67cf4b4f910",
+      "type": "response"
+    },
+    {
+      "source": "48938068-9990-4233-976b-885bbbcdbd85",
+      "target": "cf5b28a1-c089-4135-bd81-97a99efb3eb5",
+      "type": "response"
+    },
+    {
+      "source": "4671036e-82d4-4e9f-8509-1dd248a8fa4a",
+      "target": "19f0af27-e4fe-47fb-8355-c8c2a789a6bf",
+      "type": "response"
+    },
+    {
+      "source": "4671036e-82d4-4e9f-8509-1dd248a8fa4a",
+      "target": "e9edfbac-7029-414e-8a68-40e3a6d314b6",
+      "type": "response"
+    },
+    {
+      "source": "39116ac4-24b4-4f30-92c4-4a0db155fb35",
+      "target": "267d2dc8-1f82-4c4e-b868-d3c73f33c261",
+      "type": "response"
+    },
+    {
+      "source": "39116ac4-24b4-4f30-92c4-4a0db155fb35",
+      "target": "15a12be9-198a-4d9f-853f-b70da8fc6795",
+      "type": "response"
+    },
+    {
+      "source": "7d6f5f14-0fb0-4498-ae5a-815deb58acac",
+      "target": "7ce2ae69-4cef-4723-bac8-e0fbc233b664",
+      "type": "response"
+    },
+    {
+      "source": "7d6f5f14-0fb0-4498-ae5a-815deb58acac",
+      "target": "3e8efd28-3e7b-4405-adcc-16a0cb793b17",
+      "type": "response"
+    },
+    {
+      "source": "7ce2ae69-4cef-4723-bac8-e0fbc233b664",
+      "target": "0f1614a3-5aae-496c-8801-62e32860276b",
+      "type": "response"
+    },
+    {
+      "source": "3e8efd28-3e7b-4405-adcc-16a0cb793b17",
+      "target": "fbc6f4db-d843-40b3-9131-0bce0165d81b",
+      "type": "response"
+    },
+    {
+      "source": "3e8efd28-3e7b-4405-adcc-16a0cb793b17",
+      "target": "af1d6e12-8750-4f1d-a12f-0158afe1b3c1",
+      "type": "response"
+    },
+    {
+      "source": "d6f46d73-3b22-462a-a8af-47c3fa483e3a",
+      "target": "60b11726-3bc5-48d9-a63d-6a887a81833a",
+      "type": "response"
+    },
+    {
+      "source": "d6f46d73-3b22-462a-a8af-47c3fa483e3a",
+      "target": "2a530689-671e-4db5-b79c-696555575a42",
+      "type": "response"
+    },
+    {
+      "source": "60b11726-3bc5-48d9-a63d-6a887a81833a",
+      "target": "2018b6d8-f0ed-4475-8c34-233211333016",
+      "type": "response"
+    },
+    {
+      "source": "60b11726-3bc5-48d9-a63d-6a887a81833a",
+      "target": "7f5348d0-f3f4-46db-b5f7-1de05f5c1798",
+      "type": "response"
+    },
+    {
+      "source": "2a530689-671e-4db5-b79c-696555575a42",
+      "target": "adfc1c5e-5f02-4b42-808e-4fa45ecba91e",
+      "type": "response"
+    },
+    {
+      "source": "2fa9eab6-8a5b-4f49-969e-ba8076ee2dcd",
+      "target": "9c8a39e8-0004-402f-b02c-7e21191b80f8",
+      "type": "response"
+    },
+    {
+      "source": "2fa9eab6-8a5b-4f49-969e-ba8076ee2dcd",
+      "target": "4e07253b-ee2d-46ad-bb4d-a60bc70d564c",
+      "type": "response"
+    },
+    {
+      "source": "9c8a39e8-0004-402f-b02c-7e21191b80f8",
+      "target": "e5652e1c-39dd-4750-b8c3-0b08076c2498",
+      "type": "response"
+    },
+    {
+      "source": "4e07253b-ee2d-46ad-bb4d-a60bc70d564c",
+      "target": "709af8d3-90ee-4973-9574-1dcbb91a04aa",
+      "type": "response"
+    },
+    {
+      "source": "3a9e966c-f909-40cf-a37a-ab8801a0bf04",
+      "target": "374503a5-b4b9-4987-8080-b94d44fa911e",
+      "type": "response"
+    },
+    {
+      "source": "3a9e966c-f909-40cf-a37a-ab8801a0bf04",
+      "target": "1f20cc5e-b401-420c-814a-094cda3b30eb",
+      "type": "response"
+    },
+    {
+      "source": "1f20cc5e-b401-420c-814a-094cda3b30eb",
+      "target": "32625fb6-b739-4186-8495-fc53bbbd5bdc",
+      "type": "response"
+    },
+    {
+      "source": "374503a5-b4b9-4987-8080-b94d44fa911e",
+      "target": "baf1c6c5-1f13-4d5a-9f0f-b24f28b32ed8",
+      "type": "response"
+    },
+    {
+      "source": "aabdc22d-2265-46b3-acb7-e0bbe2deda6f",
+      "target": "40234676-1ea5-42cc-b6af-5b7f7ce268c7",
+      "type": "response"
+    },
+    {
+      "source": "aabdc22d-2265-46b3-acb7-e0bbe2deda6f",
+      "target": "97d8e8af-765a-4295-9f96-7c5b2ec59e66",
+      "type": "response"
+    },
+    {
+      "source": "40234676-1ea5-42cc-b6af-5b7f7ce268c7",
+      "target": "740d3cbf-8612-4f1a-a743-cdbd731cf73e",
+      "type": "response"
+    },
+    {
+      "source": "97d8e8af-765a-4295-9f96-7c5b2ec59e66",
+      "target": "8383c1fc-da81-4737-a1e2-83f43fd67001",
+      "type": "response"
+    },
+    {
+      "source": "41c96345-5fc5-4dc6-87ad-e8200f3c1632",
+      "target": "2849488f-eee7-45b3-85ce-74015cf97ebf",
+      "type": "response"
+    },
+    {
+      "source": "41c96345-5fc5-4dc6-87ad-e8200f3c1632",
+      "target": "dba63165-1cc0-4dcd-90a4-7f8a92b5fa49",
+      "type": "response"
+    },
+    {
+      "source": "2849488f-eee7-45b3-85ce-74015cf97ebf",
+      "target": "5852a09a-f1ab-41b0-a1eb-299905b5d4c8",
+      "type": "response"
+    },
+    {
+      "source": "dba63165-1cc0-4dcd-90a4-7f8a92b5fa49",
+      "target": "24af1ea7-f38c-42d4-8e0e-336a8cf90bf8",
+      "type": "response"
+    },
+    {
+      "source": "dba63165-1cc0-4dcd-90a4-7f8a92b5fa49",
+      "target": "a90ef6b0-46f2-4480-a1b4-2d1890dbeec8",
+      "type": "response"
+    },
+    {
+      "source": "ab31196a-9de9-4973-8066-24f2c38c2d25",
+      "target": "8ef27ec8-2fa4-4082-8aea-a380bede9fbd",
+      "type": "response"
+    },
+    {
+      "source": "ab31196a-9de9-4973-8066-24f2c38c2d25",
+      "target": "0915c92a-8370-4135-837f-bc04ab8c61d1",
+      "type": "response"
+    },
+    {
+      "source": "8ef27ec8-2fa4-4082-8aea-a380bede9fbd",
+      "target": "f7d4b7b3-5f36-4d94-b49d-c1af285eb306",
+      "type": "response"
+    },
+    {
+      "source": "0915c92a-8370-4135-837f-bc04ab8c61d1",
+      "target": "052b93a5-b767-4b1c-9789-83be5eee4e0e",
+      "type": "response"
+    },
+    {
+      "source": "0915c92a-8370-4135-837f-bc04ab8c61d1",
+      "target": "73d0bb60-bfcd-4352-951c-e215eb5d0b4c",
+      "type": "response"
+    },
+    {
+      "source": "0ec7b1c1-ef83-4f91-a7b7-403ee36fac67",
+      "target": "4f24bc4d-0255-48b6-8013-90e9f70ebe88",
+      "type": "response"
+    },
+    {
+      "source": "0ec7b1c1-ef83-4f91-a7b7-403ee36fac67",
+      "target": "619fefda-2d3e-4f10-b946-80ed3058d413",
+      "type": "response"
+    },
+    {
+      "source": "4f24bc4d-0255-48b6-8013-90e9f70ebe88",
+      "target": "0e8ac673-8770-43a2-99c9-13f9c0f72c64",
+      "type": "response"
+    },
+    {
+      "source": "619fefda-2d3e-4f10-b946-80ed3058d413",
+      "target": "e9bb428d-a5ca-49a0-b36f-14cc52650b31",
+      "type": "response"
+    },
+    {
+      "source": "619fefda-2d3e-4f10-b946-80ed3058d413",
+      "target": "8ed3b39d-244d-4361-8a0a-b60019b004d7",
+      "type": "response"
+    },
+    {
+      "source": "33449b06-11f9-48b3-8cd7-57b566cc14a0",
+      "target": "984545eb-18f5-436b-9c3c-9d867f4ef994",
+      "type": "response"
+    },
+    {
+      "source": "33449b06-11f9-48b3-8cd7-57b566cc14a0",
+      "target": "4336da69-9a9f-4065-980c-7e0af728e571",
+      "type": "response"
+    },
+    {
+      "source": "4336da69-9a9f-4065-980c-7e0af728e571",
+      "target": "4b0d4114-4c13-4bec-bbd9-7d6dc902e56e",
+      "type": "response"
+    },
+    {
+      "source": "984545eb-18f5-436b-9c3c-9d867f4ef994",
+      "target": "88e8ac70-a0fa-4a17-97ab-f2292cf8e78c",
+      "type": "response"
+    },
+    {
+      "source": "984545eb-18f5-436b-9c3c-9d867f4ef994",
+      "target": "77c2da17-673c-4b2b-9217-6f63b50268c2",
+      "type": "response"
+    },
+    {
+      "source": "4571fdfe-002b-4b80-aa45-d703518bf396",
+      "target": "bdaa2f69-d31f-48d5-a7b8-7fbc79cca46a",
+      "type": "response"
+    },
+    {
+      "source": "4571fdfe-002b-4b80-aa45-d703518bf396",
+      "target": "7b6962f1-9a6c-4905-8170-176b6b6c1ea9",
+      "type": "response"
+    },
+    {
+      "source": "bdaa2f69-d31f-48d5-a7b8-7fbc79cca46a",
+      "target": "dc7a4d1f-928b-4eb4-a570-1ac8a6be67d1",
+      "type": "response"
+    },
+    {
+      "source": "7b6962f1-9a6c-4905-8170-176b6b6c1ea9",
+      "target": "581ac098-94ea-4882-a062-2c168dde8e30",
+      "type": "response"
+    },
+    {
+      "source": "6b6be498-379d-4522-bce0-61dbffe3705d",
+      "target": "9439c366-7f35-4fd5-b854-166f11ee4f69",
+      "type": "response"
+    },
+    {
+      "source": "6b6be498-379d-4522-bce0-61dbffe3705d",
+      "target": "8a809291-5bfc-42dd-a45e-913710992d4e",
+      "type": "response"
+    },
+    {
+      "source": "8a809291-5bfc-42dd-a45e-913710992d4e",
+      "target": "c85d1f57-13be-4f71-b645-594e1a06de25",
+      "type": "response"
+    },
+    {
+      "source": "9439c366-7f35-4fd5-b854-166f11ee4f69",
+      "target": "ad9e6492-0b67-4f71-9d1e-31ce6e0b4458",
+      "type": "response"
+    },
+    {
+      "source": "0ba02764-c6f3-4728-9ae4-474981c00673",
+      "target": "cfcfcc90-6e08-44ee-a9fb-0333bc6ce7e1",
+      "type": "response"
+    },
+    {
+      "source": "0ba02764-c6f3-4728-9ae4-474981c00673",
+      "target": "48651f15-a89a-4462-acb8-e0dacd6f89a9",
+      "type": "response"
+    },
+    {
+      "source": "48651f15-a89a-4462-acb8-e0dacd6f89a9",
+      "target": "718cd00b-b15e-4eb9-810c-40b4a037fecf",
+      "type": "response"
+    },
+    {
+      "source": "48651f15-a89a-4462-acb8-e0dacd6f89a9",
+      "target": "6145f345-1d7b-42ee-9813-9f39cebe03bc",
+      "type": "response"
+    },
+    {
+      "source": "cfcfcc90-6e08-44ee-a9fb-0333bc6ce7e1",
+      "target": "0d75b606-1306-4422-b03c-2cf720071eea",
+      "type": "response"
+    },
+    {
+      "source": "cfcfcc90-6e08-44ee-a9fb-0333bc6ce7e1",
+      "target": "717a0e85-d7ca-4869-9a0b-274849d08eab",
+      "type": "response"
+    },
+    {
+      "source": "824f9540-4358-41e7-9f10-99199f2775be",
+      "target": "3550d2fe-e66c-4d2b-a280-59d768b1535e",
+      "type": "response"
+    },
+    {
+      "source": "824f9540-4358-41e7-9f10-99199f2775be",
+      "target": "5606a2b7-f21b-4f6a-b3a4-f9dd53bba0ef",
+      "type": "response"
+    },
+    {
+      "source": "5606a2b7-f21b-4f6a-b3a4-f9dd53bba0ef",
+      "target": "3c9a3d90-2d94-4286-8c3e-4f3b0c572870",
+      "type": "response"
+    },
+    {
+      "source": "5606a2b7-f21b-4f6a-b3a4-f9dd53bba0ef",
+      "target": "6bc3b4e0-12e4-4a95-9354-fceafac6900e",
+      "type": "response"
+    },
+    {
+      "source": "3550d2fe-e66c-4d2b-a280-59d768b1535e",
+      "target": "a48472d7-d748-47c1-957e-29b4954e29a6",
+      "type": "response"
+    },
+    {
+      "source": "3550d2fe-e66c-4d2b-a280-59d768b1535e",
+      "target": "7a61bc31-1276-41f6-ba09-1980ffcf0a8d",
+      "type": "response"
+    },
+    {
+      "source": "08db0b68-8c48-4f8a-8016-bda587fc3b0c",
+      "target": "afca2f17-3f46-40dd-a91c-a0a3451a8262",
+      "type": "response"
+    },
+    {
+      "source": "08db0b68-8c48-4f8a-8016-bda587fc3b0c",
+      "target": "f55dd9f9-b595-4e61-86af-6d04989baff9",
+      "type": "response"
+    },
+    {
+      "source": "f55dd9f9-b595-4e61-86af-6d04989baff9",
+      "target": "ffcb76e6-a852-4e55-9da0-e2220922688a",
+      "type": "response"
+    },
+    {
+      "source": "afca2f17-3f46-40dd-a91c-a0a3451a8262",
+      "target": "16589f29-50a8-4791-8915-9f66f132f95d",
+      "type": "response"
+    },
+    {
+      "source": "181b3cf3-89b1-4072-bfea-fedf5364e0f1",
+      "target": "b4b650c3-bd85-48a4-9824-092718bac483",
+      "type": "response"
+    },
+    {
+      "source": "b4b650c3-bd85-48a4-9824-092718bac483",
+      "target": "9f3e8c3c-ec02-414b-a072-c164c555e08b",
+      "type": "response"
+    },
+    {
+      "source": "2dddf5b4-0822-4d13-8471-f2e12e1988e4",
+      "target": "62dea3ee-3c8f-4bd4-9926-1584c43f1f07",
+      "type": "response"
+    },
+    {
+      "source": "62dea3ee-3c8f-4bd4-9926-1584c43f1f07",
+      "target": "9f4e8bab-5016-4e04-873c-e70928ff2609",
+      "type": "response"
+    },
+    {
+      "source": "62dea3ee-3c8f-4bd4-9926-1584c43f1f07",
+      "target": "43e93baa-8005-4958-b6a8-fa10979dcb69",
+      "type": "response"
+    },
+    {
+      "source": "93aa46e4-f5cc-4c74-ad29-d10300f2bd79",
+      "target": "8b693ba4-cac1-4b04-822b-f49042dc7291",
+      "type": "response"
+    },
+    {
+      "source": "8b693ba4-cac1-4b04-822b-f49042dc7291",
+      "target": "449e0754-ac98-411b-a77b-f311c1b0dcdb",
+      "type": "response"
+    },
+    {
+      "source": "a2c8e394-c760-4534-b051-5059f6b94149",
+      "target": "cda7479e-9ac9-4709-b68d-a5d7b2c3269a",
+      "type": "response"
+    },
+    {
+      "source": "a2c8e394-c760-4534-b051-5059f6b94149",
+      "target": "ac2edfbc-4220-48f6-8c58-7552e8979d4d",
+      "type": "response"
+    },
+    {
+      "source": "cda7479e-9ac9-4709-b68d-a5d7b2c3269a",
+      "target": "0c494ce3-ab94-49d7-bcd4-a6c5ab480714",
+      "type": "response"
+    },
+    {
+      "source": "cda7479e-9ac9-4709-b68d-a5d7b2c3269a",
+      "target": "7b622e50-1e4d-4c96-97d8-0eee3f345788",
+      "type": "response"
+    },
+    {
+      "source": "ac2edfbc-4220-48f6-8c58-7552e8979d4d",
+      "target": "334a895b-6122-4659-8203-d184ee693f2a",
+      "type": "response"
+    },
+    {
+      "source": "ac2edfbc-4220-48f6-8c58-7552e8979d4d",
+      "target": "5010e3d7-ee9f-4f33-972d-ef937ce7a9e3",
+      "type": "response"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Character limits based on depth
+            const limits = {
+                0: 100,  // Root nodes - show more
+                1: 80,
+                2: 60,
+                3: 40,
+                4: 30,
+                5: 25
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            const widths = {
+                0: 180,
+                1: 150,
+                2: 130,
+                3: 100,
+                4: 80,
+                5: 70
+            };
+
+            const heights = {
+                0: 60,
+                1: 50,
+                2: 45,
+                3: 40,
+                4: 35,
+                5: 30
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 70,
+                height: heights[Math.min(d.depth, 5)] || 30
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Create force simulation with improved parameters
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Longer links for deeper nodes
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return 120 + (depth * 20);
+            }))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            });
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes with improved tooltips
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showNodeDetails(d);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation();
+                toggleSubtree(d);
+            })
+            .append("title")
+            .text(d => getTooltipText(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height);
+
+            // Create HTML content with badge and text
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center");
+
+            // Add badge (only for depth 0-1 to avoid clutter)
+            if (d.depth <= 1) {
+                div.append("xhtml:div")
+                    .attr("class", `node-badge ${d.type}`)
+                    .text(d.type);
+            }
+
+            // Add text content
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.depth === 0 ? "13px" : (d.depth <= 2 ? "11px" : "10px"))
+                .style("font-weight", d.depth === 0 ? "600" : "500")
+                .text(displayText);
+        });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebar-content");
+
+            let html = `
+                <h2>Argument Details</h2>
+                <div class="node-text">${d.text}</div>
+                <div class="node-meta"><strong>Type:</strong> ${d.type}</div>
+                <div class="node-meta"><strong>Side:</strong> ${d.side}</div>
+                <div class="node-meta"><strong>Depth:</strong> ${d.depth}</div>
+                <div class="node-meta"><strong>Children:</strong> ${d.children_count}</div>
+                <div class="node-meta"><strong>Source:</strong> ${d.source}</div>
+            `;
+
+            if (d.references && d.references.length > 0) {
+                html += '<div class="node-meta"><strong>References:</strong></div><ul>';
+                d.references.forEach(ref => {
+                    html += `<li style="margin-left: 20px; font-size: 0.85em;"><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+                html += '</ul>';
+            }
+
+            content.innerHTML = html;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset view
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+        }
+
+        // Fit graph to view
+        function fitToView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.9;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

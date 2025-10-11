@@ -1,0 +1,2486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum mechanics proves consciousness is fundamental - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Quantum mechanics proves consciousness is fundamental</h1>
+        <div class="meta">
+            5 arguments for • 6 arguments against •
+            60 total nodes • Max depth: 2 •
+            Version 3
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/quantum-mechanics-proves-consciousness-is-fundamental.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">60</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">2</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">5</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "e802a30b-68e1-44dc-96b9-c9d868da4771",
+      "text": "The collapse of the wave function from superposition to a definite state in experiments like the double-slit demonstrates that observation is an active and necessary component in defining physical reality. This observer-dependent transition suggests consciousness is a physical antecedent rather than an emergent byproduct.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "John Archibald Wheeler"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:36.210511+00:00"
+    },
+    {
+      "id": "7843b323-c4b8-47de-b3c1-d9cb3332c396",
+      "text": "The Wigner's Friend thought experiment extends superposition to the macroscopic level, creating an infinite regress of observers holding systems in indefinite states. This contradiction necessitates introducing a fundamental, non-physical element (consciousness) to perform the final, definitive state reduction.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Wigner\u2019s Friend thought experiment"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:36.211001+00:00"
+    },
+    {
+      "id": "15e6947b-37b3-41c2-a1ef-5da1fc889bdc",
+      "text": "The Quantum Zeno Effect empirically proves that continuous, rapid observation prevents a quantum system from evolving or decaying, highlighting that the physical act of \"attention\" has a quantifiable and potent effect on matter. This arrest of evolution links observation directly to the fundamental dynamics of reality.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Quantum Zeno Effect"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:36.211265+00:00"
+    },
+    {
+      "id": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "text": "Treating consciousness as fundamental provides a complete theoretical framework by inherently resolving the \"Hard Problem\" of subjective experience in a way purely physicalist interpretations of quantum mechanics cannot. A complete explanation for experience suggests that the theory possesses higher explanatory power regarding the nature of reality.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:36.211503+00:00"
+    },
+    {
+      "id": "72f92adb-336c-43e9-a55d-9855d1c67d2e",
+      "text": "Physicist John Wheeler's Participatory Anthropic Principle argues that reality requires conscious observers to exist in a definite state. This relationship positions consciousness as a necessary, fundamental cosmological primitive crucial for defining the spatio-temporal characteristics of the universe.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "Participatory Anthropic Principle"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:36.211916+00:00"
+    },
+    {
+      "id": "ca52a622-ef3f-4bb6-a0c4-ea542831b2ee",
+      "text": "Wave function collapse is generally explained by quantum decoherence, where interaction with a measuring apparatus or the environment causes the transition without requiring conscious awareness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e802a30b-68e1-44dc-96b9-c9d868da4771",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:46.154141+00:00"
+    },
+    {
+      "id": "ad11fd54-baf7-4ea2-9d81-81021ca6ee29",
+      "text": "Assuming consciousness actively causes wave function collapse (the effect) does not logically establish its ontological status as an antecedent principle. An emergent property can also be highly interactive and influential upon its base system.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e802a30b-68e1-44dc-96b9-c9d868da4771",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:46.155236+00:00"
+    },
+    {
+      "id": "016d9303-8b84-4358-9af4-61ebb072fb36",
+      "text": "The Quantum Zeno Effect is demonstrated experimentally using rapid, physical interactions such as high-frequency alternating current pulses or laser photon detectors to induce decoherence, meaning the \"observation\" is a physical collapse mechanism, not subjective mental \"attention.\"",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "15e6947b-37b3-41c2-a1ef-5da1fc889bdc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:52.033071+00:00"
+    },
+    {
+      "id": "a8789c72-6407-48d9-976a-abb8431be2a2",
+      "text": "Standard quantum mechanics fully accounts for the Zeno effect through the mathematical prediction of the non-quadratic decay law at short times, as shown by Misra and Sudarshan (1977), contradicting the necessity of positing novel fundamental reality dynamics.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "15e6947b-37b3-41c2-a1ef-5da1fc889bdc",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:52.033508+00:00"
+    },
+    {
+      "id": "fe02a4ef-bb6c-4712-b719-94c8c1a70b8a",
+      "text": "The combination problem, central to panpsychism, demonstrates that declaring consciousness fundamental merely shifts the mystery from what creates subjective experience to how these fundamental conscious elements aggregate into a unified human mind.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:52.248141+00:00"
+    },
+    {
+      "id": "a7b723d4-fa60-4971-862d-a1c83624259a",
+      "text": "Physicalist interpretations successfully predicted the existence of the Higgs boson and calculated the precise orbits required for missions like the James Webb Space Telescope launch, demonstrating higher explanatory power over the physical reality the theory claims to supersede.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:52.248568+00:00"
+    },
+    {
+      "id": "f29c1737-6a71-4bce-98d5-8e3e615bad27",
+      "text": "Studies involving deep brain stimulation show that electrically altering activity in specific structures like the claustrum directly turns conscious awareness on or off, providing a causal, mechanistic explanation for experience within a physicalist framework.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:52.248843+00:00"
+    },
+    {
+      "id": "e4bc4df2-94a7-43f3-baf0-f762b0f877c1",
+      "text": "The Many-Worlds Interpretation (MWI), proposed by Hugh Everett III, resolves the infinite regress by asserting that the universe objectively splits into different physical realities upon measurement, completing the state reduction through decoherence without involving consciousness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7843b323-c4b8-47de-b3c1-d9cb3332c396",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:54.579242+00:00"
+    },
+    {
+      "id": "43801f54-c1bf-4c89-aee6-4303792f2d1b",
+      "text": "Quantum Bayesianism (QBism) holds that the wave function represents the observer's personal degree of belief about the system, meaning the \"state reduction\" is merely an epistemic update for that observer, which poses no physical contradiction requiring a non-physical element.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7843b323-c4b8-47de-b3c1-d9cb3332c396",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:54.579804+00:00"
+    },
+    {
+      "id": "9dcaaa6a-6ebc-474e-a347-cd11567326c4",
+      "text": "Environmental decoherence theory demonstrates that the quantum wave function collapses automatically when a system interacts with a sufficiently large, complex environment, such as a thermal bath or measurement apparatus, without requiring conscious participation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "72f92adb-336c-43e9-a55d-9855d1c67d2e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:55.279170+00:00"
+    },
+    {
+      "id": "f17a4073-5b08-4821-89bb-fcce1ab9a116",
+      "text": "The standard cosmological model defined by General Relativity describes the universe's spatio-temporal characteristics, including expansion and curvature, based entirely on the distribution of matter and energy (Einstein Field Equations) and operates independently of consciousness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "72f92adb-336c-43e9-a55d-9855d1c67d2e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:55.279843+00:00"
+    },
+    {
+      "id": "e054a980-18db-4578-a85c-2157bff64bf2",
+      "text": "Quantum decoherence explains the rapid loss of coherence and the emergence of classical-like system properties, but it does not explain the non-unitary projection onto a single eigenstate dictated by the Born rule (the actual \"collapse\").",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ca52a622-ef3f-4bb6-a0c4-ea542831b2ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:59.362992+00:00"
+    },
+    {
+      "id": "1c6585f2-5d5a-4f92-a2de-59a49bc26b07",
+      "text": "Decoherence maintains the unitary evolution of the total system, meaning it only shifts the superposition from the measured system to the environment, failing to define the physical mechanism or boundary where the wave function actually ceases to be a superposition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ca52a622-ef3f-4bb6-a0c4-ea542831b2ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:45:59.363052+00:00"
+    },
+    {
+      "id": "c314a8b9-439f-4292-bce8-2e566cc162a1",
+      "text": "Shifting the unsolved mystery from the unprecedented conceptual gap of how non-conscious matter creates consciousness to the structural problem of how existing consciousness aggregates is a theoretical simplification, not a mere replacement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fe02a4ef-bb6c-4712-b719-94c8c1a70b8a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:02.835220+00:00"
+    },
+    {
+      "id": "881538a0-1236-4666-8f2e-72351a4be848",
+      "text": "Alternative theories like substance dualism face the equally profound \"interaction problem\" of how two fundamentally different substances causally influence each other, a mystery panpsychism conceptually avoids by positing only one type of substance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "fe02a4ef-bb6c-4712-b719-94c8c1a70b8a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:02.835251+00:00"
+    },
+    {
+      "id": "f592e4a9-d584-4dc0-ae6a-24372c8484f6",
+      "text": "Environmental decoherence is a unitary mechanism that only makes the system's density matrix look classical by transferring entanglement to the environment. It fails to explain the non-unitary, instantaneous state reduction (true collapse) required by the standard quantum mechanics measurement postulate.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9dcaaa6a-6ebc-474e-a347-cd11567326c4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:06.056363+00:00"
+    },
+    {
+      "id": "0b660773-4fa8-45a2-a0f5-9d452278d71f",
+      "text": "Decoherence maintains that the total system (system + environment) remains in a superposition state; thus, it merely shifts the measurement problem to the apparatus and observer, failing to select a single, definite experienced outcome.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "9dcaaa6a-6ebc-474e-a347-cd11567326c4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:06.056389+00:00"
+    },
+    {
+      "id": "63b50cbb-64d7-40b6-8437-4e1f9745d979",
+      "text": "Deep brain stimulation studies (e.g., those involving the claustrum) typically show that interruption of awareness is caused by widespread cortical signal interference or epileptiform discharges, rather than the selective inhibition of a single 'on/off' awareness center.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f29c1737-6a71-4bce-98d5-8e3e615bad27",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:07.908508+00:00"
+    },
+    {
+      "id": "bfedb0e4-b1cf-459f-9dc4-0470667dcfb4",
+      "text": "Mechanistic control over the functional state of consciousness, like turning it \"on or off,\" does not explain the qualitative nature of experience, since a functional replica (e.g., a philosophical zombie) would possess the exact same physical mechanism without subjective qualia.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f29c1737-6a71-4bce-98d5-8e3e615bad27",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:07.908557+00:00"
+    },
+    {
+      "id": "fbbab39b-8cc6-4198-bf21-d3befe292986",
+      "text": "The predictive success of Newtonian mechanics and the Standard Model describes only mathematical structures and forces, a view compatible with non-physicalist theories, as demonstrated by the acceptance of these descriptions by idealists like Leibniz.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a7b723d4-fa60-4971-862d-a1c83624259a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:10.767445+00:00"
+    },
+    {
+      "id": "10be9f8b-990a-45ee-8ec8-b19d0b6d82d4",
+      "text": "Physicalist models successfully predicting particles and orbits do not address the subjective experience of qualia, a recognized philosophical challenge that dualism and idealism explicitly attempt to solve.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a7b723d4-fa60-4971-862d-a1c83624259a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:10.767472+00:00"
+    },
+    {
+      "id": "13ccf998-1fd6-4bd3-886e-40abd1de14f4",
+      "text": "Hugh Everett III's original 1957 Relative State formulation is purely unitary, requiring that the universal wave function never collapses or undergoes \"state reduction\" to function.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e4bc4df2-94a7-43f3-baf0-f762b0f877c1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:10.790230+00:00"
+    },
+    {
+      "id": "20399d70-383e-4cd6-bb69-3ca9fbd0bd9e",
+      "text": "Physicist Wojciech Zurek's work on decoherence shows it causes the rapid functional splitting into non-interfering components, functioning as a replacement for, not a completion of, wave function collapse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e4bc4df2-94a7-43f3-baf0-f762b0f877c1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:10.790257+00:00"
+    },
+    {
+      "id": "872b6d2b-814b-4c6b-b274-848d3c66d44f",
+      "text": "The physical mechanism of the Zeno effect depends entirely on the elusive definition of measurement, which standard quantum mechanics formalizes through added axioms like the projection postulate rather than fundamental reality dynamics.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a8789c72-6407-48d9-976a-abb8431be2a2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.196268+00:00"
+    },
+    {
+      "id": "84384592-5345-475a-a29f-603f26bc4ad3",
+      "text": "While mathematically predictable, the Zeno effect is highlighted by experiments like the delayed choice quantum eraser, which necessitate non-standard interpretations of wave function collapse outside the conventional mathematical framework.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a8789c72-6407-48d9-976a-abb8431be2a2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.196317+00:00"
+    },
+    {
+      "id": "cb6b1722-1672-4ed2-b735-1bd6fa9b380f",
+      "text": "Mainstream interpretations of quantum mechanics, including Many-Worlds and Bohmian Mechanics, successfully resolve the measurement problem without invoking consciousness. The existence of these viable, non-conscious alternatives invalidates any claim that QM definitively proves consciousness must be a fundamental necessity of the theory.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.196488+00:00"
+    },
+    {
+      "id": "df3b7963-a2ed-4e18-b487-4ee50f69eec1",
+      "text": "Quantum effects rapidly succumb to decoherence when interacting with the warm, dense environment of the brain, preventing the sustained superposition necessary for consciousness. Experimental evidence confirms that quantum coherence is exceptionally fragile and degrades almost instantly at biological temperatures, rendering quantum phenomena irrelevant to macroscopic neural circuitry.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.197321+00:00"
+    },
+    {
+      "id": "ad55d3da-2b61-4a3b-9152-ccae2b94a4d0",
+      "text": "Modern operational quantum theory defines the \"observer\" as any physical detector or measurement apparatus that registers an outcome, such as a photodetector or bubble chamber. Since the mathematical collapse of the wave function is completed by this physical detection, consciousness is extraneous to the foundational axioms of measurement.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.197800+00:00"
+    },
+    {
+      "id": "44f1038d-f362-4165-b099-08ba09b2425c",
+      "text": "The claim fails the fundamental standard of scientific validity because 'consciousness' lacks a rigorous, unified, and measurable definition required for empirical falsification. A mechanism must be operationally defined to test its fundamental physical role, consequently leaving the hypothesis fundamentally untestable.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.198223+00:00"
+    },
+    {
+      "id": "d087546b-854a-48d0-9e7c-964f792d1e76",
+      "text": "The sustained success of physics and neuroscience in explaining complex biological phenomena, such as neural firing and brain mapping, relies entirely on established physical and chemical laws. This functional completeness of purely material explanations demonstrates that material mechanisms are sufficient for describing cognitive activity without resorting to a fundamental conscious substrate.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.198632+00:00"
+    },
+    {
+      "id": "a3af063e-6174-47a7-87bb-bec04c1a7e91",
+      "text": "Theories linking QM to consciousness often involve a circular assumption where consciousness is required to explain the measurement outcome, but the empirical definition of the conscious state is simultaneously dependent on that same outcome. This circular dependency provides no independent justification or empirical grounding for the fundamental role of consciousness.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:17.199253+00:00"
+    },
+    {
+      "id": "8c9f163d-6c70-4cbc-9518-96f9b004af6e",
+      "text": "The Many-Worlds interpretation replaces the collapse mystery with the \"preferred basis\" problem and the difficulty of deriving the Born rule for probability in a purely deterministic unitary theory, meaning the resolution is incomplete.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "cb6b1722-1672-4ed2-b735-1bd6fa9b380f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:30.768036+00:00"
+    },
+    {
+      "id": "8139601b-5f6f-4eec-9252-8342a4f3b659",
+      "text": "Interpretations like Bohmian Mechanics and Many-Worlds achieve measurement resolution by adding unobservable ontology (hidden guiding waves or infinite universes), which is less parsimonious than potential objective collapse theories that incorporate consciousness or field effects.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "cb6b1722-1672-4ed2-b735-1bd6fa9b380f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:30.768727+00:00"
+    },
+    {
+      "id": "206bc7b4-0c40-44fa-822b-bbd0f5e2179f",
+      "text": "Integrated Information Theory (IIT) operationalizes consciousness as the measurable quantity Phi (\u03a6), which researchers test using non-invasive tools like EEG and TMS to measure neural complexity in specific brain regions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "44f1038d-f362-4165-b099-08ba09b2425c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:32.207414+00:00"
+    },
+    {
+      "id": "7fc65fd1-6ed5-477f-8f3f-8ef501028dec",
+      "text": "Early scientific fields like electromagnetism and biology underwent decades of successful empirical investigation led by figures such as Benjamin Franklin and Charles Darwin before developing a rigorous, unified, and operationally measurable definition for electricity or the gene.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "44f1038d-f362-4165-b099-08ba09b2425c",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:32.207850+00:00"
+    },
+    {
+      "id": "22c9c7e8-ea77-4cb8-b5fc-907277596c1f",
+      "text": "High-resolution connectome mapping, such as that completed for the nematode C. elegans, provides a complete structural account of all neural firings and connections without illuminating what it feels like to be the nematode. This demonstrates that functional completeness does not necessitate an explanation of subjective experience (qualia).",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d087546b-854a-48d0-9e7c-964f792d1e76",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:33.306189+00:00"
+    },
+    {
+      "id": "3b59fa5e-b1f9-4ce8-ac5a-6c0c18b0d880",
+      "text": "Newtonian physics successfully predicted planetary motion and projectile trajectories for centuries, yet required non-material classical concepts from quantum theory and relativity to explain phenomena outside its original scope. This historical precedent suggests established microphysics, successful in describing neural firing, may be incomplete for the domain of phenomenal consciousness.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d087546b-854a-48d0-9e7c-964f792d1e76",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:33.306589+00:00"
+    },
+    {
+      "id": "70710b22-5716-4941-92b5-77997594e8e7",
+      "text": "The Orchestrated Objective Reduction (Orch OR) model proposed by Roger Penrose and Stuart Hameroff defines consciousness functionally as an objective quantum physical process within brain microtubules. This non-computable objective reduction defines the conscious process independently of the final external measurement outcome confirmed by the observer.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a3af063e-6174-47a7-87bb-bec04c1a7e91",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:36.499801+00:00"
+    },
+    {
+      "id": "da1a8af1-d269-48ce-b854-2e31c04f05c4",
+      "text": "Theories founded on panpsychism, like David Chalmers' Naturalistic Dualism (1996), treat consciousness as a fundamental, irreducible property similar to mass. Because consciousness has primary ontological status, its defined role in quantum measurement is explained by definition rather than by requiring separate empirical verification contingent on the measurement outcome.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a3af063e-6174-47a7-87bb-bec04c1a7e91",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:36.500231+00:00"
+    },
+    {
+      "id": "5bf419c5-fa97-4006-b0b8-dd2a437b8799",
+      "text": "Quantum tunneling is a non-superposition quantum effect essential in fundamental biological processes such as enzyme catalysis and spontaneous DNA mutation. For instance, proton tunneling is a key factor enabling the high efficiency of the enzyme Alcohol Dehydrogenase at physiological temperatures.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "df3b7963-a2ed-4e18-b487-4ee50f69eec1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:36.626269+00:00"
+    },
+    {
+      "id": "61fb0d92-a7f8-4d37-a202-e784b0b2037d",
+      "text": "Transient quantum coherence is observable and functionally critical in molecular biology, demonstrating its relevance beyond sustained superposition. In the light-harvesting complexes used for photosynthesis, excitons maintain coherence for hundreds of femtoseconds to optimize rapid energy transfer within specialized proteins.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "df3b7963-a2ed-4e18-b487-4ee50f69eec1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:36.626697+00:00"
+    },
+    {
+      "id": "da2e6eab-08ff-438d-8067-56112c5d137f",
+      "text": "The \u201cWigner\u2019s friend\u201d thought experiment requires that the wave function of the physical detector itself remains in superposition until the final result is registered by an outside consciousness (Wigner, 1961). This directly contradicts the assumption that the detector apparatus physically completes the foundational non-unitary collapse.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ad55d3da-2b61-4a3b-9152-ccae2b94a4d0",
+      "children_count": 0,
+      "references": [
+        "Wigner, E. (1961). Remarks on the mind-body question."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:37.023155+00:00"
+    },
+    {
+      "id": "3ad9f4a0-0afc-46e6-81f8-5fba4ce170c7",
+      "text": "The von Neumann regression shows that any physical apparatus (photodetector) simply becomes entangled with the system, meaning the combined wave function continues to evolve linearly and never non-linearly collapses. The measurement problem remains unsolved by physical detectors alone because the state mathematically evolves linearly past the detector (Everett, 1957).",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ad55d3da-2b61-4a3b-9152-ccae2b94a4d0",
+      "children_count": 0,
+      "references": [
+        "Everett, H. (1957). \"Relative State\" Formulation of Quantum Mechanics."
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:37.023816+00:00"
+    },
+    {
+      "id": "7b104afa-6037-40b5-9558-9248c9037c9b",
+      "text": "Many-Worlds Interpretation (MWI) is often considered mechanistically more parsimonious because it relies exclusively on the standard, linear Schr\u00f6dinger equation, whereas objective collapse models (like GRW) introduce new, non-linear, and arbitrary physical constants to trigger collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8139601b-5f6f-4eec-9252-8342a4f3b659",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:43.495079+00:00"
+    },
+    {
+      "id": "6f1156bd-6c24-47c9-a96a-db36475964b9",
+      "text": "Models incorporating consciousness for collapse are widely regarded as introducing an unphysical metaphysical process, making their grouping with quantitative physical objective collapse theories like the Ghirardi\u2013Rimini\u2013Weber (GRW) model misleading for a comparison of scientific parsimony.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8139601b-5f6f-4eec-9252-8342a4f3b659",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:43.495105+00:00"
+    },
+    {
+      "id": "1b07d268-a897-445f-84b6-10596badded5",
+      "text": "Researchers cannot calculate the theoretical Phi (\u03a6) for the human brain due to the computational intractability of the algorithm; instead, empirical studies often report the Perturbational Complexity Index (PCI) as a detectable proxy using TMS-EEG data.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "206bc7b4-0c40-44fa-822b-bbd0f5e2179f",
+      "children_count": 0,
+      "references": [
+        "Nature Communications"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:49.963313+00:00"
+    },
+    {
+      "id": "13bf47be-5393-454b-9cdf-dfa5bd147357",
+      "text": "The theoretical framework of IIT requires complete specification of a system\u2019s cause-effect structure, known as the Q-lattice, which is functionally impossible to derive given the approximately 86 billion neurons in the human brain.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "206bc7b4-0c40-44fa-822b-bbd0f5e2179f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:49.963340+00:00"
+    },
+    {
+      "id": "ebc66b76-c9e5-4bea-be9d-20563c47faa2",
+      "text": "Relativity and Quantum Mechanics are fundamentally physical theories, explaining phenomena like GPS time dilation and the photoelectric effect entirely through material interactions and physical laws. These modern physics concepts do not involve non-material classical concepts, contradicting the necessity of such a shift.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3b59fa5e-b1f9-4ce8-ac5a-6c0c18b0d880",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:50.187177+00:00"
+    },
+    {
+      "id": "809ea55c-3521-42b1-965f-3f07da52ed92",
+      "text": "The successful reduction of complex biological phenomena, such as genetic inheritance, was accomplished entirely within the established microphysical framework of molecular biology after the discovery of DNA structure in 1953. This counterexample demonstrates that established microphysics often proves complete for seemingly intractable domains, undermining the historical analogy.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "3b59fa5e-b1f9-4ce8-ac5a-6c0c18b0d880",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:50.187209+00:00"
+    },
+    {
+      "id": "c0c65d77-0d95-4e7f-8960-ecf3078c4f2d",
+      "text": "Fundamental physical properties, such as the gravitational constant, still require rigorous empirical verification, as demonstrated when the 1919 Eddington experiment confirmed the bending of light by mass. Consciousness, even if ontologically fundamental like mass, is not exempt from the epistemic requirement of scientifically verifying its purported effects on quantum wave function collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "da1a8af1-d269-48ce-b854-2e31c04f05c4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:54.574408+00:00"
+    },
+    {
+      "id": "990c1f07-b6e7-4f76-86fa-62451b321c85",
+      "text": "Definitive physical interpretations of quantum mechanics, such as the Many-Worlds Interpretation proposed by Hugh Everett III, resolve the measurement problem without invoking any role for the conscious observer whatsoever. Furthermore, some prominent panpsychist philosophers, including Philip Goff, do not agree that panpsychism explains wave function collapse.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "da1a8af1-d269-48ce-b854-2e31c04f05c4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:54.574436+00:00"
+    },
+    {
+      "id": "d3714e24-7c69-4948-8886-d1bede0f4ecf",
+      "text": "C. elegans connectome maps only synaptic connections, ignoring the dynamic effects of neuromodulators like serotonin and dopamine, which fundamentally alter circuit function in even simple organisms like Aplysia sea slugs. A structurally complete map does not equal a functionally complete one.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "22c9c7e8-ea77-4cb8-b5fc-907277596c1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:58.972973+00:00"
+    },
+    {
+      "id": "3a71a419-5b44-4929-8fa9-520290baab1b",
+      "text": "The assumption that C. elegans lacks subjective experience is unverified, as conscious behavior is inferred in organisms with similarly simple nervous systems, such as the reported defensive responses of hermit crabs and fruit flies. The Cambridge Declaration on Consciousness (2012) lists many invertebrates as having non-zero subjective states.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "22c9c7e8-ea77-4cb8-b5fc-907277596c1f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:46:58.973001+00:00"
+    },
+    {
+      "id": "433b3938-a05a-4504-9d16-11900fbcb681",
+      "text": "Quantum coherence in the warm, wet brain environment decays due to decoherence in femtoseconds, as confirmed by calculations from physicist Max Tegmark; this decay rate is millions of times too fast to sustain the proposed quantum processing in microtubules.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "70710b22-5716-4941-92b5-77997594e8e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:04.667622+00:00"
+    },
+    {
+      "id": "590366fe-6cc3-4d41-bb91-497fb963d2b8",
+      "text": "Advanced artificial neural networks, such as Google DeepMind's AlphaZero, demonstrate human-level intuition and generalized problem-solving in complex domains like chess and Go, suggesting that non-computable processes are not necessary for high-level cognition.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "70710b22-5716-4941-92b5-77997594e8e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T13:47:04.667650+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 5,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:45:36.210445+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T13:45:36.210445+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "e802a30b-68e1-44dc-96b9-c9d868da4771",
+      "target": "ca52a622-ef3f-4bb6-a0c4-ea542831b2ee",
+      "type": "objection"
+    },
+    {
+      "source": "e802a30b-68e1-44dc-96b9-c9d868da4771",
+      "target": "ad11fd54-baf7-4ea2-9d81-81021ca6ee29",
+      "type": "objection"
+    },
+    {
+      "source": "15e6947b-37b3-41c2-a1ef-5da1fc889bdc",
+      "target": "016d9303-8b84-4358-9af4-61ebb072fb36",
+      "type": "objection"
+    },
+    {
+      "source": "15e6947b-37b3-41c2-a1ef-5da1fc889bdc",
+      "target": "a8789c72-6407-48d9-976a-abb8431be2a2",
+      "type": "objection"
+    },
+    {
+      "source": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "target": "fe02a4ef-bb6c-4712-b719-94c8c1a70b8a",
+      "type": "objection"
+    },
+    {
+      "source": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "target": "a7b723d4-fa60-4971-862d-a1c83624259a",
+      "type": "objection"
+    },
+    {
+      "source": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "target": "f29c1737-6a71-4bce-98d5-8e3e615bad27",
+      "type": "objection"
+    },
+    {
+      "source": "7843b323-c4b8-47de-b3c1-d9cb3332c396",
+      "target": "e4bc4df2-94a7-43f3-baf0-f762b0f877c1",
+      "type": "objection"
+    },
+    {
+      "source": "7843b323-c4b8-47de-b3c1-d9cb3332c396",
+      "target": "43801f54-c1bf-4c89-aee6-4303792f2d1b",
+      "type": "objection"
+    },
+    {
+      "source": "72f92adb-336c-43e9-a55d-9855d1c67d2e",
+      "target": "9dcaaa6a-6ebc-474e-a347-cd11567326c4",
+      "type": "objection"
+    },
+    {
+      "source": "72f92adb-336c-43e9-a55d-9855d1c67d2e",
+      "target": "f17a4073-5b08-4821-89bb-fcce1ab9a116",
+      "type": "objection"
+    },
+    {
+      "source": "ca52a622-ef3f-4bb6-a0c4-ea542831b2ee",
+      "target": "e054a980-18db-4578-a85c-2157bff64bf2",
+      "type": "response"
+    },
+    {
+      "source": "ca52a622-ef3f-4bb6-a0c4-ea542831b2ee",
+      "target": "1c6585f2-5d5a-4f92-a2de-59a49bc26b07",
+      "type": "response"
+    },
+    {
+      "source": "fe02a4ef-bb6c-4712-b719-94c8c1a70b8a",
+      "target": "c314a8b9-439f-4292-bce8-2e566cc162a1",
+      "type": "response"
+    },
+    {
+      "source": "fe02a4ef-bb6c-4712-b719-94c8c1a70b8a",
+      "target": "881538a0-1236-4666-8f2e-72351a4be848",
+      "type": "response"
+    },
+    {
+      "source": "9dcaaa6a-6ebc-474e-a347-cd11567326c4",
+      "target": "f592e4a9-d584-4dc0-ae6a-24372c8484f6",
+      "type": "response"
+    },
+    {
+      "source": "9dcaaa6a-6ebc-474e-a347-cd11567326c4",
+      "target": "0b660773-4fa8-45a2-a0f5-9d452278d71f",
+      "type": "response"
+    },
+    {
+      "source": "f29c1737-6a71-4bce-98d5-8e3e615bad27",
+      "target": "63b50cbb-64d7-40b6-8437-4e1f9745d979",
+      "type": "response"
+    },
+    {
+      "source": "f29c1737-6a71-4bce-98d5-8e3e615bad27",
+      "target": "bfedb0e4-b1cf-459f-9dc4-0470667dcfb4",
+      "type": "response"
+    },
+    {
+      "source": "a7b723d4-fa60-4971-862d-a1c83624259a",
+      "target": "fbbab39b-8cc6-4198-bf21-d3befe292986",
+      "type": "response"
+    },
+    {
+      "source": "a7b723d4-fa60-4971-862d-a1c83624259a",
+      "target": "10be9f8b-990a-45ee-8ec8-b19d0b6d82d4",
+      "type": "response"
+    },
+    {
+      "source": "e4bc4df2-94a7-43f3-baf0-f762b0f877c1",
+      "target": "13ccf998-1fd6-4bd3-886e-40abd1de14f4",
+      "type": "response"
+    },
+    {
+      "source": "e4bc4df2-94a7-43f3-baf0-f762b0f877c1",
+      "target": "20399d70-383e-4cd6-bb69-3ca9fbd0bd9e",
+      "type": "response"
+    },
+    {
+      "source": "a8789c72-6407-48d9-976a-abb8431be2a2",
+      "target": "872b6d2b-814b-4c6b-b274-848d3c66d44f",
+      "type": "response"
+    },
+    {
+      "source": "a8789c72-6407-48d9-976a-abb8431be2a2",
+      "target": "84384592-5345-475a-a29f-603f26bc4ad3",
+      "type": "response"
+    },
+    {
+      "source": "cb6b1722-1672-4ed2-b735-1bd6fa9b380f",
+      "target": "8c9f163d-6c70-4cbc-9518-96f9b004af6e",
+      "type": "objection"
+    },
+    {
+      "source": "cb6b1722-1672-4ed2-b735-1bd6fa9b380f",
+      "target": "8139601b-5f6f-4eec-9252-8342a4f3b659",
+      "type": "objection"
+    },
+    {
+      "source": "44f1038d-f362-4165-b099-08ba09b2425c",
+      "target": "206bc7b4-0c40-44fa-822b-bbd0f5e2179f",
+      "type": "objection"
+    },
+    {
+      "source": "44f1038d-f362-4165-b099-08ba09b2425c",
+      "target": "7fc65fd1-6ed5-477f-8f3f-8ef501028dec",
+      "type": "objection"
+    },
+    {
+      "source": "d087546b-854a-48d0-9e7c-964f792d1e76",
+      "target": "22c9c7e8-ea77-4cb8-b5fc-907277596c1f",
+      "type": "objection"
+    },
+    {
+      "source": "d087546b-854a-48d0-9e7c-964f792d1e76",
+      "target": "3b59fa5e-b1f9-4ce8-ac5a-6c0c18b0d880",
+      "type": "objection"
+    },
+    {
+      "source": "a3af063e-6174-47a7-87bb-bec04c1a7e91",
+      "target": "70710b22-5716-4941-92b5-77997594e8e7",
+      "type": "objection"
+    },
+    {
+      "source": "a3af063e-6174-47a7-87bb-bec04c1a7e91",
+      "target": "da1a8af1-d269-48ce-b854-2e31c04f05c4",
+      "type": "objection"
+    },
+    {
+      "source": "df3b7963-a2ed-4e18-b487-4ee50f69eec1",
+      "target": "5bf419c5-fa97-4006-b0b8-dd2a437b8799",
+      "type": "objection"
+    },
+    {
+      "source": "df3b7963-a2ed-4e18-b487-4ee50f69eec1",
+      "target": "61fb0d92-a7f8-4d37-a202-e784b0b2037d",
+      "type": "objection"
+    },
+    {
+      "source": "ad55d3da-2b61-4a3b-9152-ccae2b94a4d0",
+      "target": "da2e6eab-08ff-438d-8067-56112c5d137f",
+      "type": "objection"
+    },
+    {
+      "source": "ad55d3da-2b61-4a3b-9152-ccae2b94a4d0",
+      "target": "3ad9f4a0-0afc-46e6-81f8-5fba4ce170c7",
+      "type": "objection"
+    },
+    {
+      "source": "8139601b-5f6f-4eec-9252-8342a4f3b659",
+      "target": "7b104afa-6037-40b5-9558-9248c9037c9b",
+      "type": "response"
+    },
+    {
+      "source": "8139601b-5f6f-4eec-9252-8342a4f3b659",
+      "target": "6f1156bd-6c24-47c9-a96a-db36475964b9",
+      "type": "response"
+    },
+    {
+      "source": "206bc7b4-0c40-44fa-822b-bbd0f5e2179f",
+      "target": "1b07d268-a897-445f-84b6-10596badded5",
+      "type": "response"
+    },
+    {
+      "source": "206bc7b4-0c40-44fa-822b-bbd0f5e2179f",
+      "target": "13bf47be-5393-454b-9cdf-dfa5bd147357",
+      "type": "response"
+    },
+    {
+      "source": "3b59fa5e-b1f9-4ce8-ac5a-6c0c18b0d880",
+      "target": "ebc66b76-c9e5-4bea-be9d-20563c47faa2",
+      "type": "response"
+    },
+    {
+      "source": "3b59fa5e-b1f9-4ce8-ac5a-6c0c18b0d880",
+      "target": "809ea55c-3521-42b1-965f-3f07da52ed92",
+      "type": "response"
+    },
+    {
+      "source": "da1a8af1-d269-48ce-b854-2e31c04f05c4",
+      "target": "c0c65d77-0d95-4e7f-8960-ecf3078c4f2d",
+      "type": "response"
+    },
+    {
+      "source": "da1a8af1-d269-48ce-b854-2e31c04f05c4",
+      "target": "990c1f07-b6e7-4f76-86fa-62451b321c85",
+      "type": "response"
+    },
+    {
+      "source": "22c9c7e8-ea77-4cb8-b5fc-907277596c1f",
+      "target": "d3714e24-7c69-4948-8886-d1bede0f4ecf",
+      "type": "response"
+    },
+    {
+      "source": "22c9c7e8-ea77-4cb8-b5fc-907277596c1f",
+      "target": "3a71a419-5b44-4929-8fa9-520290baab1b",
+      "type": "response"
+    },
+    {
+      "source": "70710b22-5716-4941-92b5-77997594e8e7",
+      "target": "433b3938-a05a-4504-9d16-11900fbcb681",
+      "type": "response"
+    },
+    {
+      "source": "70710b22-5716-4941-92b5-77997594e8e7",
+      "target": "590366fe-6cc3-4d41-bb91-497fb963d2b8",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "e802a30b-68e1-44dc-96b9-c9d868da4771",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "7843b323-c4b8-47de-b3c1-d9cb3332c396",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "15e6947b-37b3-41c2-a1ef-5da1fc889bdc",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a9f0a72d-4440-4ebe-9a98-f67e1f2d2d14",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "72f92adb-336c-43e9-a55d-9855d1c67d2e",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "cb6b1722-1672-4ed2-b735-1bd6fa9b380f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "df3b7963-a2ed-4e18-b487-4ee50f69eec1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ad55d3da-2b61-4a3b-9152-ccae2b94a4d0",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "44f1038d-f362-4165-b099-08ba09b2425c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d087546b-854a-48d0-9e7c-964f792d1e76",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a3af063e-6174-47a7-87bb-bec04c1a7e91",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

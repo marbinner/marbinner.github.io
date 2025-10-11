@@ -1,0 +1,2727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal basic income is economically viable - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Universal basic income is economically viable</h1>
+        <div class="meta">
+            4 arguments for • 4 arguments against •
+            75 total nodes • Max depth: 3 •
+            Version 4
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/universal-basic-income-is-economically-viable.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">75</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">4</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">4</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "e3ca7495-cc00-45b1-9595-a5fa3e4a2bba",
+      "text": "Universal Basic Income (UBI) acts as a powerful economic stimulus, funneling income directly to those with the highest marginal propensity to consume, thereby generating a substantial economic multiplier effect that increases aggregate demand, GDP, and tax revenues.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:06.067386"
+    },
+    {
+      "id": "77873cbd-2f58-4b81-9661-99443d5a2f9d",
+      "text": "The gross cost of UBI can be economically offset by consolidating or eliminating numerous existing, complex, and administratively intensive government welfare and anti-poverty programs, leading to significant savings in bureaucratic overhead and means-testing expenses.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:06.069319"
+    },
+    {
+      "id": "228b9455-dd73-45ad-8799-0fd68a13b8b8",
+      "text": "Sustainable funding for UBI is viable through progressive revenue reforms, such as implementing a broad-based consumption tax (VAT), a carbon tax, or a reformed land value tax, which can generate the necessary revenue without unduly burdening labor or capital investment.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:06.070850"
+    },
+    {
+      "id": "1db4dcdb-5ad0-4966-9134-8b7388420cc4",
+      "text": "UBI enhances long-term economic productivity by increasing labor market flexibility, enabling individuals to pursue further education, acquire new skills, or invest in entrepreneurship, which results in a more optimal allocation of human capital.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:06.072280"
+    },
+    {
+      "id": "a519b9e8-6003-4cfc-9c42-1d6540e7930e",
+      "text": "Empirical evidence from guaranteed income trials often indicates that recipients reduce their work hours and labor force participation (e.g., increased leisure consumption), directly contradicting the assumption that stability will be primarily utilized for difficult, long-term skill acquisition and entrepreneurship.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1db4dcdb-5ad0-4966-9134-8b7388420cc4",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:15.887501"
+    },
+    {
+      "id": "802fea50-d33d-4588-8784-4610645c671d",
+      "text": "Financing a universal basic income requires high levels of taxation on capital and labor or massive public debt, creating a significant economic deadweight loss and disincentivizing work that could easily neutralize any marginal productivity gains from improved human capital allocation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "1db4dcdb-5ad0-4966-9134-8b7388420cc4",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:15.889014"
+    },
+    {
+      "id": "de36e688-f1cd-4cc2-ac10-4516342d335d",
+      "text": "The total administrative cost savings from current welfare programs are estimated to be less than 10% of overall program expenditures, which is economically insufficient to offset the massive gross spending required for a Universal Basic Income.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "77873cbd-2f58-4b81-9661-99443d5a2f9d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:17.166376"
+    },
+    {
+      "id": "7c64ca8f-b6c1-4e69-9709-e3535aaf9d5f",
+      "text": "UBI, as a generalized cash transfer, cannot functionally replace specialized in-kind programs like housing vouchers or targeted disability support without creating new resource allocation crises for vulnerable populations.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "77873cbd-2f58-4b81-9661-99443d5a2f9d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:17.166991"
+    },
+    {
+      "id": "8533edbc-2801-452b-b58a-d33d9db31af0",
+      "text": "Independent fiscal analysis shows that even maximized carbon and consumption taxes yield less than half the trillions needed for a livable UBI, thus requiring economically destructive tax rates in other areas.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "228b9455-dd73-45ad-8799-0fd68a13b8b8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:17.923948"
+    },
+    {
+      "id": "6970231f-9509-4ac0-a13f-fe2b2075191e",
+      "text": "A substantial Carbon Tax imposes a regressive burden by raising the cost of essential consumer goods, and a Land Value Tax creates significant economic distortions that shift capital away from productive investment decisions.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "228b9455-dd73-45ad-8799-0fd68a13b8b8",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:17.924588"
+    },
+    {
+      "id": "d14e0861-fda0-4729-896f-99bcedc27838",
+      "text": "UBI is a universal payment, meaning much of the money is recouped from middle- and high-income earners via the necessary funding mechanism, significantly reducing the net transfer to high-MPC individuals and thus the overall economic multiplier.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e3ca7495-cc00-45b1-9595-a5fa3e4a2bba",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:18.172944"
+    },
+    {
+      "id": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "text": "The necessary funding for a high-enough UBI is immense; no realistic economic model posits a multiplier effect large enough to generate sufficient GDP growth that would fully offset the cost and produce a net *increase* in overall tax revenues.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e3ca7495-cc00-45b1-9595-a5fa3e4a2bba",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:18.173960"
+    },
+    {
+      "id": "605d3f68-85aa-4936-b40e-61fd1182cdfe",
+      "text": "Reducing paid work is often a necessary precondition for long-term investments like skill acquisition, education, or business formation, which are non-market activities. Therefore, a reduction in labor force participation does not logically contradict the assumption that stability is being utilized for future-oriented development.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a519b9e8-6003-4cfc-9c42-1d6540e7930e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:25.176019"
+    },
+    {
+      "id": "0f4d7f31-66d4-45fb-99f0-eb46961c88b3",
+      "text": "UBI can be financed by consolidating highly bureaucratic existing welfare programs and eliminating inefficient tax expenditures, or through targeted taxes like a land value or carbon tax, none of which require broad, high taxation on labor and capital.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "802fea50-d33d-4588-8784-4610645c671d",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:27.088293"
+    },
+    {
+      "id": "c9218014-485d-40fa-ac26-1179d095eecf",
+      "text": "Financing UBI by consolidating numerous targeted social programs substantially mitigates tax-related deadweight loss, generating administrative savings that partially offset the gross cost of the program.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "802fea50-d33d-4588-8784-4610645c671d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:27.088998"
+    },
+    {
+      "id": "c70825f8-e1fb-45b8-a49d-2e35acb386e1",
+      "text": "The Land Value Tax (LVT) is fundamentally non-distortionary because the supply of land is perfectly inelastic, meaning the tax cannot be avoided by shifting capital away from it or reducing productive investments, unlike taxes on consumption or labor.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6970231f-9509-4ac0-a13f-fe2b2075191e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:29.431632"
+    },
+    {
+      "id": "79c70eb1-c8c0-4a51-9af8-0deaaf25de1f",
+      "text": "Claims of an \"undue burden\" ignore that the revenue generated by a carbon tax can be cycled back as lump-sum dividends to households, which economic studies show can offset or even reverse the cost burden for low and middle-income consumers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "6970231f-9509-4ac0-a13f-fe2b2075191e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:29.432254"
+    },
+    {
+      "id": "af1b1bdd-6e66-49ab-81af-31f83d7ba142",
+      "text": "Specialized needs are met by a tiered UBI that provides larger cash transfers based on verifiable conditions like severe disability, eliminating the restrictive nature of in-kind aid while maintaining targeting.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7c64ca8f-b6c1-4e69-9709-e3535aaf9d5f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:29.719978"
+    },
+    {
+      "id": "104dfec4-1dcf-4f1c-aee6-aeff3f25ae31",
+      "text": "Evidence from UBI pilots proves recipients prioritize housing and necessities, directly refuting the assumption that generalized transfers lead to widespread misallocation or market instability worse than existing voucher systems.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "7c64ca8f-b6c1-4e69-9709-e3535aaf9d5f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:29.721033"
+    },
+    {
+      "id": "f2ef044d-92a7-4137-89c6-9bbe07649cd0",
+      "text": "UBI's primary funding mechanism is not revenue generated by GDP growth, but the consolidation and displacement of expensive, existing bureaucratic welfare programs, which significantly reduces the net new funding required.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:29.980516"
+    },
+    {
+      "id": "5ebee1d6-b665-4fb2-a73a-1dd1115b4790",
+      "text": "Funding viability is not solely dependent on a GDP growth multiplier; alternative economic models propose implementing broad-based taxes (such as a progressive wealth tax or a high carbon tax) specifically designed to generate the necessary funding.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:29.981494"
+    },
+    {
+      "id": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "text": "Models analyzing UBI pilots, such as the Alaska Permanent Fund or micro-simulations used in Finland, show significant positive regional economic multipliers and reductions in social costs like healthcare, offsetting costs beyond pure taxable GDP growth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:29.982195"
+    },
+    {
+      "id": "8e0253e1-a7b4-43b3-ad74-a6d436ab820e",
+      "text": "UBI primarily offsets costs by replacing the direct transfer component of current welfare programs, which accounts for the vast majority (often over 90%) of existing government social spending, not just administrative overhead.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "de36e688-f1cd-4cc2-ac10-4516342d335d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:33.345326"
+    },
+    {
+      "id": "c2282fec-8a17-4c65-bcaf-0f946591fb0c",
+      "text": "Administrative costs for highly complex welfare programs, particularly those requiring intensive means-testing and eligibility verification, frequently exceed 10% of total program expenditures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "de36e688-f1cd-4cc2-ac10-4516342d335d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:33.346444"
+    },
+    {
+      "id": "7a073b03-8d22-4e30-9bf8-7d3931502fa4",
+      "text": "The necessary revenue is not trillions; the UBI's actual net cost is calculated by subtracting the elimination of all existing welfare, tax credits, and unemployment insurance, drastically lowering the new funding requirement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8533edbc-2801-452b-b58a-d33d9db31af0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:34.277193"
+    },
+    {
+      "id": "dbdf585e-01f1-4c12-aef3-0c05edb3b2c3",
+      "text": "Major UBI funding proposals explicitly combine revenue from wealth taxes, land value taxes, and financial transaction taxes, demonstrating significant revenue streams beyond the limited scope of VAT or carbon taxes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8533edbc-2801-452b-b58a-d33d9db31af0",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:34.278953"
+    },
+    {
+      "id": "239194b1-1db2-4239-bac4-b46380a0bd5a",
+      "text": "The structure of UBI funding, which relies on progressive taxation, ensures that those with high marginal propensity to consume (low-income individuals) remain substantial net recipients. The gross universality of the payment does not negate the significant targeted net transfer effect.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d14e0861-fda0-4729-896f-99bcedc27838",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:35.779195"
+    },
+    {
+      "id": "a32bb18e-bf77-4787-92b5-dcc7961f20cf",
+      "text": "The economic multiplier is driven by the *net* shift of purchasing power from low-MPC individuals (taxpayers/savers) to high-MPC individuals (receivers/spenders). The internal recycling of UBI funds from high earners back into the system does not diminish the aggregate net injection that generates the multiplier.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "d14e0861-fda0-4729-896f-99bcedc27838",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:35.780448"
+    },
+    {
+      "id": "affd02fc-99e8-4bf5-9e0c-e1e0e6e03562",
+      "text": "Specialized aid often provides non-cash, coordinated services like case management, therapy resource procurement, and subsidized housing, which money alone cannot replace because these critical resources are not reliably available on the open market, regardless of the cash sum provided.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "af1b1bdd-6e66-49ab-81af-31f83d7ba142",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:40.547809"
+    },
+    {
+      "id": "1a8ae6f6-aacb-4d4a-b06a-ffde213b169b",
+      "text": "Imposing a needs-tested \"higher tier\" for specialized needs requires administrative categorization and assessment of severity, violating the unconditionality and universality central to the definition of UBI, thus recreating the complexity of the specialized aid structure it purports to replace.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "af1b1bdd-6e66-49ab-81af-31f83d7ba142",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:40.547834"
+    },
+    {
+      "id": "bf469614-e6f0-4e66-a976-2bf875fd69b6",
+      "text": "Consolidating existing welfare programs only rearranges spending; the funding source remains the high income and payroll taxes on labor and capital.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0f4d7f31-66d4-45fb-99f0-eb46961c88b3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:41.047946"
+    },
+    {
+      "id": "54f212ce-897b-4293-afe8-eb3c1b1db234",
+      "text": "Economic analysis indicates that the combined revenue from targeted taxes and welfare consolidation is insufficient to fund a UBI that exceeds the poverty line, inevitably requiring significant new broad taxes on capital or consumption.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0f4d7f31-66d4-45fb-99f0-eb46961c88b3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:41.047972"
+    },
+    {
+      "id": "92563b0f-88c3-4c87-987d-1258e0747751",
+      "text": "The total cost of a meaningful UBI typically far exceeds the existing welfare budget; studies show consolidation of current programs offsets only 20% to 40% of the required funding, proving it cannot be the primary funding mechanism.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f2ef044d-92a7-4137-89c6-9bbe07649cd0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:41.374782"
+    },
+    {
+      "id": "410abfa9-be44-49ee-98cc-66f627c4cce0",
+      "text": "Consolidation assumes full displacement is possible, yet necessary targeted welfare programs (e.g., specialized disability or housing aid) provide non-monetary support crucial for specific vulnerable populations, making full replacement impossible without catastrophic adverse consequences.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "f2ef044d-92a7-4137-89c6-9bbe07649cd0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:41.374821"
+    },
+    {
+      "id": "46a74f96-0204-4108-831d-fde9636bef63",
+      "text": "The Alaska Permanent Fund is structurally distinct from a tax-funded UBI, as it is non-replicable and funded by resource rents on state-owned oil, not broad labor or capital taxation, invalidating it as a model for sustainable national UBI funding.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:45.778556"
+    },
+    {
+      "id": "dd8f9cac-6eb6-4c86-a798-46452e2521c2",
+      "text": "The two-year Finnish study showed basic income failed to significantly increase earned income or productive labor engagement, demonstrating that the program did not generate the necessary labor supply response for viability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:45.778598"
+    },
+    {
+      "id": "ad7007d0-d59a-44de-ab50-24cf39c63210",
+      "text": "Regional or small-scale social cost reductions, like modest decreases in healthcare utilization, cannot offset the massive macroeconomic burden required for a true national UBI, which demands funding equal to 10-20% of GDP.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:45.778618"
+    },
+    {
+      "id": "383a050f-4ea0-42d4-8561-1e5ab3864d3c",
+      "text": "The administrative and political challenges of implementing comprehensive wealth and financial transaction taxes often result in reduced compliance, capital flight, or complex loopholes that significantly depress the actual realized revenue, failing to validate the assumption of inherent significance.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dbdf585e-01f1-4c12-aef3-0c05edb3b2c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:47.414893"
+    },
+    {
+      "id": "5ff6075a-2eec-4b78-a437-ec5f4fc821f1",
+      "text": "Wealth and financial transaction tax revenues are inherently volatile and vulnerable to capital flight, whereas broad consumption or carbon taxes draw from a wider, more stable national economic base required for sustained UBI funding viability.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dbdf585e-01f1-4c12-aef3-0c05edb3b2c3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:47.414921"
+    },
+    {
+      "id": "7243aef8-8fb2-4bca-b928-320d0d413c18",
+      "text": "The sheer cost of a UBI set at or above the poverty line requires massive tax increases that discourage investment and work, or reliance on deficit spending that leads to unsustainable national debt.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:47.415196"
+    },
+    {
+      "id": "ad499292-a0a8-4e8d-a449-8b988c5a7cfd",
+      "text": "If funded by new money creation, UBI fuels demand-pull inflation, which rapidly erodes the purchasing power of the basic income itself, neutralizing the intended economic benefit over time.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:47.415826"
+    },
+    {
+      "id": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "text": "UBI disincentivizes work, particularly for low-wage jobs, leading to structural labor shortages and decreased overall economic productivity, undermining the tax base required for its maintenance.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:47.416252"
+    },
+    {
+      "id": "fc94d82e-141b-48c9-9c44-481a5f6d17cf",
+      "text": "The required expenditure for UBI crowds out essential government investment in growth-generating areas like public infrastructure, education, and innovation, hindering long-term economic expansion.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:47.416852"
+    },
+    {
+      "id": "e9d29a40-573f-48a1-b6b7-42d102e778d2",
+      "text": "UBI does not have to crowd out essential government spending; it can be fully funded by eliminating less productive expenditures, such as corporate welfare, or by implementing progressive taxation and adjusting consumption taxes.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "fc94d82e-141b-48c9-9c44-481a5f6d17cf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:59.603842"
+    },
+    {
+      "id": "cdc06a44-c212-44ef-8e46-48da77103e34",
+      "text": "UBI can stimulate substantial economic activity through increased broad-based consumer demand and reduced poverty-related productivity losses, potentially offsetting any reduced public investment and accelerating long-term growth.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "fc94d82e-141b-48c9-9c44-481a5f6d17cf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:59.604753"
+    },
+    {
+      "id": "6fa52c4d-dff9-4734-8f9e-6849541445c5",
+      "text": "UBI can be funded by consolidating and streamlining existing federal welfare and subsidy programs, reallocating those budgeted funds instead of relying solely on massive new net taxation or deficit spending.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7243aef8-8fb2-4bca-b928-320d0d413c18",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:59.767679"
+    },
+    {
+      "id": "828bdb62-1f61-4f7f-9c3e-3b955653b597",
+      "text": "Funding UBI through non-labor mechanisms like progressive consumption taxes, financial transaction taxes, or land taxes minimizes the assumed discouragement of work and investment. The dynamic economic effects of guaranteed income and increased demand can also offset macroeconomic drag.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7243aef8-8fb2-4bca-b928-320d0d413c18",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:36:59.768362"
+    },
+    {
+      "id": "d5a73fb3-afcd-47b3-aa0f-a235faf0f08b",
+      "text": "Standard UBI proposals index payments to the Consumer Price Index (CPI), which automatically adjusts the benefit amount to offset inflation and prevent the purported erosion of purchasing power.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ad499292-a0a8-4e8d-a449-8b988c5a7cfd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:00.827998"
+    },
+    {
+      "id": "55f8a767-ea4d-4823-914a-87203ba6654f",
+      "text": "UBI's real economic benefit is preserved because most viable proposals mandate automatic indexing to the Consumer Price Index (CPI), which prevents inflation from eroding purchasing power over time.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "ad499292-a0a8-4e8d-a449-8b988c5a7cfd",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:00.829235"
+    },
+    {
+      "id": "aa941f59-df75-4dea-81d6-3e9faf119967",
+      "text": "Pilot programs, such as the Finnish UBI experiment and various United States studies, have shown only a statistically insignificant decrease in overall employment, suggesting UBI would not cause widespread structural labor shortages.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:02.950496"
+    },
+    {
+      "id": "17d0944b-a4f1-4afb-9dbf-a846be89ed4a",
+      "text": "A temporary reduction in labor supply in low-wage sectors would incentivize businesses to raise wages to restore work incentives or accelerate investment in value-creating automation to offset perceived labor reliance.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:02.951163"
+    },
+    {
+      "id": "74f5060b-8235-4369-a2bc-843d6b6c0d59",
+      "text": "Aggregate economic productivity is not defined by the quantity of low-wage work; freeing workers from marginal jobs allows labor reallocation toward education, entrepreneurship, or higher-skilled sectors, potentially increasing overall GDP per capita.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:02.951561"
+    },
+    {
+      "id": "5936ed3b-9a40-476d-9dae-82a500f9d631",
+      "text": "Indexing UBI to the standard CPI is insufficient because the measured CPI basket underweights essential costs like housing and food, which typically experience inflation rates significantly higher than the overall index, disproportionately eroding the purchasing power of low-income recipients.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d5a73fb3-afcd-47b3-aa0f-a235faf0f08b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:09.774033"
+    },
+    {
+      "id": "ad01793c-105b-4770-a4fc-4b091d7d4011",
+      "text": "The necessary taxes or cuts required to fund a meaningful UBI often target highly efficient public investments, such as infrastructure or R&D, meaning the UBI stimulus is likely to yield a negative net effect on long-term productivity and growth.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cdc06a44-c212-44ef-8e46-48da77103e34",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:09.841072"
+    },
+    {
+      "id": "1e7d177c-dedd-49d4-a5ff-1fb7547c9986",
+      "text": "Injecting UBI demand without addressing supply-side elasticities immediately triggers inflation that erodes real purchasing power, structurally impeding, not accelerating, net long-term growth.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cdc06a44-c212-44ef-8e46-48da77103e34",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:09.842010"
+    },
+    {
+      "id": "bb844956-8f8a-4249-a445-5f3da95d5446",
+      "text": "Existing non-contributory welfare spending totals less than one-third of the estimated cost of a poverty-level UBI for all U.S. citizens; consolidation alone is fiscally impossible without massive cuts to the UBI amount or significant new taxes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6fa52c4d-dff9-4734-8f9e-6849541445c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:10.483281"
+    },
+    {
+      "id": "79e3a7a4-da76-48be-87a7-3327c5775959",
+      "text": "Cash payments cannot replace complex social insurance and non-fungible in-kind benefits, such as healthcare through Medicaid or housing assistance, which are designed to address catastrophic risk and market failures.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "6fa52c4d-dff9-4734-8f9e-6849541445c5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:10.483902"
+    },
+    {
+      "id": "2b76d923-de86-4950-b9d9-5b84cbf8f3a6",
+      "text": "A Financial Transaction Tax immediately reduces market liquidity and raises the cost of capital, while high progressive consumption taxes discourage the long-term saving and investment necessary for sustained economic growth.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "828bdb62-1f61-4f7f-9c3e-3b955653b597",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:12.239607"
+    },
+    {
+      "id": "6597f2bb-c53b-4866-9f9b-f4363bb55896",
+      "text": "The structural macroeconomic drag created by high taxes on efficient transactions and capital formation is not automatically or reliably offset by the potentially uneven or temporary increase in aggregate demand from UBI.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "828bdb62-1f61-4f7f-9c3e-3b955653b597",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:12.241345"
+    },
+    {
+      "id": "93ce0c8e-6e59-4f78-9e36-2db988761585",
+      "text": "A universal basic income set at the Federal Poverty Line for all adults would cost nearly $3.5 trillion annually, a figure multiple times larger than all available savings from eliminating corporate welfare and minor tax expenditures combined.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e9d29a40-573f-48a1-b6b7-42d102e778d2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:12.660054"
+    },
+    {
+      "id": "b79be091-c1c0-4875-bed6-21f9588b52e7",
+      "text": "Eliminating all U.S. corporate welfare and non-defense discretionary spending covers less than 20% of the cost for a poverty-level UBI, fundamentally necessitating cuts to major mandatory entitlements like Social Security, which directly crowds out essential government spending.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e9d29a40-573f-48a1-b6b7-42d102e778d2",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:12.660863"
+    },
+    {
+      "id": "26141b64-6d99-4254-bf31-10796c807d8a",
+      "text": "Pilot program results, which are limited in scale and duration, fail to capture the long-term structural changes in labor supply that would occur when a UBI is permanently guaranteed and universally available to the entire population.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aa941f59-df75-4dea-81d6-3e9faf119967",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:12.714565"
+    },
+    {
+      "id": "4ac26916-40c1-4f0c-9e73-b419f57b500b",
+      "text": "Structural labor shortages are defined by persistent vacancies in specific low-wage, high-effort sectors, not just an overall employment rate. UBI provides the financial freedom for workers to reject undesirable jobs, creating acute labor crises in essential services.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "aa941f59-df75-4dea-81d6-3e9faf119967",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:12.715204"
+    },
+    {
+      "id": "6dea6208-3c85-4b60-aabc-add5cb75e8a8",
+      "text": "Displaced labor does not automatically reallocate because low-wage workers lack both the capital and access to intensive training required for higher-skilled sectors, locking them into joblessness instead of entrepreneurship.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "74f5060b-8235-4369-a2bc-843d6b6c0d59",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:13.117170"
+    },
+    {
+      "id": "2b3c9a78-cd42-47ae-b1ef-a1a2d1064f84",
+      "text": "The mechanism ignores the significant short-term economic disruption that accompanies mass labor displacement, such as increased reliance on social safety nets and depressed consumer spending, which can negatively impact overall GDP growth during the transition period.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "74f5060b-8235-4369-a2bc-843d6b6c0d59",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:13.117800"
+    },
+    {
+      "id": "03654f53-1bbb-4043-a802-c7cc846bae42",
+      "text": "Businesses facing a temporary shortage can rationally choose to reduce operating hours, decline new orders, or scale back output until the labor supply naturally recovers, thereby avoiding costly and permanent structural changes like automation or wage hikes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "17d0944b-a4f1-4afb-9dbf-a846be89ed4a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:14.851876"
+    },
+    {
+      "id": "787ef8c0-ebc9-4c37-b5d0-efac8ca258ad",
+      "text": "Many low-wage sectors operate on thin profit margins, meaning cost increases from wage hikes or automation debt cannot be absorbed and result in business contraction, closure, or price inflation passed onto consumers, rather than structural improvement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "17d0944b-a4f1-4afb-9dbf-a846be89ed4a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:14.852457"
+    },
+    {
+      "id": "363641a2-e91f-46bd-a4a2-91663d91409f",
+      "text": "Indexing UBI to the general CPI is inadequate because low-income recipients spend a greater share of their income on necessities like rent and food, whose prices routinely inflate faster than the broad consumer index. This means the benefit's real value for essentials is still eroded despite CPI tracking.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "55f8a767-ea4d-4823-914a-87203ba6654f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:16.096033"
+    },
+    {
+      "id": "55733e0d-dae5-4898-83fa-8066ccf9a7ed",
+      "text": "A benefit is practically neutralized, or rendered ineffective, when inflation significantly diminishes its real purchasing power, long before the value reaches absolute zero. The focus on requiring a literal total elimination ignores the point where the benefit becomes too small to achieve its intended socio-economic goals.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "55f8a767-ea4d-4823-914a-87203ba6654f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:16.096979"
+    },
+    {
+      "id": "598ecec9-b120-49cf-93f7-6fbdcd5598b3",
+      "text": "Current labor shortages in many key sectors are structural (driven by demographics or permanent skill mismatches), meaning the labor supply will not \"naturally recover\"; thus, avoiding \"costly structural changes\" guarantees a permanent loss of market capability.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "03654f53-1bbb-4043-a802-c7cc846bae42",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:26.025802"
+    },
+    {
+      "id": "14cfd5b1-a599-48f3-b487-7b9f3ac85021",
+      "text": "Reducing operating hours and declining orders forces businesses to incur immediate, non-recoverable costs like customer attrition, loss of market share, and impaired future goodwill, costs that often surpass the expense of necessary long-term structural investments like competitive wages.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "03654f53-1bbb-4043-a802-c7cc846bae42",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:26.025829"
+    },
+    {
+      "id": "11f8983b-8372-4d02-8a30-50f5cb6efe23",
+      "text": "Redirecting the $900 billion from non-defense discretionary spending and corporate subsidies can fund a foundational basic income of approximately $300 per adult per month ($3,600 annually) for the entire population without requiring cuts to mandatory entitlements like Social Security.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b79be091-c1c0-4875-bed6-21f9588b52e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:30.879005"
+    },
+    {
+      "id": "c71429a9-281d-4967-98b5-7aa4083f0dbf",
+      "text": "The necessity for broad structural tax reforms or major entitlement cuts is irrelevant, as redirecting existing corporate welfare and non-defense spending is a structurally simpler internal budgetary adjustment that avoids imposing new burdens or deeper cuts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "b79be091-c1c0-4875-bed6-21f9588b52e7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:30.879048"
+    },
+    {
+      "id": "2b926b6f-9676-4517-8502-415e84156a32",
+      "text": "Major structural economic reforms, such as a national carbon tax or a modest Land Value Tax, are projected to yield $1.5 to $2.5 trillion in annual revenue, providing the necessary funding scale for UBI.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "93ce0c8e-6e59-4f78-9e36-2db988761585",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:31.683919"
+    },
+    {
+      "id": "5941df13-6daf-4611-beca-456f5fbde213",
+      "text": "The calculation of UBI costs as \"trillions annually\" significantly overstates the fiscal impact, as it uses the gross cost; the net burden is dramatically reduced by eliminating existing welfare programs and recouping income through progressive taxation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "93ce0c8e-6e59-4f78-9e36-2db988761585",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-10T22:37:31.683986"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:36:06.067250"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 4,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-10T22:36:06.067250"
+    }
+  ],
+  "links": [
+    {
+      "source": "1db4dcdb-5ad0-4966-9134-8b7388420cc4",
+      "target": "a519b9e8-6003-4cfc-9c42-1d6540e7930e",
+      "type": "objection"
+    },
+    {
+      "source": "1db4dcdb-5ad0-4966-9134-8b7388420cc4",
+      "target": "802fea50-d33d-4588-8784-4610645c671d",
+      "type": "objection"
+    },
+    {
+      "source": "77873cbd-2f58-4b81-9661-99443d5a2f9d",
+      "target": "de36e688-f1cd-4cc2-ac10-4516342d335d",
+      "type": "objection"
+    },
+    {
+      "source": "77873cbd-2f58-4b81-9661-99443d5a2f9d",
+      "target": "7c64ca8f-b6c1-4e69-9709-e3535aaf9d5f",
+      "type": "objection"
+    },
+    {
+      "source": "228b9455-dd73-45ad-8799-0fd68a13b8b8",
+      "target": "8533edbc-2801-452b-b58a-d33d9db31af0",
+      "type": "objection"
+    },
+    {
+      "source": "228b9455-dd73-45ad-8799-0fd68a13b8b8",
+      "target": "6970231f-9509-4ac0-a13f-fe2b2075191e",
+      "type": "objection"
+    },
+    {
+      "source": "e3ca7495-cc00-45b1-9595-a5fa3e4a2bba",
+      "target": "d14e0861-fda0-4729-896f-99bcedc27838",
+      "type": "objection"
+    },
+    {
+      "source": "e3ca7495-cc00-45b1-9595-a5fa3e4a2bba",
+      "target": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "type": "objection"
+    },
+    {
+      "source": "a519b9e8-6003-4cfc-9c42-1d6540e7930e",
+      "target": "605d3f68-85aa-4936-b40e-61fd1182cdfe",
+      "type": "response"
+    },
+    {
+      "source": "802fea50-d33d-4588-8784-4610645c671d",
+      "target": "0f4d7f31-66d4-45fb-99f0-eb46961c88b3",
+      "type": "response"
+    },
+    {
+      "source": "802fea50-d33d-4588-8784-4610645c671d",
+      "target": "c9218014-485d-40fa-ac26-1179d095eecf",
+      "type": "response"
+    },
+    {
+      "source": "6970231f-9509-4ac0-a13f-fe2b2075191e",
+      "target": "c70825f8-e1fb-45b8-a49d-2e35acb386e1",
+      "type": "response"
+    },
+    {
+      "source": "6970231f-9509-4ac0-a13f-fe2b2075191e",
+      "target": "79c70eb1-c8c0-4a51-9af8-0deaaf25de1f",
+      "type": "response"
+    },
+    {
+      "source": "7c64ca8f-b6c1-4e69-9709-e3535aaf9d5f",
+      "target": "af1b1bdd-6e66-49ab-81af-31f83d7ba142",
+      "type": "response"
+    },
+    {
+      "source": "7c64ca8f-b6c1-4e69-9709-e3535aaf9d5f",
+      "target": "104dfec4-1dcf-4f1c-aee6-aeff3f25ae31",
+      "type": "response"
+    },
+    {
+      "source": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "target": "f2ef044d-92a7-4137-89c6-9bbe07649cd0",
+      "type": "response"
+    },
+    {
+      "source": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "target": "5ebee1d6-b665-4fb2-a73a-1dd1115b4790",
+      "type": "response"
+    },
+    {
+      "source": "74d943ce-655f-4f13-8843-0ba40a8d23bd",
+      "target": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "type": "response"
+    },
+    {
+      "source": "de36e688-f1cd-4cc2-ac10-4516342d335d",
+      "target": "8e0253e1-a7b4-43b3-ad74-a6d436ab820e",
+      "type": "response"
+    },
+    {
+      "source": "de36e688-f1cd-4cc2-ac10-4516342d335d",
+      "target": "c2282fec-8a17-4c65-bcaf-0f946591fb0c",
+      "type": "response"
+    },
+    {
+      "source": "8533edbc-2801-452b-b58a-d33d9db31af0",
+      "target": "7a073b03-8d22-4e30-9bf8-7d3931502fa4",
+      "type": "response"
+    },
+    {
+      "source": "8533edbc-2801-452b-b58a-d33d9db31af0",
+      "target": "dbdf585e-01f1-4c12-aef3-0c05edb3b2c3",
+      "type": "response"
+    },
+    {
+      "source": "d14e0861-fda0-4729-896f-99bcedc27838",
+      "target": "239194b1-1db2-4239-bac4-b46380a0bd5a",
+      "type": "response"
+    },
+    {
+      "source": "d14e0861-fda0-4729-896f-99bcedc27838",
+      "target": "a32bb18e-bf77-4787-92b5-dcc7961f20cf",
+      "type": "response"
+    },
+    {
+      "source": "af1b1bdd-6e66-49ab-81af-31f83d7ba142",
+      "target": "affd02fc-99e8-4bf5-9e0c-e1e0e6e03562",
+      "type": "response"
+    },
+    {
+      "source": "af1b1bdd-6e66-49ab-81af-31f83d7ba142",
+      "target": "1a8ae6f6-aacb-4d4a-b06a-ffde213b169b",
+      "type": "response"
+    },
+    {
+      "source": "0f4d7f31-66d4-45fb-99f0-eb46961c88b3",
+      "target": "bf469614-e6f0-4e66-a976-2bf875fd69b6",
+      "type": "response"
+    },
+    {
+      "source": "0f4d7f31-66d4-45fb-99f0-eb46961c88b3",
+      "target": "54f212ce-897b-4293-afe8-eb3c1b1db234",
+      "type": "response"
+    },
+    {
+      "source": "f2ef044d-92a7-4137-89c6-9bbe07649cd0",
+      "target": "92563b0f-88c3-4c87-987d-1258e0747751",
+      "type": "response"
+    },
+    {
+      "source": "f2ef044d-92a7-4137-89c6-9bbe07649cd0",
+      "target": "410abfa9-be44-49ee-98cc-66f627c4cce0",
+      "type": "response"
+    },
+    {
+      "source": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "target": "46a74f96-0204-4108-831d-fde9636bef63",
+      "type": "response"
+    },
+    {
+      "source": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "target": "dd8f9cac-6eb6-4c86-a798-46452e2521c2",
+      "type": "response"
+    },
+    {
+      "source": "2a586e30-be3f-4d29-b0c7-00e0c666e54f",
+      "target": "ad7007d0-d59a-44de-ab50-24cf39c63210",
+      "type": "response"
+    },
+    {
+      "source": "dbdf585e-01f1-4c12-aef3-0c05edb3b2c3",
+      "target": "383a050f-4ea0-42d4-8561-1e5ab3864d3c",
+      "type": "response"
+    },
+    {
+      "source": "dbdf585e-01f1-4c12-aef3-0c05edb3b2c3",
+      "target": "5ff6075a-2eec-4b78-a437-ec5f4fc821f1",
+      "type": "response"
+    },
+    {
+      "source": "fc94d82e-141b-48c9-9c44-481a5f6d17cf",
+      "target": "e9d29a40-573f-48a1-b6b7-42d102e778d2",
+      "type": "objection"
+    },
+    {
+      "source": "fc94d82e-141b-48c9-9c44-481a5f6d17cf",
+      "target": "cdc06a44-c212-44ef-8e46-48da77103e34",
+      "type": "objection"
+    },
+    {
+      "source": "7243aef8-8fb2-4bca-b928-320d0d413c18",
+      "target": "6fa52c4d-dff9-4734-8f9e-6849541445c5",
+      "type": "objection"
+    },
+    {
+      "source": "7243aef8-8fb2-4bca-b928-320d0d413c18",
+      "target": "828bdb62-1f61-4f7f-9c3e-3b955653b597",
+      "type": "objection"
+    },
+    {
+      "source": "ad499292-a0a8-4e8d-a449-8b988c5a7cfd",
+      "target": "d5a73fb3-afcd-47b3-aa0f-a235faf0f08b",
+      "type": "objection"
+    },
+    {
+      "source": "ad499292-a0a8-4e8d-a449-8b988c5a7cfd",
+      "target": "55f8a767-ea4d-4823-914a-87203ba6654f",
+      "type": "objection"
+    },
+    {
+      "source": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "target": "aa941f59-df75-4dea-81d6-3e9faf119967",
+      "type": "objection"
+    },
+    {
+      "source": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "target": "17d0944b-a4f1-4afb-9dbf-a846be89ed4a",
+      "type": "objection"
+    },
+    {
+      "source": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "target": "74f5060b-8235-4369-a2bc-843d6b6c0d59",
+      "type": "objection"
+    },
+    {
+      "source": "d5a73fb3-afcd-47b3-aa0f-a235faf0f08b",
+      "target": "5936ed3b-9a40-476d-9dae-82a500f9d631",
+      "type": "response"
+    },
+    {
+      "source": "cdc06a44-c212-44ef-8e46-48da77103e34",
+      "target": "ad01793c-105b-4770-a4fc-4b091d7d4011",
+      "type": "response"
+    },
+    {
+      "source": "cdc06a44-c212-44ef-8e46-48da77103e34",
+      "target": "1e7d177c-dedd-49d4-a5ff-1fb7547c9986",
+      "type": "response"
+    },
+    {
+      "source": "6fa52c4d-dff9-4734-8f9e-6849541445c5",
+      "target": "bb844956-8f8a-4249-a445-5f3da95d5446",
+      "type": "response"
+    },
+    {
+      "source": "6fa52c4d-dff9-4734-8f9e-6849541445c5",
+      "target": "79e3a7a4-da76-48be-87a7-3327c5775959",
+      "type": "response"
+    },
+    {
+      "source": "828bdb62-1f61-4f7f-9c3e-3b955653b597",
+      "target": "2b76d923-de86-4950-b9d9-5b84cbf8f3a6",
+      "type": "response"
+    },
+    {
+      "source": "828bdb62-1f61-4f7f-9c3e-3b955653b597",
+      "target": "6597f2bb-c53b-4866-9f9b-f4363bb55896",
+      "type": "response"
+    },
+    {
+      "source": "e9d29a40-573f-48a1-b6b7-42d102e778d2",
+      "target": "93ce0c8e-6e59-4f78-9e36-2db988761585",
+      "type": "response"
+    },
+    {
+      "source": "e9d29a40-573f-48a1-b6b7-42d102e778d2",
+      "target": "b79be091-c1c0-4875-bed6-21f9588b52e7",
+      "type": "response"
+    },
+    {
+      "source": "aa941f59-df75-4dea-81d6-3e9faf119967",
+      "target": "26141b64-6d99-4254-bf31-10796c807d8a",
+      "type": "response"
+    },
+    {
+      "source": "aa941f59-df75-4dea-81d6-3e9faf119967",
+      "target": "4ac26916-40c1-4f0c-9e73-b419f57b500b",
+      "type": "response"
+    },
+    {
+      "source": "74f5060b-8235-4369-a2bc-843d6b6c0d59",
+      "target": "6dea6208-3c85-4b60-aabc-add5cb75e8a8",
+      "type": "response"
+    },
+    {
+      "source": "74f5060b-8235-4369-a2bc-843d6b6c0d59",
+      "target": "2b3c9a78-cd42-47ae-b1ef-a1a2d1064f84",
+      "type": "response"
+    },
+    {
+      "source": "17d0944b-a4f1-4afb-9dbf-a846be89ed4a",
+      "target": "03654f53-1bbb-4043-a802-c7cc846bae42",
+      "type": "response"
+    },
+    {
+      "source": "17d0944b-a4f1-4afb-9dbf-a846be89ed4a",
+      "target": "787ef8c0-ebc9-4c37-b5d0-efac8ca258ad",
+      "type": "response"
+    },
+    {
+      "source": "55f8a767-ea4d-4823-914a-87203ba6654f",
+      "target": "363641a2-e91f-46bd-a4a2-91663d91409f",
+      "type": "response"
+    },
+    {
+      "source": "55f8a767-ea4d-4823-914a-87203ba6654f",
+      "target": "55733e0d-dae5-4898-83fa-8066ccf9a7ed",
+      "type": "response"
+    },
+    {
+      "source": "03654f53-1bbb-4043-a802-c7cc846bae42",
+      "target": "598ecec9-b120-49cf-93f7-6fbdcd5598b3",
+      "type": "response"
+    },
+    {
+      "source": "03654f53-1bbb-4043-a802-c7cc846bae42",
+      "target": "14cfd5b1-a599-48f3-b487-7b9f3ac85021",
+      "type": "response"
+    },
+    {
+      "source": "b79be091-c1c0-4875-bed6-21f9588b52e7",
+      "target": "11f8983b-8372-4d02-8a30-50f5cb6efe23",
+      "type": "response"
+    },
+    {
+      "source": "b79be091-c1c0-4875-bed6-21f9588b52e7",
+      "target": "c71429a9-281d-4967-98b5-7aa4083f0dbf",
+      "type": "response"
+    },
+    {
+      "source": "93ce0c8e-6e59-4f78-9e36-2db988761585",
+      "target": "2b926b6f-9676-4517-8502-415e84156a32",
+      "type": "response"
+    },
+    {
+      "source": "93ce0c8e-6e59-4f78-9e36-2db988761585",
+      "target": "5941df13-6daf-4611-beca-456f5fbde213",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "e3ca7495-cc00-45b1-9595-a5fa3e4a2bba",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "77873cbd-2f58-4b81-9661-99443d5a2f9d",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "228b9455-dd73-45ad-8799-0fd68a13b8b8",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "1db4dcdb-5ad0-4966-9134-8b7388420cc4",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "7243aef8-8fb2-4bca-b928-320d0d413c18",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "ad499292-a0a8-4e8d-a449-8b988c5a7cfd",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "6f4bc654-0c28-4252-80de-963fd1c17006",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "fc94d82e-141b-48c9-9c44-481a5f6d17cf",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

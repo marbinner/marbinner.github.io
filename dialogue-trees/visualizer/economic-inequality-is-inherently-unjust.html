@@ -1,0 +1,3417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Economic inequality is inherently unjust - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Economic inequality is inherently unjust</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            115 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/economic-inequality-is-inherently-unjust.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">115</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "a1ad88cb-7063-4cc6-8263-822ba7f28a02",
+      "text": "Economic inequality inherently violates the foundational ethical claim that all individuals possess equal moral worth and dignity. When systemic differences in wealth translate directly into vastly unequal access to healthcare, education, and safety, society treats people as having conditional, rather than inherent, value. Such a structure is unjust because it makes the fulfillment of basic human potential dependent on accidents of birth or economic circumstance.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:43.017502+00:00"
+    },
+    {
+      "id": "d9beb944-17db-4905-826c-20f4ebf0f60c",
+      "text": "Economic inequality violates the principle of commutative justice by allowing returns on resource ownership to dictate life outcomes rather than measurable contribution or effort. When the financial returns on passive capital consistently outpace the returns on active labor, the system unjustly rewards extraction over production.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:43.018003+00:00"
+    },
+    {
+      "id": "e13cabf6-0e63-4832-8995-a4b7c27b3054",
+      "text": "Concentrated economic power systematically translates into disproportionate political and social influence, inevitably subverting the mechanisms of democratic equality. Examples like extensive corporate lobbying and permissive campaign finance structures in many Western democracies demonstrate how the wealthy can shape laws to secure their own enrichment.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:43.018316+00:00"
+    },
+    {
+      "id": "d04640d1-5d42-468b-b09d-cacb79fa4c8f",
+      "text": "High economic inequality generates severe negative consequences by decreasing social cohesion, increasing mistrust, and systematically lowering public health outcomes throughout society. World Bank and OECD data consistently show that unequal nations often have lower life expectancies and higher rates of mental illness compared to more equal, affluent peers.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "World Bank data",
+        "OECD statistics"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:43.018606+00:00"
+    },
+    {
+      "id": "ec06005f-2d7c-428e-b1d4-f891c9635363",
+      "text": "High levels of economic inequality are empirically correlated with significantly depressed social mobility, fundamentally contradicting the ideal of equality of opportunity. OECD studies demonstrate that the likelihood of a child escaping the lowest income quintile is dramatically lower in highly unequal societies, proving that current systems entrench economic status rather than recognize potential.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [
+        "OECD studies"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:43.019024+00:00"
+    },
+    {
+      "id": "0ec194f1-16ec-4b1d-9e1e-4724632a6cbf",
+      "text": "It is practically and morally unjust for vast, unproductive concentrations of wealth to coexist with acute unmet foundational human needs like clean water, basic healthcare, and housing. This radical resource disparity signifies a fundamental moral failure in societal allocation, prioritizing superfluous capital preservation over the basic requirements for human flourishing.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:43.019328+00:00"
+    },
+    {
+      "id": "f86c2a7c-cbf5-4718-a158-eb57804d542f",
+      "text": "The correlation between inequality and low mobility does not definitively prove causation; low social mobility is often driven more directly by structural barriers like restrictive zoning laws or segregated, underfunded public school systems, regardless of the overall income gap.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ec06005f-2d7c-428e-b1d4-f891c9635363",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:54.846606+00:00"
+    },
+    {
+      "id": "53b231c5-922f-470c-830f-f2218545f961",
+      "text": "The focus on *relative* mobility (quintiles) ignores high-growth developing economies, like China and Vietnam, where rapid economic expansion generates massive *absolute* upward mobility even while income inequality simultaneously increases.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "ec06005f-2d7c-428e-b1d4-f891c9635363",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:54.847304+00:00"
+    },
+    {
+      "id": "f363966f-2698-40ff-b871-1df5329b5a61",
+      "text": "The severe lack of clean water and healthcare in nations like Nigeria and Venezuela is driven by government corruption and infrastructural breakdown, even where substantial national resources exist.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0ec194f1-16ec-4b1d-9e1e-4724632a6cbf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:58.140302+00:00"
+    },
+    {
+      "id": "e1b81af9-7048-4fb5-9cb2-228610090999",
+      "text": "Concentrated funds managed by venture capitalists and private equity firms finance high-risk, essential innovations like mRNA vaccine technology and advanced renewable energy infrastructure.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "0ec194f1-16ec-4b1d-9e1e-4724632a6cbf",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:58.140825+00:00"
+    },
+    {
+      "id": "3e386288-bae0-43a1-9b1c-7abee2dc6265",
+      "text": "Strong campaign finance regulations and anti-corruption laws in Nordic countries prevent wealthy interests from establishing systemic political control, preserving high degrees of democratic equality.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e13cabf6-0e63-4832-8995-a4b7c27b3054",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:59.476480+00:00"
+    },
+    {
+      "id": "f67d10cf-cc22-4766-b548-cb5011de1266",
+      "text": "Mass social movements, such as the US Civil Rights Movement or organized labor, have historically secured profound legislative changes by mobilizing popular power against concentrated economic opposition.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "e13cabf6-0e63-4832-8995-a4b7c27b3054",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:59.477486+00:00"
+    },
+    {
+      "id": "ac00a736-e047-429d-b73e-d816fa0b8653",
+      "text": "Highly unequal, high-GDP nations like the United States still exhibit higher average life expectancy and lower infant mortality rates than many poorer but substantially more equal nations in Eastern Europe or South America. This demonstrates that absolute wealth frequently outweighs relative inequality as a determinant of public health outcomes.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d04640d1-5d42-468b-b09d-cacb79fa4c8f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:00.302664+00:00"
+    },
+    {
+      "id": "a9d795cd-5a1c-4156-bb12-11713890a4f8",
+      "text": "Social cohesion and mistrust in many unequal nations are often driven by high ethnic, geographical, or linguistic fractionalization rather than economic disparity alone. Multiple high-Gini nations in Sub-Saharan Africa and Latin America suffer from low trust due to deep-seated historical conflicts and institutional weakness.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d04640d1-5d42-468b-b09d-cacb79fa4c8f",
+      "children_count": 0,
+      "references": [
+        "World Bank data"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:00.303432+00:00"
+    },
+    {
+      "id": "335db842-809a-4a5e-968d-1c3846eae288",
+      "text": "Establishing equal rights and opportunities under the law, such as the U.S. Constitution's equal protection clause, fulfills the requirement of equal moral worth without necessitating equal economic outcomes or guaranteed access to social goods.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a1ad88cb-7063-4cc6-8263-822ba7f28a02",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:01.936192+00:00"
+    },
+    {
+      "id": "5d33f192-0c3c-43cc-ba76-b4afa6f6f68c",
+      "text": "Possessing an inherent, non-contingent moral worth is a philosophical axiom that exists independently of social systems; thus, poor societal design or unequal economic systems cannot logically invalidate the fundamental truth of that equal value.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "a1ad88cb-7063-4cc6-8263-822ba7f28a02",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:01.936968+00:00"
+    },
+    {
+      "id": "bb9dc442-be7e-4dfa-baa6-2d72e7dc4b0a",
+      "text": "High income inequality provides the financial and political power for affluent populations to successfully lobby for and maintain structural barriers, such as restrictive zoning and segregated school funding via local property taxes. This demonstrates the income gap is synergistic with, not independent of, these structural mobility impediments.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f86c2a7c-cbf5-4718-a158-eb57804d542f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:04.487463+00:00"
+    },
+    {
+      "id": "980038ef-f7b7-4f3d-a1f6-bb57d476c122",
+      "text": "Intergenerational wealth transfer and vastly different access to capital for investments or higher education are direct drivers of low mobility that scale precisely with the overall income gap, independent of localized zoning or school quality issues. The economic gap itself transmits status across generations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f86c2a7c-cbf5-4718-a158-eb57804d542f",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:04.488196+00:00"
+    },
+    {
+      "id": "e7231b7e-e128-4796-885c-d9bda0dc98c7",
+      "text": "Returns on private property reward deferred consumption and the assumption of real financial risk, which are necessary economic functions distinct from immediate \"active labor or effort.\" Life outcomes are legitimately derived from established property rights and voluntary exchange, regardless of whether gains align with proportional contribution.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d9beb944-17db-4905-826c-20f4ebf0f60c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:05.800490+00:00"
+    },
+    {
+      "id": "12ada479-f607-4045-ba02-ece0d830f0c1",
+      "text": "Capital is productive and active, funding the innovation that drives economic progress, as demonstrated by the high-risk venture capital that financed companies like Google and Tesla. Returns on ownership often fund the required investment in infrastructure and technology improvements that increase overall economic production.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "d9beb944-17db-4905-826c-20f4ebf0f60c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:05.801242+00:00"
+    },
+    {
+      "id": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "text": "The democratic equality of Nordic states fundamentally stems from deeply entrenched universal social welfare states and strong labor movements that created economic equality, which existed prior to and enables effective finance regulations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3e386288-bae0-43a1-9b1c-7abee2dc6265",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:11.933091+00:00"
+    },
+    {
+      "id": "c7dbd140-65b8-4169-a2ec-d4cd26c0b586",
+      "text": "Many democratic nations, such as Italy and Spain, have implemented robust anti-corruption and campaign finance regulations but still struggle with pervasive elite political influence, proving that these laws are insufficient alone.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "3e386288-bae0-43a1-9b1c-7abee2dc6265",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:11.933893+00:00"
+    },
+    {
+      "id": "d4cdf45c-deb9-47d3-a5ce-916db3f01f47",
+      "text": "Profound legislative change requires elite political cooperation or division, not just popular mobilization. The US Civil Rights Act of 1964 needed President Johnson's political maneuvering and bipartisan Congressional support to overcome legislative hurdles.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f67d10cf-cc22-4766-b548-cb5011de1266",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:12.523167+00:00"
+    },
+    {
+      "id": "10d14193-1e9c-469c-bd38-9d6adc980b18",
+      "text": "Not all movements primarily oppose economic forces; the core opposition to the US Civil Rights Movement was political and structural\u2014segregation enforced by state and local governments\u2014not solely \"concentrated economic opposition.\"",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "f67d10cf-cc22-4766-b548-cb5011de1266",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:12.524036+00:00"
+    },
+    {
+      "id": "6724f1aa-6ad9-47b0-bac2-c7a611d3a65f",
+      "text": "The enabling basic science for mRNA vaccines was developed over decades through sustained public funding from institutions like the US National Institutes of Health and European academic labs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e1b81af9-7048-4fb5-9cb2-228610090999",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.625339+00:00"
+    },
+    {
+      "id": "c40bd9f6-82ae-43cf-a8a3-2244d9646189",
+      "text": "Essential advanced renewable technologies, including generational battery and solar cell science, began with substantial, high-risk public investment from agencies like the US Department of Energy.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e1b81af9-7048-4fb5-9cb2-228610090999",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.625824+00:00"
+    },
+    {
+      "id": "dae6a10e-0abc-49d0-b8f0-03cc76f44c0d",
+      "text": "Intergenerational income elasticity does not scale precisely with income inequality; the US and Italy have comparable Gini coefficients but the US exhibits significantly lower intergenerational mobility.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "980038ef-f7b7-4f3d-a1f6-bb57d476c122",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:14.481974+00:00"
+    },
+    {
+      "id": "cd7fc1c2-45dc-44fc-918d-3a20d30c430d",
+      "text": "Localized factors are not independent, as exclusionary zoning in US metropolitan areas directly limits the ability of low-income families to convert human capital investments (education) into financial capital (housing equity).",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "980038ef-f7b7-4f3d-a1f6-bb57d476c122",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:14.482022+00:00"
+    },
+    {
+      "id": "3ce54f0c-8637-432d-8e65-2d981ddb34ee",
+      "text": "The foundational technologies enabling companies like Google (internet, GPS) and Tesla (battery research) originated from large-scale, long-term state investments through agencies like DARPA, not solely private venture capital.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "12ada479-f607-4045-ba02-ece0d830f0c1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:17.698129+00:00"
+    },
+    {
+      "id": "5e8ab0aa-fdbd-48ba-9ff2-1be9c3a77640",
+      "text": "Corporate returns are frequently diverted toward financial engineering, notably share buybacks, which prioritize short-term owner value over the sustained capital investment in broad infrastructure improvement claimed by the argument.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "12ada479-f607-4045-ba02-ece0d830f0c1",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:17.699050+00:00"
+    },
+    {
+      "id": "2659e1fa-f2a7-49e3-afa1-1e4f62b74f4f",
+      "text": "Economic disparity means individuals without guaranteed public defenders or the means to hire legal counsel cannot utilize their legal rights, functionally negating the formal promise of justice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "335db842-809a-4a5e-968d-1c3846eae288",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:19.911608+00:00"
+    },
+    {
+      "id": "63e8bad9-7d44-461e-911e-1e34ce2acca7",
+      "text": "For nearly 100 years after the 14th Amendment's adoption, the Equal Protection Clause failed to prevent the system of Jim Crow laws, which legally enforced systemic racial and economic inequality.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "335db842-809a-4a5e-968d-1c3846eae288",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:19.912364+00:00"
+    },
+    {
+      "id": "da531b65-baa6-4c65-9288-3d87c16204b1",
+      "text": "The United States\u2019 life expectancy and infant mortality rates rank significantly lower than other equally wealthy OECD nations like Japan, Switzerland, and Norway, which demonstrate substantially greater income equality. This outcome shows greater equality correlates with better public health even among the wealthiest countries.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ac00a736-e047-429d-b73e-d816fa0b8653",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.285591+00:00"
+    },
+    {
+      "id": "25704d38-4cd0-4431-b23b-6599eaa012fb",
+      "text": "Many post-Soviet and developing nations in Eastern Europe and South America are still grappling with legacies of institutional stagnation, high chronic disease rates, and public health infrastructure deficits developed over decades. These historical factors, independent of current income equality, severely depress public health outcomes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ac00a736-e047-429d-b73e-d816fa0b8653",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.286156+00:00"
+    },
+    {
+      "id": "069cbe02-1a98-41cd-b479-ebb7fb097991",
+      "text": "Systems like Preference Utilitarianism define moral worth based on an individual's capacity to maximize pleasure and minimize pain, making moral value contingent and variable rather than inherent or axiomatic.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5d33f192-0c3c-43cc-ba76-b4afa6f6f68c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.904981+00:00"
+    },
+    {
+      "id": "fd6cd888-f3f5-49a9-9d8d-1e456a2fb7e6",
+      "text": "Global economic disparity results in billions lacking clean water and basic healthcare, establishing that societal structure imposes conditions that physically prevent the equal practical valuation of human life.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "5d33f192-0c3c-43cc-ba76-b4afa6f6f68c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:20.905696+00:00"
+    },
+    {
+      "id": "9aac3d6f-2b73-4805-a7c3-94188a19fecd",
+      "text": "France and Germany use centralized national funding for schools and lack the localized restrictive zoning common in the US, yet both countries exhibit high income inequality persistence and low rates of intergenerational mobility.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bb9dc442-be7e-4dfa-baa6-2d72e7dc4b0a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.555400+00:00"
+    },
+    {
+      "id": "5976de99-e47c-436b-b61e-edcdda7b0405",
+      "text": "The structural opposition of Jim Crow was intrinsically economic, creating dual wage systems and limiting access to markets and capital for Black communities, thereby ensuring white economic dominance.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "10d14193-1e9c-469c-bd38-9d6adc980b18",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.210212+00:00"
+    },
+    {
+      "id": "03d6707c-7450-41c5-9df3-cea20997d58c",
+      "text": "The core political resistance groups, such as the Citizens' Councils, were largely organized and funded by Southern white business elites and professionals seeking to maintain inexpensive, non-unionized Black labor, proving direct concentrated economic opposition.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "10d14193-1e9c-469c-bd38-9d6adc980b18",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.210243+00:00"
+    },
+    {
+      "id": "dfcfede9-7dfc-4872-932d-bd14b6d32eec",
+      "text": "Returns from inherited wealth, such as established real estate portfolios or financial trusts, accrue to recipients who have not personally deferred consumption or undertaken current financial risk.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e7231b7e-e128-4796-885c-d9bda0dc98c7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.180879+00:00"
+    },
+    {
+      "id": "14309f76-23da-4cd7-9b09-56cdb9dce27d",
+      "text": "Land ownership in rapidly developing urban areas generates pure economic rent, where financial gains derive entirely from scarcity and public infrastructure, not the owner's current risk or labor.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "e7231b7e-e128-4796-885c-d9bda0dc98c7",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.181375+00:00"
+    },
+    {
+      "id": "f4bea1b0-128f-447c-ae0d-15d1c3c4d1e6",
+      "text": "Elite cooperation is a reactionary mechanism, not the necessary source of profound change, often merely formalizing shifts already won by other means. The Haitian Revolution established the first free nation by completely overthrowing the established French elite power structure without their consent or cooperation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "d4cdf45c-deb9-47d3-a5ce-916db3f01f47",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:27.659195+00:00"
+    },
+    {
+      "id": "8cfb57e9-15b2-451b-97b4-1bfbb1144c57",
+      "text": "Deeply rooted institutional factors, such as Sweden's historical tradition of strong centralized administrative capacity and robust property rights, were prerequisites that enabled both effective welfare state construction and efficient regulation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:29.218313+00:00"
+    },
+    {
+      "id": "06b83b32-698a-407a-92ce-892905d930a9",
+      "text": "Strong finance regulations, such as those implemented after the 2008 financial crisis across many wealthy nations, often result from immediate crises and political mobilization against established elites, not pre-existing low economic inequality.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:29.218362+00:00"
+    },
+    {
+      "id": "c71c95f2-bb0e-478f-ba06-c9245ae0d584",
+      "text": "Many stabilizing financial and industrial regulations in the Nordic countries were established during the 1930s economic crises, expanding alongside, rather than waiting for, the comprehensive universal welfare system development that peaked in the post-WWII era.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:29.218385+00:00"
+    },
+    {
+      "id": "2c1ed6ff-9318-45b4-82af-5732f49b5546",
+      "text": "The prospect of substantial individual reward and wealth accumulation provides the critical incentive, as demonstrated by the high-risk innovation engine of Silicon Valley, for entrepreneurs to create new industries that generate widespread societal benefits.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "6724f1aa-6ad9-47b0-bac2-c7a611d3a65f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:29.425452+00:00"
+    },
+    {
+      "id": "18594fee-6083-421f-9faa-362d0c6f049d",
+      "text": "The potential for significantly unequal rewards acts as a powerful economic incentive, driving the high-risk innovation and entrepreneurship that creates wealth for an entire society. The strenuous effort required to develop transformative companies like Apple or Amazon would not materialize if rewards were strictly equalized.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c40bd9f6-82ae-43cf-a8a3-2244d9646189",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:29.633392+00:00"
+    },
+    {
+      "id": "1b6d558f-c8c7-4f83-b10b-57ddb7f60017",
+      "text": "Economic inequality that stems from voluntary exchange and rewarding differential productivity is not inherently unjust, as evidenced by the rapid wealth creation following market liberalization in post-Soviet Eastern Europe.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "63e8bad9-7d44-461e-911e-1e34ce2acca7",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.523304+00:00"
+    },
+    {
+      "id": "db7bb877-2d92-46f7-a9ea-f6fd492d6dcc",
+      "text": "Income inequality is not independent of institutional stagnation; it is often a direct result of historical institutional failing (e.g., rapid, corrupt privatization in post-Soviet nations), and acts as the immediate mechanism reinforcing health disparity. High current inequality in places like Brazil and Russia concentrates wealth and political power, directly preventing the investment needed to overcome historical public health deficits for the majority.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "25704d38-4cd0-4431-b23b-6599eaa012fb",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.718368+00:00"
+    },
+    {
+      "id": "32b90936-1640-445f-955b-ad80a71395d0",
+      "text": "Denmark and New Zealand utilize independent audit bodies with full prosecutorial power to ensure campaign finance compliance, which drastically curtails political elite influence despite similar legal frameworks to Italy and Spain.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "c7dbd140-65b8-4169-a2ec-d4cd26c0b586",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.877152+00:00"
+    },
+    {
+      "id": "ebb9779f-ca1b-43c5-b092-7c8d098be117",
+      "text": "The superior health outcomes in Japan, Switzerland, and Norway are primarily attributable to their universal healthcare systems, which provide guaranteed access to care, a direct causal determinant overlooked by the comparison focusing on income equality alone.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "da531b65-baa6-4c65-9288-3d87c16204b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:32.295572+00:00"
+    },
+    {
+      "id": "2d77f1a2-2cb0-4a9e-9bbd-8375bc635441",
+      "text": "The comparison is based on a small, cherry-picked sample; wealthy countries like South Korea and Spain achieve life expectancies comparable to the Nordic nations despite having significantly different income distributions and other confounding variables.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "da531b65-baa6-4c65-9288-3d87c16204b1",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:32.295603+00:00"
+    },
+    {
+      "id": "8c6a622d-8502-425b-ab66-057537442670",
+      "text": "The economic value generated by Google and Tesla stems from private companies taking massive financial risks to translate government prototypes into scalable, user-focused commercial platforms, a critical stage that government agencies are neither structured nor mandated to perform.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3ce54f0c-8637-432d-8e65-2d981ddb34ee",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:33.201309+00:00"
+    },
+    {
+      "id": "da0ab26f-2012-4b89-840d-83ae2a7eaf41",
+      "text": "Constitutional law in the United States, established by Gideon v. Wainwright, guarantees counsel for indigent persons in all criminal cases that could result in jail time. However, this guarantee is absent for critical civil matters like eviction, foreclosure, or child custody, where economic disparity creates the greatest barrier to legal rights.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2659e1fa-f2a7-49e3-afa1-1e4f62b74f4f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.500992+00:00"
+    },
+    {
+      "id": "6c3167ba-6db7-4e06-b1f0-839bd96dc8bb",
+      "text": "The issue is not the lack of guaranteed public defenders in criminal courts, but the systematic underfunding of these systems, which results in extreme caseloads overwhelming public defenders in states like Louisiana and New York and preventing adequate representation.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "2659e1fa-f2a7-49e3-afa1-1e4f62b74f4f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.501041+00:00"
+    },
+    {
+      "id": "3a30608f-1f0b-4f72-b2ad-68a2270ad5b5",
+      "text": "Mature, cash-rich firms like Apple or Pfizer undertake buybacks because their global markets offer few new investment opportunities that exceed their cost of capital; this indicates a lack of productive internal projects, not a diversion from necessary infrastructure spending.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5e8ab0aa-fdbd-48ba-9ff2-1be9c3a77640",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:34.859030+00:00"
+    },
+    {
+      "id": "79e936a4-ca34-4c87-ba56-28f5277877e5",
+      "text": "Access to basic necessities is often disrupted by failed governance and institutional corruption rather than global disparity alone; for example, Costa Rica and Cuba deliver high life expectancies and basic care through state provision despite existing economic inequalities. This demonstrates that local institutional failures, not just macro-economic disparity, prevent the equal practical valuation of life.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "fd6cd888-f3f5-49a9-9d8d-1e456a2fb7e6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:36.669289+00:00"
+    },
+    {
+      "id": "d5ad853c-dd5a-444a-a9e2-417ce2a3afb6",
+      "text": "Preference Utilitarianism, as advanced by thinkers like Peter Singer, grounds moral worth in the maximal satisfaction of expressed rational preferences, not the hedonistic calculation of maximizing raw pleasure and minimizing pain.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "069cbe02-1a98-41cd-b479-ebb7fb097991",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:37.403620+00:00"
+    },
+    {
+      "id": "dfada7dd-2ece-41a5-84a6-71eea526fb36",
+      "text": "Holding high-value land ties up capital that must be financed and carries market risk, as seen during the 1990s Japanese real estate bubble where values collapsed by over 50%; financial returns therefore compensate for capital risk and opportunity cost.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "14309f76-23da-4cd7-9b09-56cdb9dce27d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.639440+00:00"
+    },
+    {
+      "id": "9a10f21e-d4bf-46b0-900a-e38503b01149",
+      "text": "Established financial portfolios and real estate holdings are still exposed to immediate market volatility and systemic risk; for example, recipients of inherited trusts lost substantial principal during the 2008 financial crisis.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "dfcfede9-7dfc-4872-932d-bd14b6d32eec",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.724081+00:00"
+    },
+    {
+      "id": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "text": "Inequality is a just consequence of voluntary market transactions and differential effort, skill, and talent among individuals. If procedural justice is maintained\u2014meaning equal opportunity and fair rules and processes\u2014the resulting distribution is morally permissible, regardless of the relative gap.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.724225+00:00"
+    },
+    {
+      "id": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "text": "Economic inequality provides necessary incentives for innovation, risk-taking, and high-productivity labor, which ultimately drives overall economic growth. This disparity is functional because the resultant wealth creation lifts even the poorest individuals, as demonstrated by rising global living standards in market economies over the last century.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.724716+00:00"
+    },
+    {
+      "id": "cc02826f-3700-47db-8c1e-68030e831c0a",
+      "text": "Achieving near-perfect economic equality requires continuous, coercive state intervention and the substantial seizure of legitimately acquired private property. Such systemic violation of individuals' property rights is itself inherently unjust and incompatible with a free society.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.725032+00:00"
+    },
+    {
+      "id": "d6f871dd-0a6a-4505-91e6-f48678b02135",
+      "text": "Historical attempts to eliminate economic inequality through centralized control have consistently resulted in systemic resource misallocation, economic stagnation, and human rights abuses. Examples like the Soviet Union and Maoist China demonstrate that forcing equality sacrifices liberty and overall prosperity.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "Soviet Union",
+        "Maoist China"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.725325+00:00"
+    },
+    {
+      "id": "f891cbb8-c3e5-40f9-934f-93433a8112e1",
+      "text": "The primary moral concern should be the reduction of absolute poverty and ensuring a sufficient baseline standard of living for all citizens, not on the relative distance between the top and bottom earners. Focusing resources on raising the floor offers a greater positive consequence for human welfare than simply reducing a statistical gap.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.725622+00:00"
+    },
+    {
+      "id": "9bf31639-42ac-4cf4-9aa4-4304f2aae000",
+      "text": "Justice in a market economy is defined entirely by the fairness of the rules and processes (procedural justice), such as laws against force and fraud, not by the final distribution of wealth. If all participants follow the same established fair rules, the resulting economic outcome is morally just by definition, irrespective of the outcome\u2019s configuration.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:44.725908+00:00"
+    },
+    {
+      "id": "849032c9-62c8-41d0-9f61-f2a823735530",
+      "text": "Focusing only on absolute poverty ignores how extreme relative inequality, like the wealth concentration seen in many Latin American countries, grants political power to the wealthy, allowing them to block the progressive taxation and public investments necessary to sustainably raise the baseline for the poor.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f891cbb8-c3e5-40f9-934f-93433a8112e1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:53.880817+00:00"
+    },
+    {
+      "id": "fdb48913-6234-4587-adae-25d6cc91938b",
+      "text": "Treating the relative distance as merely a statistical gap overlooks that high inequality severely decreases social cohesion, trust, and public health outcomes across all income levels, as evidenced by consistent comparisons of OECD nations like the US and Nordic states.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "f891cbb8-c3e5-40f9-934f-93433a8112e1",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:53.881402+00:00"
+    },
+    {
+      "id": "e965ca7c-cdc2-4634-a1c6-c4a501b3027d",
+      "text": "Highly productive economies like Denmark and Norway exhibit compressed income distribution (Gini coefficients below 0.30) while sustaining world-leading innovation and high GDP per capita.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:00.660751+00:00"
+    },
+    {
+      "id": "8f4c50b5-2c1d-44e6-9329-d0b914d999f4",
+      "text": "Extreme wealth concentration harms overall economic stability by lowering aggregate demand and fostering political rent-seeking, exemplified by the financial deregulation driven by concentrated wealth prior to the 2008 crisis.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:00.661217+00:00"
+    },
+    {
+      "id": "2442e88f-9a92-4378-89c8-a4726c48f77d",
+      "text": "The rapid post-war economic growth in countries like Japan and South Korea was characterized by strong public investment and policies promoting broad wealth distribution, not high initial inequality.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:00.661508+00:00"
+    },
+    {
+      "id": "4cef445b-998c-4ad7-8ea1-9290672327d6",
+      "text": "Nordic countries achieve extremely low economic inequality through high centralized taxation and robust social welfare states while simultaneously ranking high in global economic prosperity, democratic freedom, and GDP per capita.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d6f871dd-0a6a-4505-91e6-f48678b02135",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:00.669310+00:00"
+    },
+    {
+      "id": "61139ab9-fb1a-4954-b9eb-3de8f202df60",
+      "text": "Systemic economic stagnation in the Soviet Union resulted from the complete suppression of competitive market price signals and private incentives, which are necessary inputs for efficient resource allocation and technological innovation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "d6f871dd-0a6a-4505-91e6-f48678b02135",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:00.669734+00:00"
+    },
+    {
+      "id": "d4ba9b2c-dc33-4a82-8295-8b8a00384fdc",
+      "text": "The US financial crisis of 2008 occurred despite existing anti-fraud laws, showing that legal but reckless financial instruments created profoundly unjust outcomes for millions of homeowners and investors.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9bf31639-42ac-4cf4-9aa4-4304f2aae000",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:03.719986+00:00"
+    },
+    {
+      "id": "e4f2dc37-b3fd-4a6c-a64c-e15fd45adfea",
+      "text": "A procedure of fair rules does not prevent a market where one person legally accumulates 99% of all wealth through compounding interest, an outcome that is unjust because it leaves the majority without basic necessities.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "9bf31639-42ac-4cf4-9aa4-4304f2aae000",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:03.720784+00:00"
+    },
+    {
+      "id": "fb4ae2f0-33ce-4089-b84c-184941f8c005",
+      "text": "Countries like Denmark and Norway achieve some of the world's lowest Gini coefficients (high equality) through highly progressive taxation and universal social welfare, without systematic property seizure or eliminating competitive market economies.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "cc02826f-3700-47db-8c1e-68030e831c0a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:03.829829+00:00"
+    },
+    {
+      "id": "94872333-0f57-468d-9c17-754e261c9f31",
+      "text": "Property rights are socially and legally defined, not absolute; all free societies, including the United States, mandate progressive taxation (up to 37% federal income tax) as a legitimate condition of ownership, not an inherent violation.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "cc02826f-3700-47db-8c1e-68030e831c0a",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:03.830326+00:00"
+    },
+    {
+      "id": "e298b39b-fd21-4c0c-af24-914ca9cdd446",
+      "text": "The accumulation of intergenerational wealth and capital gains, not solely market transactions or individual labor, determines a substantial portion of the economic gap. For instance, in OECD countries, returns on capital persistently exceed economic growth, ensuring inherited wealth expands faster than earned labor income.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:08.013924+00:00"
+    },
+    {
+      "id": "438b329a-f222-4278-b3d5-05e81c5c0352",
+      "text": "US public school funding often ties directly to local property taxes, guaranteeing that children in lower-income areas receive dramatically fewer educational or network resources, physically preventing equal opportunity at the starting line.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:08.014766+00:00"
+    },
+    {
+      "id": "bd7cf4b9-327f-4e0e-aa58-bd08302fe0e4",
+      "text": "Extreme concentration of wealth, particularly when the Gini coefficient exceeds 0.45, often leads to political capture by the ultra-rich, systematically undermining the integrity of the purportedly fair rules and processes for future transactions.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:08.015370+00:00"
+    },
+    {
+      "id": "1f0cf770-9f26-4a5d-adb8-a9c547ef6c23",
+      "text": "South Korea and Taiwan achieved dramatic national poverty reduction following 1960 through aggressive export-oriented growth focused on manufacturing and universal primary education, not high progressive taxation.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "849032c9-62c8-41d0-9f61-f2a823735530",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:10.196669+00:00"
+    },
+    {
+      "id": "14264e3d-d54f-4a9c-b4cf-608aad674c0b",
+      "text": "In many developing nations, widespread tax evasion and institutional corruption are the primary barriers to funding public investments, which severely limits state capacity to collect revenue regardless of wealth distribution.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "849032c9-62c8-41d0-9f61-f2a823735530",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:10.197777+00:00"
+    },
+    {
+      "id": "d6439fb5-562d-4e73-afc4-9bd4e5b68c7f",
+      "text": "The success of the Nordic model is critically dependent on non-policy factors like extremely high social trust and low institutional corruption, which predate the robust welfare states and enable the efficient function and administration of high taxes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4cef445b-998c-4ad7-8ea1-9290672327d6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:11.112662+00:00"
+    },
+    {
+      "id": "7cf91ab1-808a-42db-99ee-0b37a2141af2",
+      "text": "The high GDP per capita that enables the welfare state stems largely from historical factors and highly specialized, high value-added industries, such as Finnish technology, Swedish engineering, and Norwegian petroleum.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "4cef445b-998c-4ad7-8ea1-9290672327d6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:11.113847+00:00"
+    },
+    {
+      "id": "079495ab-6a59-4139-b062-dd7181dece54",
+      "text": "High social cohesion and trust in Nordic countries result primarily from long-standing homogenous populations and robust social safety nets, such as universal healthcare, rather than merely low income inequality.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fdb48913-6234-4587-adae-25d6cc91938b",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:13.528632+00:00"
+    },
+    {
+      "id": "9b4a2967-b94e-4227-96d1-0879ade01464",
+      "text": "The wealthiest 1% in highly unequal nations like the US maintain superior access to private healthcare and high reported life satisfaction, demonstrating that the negative social and health outcomes are not equally severe across all income levels.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "fdb48913-6234-4587-adae-25d6cc91938b",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:13.529219+00:00"
+    },
+    {
+      "id": "c2d0771a-abeb-42da-af5f-9280dbd67c79",
+      "text": "Most US states, including Massachusetts and New Jersey, implement school finance equalization formulas that allocate supplemental state funds to low-property-wealth districts, directly mitigating the property tax disparity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "438b329a-f222-4278-b3d5-05e81c5c0352",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.219601+00:00"
+    },
+    {
+      "id": "96b3fed1-1b59-4969-b7bc-53f88dd2a600",
+      "text": "Socioeconomic factors outside of school resources, such as parental education levels, housing stability, and neighborhood safety, are often stronger determinants of the opportunity gap than differences in per-pupil spending.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "438b329a-f222-4278-b3d5-05e81c5c0352",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.220395+00:00"
+    },
+    {
+      "id": "cdeba325-9ff2-4831-b908-67c9dc1031af",
+      "text": "Extreme wealth concentration directly enables institutional corruption and elite tax evasion, as economic power often translates into political influence over tax policy and enforcement. For example, analysis of the Panama Papers showed that the wealthy systematically exploit global loopholes and weak governance, proving that wealth distribution directly impacts the severity of revenue barriers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "14264e3d-d54f-4a9c-b4cf-608aad674c0b",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:20.356688+00:00"
+    },
+    {
+      "id": "68322bf3-0ebb-41f3-9e6b-42a32dbc515d",
+      "text": "Philosophical traditions, dating back to John Locke's justification based on labor and self-ownership, assert that property rights exist independently of state laws and social agreements.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "94872333-0f57-468d-9c17-754e261c9f31",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.117789+00:00"
+    },
+    {
+      "id": "c711aee3-36cc-46f4-9b32-f451b061da3a",
+      "text": "Economically free nations like Switzerland and Estonia maintain strong property rights protection and high standards of living with considerably flatter or significantly lower top marginal income tax rates than the rate cited for the US.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "94872333-0f57-468d-9c17-754e261c9f31",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.118254+00:00"
+    },
+    {
+      "id": "d7ff3496-a331-4f87-b166-5ab889316aaf",
+      "text": "Modern extreme wealth accumulation, such as fortunes exceeding $100 billion, stems primarily from capital appreciation, speculative asset gains, and monopoly rents, not fixed compounding interest.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e4f2dc37-b3fd-4a6c-a64c-e15fd45adfea",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.659594+00:00"
+    },
+    {
+      "id": "d2dde3aa-7713-4e00-a4b6-96ff0c9d45b6",
+      "text": "If one entity held 99% of the world's wealth, the remaining 1% of the estimated $460 trillion global assets (over $4 trillion) is sufficient to ensure basic necessities for billions, separating extreme inequality from absolute poverty.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e4f2dc37-b3fd-4a6c-a64c-e15fd45adfea",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:21.660068+00:00"
+    },
+    {
+      "id": "cd3640f4-119e-400a-a1e7-bbaf356b5806",
+      "text": "The foundation of the successful Nordic welfare model rests on institutional factors like low corruption and high social trust, which ensure the tax compliance required for high public spending.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7cf91ab1-808a-42db-99ee-0b37a2141af2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:25.588999+00:00"
+    },
+    {
+      "id": "07b4b409-4af9-4000-b36a-2ccd54580a61",
+      "text": "High GDP per capita is not solely dependent on specialized industries; Denmark sustains a robust welfare state with diverse small and medium enterprises and a flexible \"flexicurity\" labor model, lacking Norwegian oil and Swedish engineering specialization.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "7cf91ab1-808a-42db-99ee-0b37a2141af2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:25.589030+00:00"
+    },
+    {
+      "id": "24750681-1d5f-43e3-b4a7-3d4c1f5e7cc7",
+      "text": "Robust welfare programs, such as universal education and healthcare, actively build social trust and reduce corruption by standardizing interactions and ensuring equal access, demonstrated by the institutional growth in 20th-century Nordic nations like Finland.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d6439fb5-562d-4e73-afc4-9bd4e5b68c7f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:26.757646+00:00"
+    },
+    {
+      "id": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "text": "Progressive taxation systems in Nordic nations, featuring high inheritance and capital gains taxes, actively counteract the sustained growth of dynastic fortunes, limiting the structural impact of r>g.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e298b39b-fd21-4c0c-af24-914ca9cdd446",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.276893+00:00"
+    },
+    {
+      "id": "92965e7a-b4cf-4e8e-9366-50fac649ecf2",
+      "text": "Rising inequality within the labor market, driven by skill-biased technological change and the weakening of collective bargaining, accounts for a substantial portion of the economic gap in OECD countries since the 1980s.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "e298b39b-fd21-4c0c-af24-914ca9cdd446",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.277581+00:00"
+    },
+    {
+      "id": "6f7f049e-0c32-4557-b3e1-3f84f267e8fd",
+      "text": "Extreme national inequality drives systemic issues like higher crime rates and political instability, which private wealth cannot solve. For example, wealthy citizens in highly unequal nations like South Africa must contend with pervasive violent crime that necessitates extensive private security, illustrating that societal decay affects all income levels.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "9b4a2967-b94e-4227-96d1-0879ade01464",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.590602+00:00"
+    },
+    {
+      "id": "94a5d862-4025-4a9e-8a2b-20fc64cf7d7f",
+      "text": "Increased per-pupil spending, particularly when allocated to community schools, directly addresses these external factors by funding social workers, on-site health services, and robust parental engagement programs, making school resources instrumental in mitigating socioeconomic disadvantage.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "96b3fed1-1b59-4969-b7bc-53f88dd2a600",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.044118+00:00"
+    },
+    {
+      "id": "e9d9744f-75e4-4cbc-886a-c495ddaf8087",
+      "text": "South Korea and Taiwan first implemented highly redistributive land reforms in the 1950s\u2014often with confiscatory effect\u2014which fundamentally reduced asset inequality and provided the initial political stability and broad landholding base for later growth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1f0cf770-9f26-4a5d-adb8-a9c547ef6c23",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.065346+00:00"
+    },
+    {
+      "id": "047dc9bd-5fe0-41a3-89f0-b0cbe8dafe63",
+      "text": "The success of export-oriented growth was critically dependent on extensive state revenue used for massive public infrastructure investment, directed credit to strategic industries, and substantial subsidies, regardless of income tax progressivity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "1f0cf770-9f26-4a5d-adb8-a9c547ef6c23",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:28.065373+00:00"
+    },
+    {
+      "id": "71efa0cc-752a-4777-930f-8bfa8a196252",
+      "text": "Sweden, Norway, and Denmark have experienced significant demographic shifts, with large immigrant populations now comprising up to 20% of residents, yet these nations consistently maintain the world's highest levels of social trust.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "079495ab-6a59-4139-b062-dd7181dece54",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:29.018968+00:00"
+    },
+    {
+      "id": "7625a147-7163-474d-9885-39c9696578d5",
+      "text": "Strong social safety nets, such as compulsory collective bargaining and progressive taxation in the Nordic model, *are* the structural mechanisms that directly enforce and measure low income inequality (low Gini coefficients).",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "079495ab-6a59-4139-b062-dd7181dece54",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:29.018997+00:00"
+    },
+    {
+      "id": "e9fd654f-786c-4539-aef0-0056d620e0d9",
+      "text": "Equalization formulas often fail to achieve true funding parity, as demonstrated by continuous litigation in states like Texas and Kansas, where courts have repeatedly ruled that state funding mechanisms remain inadequate and inequitable.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c2d0771a-abeb-42da-af5f-9280dbd67c79",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.815419+00:00"
+    },
+    {
+      "id": "89c2d707-c3af-4199-8ab2-6abbdcb0e187",
+      "text": "Key philosophical traditions like legal positivism and theories from thinkers such as Jeremy Bentham and Thomas Hobbes assert that property is entirely contingent upon man-made, positive law and social agreements. Hobbes explicitly argued that outside of civil society, there is no proprietary right, only a general right to all things, contradicting claims of natural, pre-political ownership.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "68322bf3-0ebb-41f3-9e6b-42a32dbc515d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:35.842678+00:00"
+    },
+    {
+      "id": "fca021b1-f102-44da-9120-5327cd87ad38",
+      "text": "Switzerland's economic success is driven by its specialized, highly regulated global banking and pharmaceutical sectors, which are structural advantages not replicable in the large, diverse economy of the United States.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c711aee3-36cc-46f4-9b32-f451b061da3a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:36.968464+00:00"
+    },
+    {
+      "id": "59aa31a5-5348-4a24-ad48-f37422522865",
+      "text": "Large, complex economies like Germany and the Nordic countries maintain high standards of living and strong property rights while employing top marginal income tax rates near 50%, demonstrating that low rates are not a necessary condition.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c711aee3-36cc-46f4-9b32-f451b061da3a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:36.968493+00:00"
+    },
+    {
+      "id": "02d1b62c-4163-4837-9254-76fc855f3ea1",
+      "text": "The $4.6 trillion residual wealth is a one-time stock that can only fund extreme poverty relief for about eight years, based on the World Bank's estimated annual cost of approximately $550 billion to lift the 700 million people living under $2.15 a day out of poverty.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d2dde3aa-7713-4e00-a4b6-96ff0c9d45b6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:38.719166+00:00"
+    },
+    {
+      "id": "efc7b7ca-12e2-4f69-9733-068be2aec123",
+      "text": "Long-term poverty eradication depends on creating perpetual income flows through economic growth and productive employment, as seen in the sustained reduction of poverty achieved via mass industrialization in China and India, not through one-time asset liquidation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d2dde3aa-7713-4e00-a4b6-96ff0c9d45b6",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:38.719197+00:00"
+    },
+    {
+      "id": "22bed301-1678-4f5b-b7c9-f2f5da37ddbd",
+      "text": "The base capital necessary to leverage enormous capital appreciation must first be amassed through the compounding of retained earnings and realized business profits. The growth of initial fortunes like Bill Gates\u2019 or Jeff Bezos\u2019 required years of compounding retained business profits before asset appreciation created the explosive wealth spikes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "d7ff3496-a331-4f87-b166-5ab889316aaf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:40.511892+00:00"
+    },
+    {
+      "id": "aadcfaaa-d3cc-43cd-b6c2-329b1d61da58",
+      "text": "Sweden abolished its inheritance tax in 2004 and Norway followed in 2014, demonstrating that high inheritance taxes are not currently a defining feature of the Nordic model's success against dynastic wealth.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:41.949646+00:00"
+    },
+    {
+      "id": "e016d7ee-5473-4042-bda5-373cc0e3c26c",
+      "text": "Despite low income inequality, Nordic countries like Sweden and Denmark still exhibit high levels of net wealth inequality, showing these tax systems have not fully limited the accumulation of dynastic fortunes driven by r>g.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:41.949680+00:00"
+    },
+    {
+      "id": "6ba0f675-205b-4c5d-a20e-cb9687e6d3ad",
+      "text": "The key mechanism for compressed inequality in the Nordic nations is the combination of high marginal income taxes and strong labor market institutions promoting collective bargaining, not solely capital gains or inheritance taxes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:41.949696+00:00"
+    },
+    {
+      "id": "e731601f-6568-47d4-bb74-45672dc8ed70",
+      "text": "Rising returns on capital exceeding the rate of economic growth since the 1980s primarily drives wealth accumulation among the top 1%, which is a larger factor in overall economic disparity than changes in labor income distribution in OECD nations.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "92965e7a-b4cf-4e8e-9366-50fac649ecf2",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:45.492994+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:43.017442+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:43.017442+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "ec06005f-2d7c-428e-b1d4-f891c9635363",
+      "target": "f86c2a7c-cbf5-4718-a158-eb57804d542f",
+      "type": "objection"
+    },
+    {
+      "source": "ec06005f-2d7c-428e-b1d4-f891c9635363",
+      "target": "53b231c5-922f-470c-830f-f2218545f961",
+      "type": "objection"
+    },
+    {
+      "source": "0ec194f1-16ec-4b1d-9e1e-4724632a6cbf",
+      "target": "f363966f-2698-40ff-b871-1df5329b5a61",
+      "type": "objection"
+    },
+    {
+      "source": "0ec194f1-16ec-4b1d-9e1e-4724632a6cbf",
+      "target": "e1b81af9-7048-4fb5-9cb2-228610090999",
+      "type": "objection"
+    },
+    {
+      "source": "e13cabf6-0e63-4832-8995-a4b7c27b3054",
+      "target": "3e386288-bae0-43a1-9b1c-7abee2dc6265",
+      "type": "objection"
+    },
+    {
+      "source": "e13cabf6-0e63-4832-8995-a4b7c27b3054",
+      "target": "f67d10cf-cc22-4766-b548-cb5011de1266",
+      "type": "objection"
+    },
+    {
+      "source": "d04640d1-5d42-468b-b09d-cacb79fa4c8f",
+      "target": "ac00a736-e047-429d-b73e-d816fa0b8653",
+      "type": "objection"
+    },
+    {
+      "source": "d04640d1-5d42-468b-b09d-cacb79fa4c8f",
+      "target": "a9d795cd-5a1c-4156-bb12-11713890a4f8",
+      "type": "objection"
+    },
+    {
+      "source": "a1ad88cb-7063-4cc6-8263-822ba7f28a02",
+      "target": "335db842-809a-4a5e-968d-1c3846eae288",
+      "type": "objection"
+    },
+    {
+      "source": "a1ad88cb-7063-4cc6-8263-822ba7f28a02",
+      "target": "5d33f192-0c3c-43cc-ba76-b4afa6f6f68c",
+      "type": "objection"
+    },
+    {
+      "source": "f86c2a7c-cbf5-4718-a158-eb57804d542f",
+      "target": "bb9dc442-be7e-4dfa-baa6-2d72e7dc4b0a",
+      "type": "response"
+    },
+    {
+      "source": "f86c2a7c-cbf5-4718-a158-eb57804d542f",
+      "target": "980038ef-f7b7-4f3d-a1f6-bb57d476c122",
+      "type": "response"
+    },
+    {
+      "source": "d9beb944-17db-4905-826c-20f4ebf0f60c",
+      "target": "e7231b7e-e128-4796-885c-d9bda0dc98c7",
+      "type": "objection"
+    },
+    {
+      "source": "d9beb944-17db-4905-826c-20f4ebf0f60c",
+      "target": "12ada479-f607-4045-ba02-ece0d830f0c1",
+      "type": "objection"
+    },
+    {
+      "source": "3e386288-bae0-43a1-9b1c-7abee2dc6265",
+      "target": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "type": "response"
+    },
+    {
+      "source": "3e386288-bae0-43a1-9b1c-7abee2dc6265",
+      "target": "c7dbd140-65b8-4169-a2ec-d4cd26c0b586",
+      "type": "response"
+    },
+    {
+      "source": "f67d10cf-cc22-4766-b548-cb5011de1266",
+      "target": "d4cdf45c-deb9-47d3-a5ce-916db3f01f47",
+      "type": "response"
+    },
+    {
+      "source": "f67d10cf-cc22-4766-b548-cb5011de1266",
+      "target": "10d14193-1e9c-469c-bd38-9d6adc980b18",
+      "type": "response"
+    },
+    {
+      "source": "e1b81af9-7048-4fb5-9cb2-228610090999",
+      "target": "6724f1aa-6ad9-47b0-bac2-c7a611d3a65f",
+      "type": "response"
+    },
+    {
+      "source": "e1b81af9-7048-4fb5-9cb2-228610090999",
+      "target": "c40bd9f6-82ae-43cf-a8a3-2244d9646189",
+      "type": "response"
+    },
+    {
+      "source": "980038ef-f7b7-4f3d-a1f6-bb57d476c122",
+      "target": "dae6a10e-0abc-49d0-b8f0-03cc76f44c0d",
+      "type": "response"
+    },
+    {
+      "source": "980038ef-f7b7-4f3d-a1f6-bb57d476c122",
+      "target": "cd7fc1c2-45dc-44fc-918d-3a20d30c430d",
+      "type": "response"
+    },
+    {
+      "source": "12ada479-f607-4045-ba02-ece0d830f0c1",
+      "target": "3ce54f0c-8637-432d-8e65-2d981ddb34ee",
+      "type": "response"
+    },
+    {
+      "source": "12ada479-f607-4045-ba02-ece0d830f0c1",
+      "target": "5e8ab0aa-fdbd-48ba-9ff2-1be9c3a77640",
+      "type": "response"
+    },
+    {
+      "source": "335db842-809a-4a5e-968d-1c3846eae288",
+      "target": "2659e1fa-f2a7-49e3-afa1-1e4f62b74f4f",
+      "type": "response"
+    },
+    {
+      "source": "335db842-809a-4a5e-968d-1c3846eae288",
+      "target": "63e8bad9-7d44-461e-911e-1e34ce2acca7",
+      "type": "response"
+    },
+    {
+      "source": "ac00a736-e047-429d-b73e-d816fa0b8653",
+      "target": "da531b65-baa6-4c65-9288-3d87c16204b1",
+      "type": "response"
+    },
+    {
+      "source": "ac00a736-e047-429d-b73e-d816fa0b8653",
+      "target": "25704d38-4cd0-4431-b23b-6599eaa012fb",
+      "type": "response"
+    },
+    {
+      "source": "5d33f192-0c3c-43cc-ba76-b4afa6f6f68c",
+      "target": "069cbe02-1a98-41cd-b479-ebb7fb097991",
+      "type": "response"
+    },
+    {
+      "source": "5d33f192-0c3c-43cc-ba76-b4afa6f6f68c",
+      "target": "fd6cd888-f3f5-49a9-9d8d-1e456a2fb7e6",
+      "type": "response"
+    },
+    {
+      "source": "bb9dc442-be7e-4dfa-baa6-2d72e7dc4b0a",
+      "target": "9aac3d6f-2b73-4805-a7c3-94188a19fecd",
+      "type": "response"
+    },
+    {
+      "source": "10d14193-1e9c-469c-bd38-9d6adc980b18",
+      "target": "5976de99-e47c-436b-b61e-edcdda7b0405",
+      "type": "response"
+    },
+    {
+      "source": "10d14193-1e9c-469c-bd38-9d6adc980b18",
+      "target": "03d6707c-7450-41c5-9df3-cea20997d58c",
+      "type": "response"
+    },
+    {
+      "source": "e7231b7e-e128-4796-885c-d9bda0dc98c7",
+      "target": "dfcfede9-7dfc-4872-932d-bd14b6d32eec",
+      "type": "response"
+    },
+    {
+      "source": "e7231b7e-e128-4796-885c-d9bda0dc98c7",
+      "target": "14309f76-23da-4cd7-9b09-56cdb9dce27d",
+      "type": "response"
+    },
+    {
+      "source": "d4cdf45c-deb9-47d3-a5ce-916db3f01f47",
+      "target": "f4bea1b0-128f-447c-ae0d-15d1c3c4d1e6",
+      "type": "response"
+    },
+    {
+      "source": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "target": "8cfb57e9-15b2-451b-97b4-1bfbb1144c57",
+      "type": "response"
+    },
+    {
+      "source": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "target": "06b83b32-698a-407a-92ce-892905d930a9",
+      "type": "response"
+    },
+    {
+      "source": "e34b05cb-05ce-4663-bcac-7bf93ecc0772",
+      "target": "c71c95f2-bb0e-478f-ba06-c9245ae0d584",
+      "type": "response"
+    },
+    {
+      "source": "6724f1aa-6ad9-47b0-bac2-c7a611d3a65f",
+      "target": "2c1ed6ff-9318-45b4-82af-5732f49b5546",
+      "type": "response"
+    },
+    {
+      "source": "c40bd9f6-82ae-43cf-a8a3-2244d9646189",
+      "target": "18594fee-6083-421f-9faa-362d0c6f049d",
+      "type": "response"
+    },
+    {
+      "source": "63e8bad9-7d44-461e-911e-1e34ce2acca7",
+      "target": "1b6d558f-c8c7-4f83-b10b-57ddb7f60017",
+      "type": "response"
+    },
+    {
+      "source": "25704d38-4cd0-4431-b23b-6599eaa012fb",
+      "target": "db7bb877-2d92-46f7-a9ea-f6fd492d6dcc",
+      "type": "response"
+    },
+    {
+      "source": "c7dbd140-65b8-4169-a2ec-d4cd26c0b586",
+      "target": "32b90936-1640-445f-955b-ad80a71395d0",
+      "type": "response"
+    },
+    {
+      "source": "da531b65-baa6-4c65-9288-3d87c16204b1",
+      "target": "ebb9779f-ca1b-43c5-b092-7c8d098be117",
+      "type": "response"
+    },
+    {
+      "source": "da531b65-baa6-4c65-9288-3d87c16204b1",
+      "target": "2d77f1a2-2cb0-4a9e-9bbd-8375bc635441",
+      "type": "response"
+    },
+    {
+      "source": "3ce54f0c-8637-432d-8e65-2d981ddb34ee",
+      "target": "8c6a622d-8502-425b-ab66-057537442670",
+      "type": "response"
+    },
+    {
+      "source": "2659e1fa-f2a7-49e3-afa1-1e4f62b74f4f",
+      "target": "da0ab26f-2012-4b89-840d-83ae2a7eaf41",
+      "type": "response"
+    },
+    {
+      "source": "2659e1fa-f2a7-49e3-afa1-1e4f62b74f4f",
+      "target": "6c3167ba-6db7-4e06-b1f0-839bd96dc8bb",
+      "type": "response"
+    },
+    {
+      "source": "5e8ab0aa-fdbd-48ba-9ff2-1be9c3a77640",
+      "target": "3a30608f-1f0b-4f72-b2ad-68a2270ad5b5",
+      "type": "response"
+    },
+    {
+      "source": "fd6cd888-f3f5-49a9-9d8d-1e456a2fb7e6",
+      "target": "79e936a4-ca34-4c87-ba56-28f5277877e5",
+      "type": "response"
+    },
+    {
+      "source": "069cbe02-1a98-41cd-b479-ebb7fb097991",
+      "target": "d5ad853c-dd5a-444a-a9e2-417ce2a3afb6",
+      "type": "response"
+    },
+    {
+      "source": "14309f76-23da-4cd7-9b09-56cdb9dce27d",
+      "target": "dfada7dd-2ece-41a5-84a6-71eea526fb36",
+      "type": "response"
+    },
+    {
+      "source": "dfcfede9-7dfc-4872-932d-bd14b6d32eec",
+      "target": "9a10f21e-d4bf-46b0-900a-e38503b01149",
+      "type": "response"
+    },
+    {
+      "source": "f891cbb8-c3e5-40f9-934f-93433a8112e1",
+      "target": "849032c9-62c8-41d0-9f61-f2a823735530",
+      "type": "objection"
+    },
+    {
+      "source": "f891cbb8-c3e5-40f9-934f-93433a8112e1",
+      "target": "fdb48913-6234-4587-adae-25d6cc91938b",
+      "type": "objection"
+    },
+    {
+      "source": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "target": "e965ca7c-cdc2-4634-a1c6-c4a501b3027d",
+      "type": "objection"
+    },
+    {
+      "source": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "target": "8f4c50b5-2c1d-44e6-9329-d0b914d999f4",
+      "type": "objection"
+    },
+    {
+      "source": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "target": "2442e88f-9a92-4378-89c8-a4726c48f77d",
+      "type": "objection"
+    },
+    {
+      "source": "d6f871dd-0a6a-4505-91e6-f48678b02135",
+      "target": "4cef445b-998c-4ad7-8ea1-9290672327d6",
+      "type": "objection"
+    },
+    {
+      "source": "d6f871dd-0a6a-4505-91e6-f48678b02135",
+      "target": "61139ab9-fb1a-4954-b9eb-3de8f202df60",
+      "type": "objection"
+    },
+    {
+      "source": "9bf31639-42ac-4cf4-9aa4-4304f2aae000",
+      "target": "d4ba9b2c-dc33-4a82-8295-8b8a00384fdc",
+      "type": "objection"
+    },
+    {
+      "source": "9bf31639-42ac-4cf4-9aa4-4304f2aae000",
+      "target": "e4f2dc37-b3fd-4a6c-a64c-e15fd45adfea",
+      "type": "objection"
+    },
+    {
+      "source": "cc02826f-3700-47db-8c1e-68030e831c0a",
+      "target": "fb4ae2f0-33ce-4089-b84c-184941f8c005",
+      "type": "objection"
+    },
+    {
+      "source": "cc02826f-3700-47db-8c1e-68030e831c0a",
+      "target": "94872333-0f57-468d-9c17-754e261c9f31",
+      "type": "objection"
+    },
+    {
+      "source": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "target": "e298b39b-fd21-4c0c-af24-914ca9cdd446",
+      "type": "objection"
+    },
+    {
+      "source": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "target": "438b329a-f222-4278-b3d5-05e81c5c0352",
+      "type": "objection"
+    },
+    {
+      "source": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "target": "bd7cf4b9-327f-4e0e-aa58-bd08302fe0e4",
+      "type": "objection"
+    },
+    {
+      "source": "849032c9-62c8-41d0-9f61-f2a823735530",
+      "target": "1f0cf770-9f26-4a5d-adb8-a9c547ef6c23",
+      "type": "response"
+    },
+    {
+      "source": "849032c9-62c8-41d0-9f61-f2a823735530",
+      "target": "14264e3d-d54f-4a9c-b4cf-608aad674c0b",
+      "type": "response"
+    },
+    {
+      "source": "4cef445b-998c-4ad7-8ea1-9290672327d6",
+      "target": "d6439fb5-562d-4e73-afc4-9bd4e5b68c7f",
+      "type": "response"
+    },
+    {
+      "source": "4cef445b-998c-4ad7-8ea1-9290672327d6",
+      "target": "7cf91ab1-808a-42db-99ee-0b37a2141af2",
+      "type": "response"
+    },
+    {
+      "source": "fdb48913-6234-4587-adae-25d6cc91938b",
+      "target": "079495ab-6a59-4139-b062-dd7181dece54",
+      "type": "response"
+    },
+    {
+      "source": "fdb48913-6234-4587-adae-25d6cc91938b",
+      "target": "9b4a2967-b94e-4227-96d1-0879ade01464",
+      "type": "response"
+    },
+    {
+      "source": "438b329a-f222-4278-b3d5-05e81c5c0352",
+      "target": "c2d0771a-abeb-42da-af5f-9280dbd67c79",
+      "type": "response"
+    },
+    {
+      "source": "438b329a-f222-4278-b3d5-05e81c5c0352",
+      "target": "96b3fed1-1b59-4969-b7bc-53f88dd2a600",
+      "type": "response"
+    },
+    {
+      "source": "14264e3d-d54f-4a9c-b4cf-608aad674c0b",
+      "target": "cdeba325-9ff2-4831-b908-67c9dc1031af",
+      "type": "response"
+    },
+    {
+      "source": "94872333-0f57-468d-9c17-754e261c9f31",
+      "target": "68322bf3-0ebb-41f3-9e6b-42a32dbc515d",
+      "type": "response"
+    },
+    {
+      "source": "94872333-0f57-468d-9c17-754e261c9f31",
+      "target": "c711aee3-36cc-46f4-9b32-f451b061da3a",
+      "type": "response"
+    },
+    {
+      "source": "e4f2dc37-b3fd-4a6c-a64c-e15fd45adfea",
+      "target": "d7ff3496-a331-4f87-b166-5ab889316aaf",
+      "type": "response"
+    },
+    {
+      "source": "e4f2dc37-b3fd-4a6c-a64c-e15fd45adfea",
+      "target": "d2dde3aa-7713-4e00-a4b6-96ff0c9d45b6",
+      "type": "response"
+    },
+    {
+      "source": "7cf91ab1-808a-42db-99ee-0b37a2141af2",
+      "target": "cd3640f4-119e-400a-a1e7-bbaf356b5806",
+      "type": "response"
+    },
+    {
+      "source": "7cf91ab1-808a-42db-99ee-0b37a2141af2",
+      "target": "07b4b409-4af9-4000-b36a-2ccd54580a61",
+      "type": "response"
+    },
+    {
+      "source": "d6439fb5-562d-4e73-afc4-9bd4e5b68c7f",
+      "target": "24750681-1d5f-43e3-b4a7-3d4c1f5e7cc7",
+      "type": "response"
+    },
+    {
+      "source": "e298b39b-fd21-4c0c-af24-914ca9cdd446",
+      "target": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "type": "response"
+    },
+    {
+      "source": "e298b39b-fd21-4c0c-af24-914ca9cdd446",
+      "target": "92965e7a-b4cf-4e8e-9366-50fac649ecf2",
+      "type": "response"
+    },
+    {
+      "source": "9b4a2967-b94e-4227-96d1-0879ade01464",
+      "target": "6f7f049e-0c32-4557-b3e1-3f84f267e8fd",
+      "type": "response"
+    },
+    {
+      "source": "96b3fed1-1b59-4969-b7bc-53f88dd2a600",
+      "target": "94a5d862-4025-4a9e-8a2b-20fc64cf7d7f",
+      "type": "response"
+    },
+    {
+      "source": "1f0cf770-9f26-4a5d-adb8-a9c547ef6c23",
+      "target": "e9d9744f-75e4-4cbc-886a-c495ddaf8087",
+      "type": "response"
+    },
+    {
+      "source": "1f0cf770-9f26-4a5d-adb8-a9c547ef6c23",
+      "target": "047dc9bd-5fe0-41a3-89f0-b0cbe8dafe63",
+      "type": "response"
+    },
+    {
+      "source": "079495ab-6a59-4139-b062-dd7181dece54",
+      "target": "71efa0cc-752a-4777-930f-8bfa8a196252",
+      "type": "response"
+    },
+    {
+      "source": "079495ab-6a59-4139-b062-dd7181dece54",
+      "target": "7625a147-7163-474d-9885-39c9696578d5",
+      "type": "response"
+    },
+    {
+      "source": "c2d0771a-abeb-42da-af5f-9280dbd67c79",
+      "target": "e9fd654f-786c-4539-aef0-0056d620e0d9",
+      "type": "response"
+    },
+    {
+      "source": "68322bf3-0ebb-41f3-9e6b-42a32dbc515d",
+      "target": "89c2d707-c3af-4199-8ab2-6abbdcb0e187",
+      "type": "response"
+    },
+    {
+      "source": "c711aee3-36cc-46f4-9b32-f451b061da3a",
+      "target": "fca021b1-f102-44da-9120-5327cd87ad38",
+      "type": "response"
+    },
+    {
+      "source": "c711aee3-36cc-46f4-9b32-f451b061da3a",
+      "target": "59aa31a5-5348-4a24-ad48-f37422522865",
+      "type": "response"
+    },
+    {
+      "source": "d2dde3aa-7713-4e00-a4b6-96ff0c9d45b6",
+      "target": "02d1b62c-4163-4837-9254-76fc855f3ea1",
+      "type": "response"
+    },
+    {
+      "source": "d2dde3aa-7713-4e00-a4b6-96ff0c9d45b6",
+      "target": "efc7b7ca-12e2-4f69-9733-068be2aec123",
+      "type": "response"
+    },
+    {
+      "source": "d7ff3496-a331-4f87-b166-5ab889316aaf",
+      "target": "22bed301-1678-4f5b-b7c9-f2f5da37ddbd",
+      "type": "response"
+    },
+    {
+      "source": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "target": "aadcfaaa-d3cc-43cd-b6c2-329b1d61da58",
+      "type": "response"
+    },
+    {
+      "source": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "target": "e016d7ee-5473-4042-bda5-373cc0e3c26c",
+      "type": "response"
+    },
+    {
+      "source": "fb960f33-63b2-40dd-b244-972e8eba8322",
+      "target": "6ba0f675-205b-4c5d-a20e-cb9687e6d3ad",
+      "type": "response"
+    },
+    {
+      "source": "92965e7a-b4cf-4e8e-9366-50fac649ecf2",
+      "target": "e731601f-6568-47d4-bb74-45672dc8ed70",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "a1ad88cb-7063-4cc6-8263-822ba7f28a02",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d9beb944-17db-4905-826c-20f4ebf0f60c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "e13cabf6-0e63-4832-8995-a4b7c27b3054",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "d04640d1-5d42-468b-b09d-cacb79fa4c8f",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "ec06005f-2d7c-428e-b1d4-f891c9635363",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "0ec194f1-16ec-4b1d-9e1e-4724632a6cbf",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "30f8529b-3d87-4445-836b-6ce978b8d755",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "c848f43b-3a81-4420-ac2e-10161b7046e9",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "cc02826f-3700-47db-8c1e-68030e831c0a",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "d6f871dd-0a6a-4505-91e6-f48678b02135",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "f891cbb8-c3e5-40f9-934f-93433a8112e1",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "9bf31639-42ac-4cf4-9aa4-4304f2aae000",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

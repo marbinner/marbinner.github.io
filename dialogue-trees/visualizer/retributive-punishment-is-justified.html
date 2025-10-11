@@ -1,0 +1,3646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retributive punishment is justified - Graph View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Inline critical styles (graph.css will be external for customization) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            overflow: hidden;
+        }
+
+        #header {
+            background: white;
+            border-bottom: 1px solid #a2a9b1;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        #header h1 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 5px;
+        }
+
+        #header .meta {
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        #controls {
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #202122;
+        }
+
+        #controls input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        #controls button {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        #controls button:hover {
+            background: #eaecf0;
+        }
+
+        #legend {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eaecf0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+            border-left-width: 3px;
+            border-left-color: #0645ad;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.7em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            right: -550px;
+            width: 520px;
+            height: calc(100vh - 70px);
+            background: white;
+            border-left: 2px solid #a2a9b1;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar.open {
+            right: 0;
+        }
+
+        #sidebar .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        #sidebar .close-btn:hover {
+            background: #eaecf0;
+            color: #202122;
+        }
+
+        #sidebar-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaecf0;
+            padding: 20px 25px;
+            padding-right: 55px;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202122;
+        }
+
+        .breadcrumb {
+            font-size: 0.8em;
+            color: #72777d;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #0645ad;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #a2a9b1;
+            margin: 0 3px;
+        }
+
+        #sidebar-body {
+            padding: 20px 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-text {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #202122;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0645ad;
+        }
+
+        .node-badge-large {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .node-badge-large.pro {
+            background: #d5f0e8;
+            color: #2d9e7e;
+            border: 1px solid #2d9e7e;
+        }
+
+        .node-badge-large.con {
+            background: #f7e0e0;
+            color: #c74848;
+            border: 1px solid #c74848;
+        }
+
+        .node-badge-large.objection {
+            background: #ffecd9;
+            color: #d97a30;
+            border: 1px solid #d97a30;
+        }
+
+        .node-badge-large.response {
+            background: #e3eef8;
+            color: #4a7fb8;
+            border: 1px solid #4a7fb8;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eaecf0;
+        }
+
+        .meta-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: #f8f9fa;
+            border-color: #0645ad;
+            color: #0645ad;
+        }
+
+        .action-btn.primary {
+            background: #0645ad;
+            color: white;
+            border-color: #0645ad;
+        }
+
+        .action-btn.primary:hover {
+            background: #0051a0;
+        }
+
+        .child-node {
+            background: white;
+            border: 1px solid #eaecf0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .child-node:hover {
+            border-color: #0645ad;
+            border-left-color: #0645ad;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-node.pro {
+            border-left-color: #2d9e7e;
+        }
+
+        .child-node.con {
+            border-left-color: #c74848;
+        }
+
+        .child-node.objection {
+            border-left-color: #d97a30;
+        }
+
+        .child-node.response {
+            border-left-color: #4a7fb8;
+        }
+
+        .child-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .child-node-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .child-node-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #202122;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .references-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .references-list li:before {
+            content: "🔗";
+            position: absolute;
+            left: 0;
+        }
+
+        .references-list a {
+            color: #0645ad;
+            text-decoration: none;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .stat-box-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        #graph-container {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke: none;
+            fill: transparent;
+            opacity: 0;
+            /* Keep circles for physics/collision detection but hide them */
+        }
+
+        /* Highlighted and selected states now apply to text boxes */
+        .node.highlighted .node-text-content {
+            outline: 3px solid #ffd700;
+            outline-offset: 2px;
+        }
+
+        .node.selected .node-text-content {
+            outline: 3px solid #0645ad;
+            outline-offset: 2px;
+        }
+
+        /* foreignObject for text wrapping */
+        .node foreignObject {
+            overflow: visible;
+            pointer-events: auto;  /* Make text boxes clickable */
+        }
+
+        .node-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;  /* Make labels clickable */
+        }
+
+        .node-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .node-badge.pro {
+            color: #2d9e7e;
+            border-color: #2d9e7e;
+        }
+
+        .node-badge.con {
+            color: #c74848;
+            border-color: #c74848;
+        }
+
+        .node-badge.objection {
+            color: #d97a30;
+            border-color: #d97a30;
+        }
+
+        .node-badge.response {
+            color: #4a7fb8;
+            border-color: #4a7fb8;
+        }
+
+        .node-text-content {
+            color: #202122;
+            line-height: 1.4;
+            word-wrap: break-word;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-left-width: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Color-coded left borders by node type */
+        .node.pro .node-text-content {
+            border-left-color: #2d9e7e;
+            background: rgba(213, 240, 232, 0.85);
+        }
+
+        .node.con .node-text-content {
+            border-left-color: #c74848;
+            background: rgba(247, 224, 224, 0.85);
+        }
+
+        .node.objection .node-text-content {
+            border-left-color: #d97a30;
+            background: rgba(255, 236, 217, 0.85);
+        }
+
+        .node.response .node-text-content {
+            border-left-color: #4a7fb8;
+            background: rgba(227, 238, 248, 0.85);
+        }
+
+        /* Depth-based opacity for hierarchy */
+        .node.depth-0 .node-text-content {
+            opacity: 1;
+        }
+
+        .node.depth-1 .node-text-content {
+            opacity: 0.95;
+        }
+
+        .node.depth-2 .node-text-content {
+            opacity: 0.9;
+        }
+
+        .node.depth-3 .node-text-content {
+            opacity: 0.85;
+        }
+
+        .node.depth-4 .node-text-content {
+            opacity: 0.8;
+        }
+
+        .node.depth-5 .node-text-content {
+            opacity: 0.75;
+        }
+
+        /* Meta node text gets special styling */
+        .node.meta-pro .node-text-content,
+        .node.meta-con .node-text-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left-width: 5px;
+        }
+
+        .node.meta-pro .node-text-content {
+            background: rgba(213, 240, 232, 0.95);
+            border-left-color: #2d9e7e;
+        }
+
+        .node.meta-con .node-text-content {
+            background: rgba(247, 224, 224, 0.95);
+            border-left-color: #c74848;
+        }
+
+        /* Subtle hover effects */
+        .node:hover .node-text-content {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .link:hover {
+            stroke-opacity: 0.8 !important;
+            stroke-width: 3px;
+        }
+
+        .node title {
+            font-size: 14px;
+        }
+
+        .link {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Unified link styling - all types use same neutral color for cleaner look */
+        .link.pro,
+        .link.con,
+        .link.objection,
+        .link.response {
+            stroke: #8b95a5;
+            stroke-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Retributive punishment is justified</h1>
+        <div class="meta">
+            6 arguments for • 6 arguments against •
+            128 total nodes • Max depth: 3 •
+            Version 2
+        </div>
+    </div>
+
+    <div id="controls">
+        <a href="../debates/retributive-punishment-is-justified.html" style="display: block; width: 100%; padding: 8px 10px; margin-bottom: 10px; text-align: center; background: #0645ad; color: white; border-radius: 3px; text-decoration: none; font-size: 0.85em; font-weight: 500;">📖 View Debate Page</a>
+
+        <h3>🔍 Search & Navigate</h3>
+        <input type="text" id="search" placeholder="Search arguments...">
+        <button onclick="resetAndFit()">🎯 Reset & Fit View</button>
+
+        <div id="legend">
+            <h3>📊 Tree Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-number">128</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth</span>
+                    <span class="stat-number">3</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #2d9e7e;">
+                    <span class="stat-label">Supporting</span>
+                    <span class="stat-number" style="color: #2d9e7e;">6</span>
+                </div>
+                <div class="stat-item" style="border-left: 3px solid #c74848;">
+                    <span class="stat-label">Opposing</span>
+                    <span class="stat-number" style="color: #c74848;">6</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 15px;">🎨 Argument Types</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(213, 240, 232, 0.85); border: 2px solid #2d9e7e;"></div>
+                <span>Pro / Supporting</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(247, 224, 224, 0.85); border: 2px solid #c74848;"></div>
+                <span>Con / Opposing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 236, 217, 0.85); border: 2px solid #d97a30;"></div>
+                <span>Objection</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(227, 238, 248, 0.85); border: 2px solid #4a7fb8;"></div>
+                <span>Response</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <button class="close-btn" onclick="closeSidebar()">×</button>
+        <div id="sidebar-header"></div>
+        <div id="sidebar-body"></div>
+    </div>
+
+    <div id="graph-container">
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        // Graph data from Python
+        const graphData = {
+  "nodes": [
+    {
+      "id": "6e531beb-17ac-40b9-b400-0aff29a6e657",
+      "text": "Retributive punishment respects the offender as a rational moral agent, validating their capacity for free will and moral responsibility for their chosen actions. Holding individuals accountable through proportionate sentencing, regardless of future conduct, upholds the foundational principle of \"just deserts.\"",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:40.849858+00:00"
+    },
+    {
+      "id": "036b2fc9-e977-4752-9a88-0e553f7b6677",
+      "text": "Retribution affirms the equality and inherent value of the victim by publicly rejecting the perpetrator's attempt to elevate their status above the injured party. This is evident in major historical justice processes, such as the post-WWII tribunals, where moral condemnation of specific deeds was the primary justification.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:40.850633+00:00"
+    },
+    {
+      "id": "bd99ed04-85c9-48cb-9f28-3f3526cb73ad",
+      "text": "Retribution acts as a crucial limiting principle by enforcing proportionality, ensuring the penalty never exceeds the gravity of the offense. This \"ceiling\" prevents excessive state cruelty and guards against the unjust use of severe punishments purely for utilitarian goals.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:40.851127+00:00"
+    },
+    {
+      "id": "7661e2e9-7e3f-4c89-ba07-169f5a4f5004",
+      "text": "Retributive justice satisfies the public need for moral condemnation and validation, channeling societal outrage into legal processes. This formal state response is pragmatic, maintaining public confidence in the rule of law and preventing the descent into destabilizing systems of private revenge or vigilantism.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:40.851587+00:00"
+    },
+    {
+      "id": "6998060e-191d-4376-bd44-6909ffcb7b95",
+      "text": "Legal systems throughout recorded history, starting with ancient codes like the Babylonian Code of Hammurabi (c. 1754 BCE), have based foundational concepts of order on retributive principles. This historical prevalence demonstrates the necessary role of proportional punishment in establishing and maintaining civilized legal authority.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:40.852031+00:00"
+    },
+    {
+      "id": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "text": "Retribution provides a stable moral foundation for punishment based purely on justice, independently justifying sanctions when utilitarian goals like deterrence or rehabilitation fail. This framework permits the imposition of life sentences for heinous crimes regardless of the offender's potential for reform, focusing only on the moral gravity of the past act.",
+      "type": "pro",
+      "side": "pro",
+      "depth": 0,
+      "parent_id": "meta-pro",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:40.852505+00:00"
+    },
+    {
+      "id": "884af265-bb53-479c-8346-5f23eb3ed7b3",
+      "text": "The need for public confidence is satisfied by any state-sanctioned, fair legal process, not exclusively by retribution. Restorative justice models in countries like New Zealand and Norway effectively rebuild trust and channel public outrage without prioritizing punishment over rehabilitation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7661e2e9-7e3f-4c89-ba07-169f5a4f5004",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:52.504304+00:00"
+    },
+    {
+      "id": "39d8aeac-a1ac-4a73-aa19-f6df891e0aa8",
+      "text": "Retributive systems fail to prevent vigilantism when they are perceived as illegitimate, slow, or discriminatory, actively encouraging private revenge. The documented rise of \"street justice\" and lynchings in areas with high perceived impunity demonstrates the system's failure to adequately channel public outrage.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "7661e2e9-7e3f-4c89-ba07-169f5a4f5004",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:52.505097+00:00"
+    },
+    {
+      "id": "1046274a-08a1-4c2e-b7b4-b1a6dc28b3be",
+      "text": "Non-retributive actions, such as formal legal condemnation or mandatory restitution in restorative justice models (e.g., New Zealand's system), can also publicly affirm the victim's inherent value without perpetrator suffering.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "036b2fc9-e977-4752-9a88-0e553f7b6677",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:53.587797+00:00"
+    },
+    {
+      "id": "a67fbf58-19b7-4f7d-aa16-392fd8224f2f",
+      "text": "The primary purpose of the post-WWII tribunals was establishing legal precedent for \"Crimes Against Humanity\" and codifying international law, making the foundation of a new legal order a more significant justification than moral condemnation alone.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "036b2fc9-e977-4752-9a88-0e553f7b6677",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:53.588515+00:00"
+    },
+    {
+      "id": "732c8b42-8f7f-43bd-b006-0b9117b30140",
+      "text": "Historical retributive systems, such as those codified in early British Common Law or ancient draconian codes, upheld punishments like mutilation and public executions as proportional, demonstrating that proportionality standards do not inherently prevent excessive state cruelty.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bd99ed04-85c9-48cb-9f28-3f3526cb73ad",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:56.285185+00:00"
+    },
+    {
+      "id": "b322def5-06b2-44d2-afd3-aa6b8d53d4c9",
+      "text": "Retribution sets a mandatory minimum level of severity (the floor), compelling jurisdictions like the United States to maintain the death penalty or lengthy mandatory minimum sentences even when less severe punishments satisfy utilitarian goals like deterrence and rehabilitation.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "bd99ed04-85c9-48cb-9f28-3f3526cb73ad",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:56.286244+00:00"
+    },
+    {
+      "id": "e0a3a5dd-dfd2-48aa-b107-29b74d1d51ee",
+      "text": "Many legal systems recognize defenses like \"not guilty by reason of insanity\" or \"diminished capacity,\" acknowledging that severe mental impairment negates the full rational moral agency necessary for strict retribution.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6e531beb-17ac-40b9-b400-0aff29a6e657",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:58.966812+00:00"
+    },
+    {
+      "id": "a0b44dcb-ac81-49db-a48e-53b80d8e1cd9",
+      "text": "Legal systems include defenses of duress and necessity, such as stealing food to prevent starvation, demonstrating that the justice system accepts circumstances that constrain \"chosen actions\" and mitigate moral responsibility.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6e531beb-17ac-40b9-b400-0aff29a6e657",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:40:58.967669+00:00"
+    },
+    {
+      "id": "ddbeecff-6a94-44fd-aab2-0c5dc11f74a5",
+      "text": "Modern successful justice systems, like those in Norway and other Nordic countries, are primarily structured around rehabilitation and restorative justice, demonstrating that retributive principles are not necessary for maintaining civilized legal authority.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6998060e-191d-4376-bd44-6909ffcb7b95",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:00.537247+00:00"
+    },
+    {
+      "id": "dbc1720c-6377-4099-a973-7b87a27a39bd",
+      "text": "Maintaining civilized authority requires effective state enforcement, centralized jurisdiction, and the monopoly on violence, as demonstrated by the stability of the Roman Empire, which is a factor separate from an underlying retributive legal code.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "6998060e-191d-4376-bd44-6909ffcb7b95",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:00.537773+00:00"
+    },
+    {
+      "id": "48eb3b8e-ebaa-4dfb-9e2a-d3653186467f",
+      "text": "The London Charter, the foundational document for the tribunals, explicitly stated the trials were necessary to satisfy the \"conscience of mankind,\" demonstrating that moral repulsion drove the establishment of the legal framework, not the reverse.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a67fbf58-19b7-4f7d-aa16-392fd8224f2f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.441864+00:00"
+    },
+    {
+      "id": "8442d281-2975-4062-8076-6fbf31cbc44e",
+      "text": "The extensive public presentation of documentary evidence and firsthand victim testimony during the Nuremberg and Tokyo proceedings served the purpose of global moral condemnation and historical record, a function independent of merely codifying legal precedent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a67fbf58-19b7-4f7d-aa16-392fd8224f2f",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:07.442352+00:00"
+    },
+    {
+      "id": "8dc2130a-4939-4072-b1d9-dcfe9e9d9f66",
+      "text": "Legal traditions, such as the restorative justice systems used in South Africa and New Zealand, define justice as repairing harm and reintegrating offenders. These operational models demonstrate that successful justice outcomes do not require focusing purely on proportional suffering.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:08.695351+00:00"
+    },
+    {
+      "id": "a8f2cbea-8ab4-4907-931e-40240e1ad606",
+      "text": "The \"moral gravity\" of an act lacks an objective metric, evidenced by how comparable crimes, such as certain homicides, receive mandatory life sentences in the US but maximum 15-year terms in Nordic countries.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:08.695885+00:00"
+    },
+    {
+      "id": "d94db9b3-f81f-481c-ac44-ad5aa1efb998",
+      "text": "Retributive theory requires the attribution of full moral desert, which is philosophically dependent on assessing the offender's mental capacity and rational agency at the time of the offense.",
+      "type": "objection",
+      "side": "con",
+      "depth": 1,
+      "parent_id": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:08.696228+00:00"
+    },
+    {
+      "id": "347654f5-d6f0-4dc7-aff3-6ab93093e321",
+      "text": "The Nordic model still relies on the fundamental retributive principle of deprivation of liberty through imprisonment, meaning punitive measures remain a necessary element of maintaining legal authority, even if rehabilitation is the ultimate goal. Concluding that retribution is unnecessary ignores this essential component of punishment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ddbeecff-6a94-44fd-aab2-0c5dc11f74a5",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:09.743696+00:00"
+    },
+    {
+      "id": "3c4099f5-094c-4a88-878f-35680915a6b3",
+      "text": "The success of rehabilitation in small, high-trust, low-inequality nations like Norway does not prove retributive principles are unnecessary for maintaining legal authority globally. Contextual prerequisites, such as low crime rates and high social cohesion, are absent in nations with high inequality and diverse populations, such as the United States or Brazil.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "ddbeecff-6a94-44fd-aab2-0c5dc11f74a5",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:09.744407+00:00"
+    },
+    {
+      "id": "72054a86-f2f4-4bc3-bd84-106a6de011e8",
+      "text": "Stable governance does not universally require centralized jurisdiction or a state monopoly on violence; the Icelandic Commonwealth (930\u20131262) maintained centuries of legal and political order through decentralized consensus and local, private enforcement.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dbc1720c-6377-4099-a973-7b87a27a39bd",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.018902+00:00"
+    },
+    {
+      "id": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "text": "The concept of \"civilized authority\" is left undefined, which ignores functional governance systems where authority stems from social consensus and kinship structures, such as the decentralized legal system of the Somali clan structures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "dbc1720c-6377-4099-a973-7b87a27a39bd",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.019408+00:00"
+    },
+    {
+      "id": "eff5431e-daa4-41fa-b366-b418fa43914a",
+      "text": "Public confidence often demands specific retributive outcomes for severe crimes, as demonstrated by the consistent majority support for the death penalty in US voter polls, indicating that not every fair process naturally satisfies the need for trust.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "884af265-bb53-479c-8346-5f23eb3ed7b3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.631978+00:00"
+    },
+    {
+      "id": "670ad113-1dcb-46c7-a682-4c2e01ed93a1",
+      "text": "The success of restorative justice in countries with high social trust, such as Norway and New Zealand, does not apply to nations facing extreme internal instability or high rates of violent crime, where visible state retribution is necessary to establish public security and trust.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "884af265-bb53-479c-8346-5f23eb3ed7b3",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.632755+00:00"
+    },
+    {
+      "id": "b822b617-3295-4b4c-880a-6633f9474765",
+      "text": "Mandatory restitution in restorative justice models (e.g., New Zealand\u2019s system) necessarily imposes a direct, quantifiable financial loss or burden on the perpetrator, which constitutes a material detriment.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1046274a-08a1-4c2e-b7b4-b1a6dc28b3be",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.897336+00:00"
+    },
+    {
+      "id": "bdc89959-f574-4057-8971-e755d4f1a43f",
+      "text": "Formal legal condemnation publicly labels the perpetrator as a wrongdoer, imposing societal stigma that leads to psychological distress, reputational damage, and future employment barriers.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "1046274a-08a1-4c2e-b7b4-b1a6dc28b3be",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:10.898242+00:00"
+    },
+    {
+      "id": "0a276c1f-8997-4730-9f17-14ebbacc5a68",
+      "text": "Severe sentencing, such as the life sentences mandated by California's Three Strikes law (1994), directly serves the pragmatic goal of incapacitation for public safety, independent of philosophical retribution.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b322def5-06b2-44d2-afd3-aa6b8d53d4c9",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.751036+00:00"
+    },
+    {
+      "id": "5a64bdf2-ce2c-49b0-99ed-d7f006c03a96",
+      "text": "Penal systems in nations like Germany and France rely on the retributive principle of \"just deserts\" but successfully operate without the death penalty or comparable lengthy mandatory minimum sentences.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "b322def5-06b2-44d2-afd3-aa6b8d53d4c9",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:13.751904+00:00"
+    },
+    {
+      "id": "a8c03ef7-90fb-4f30-85d9-e01d73926af9",
+      "text": "The legal definitions created at Nuremberg, such as \"Crimes Against Humanity\" and \"Crimes Against Peace,\" were the specific mechanisms that formally encoded the global moral condemnation into international law, proving the two functions were profoundly interdependent rather than independent.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8442d281-2975-4062-8076-6fbf31cbc44e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:17.197374+00:00"
+    },
+    {
+      "id": "61522418-e8e8-4cfa-88d2-a0f8d942ccd4",
+      "text": "Support for the death penalty frequently stems from a consequentialist desire for permanent incapacitation, which nullifies the risk of re-offense or parole, demonstrating a concern for public safety rather than a purely retributive demand.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "eff5431e-daa4-41fa-b366-b418fa43914a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.041239+00:00"
+    },
+    {
+      "id": "f1e95894-2eb5-4f4c-b6bd-c5054843b20b",
+      "text": "Public support for the death penalty often reflects a distrust in the justice system\u2019s ability to ensure finality, fueled by fears of endless appeals, early release, or parole for those sentenced to life imprisonment.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "eff5431e-daa4-41fa-b366-b418fa43914a",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.041291+00:00"
+    },
+    {
+      "id": "d73ca01d-995e-47ef-b3d7-5bbe20a905c9",
+      "text": "In nations with high internal instability, reliance on harsh state retribution has often exacerbated cycles of violence and distrust, exemplified by the limited security gains achieved through mass incarceration in the United States.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "670ad113-1dcb-46c7-a682-4c2e01ed93a1",
+      "children_count": 0,
+      "references": [
+        "US high incarceration rates"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.124480+00:00"
+    },
+    {
+      "id": "d84d3904-f385-458a-a147-82dcdb112a9b",
+      "text": "Restorative principles are not mutually exclusive with state authority; transitional justice mechanisms, such as those in post-apartheid South Africa and Colombia\u2019s peace process, demonstrate successful hybrid applications in severely unstable, high-crime contexts.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "670ad113-1dcb-46c7-a682-4c2e01ed93a1",
+      "children_count": 0,
+      "references": [
+        "South Africa Truth and Reconciliation Commission",
+        "Colombia peace process"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.124512+00:00"
+    },
+    {
+      "id": "99c62805-b800-4d7e-9c50-c968770444d4",
+      "text": "Deprivation of liberty serves the non-retributive functions of incapacitation and deterrence for public safety, independent of any moral payback principle. The low recidivism rates in countries like Norway demonstrate that incarceration can prioritize rehabilitation over retribution while still maintaining the rule of law.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "347654f5-d6f0-4dc7-aff3-6ab93093e321",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.181080+00:00"
+    },
+    {
+      "id": "083294a9-7c5a-4dd8-b608-78ac3bbd61ac",
+      "text": "The maintenance of legal authority does not necessitate deprivation of liberty or punitive imprisonment; non-custodial sanctions often maintain order and compliance effectively. Examples include mandatory community service, intensive supervision orders (common in the U.K.), and restorative justice programs used extensively in New Zealand.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "347654f5-d6f0-4dc7-aff3-6ab93093e321",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:22.181113+00:00"
+    },
+    {
+      "id": "0d994cd2-f25c-467b-9490-3994ba0e8d23",
+      "text": "The Allies established the legal framework partly to avert the politically destabilizing summary executions proposed by alternatives like the Morgenthau Plan, demonstrating a strategic necessity alongside moral considerations.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "48eb3b8e-ebaa-4dfb-9e2a-d3653186467f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.149335+00:00"
+    },
+    {
+      "id": "4a936b6a-8c82-4529-85cd-1a27c265e170",
+      "text": "Restorative justice models like New Zealand\u2019s Family Group Conferences often mandate non-quantifiable reparations, such as direct apologies, mandatory counseling, or community service, which impose a personal material detriment without being a financial loss.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b822b617-3295-4b4c-880a-6633f9474765",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.606136+00:00"
+    },
+    {
+      "id": "5d847aba-d342-4786-83b9-878d8b4e843c",
+      "text": "The Icelandic Commonwealth's decentralized system failed to prevent 40 years of conflict known as the Sturlung Age (1220-1264), culminating in the country submitting to the centralized authority of the Norwegian Crown.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "72054a86-f2f4-4bc3-bd84-106a6de011e8",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:24.932230+00:00"
+    },
+    {
+      "id": "3a9608d8-bcba-4c8f-a3a1-9c84d37fef1c",
+      "text": "Governance deriving authority only from social consensus and kinship often lacks the stable, predictable mechanisms for dispute resolution and universal application of law required for \"civilized authority.\"",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.040950+00:00"
+    },
+    {
+      "id": "128bf59b-8d9f-4f2b-b3ef-3836b06b0ddf",
+      "text": "International organizations typically decline to recognize decentralized consensus-based systems because they fail to uphold fundamental human rights, equality before the law, or stable territorial control.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.040999+00:00"
+    },
+    {
+      "id": "43fbb87b-ae7f-47a4-8265-b77c544565aa",
+      "text": "The Somali clan structure (Xeer), while functionally providing localized justice, failed to establish state capacity, leading to decades of civil war and lack of universal public goods across the region in the 1990s and 2000s.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.041025+00:00"
+    },
+    {
+      "id": "f241f4d4-3627-4a93-9066-a582ce1764b0",
+      "text": "The disproportionality in California's Three Strikes law, which mandated life sentences for non-violent third felonies like petty theft, demonstrates that the severe measure stems from retributive demands rather than purely pragmatic incapacitation tailored to threat level.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "0a276c1f-8997-4730-9f17-14ebbacc5a68",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:25.699831+00:00"
+    },
+    {
+      "id": "70f08c04-7030-4f38-895a-4fc0f5cfd34d",
+      "text": "Nordic justice systems, notably Norway, prioritize restorative justice and rehabilitation models, employing shorter maximum sentences (e.g., 15 years) to achieve low recidivism, which is a penal objective separate from the moral condemnation of homicide.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a8f2cbea-8ab4-4907-931e-40240e1ad606",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.277194+00:00"
+    },
+    {
+      "id": "b196ac2e-8fa8-4ab8-a62c-64c4b7ebb284",
+      "text": "The objective moral gravity of homicide (the taking of a life is wrong) is affirmed by its criminal prohibition in both the US and Nordic nations; the variance in sentencing reflects differing legal degrees of culpability (manslaughter vs. premeditated murder), not differing moral gravity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "a8f2cbea-8ab4-4907-931e-40240e1ad606",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.277997+00:00"
+    },
+    {
+      "id": "345d32f0-6cb6-42fa-a0cd-0ce52e810d79",
+      "text": "The condemnation and resulting stigma provide necessary public validation for victims and reaffirm the community's non-negotiable moral boundaries, an essential function of social order that outweighs the perpetrator's distress.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "bdc89959-f574-4057-8971-e755d4f1a43f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.287609+00:00"
+    },
+    {
+      "id": "f13f3920-a602-4744-a511-11edb2b792ce",
+      "text": "Norway's 20% recidivism rate, significantly lower than the US rate of over 60%, demonstrates that prioritizing rehabilitation and reintegration actively builds the stability and social cohesion necessary for a low-crime society.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "3c4099f5-094c-4a88-878f-35680915a6b3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:26.919377+00:00"
+    },
+    {
+      "id": "78d54b50-904c-4486-8c4a-f434ceac3755",
+      "text": "South Africa's legal system remains fundamentally retributive, evidenced by its high incarceration rate (exceeding 250 per 100,000 people) and reliance on prison sentences for serious crimes. New Zealand utilizes restorative justice primarily for juvenile and diversionary matters, while serious adult offenses are prosecuted using traditional retributive models.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8dc2130a-4939-4072-b1d9-dcfe9e9d9f66",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.017190+00:00"
+    },
+    {
+      "id": "db51f911-7ab4-4027-acce-e8b861521d5e",
+      "text": "Successful justice outcomes must be demonstrated using defined metrics like reduced recidivism or increased victim satisfaction. Evidence regarding restorative justice shows only modest reductions in reoffending, and only in specific types of offenses like property crime, without proving overall success for the entire justice system.",
+      "type": "response",
+      "side": "pro",
+      "depth": 2,
+      "parent_id": "8dc2130a-4939-4072-b1d9-dcfe9e9d9f66",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:30.018165+00:00"
+    },
+    {
+      "id": "ee4f31b2-e7c7-497e-86a3-f03ac1b98960",
+      "text": "German prisons face chronic issues like severe overcrowding, which reached 100% capacity in some federal states by 2019, undermining smooth operations and contributing to relatively constant recidivism rates rather than achieving unambiguous success.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a64bdf2-ce2c-49b0-99ed-d7f006c03a96",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:31.971178+00:00"
+    },
+    {
+      "id": "16463bbc-7b01-414e-aeff-f4800f8de052",
+      "text": "The French penal system is fundamentally bounded by an explicit constitutional mandate for the social reintegration of offenders, thus prohibiting excessive sentences and shifting the primary purpose of the system away from pure retributivism.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "5a64bdf2-ce2c-49b0-99ed-d7f006c03a96",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:31.971206+00:00"
+    },
+    {
+      "id": "e9985bf6-5f64-4a01-a098-372f613512f7",
+      "text": "The high incarceration rate in South Africa is strongly correlated with its extremely high rate of violent crime, including one of the highest murder rates globally, making the rate a response necessary for public safety rather than purely philosophical adherence to retribution.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "78d54b50-904c-4486-8c4a-f434ceac3755",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:41.254390+00:00"
+    },
+    {
+      "id": "0bb14164-617f-469b-ba4b-c97c9d9c9086",
+      "text": "Reliance on prison sentences for serious crimes is characteristic of virtually all justice systems globally, including highly rehabilitative models like those in Norway and Sweden, invalidating it as evidence specific to a \"fundamentally retributive\" nature.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "78d54b50-904c-4486-8c4a-f434ceac3755",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:41.254440+00:00"
+    },
+    {
+      "id": "80de1227-eec7-4c7d-88a8-a978acf5a2e7",
+      "text": "Legal systems, such as those in Belgium and Canada that permit physician-assisted suicide, show that the legal status of life-ending actions reflects societal consensus and context, rather than objective, universal moral gravity.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b196ac2e-8fa8-4ab8-a62c-64c4b7ebb284",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:42.452996+00:00"
+    },
+    {
+      "id": "10b21a92-1c80-4777-a047-e269029fd3ed",
+      "text": "Homicides ruled as justifiable self-defense receive no criminal sanction, demonstrating that the justice system explicitly prioritizes morally mitigating factors like intent (mens rea) over the simple legal fact of life-taking.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "b196ac2e-8fa8-4ab8-a62c-64c4b7ebb284",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:42.453029+00:00"
+    },
+    {
+      "id": "331f3279-60f3-40fd-bf12-cef824e719c3",
+      "text": "Restorative justice programs consistently show victim satisfaction rates exceeding 80%, substantially higher than satisfaction with traditional criminal court proceedings.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "db51f911-7ab4-4027-acce-e8b861521d5e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:42.843765+00:00"
+    },
+    {
+      "id": "0e4be58a-5a23-468a-8fc2-2603e417ec57",
+      "text": "No single justice intervention, including the punitive retributive model, proves \"overall success for the entire justice system,\" as evidenced by 52% recidivism rates within five years of release from US state prisons.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "db51f911-7ab4-4027-acce-e8b861521d5e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:42.843798+00:00"
+    },
+    {
+      "id": "931fb3b7-6115-487d-bae4-661b84948cae",
+      "text": "Low Nordic recidivism correlates strongly with universal healthcare, robust unemployment benefits, and highly egalitarian societies, providing comprehensive social reentry support and reducing the underlying drivers of criminal behavior.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "70f08c04-7030-4f38-895a-4fc0f5cfd34d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.608375+00:00"
+    },
+    {
+      "id": "a1eaedff-6923-4a0b-b138-9226eb81cb9a",
+      "text": "Norway's penal code includes \"Forvaring\" (preventive detention), which allows for the indefinite extension of incarceration beyond the common 21-year maximum sentence for dangerous offenders, contradicting the emphasis on short sentences.",
+      "type": "response",
+      "side": "con",
+      "depth": 3,
+      "parent_id": "70f08c04-7030-4f38-895a-4fc0f5cfd34d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.608423+00:00"
+    },
+    {
+      "id": "b8e717bc-1733-4993-8faa-fce83bf2cd09",
+      "text": "Prioritizing retribution over rehabilitation treats offenders as obstacles rather than future citizens, failing to equip them for reentry. This approach correlates with detrimental societal outcomes like high recidivism rates, evident when comparing the US penal system against highly rehabilitative Nordic models.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [
+        "US Department of Justice data",
+        "Norwegian Correctional Service"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.608619+00:00"
+    },
+    {
+      "id": "a97af6c9-b6d1-430c-88b7-0ed3f18cee88",
+      "text": "The intentional state-infliction of suffering solely to balance a moral scale violates fundamental ethical prohibitions against gratuitous cruelty. This principle undermines the function of the state by making suffering an unconditional end rather than a necessary, utility-driven means for public safety, reform, or deterrence.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.609368+00:00"
+    },
+    {
+      "id": "db9b4b18-1fbd-4cd5-9102-870d43ebe622",
+      "text": "Purely retributive sanctions necessitate lengthy, expensive incarceration that imposes unsustainable financial and opportunity costs on society. The high annual cost of jailing inmates in countries like the United States greatly exceeds the investment required for effective restorative and community-based alternatives.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.609886+00:00"
+    },
+    {
+      "id": "7524b4e9-ac2a-4357-aaa6-6183f67edebf",
+      "text": "Retribution relies heavily on subjective human judgment to calculate 'just deserts,' providing no objective standard for assigning punishment severity. This subjectivity results in empirically documented inconsistencies and disproportionate sentencing practices based on factors like race, failing to achieve judicial fairness.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.610339+00:00"
+    },
+    {
+      "id": "85d3a46e-cb6b-443f-9773-7968c848903c",
+      "text": "Legal history shows a necessary societal progression away from purely retributive models, such as ancient blood feuds and lex talionis. Modern legal systems predominantly substitute utility-focused goals like deterrence and social stability for simple symmetric vengeance, demonstrating the practical limitations of pure retribution.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.610899+00:00"
+    },
+    {
+      "id": "a8d6451d-f2f6-40fa-949b-c4f4e60b4891",
+      "text": "A system focused strictly on justifying past deeds diverts resources and institutional attention away from forward-looking strategies vital for public safety. This emphasis on retrospective suffering neglects proactive community investments in education, job creation, and mental health services that effectively prevent future crime.",
+      "type": "con",
+      "side": "con",
+      "depth": 0,
+      "parent_id": "meta-con",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:46.611516+00:00"
+    },
+    {
+      "id": "1c086a96-8e1b-4086-a0e0-52ef340912ce",
+      "text": "All sentencing philosophies rely on subjective human decisions, such as estimating future dangerousness for rehabilitation or calculating optimal deterrence levels, proving that subjectivity is a systemic feature of judicial processes, not an exclusive flaw of retribution.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7524b4e9-ac2a-4357-aaa6-6183f67edebf",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:57.097918+00:00"
+    },
+    {
+      "id": "3483751f-c64c-42f0-9a57-028b1e7d174b",
+      "text": "Modern retributive systems often employ detailed sentencing guidelines, such as the US Federal Sentencing Guidelines, which standardize \"just deserts\" by codifying factors like offense level and criminal history to severely limit judicial discretion.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "7524b4e9-ac2a-4357-aaa6-6183f67edebf",
+      "children_count": 0,
+      "references": [
+        "US Federal Sentencing Guidelines"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:57.098863+00:00"
+    },
+    {
+      "id": "01a4bfe9-c280-4230-ae7b-fc2c426ecbbf",
+      "text": "Retributive sanctions do not necessitate incarceration; they merely require proportional punishment, which can be satisfied through non-custodial penalties like asset forfeiture, large fines, or intensive probation, significantly cutting costs.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "db9b4b18-1fbd-4cd5-9102-870d43ebe622",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:57.436836+00:00"
+    },
+    {
+      "id": "28208b01-bdc4-4633-aa37-5453da57f3ea",
+      "text": "The high cost of lengthy incarceration is primarily driven by violent felony offenders, for whom restorative and community-based alternatives have not proven effective or politically viable substitutes for long retributive sentences.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "db9b4b18-1fbd-4cd5-9102-870d43ebe622",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:57.437627+00:00"
+    },
+    {
+      "id": "29130682-59f2-4b04-8c96-2004c434557e",
+      "text": "Retrospective accountability processes are not inherently zero-sum, as they often reveal systemic failures and resource misallocations that define the need for proactive investment. For instance, post-incident reviews of police violence often lead directly to mandated reallocation of funds toward community-based mental health intervention programs.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a8d6451d-f2f6-40fa-949b-c4f4e60b4891",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:57.644108+00:00"
+    },
+    {
+      "id": "a0f668c5-d7a9-49a4-9bc1-1f30faa1b15e",
+      "text": "The term \"justifying past deeds\" is too vague and overlooks restorative justice models, which are intrinsically proactive by engaging victims and offenders in community-based solutions to prevent reoccurrences. Restorative justice programs used in countries like New Zealand integrate community reconciliation directly into the act of addressing past harm.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a8d6451d-f2f6-40fa-949b-c4f4e60b4891",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:41:57.644891+00:00"
+    },
+    {
+      "id": "a08a1a28-f063-4ec4-802e-58d5c512c79c",
+      "text": "The principle of proportionality\u2014that punishment must directly match the severity of the crime\u2014is a core retributive goal codified in sentencing guidelines across highly developed legal systems like Germany and the US Federal System.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "85d3a46e-cb6b-443f-9773-7968c848903c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:02.320050+00:00"
+    },
+    {
+      "id": "d6d2ad64-3091-4eec-b385-469f141e8747",
+      "text": "The historical shift away from decentralized retributive systems like the ancient Icelandic Althing and blood feuds was primarily driven by the political necessity of centralized states, such as Norman England, to establish a monopoly on violence and secure sovereignty.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "85d3a46e-cb6b-443f-9773-7968c848903c",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:02.320840+00:00"
+    },
+    {
+      "id": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "text": "Many legal systems incorporating retributive principles define deserved punishment as a proportional response to injustice, making it a necessary function of justice rather than gratuitous cruelty. The long-term incarceration of war criminals and perpetrators of crimes against humanity, who often pose minimal future threat, demonstrates that moral desert is a primary state function.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a97af6c9-b6d1-430c-88b7-0ed3f18cee88",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:02.426801+00:00"
+    },
+    {
+      "id": "cc7ef49c-1a56-440e-8ad9-2891962d5703",
+      "text": "The state's justice function frequently involves expressive goals, publicly affirming the integrity of the law even when utility is zero. Punishment is often pursued for terminally ill criminals who can no longer reoffend, cannot be reformed, and offer no new deterrence, indicating that state justice encompasses more than just public safety.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "a97af6c9-b6d1-430c-88b7-0ed3f18cee88",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:02.427345+00:00"
+    },
+    {
+      "id": "8db5eede-3f90-4c6a-94db-77d762acb377",
+      "text": "Nordic models benefit substantially from robust social safety nets and lower socioeconomic inequality, providing released offenders with stable housing and employment support that independently reduces reoffending risk.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b8e717bc-1733-4993-8faa-fce83bf2cd09",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:02.561606+00:00"
+    },
+    {
+      "id": "579686a8-42f8-4524-9b8e-0bbc4ec3a311",
+      "text": "US recidivism is often measured broadly by any arrest or technical parole violation within three years, while Norwegian and Finnish statistics rely on new convictions, creating a non-equivalent statistical comparison.",
+      "type": "objection",
+      "side": "pro",
+      "depth": 1,
+      "parent_id": "b8e717bc-1733-4993-8faa-fce83bf2cd09",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:02.562073+00:00"
+    },
+    {
+      "id": "010ae828-0754-4da2-92ca-e5eee15ffcdc",
+      "text": "For heinous offenses like murder or rape, the retributive standard demands a penalty involving a loss of freedom commensurate with the crime's moral gravity, a requirement that fines or community service cannot satisfy.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "01a4bfe9-c280-4230-ae7b-fc2c426ecbbf",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:07.153897+00:00"
+    },
+    {
+      "id": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "text": "Financial penalties inherently fail the retributive standard of equal justice, as a massive fine is meaningless to an indigent offender and is merely an operational cost for a wealthy corporate criminal.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "01a4bfe9-c280-4230-ae7b-fc2c426ecbbf",
+      "children_count": 3,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:07.154802+00:00"
+    },
+    {
+      "id": "dd8dabe3-4342-4b5d-b19c-8a45b6184a3e",
+      "text": "Modern sentencing guidelines, such as those in the US Federal System, explicitly mandate balancing retributive proportionality with utilitarian goals like deterrence and incapacitation, making pure proportionality only one of several competing factors.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a08a1a28-f063-4ec4-802e-58d5c512c79c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.865020+00:00"
+    },
+    {
+      "id": "cc209a5c-df07-469f-addc-e75fd528db8e",
+      "text": "The US Federal Sentencing Guidelines, especially concerning mandatory minimums and pre-Booker rigidity, were widely criticized for prioritizing uniformity over individualized justice, resulting in judicially acknowledged disproportionate sentences for offenses like low-level drug crimes.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a08a1a28-f063-4ec4-802e-58d5c512c79c",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:12.865835+00:00"
+    },
+    {
+      "id": "c1759c07-393e-4b11-ab52-8a5468054d9d",
+      "text": "The effectiveness of post-release support is dependent on the high social trust and cultural homogeneity within countries like Norway, which facilitate genuine community acceptance and integration for former offenders.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8db5eede-3f90-4c6a-94db-77d762acb377",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:13.789454+00:00"
+    },
+    {
+      "id": "24d90fed-e529-4c45-95d6-204e38f6c0ec",
+      "text": "Lower recidivism is primarily driven by the fundamentally humanistic, restorative focus of the Nordic penal system, where prisons normalize life and provide education, making outside employment support effective only as an enabling final step.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "8db5eede-3f90-4c6a-94db-77d762acb377",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:13.790469+00:00"
+    },
+    {
+      "id": "5f4b3848-9b2c-493b-ac3c-db68f6cab679",
+      "text": "The economic need for stable commercial law and contracts was a critical driver, as seen in the growth of merchant courts (Lex Mercatoria) in medieval Italian city-states, which provided predictable justice outside royal political control.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d6d2ad64-3091-4eec-b385-469f141e8747",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:14.074090+00:00"
+    },
+    {
+      "id": "974dba52-f9ac-4d71-944b-ad295bc268ad",
+      "text": "The transition was significantly influenced by social and moral opposition to endless cycles of violence, with the Christian Church often using the \"Truce of God\" to limit feuding long before centralized states secured true sovereignty.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "d6d2ad64-3091-4eec-b385-469f141e8747",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:14.074972+00:00"
+    },
+    {
+      "id": "3098752e-4f39-4861-ac17-188035248aa3",
+      "text": "Retrospective accountability primarily functions by assigning individual or organizational sanctions, such as fines or dismissals, which are inherently zero-sum transfers of resources rather than creations of new social value.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "29130682-59f2-4b04-8c96-2004c434557e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:14.969267+00:00"
+    },
+    {
+      "id": "82e97d34-c81a-4483-9dcf-680398ab4690",
+      "text": "Despite numerous investigations identifying systemic failures in lead contamination in cities like Flint, Michigan, political resistance and budgetary constraints often prevent the mandated reallocation of municipal funds necessary for proactive infrastructure replacement.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "29130682-59f2-4b04-8c96-2004c434557e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:14.969838+00:00"
+    },
+    {
+      "id": "a5114b8d-b2c9-4e51-8913-2b43e9a7dc52",
+      "text": "Specific restorative justice programs for severe violent crimes, such as the victim-offender dialogue model, have demonstrated higher victim satisfaction and lower reoffending rates than traditional retributive sentencing in pilot studies.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "28208b01-bdc4-4633-aa37-5453da57f3ea",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:16.230669+00:00"
+    },
+    {
+      "id": "08c5a1dd-df5a-40af-aa92-c9b5a01d0b25",
+      "text": "In the United States, drug and property offenders make up a majority of both annual prison admissions and the total incarcerated population, meaning the cumulative volume and high turnover of these non-violent populations significantly drive overall operating costs.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "28208b01-bdc4-4633-aa37-5453da57f3ea",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:16.231213+00:00"
+    },
+    {
+      "id": "95ebacc3-0a09-4c02-8088-bee3f044567f",
+      "text": "Maintaining public confidence in the legal system is a necessary utility function; punishing high-profile offenders reinforces the authority of the law, thereby preserving broader societal order and the system's deterrent effect.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cc7ef49c-1a56-440e-8ad9-2891962d5703",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.263348+00:00"
+    },
+    {
+      "id": "f7ed036a-638a-45fa-85e9-3e3aa87ae8f0",
+      "text": "State justice serves the utilitarian function of establishing social boundaries and preventing private vengeance, meaning the ceremonial expression of proportionate retribution directly contributes to long-term public safety.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "cc7ef49c-1a56-440e-8ad9-2891962d5703",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.264267+00:00"
+    },
+    {
+      "id": "2a4c4146-0180-4187-a595-1f4acb061fc4",
+      "text": "Modern justice systems primarily focus on rehabilitation and deterrence for the vast majority of ordinary domestic crimes; the specialized long-term incarceration of international war criminals does not define the function of general criminal law.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.310187+00:00"
+    },
+    {
+      "id": "a74498c2-3e0d-48a8-a946-88a1374d27bc",
+      "text": "The function of state criminal justice systems is primarily dedicated to public safety through police enforcement and incapacitation, with the deterrence of ordinary crimes like theft consuming far more resources than the retribution for rare crimes against humanity.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.310841+00:00"
+    },
+    {
+      "id": "60bae3d8-8d63-45e2-8390-a3eaa0ca5996",
+      "text": "The removal and incarceration of high-profile war criminals like Ratko Mladi\u0107 and Slobodan Milo\u0161evi\u0107 serves crucial long-term general deterrence by demonstrating accountability for state actors, even if the individuals themselves pose low recidivism risk.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:18.311197+00:00"
+    },
+    {
+      "id": "8e16887b-b58f-4fe6-8729-658c67e6c5f3",
+      "text": "Addressing a past deed, by requiring a specific act of repair or formal apology, necessitates retrospective acknowledgment and justification of harm done. The South African Truth and Reconciliation Commission required full disclosure of past deeds before granting amnesty, explicitly proving the past action must be justified first.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a0f668c5-d7a9-49a4-9bc1-1f30faa1b15e",
+      "children_count": 2,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:20.827367+00:00"
+    },
+    {
+      "id": "41a182e5-5ffb-4b12-98d5-c31deb1ee7e0",
+      "text": "Restorative systems often encounter substantive criticism from victims\u2019 advocacy groups that they fail to provide adequate retribution and deterrence for serious past deeds. In countries with established RJ programs, like Canada, critics argue that the reconciliation process does not sufficiently justify the state's response to violent crime.",
+      "type": "response",
+      "side": "con",
+      "depth": 2,
+      "parent_id": "a0f668c5-d7a9-49a4-9bc1-1f30faa1b15e",
+      "children_count": 1,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:20.827826+00:00"
+    },
+    {
+      "id": "21c83e7a-7202-400a-a1e3-4322f415e685",
+      "text": "The Federal Sentencing Guidelines were fundamentally established to achieve the retributive goal of horizontal equity by eliminating the vast and arbitrary sentencing disparities caused by individual judicial discretion, making punishment more uniform and predictable across jurisdictions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "cc209a5c-df07-469f-addc-e75fd528db8e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:22.224873+00:00"
+    },
+    {
+      "id": "95b79a37-83ae-4bd4-a693-8fd8843938ea",
+      "text": "The effectiveness of Nordic re-entry programs is primarily driven by extensive state investment in personalized education, housing assistance, and low rates of income inequality, factors that are independent of social trust or homogeneity.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c1759c07-393e-4b11-ab52-8a5468054d9d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:24.547663+00:00"
+    },
+    {
+      "id": "66fabf61-fdee-4429-931a-53430f3ffadf",
+      "text": "Immigration has increased cultural diversity in countries like Norway, yet their successful post-release reintegration rates have been maintained or improved, demonstrating that homogeneity is not a prerequisite for community acceptance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "c1759c07-393e-4b11-ab52-8a5468054d9d",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:24.547693+00:00"
+    },
+    {
+      "id": "b65697a5-c594-4c7d-8527-9859c23b8cf9",
+      "text": "Jurisdictions practicing capital punishment for murder, such as parts of the United States and China, demonstrate that the retributive standard often demands the loss of life. This shows that moral gravity requires a penalty more severe than the mere loss of freedom represented by incarceration.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "010ae828-0754-4da2-92ca-e5eee15ffcdc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:24.757743+00:00"
+    },
+    {
+      "id": "38a7005f-d374-4d4d-a9d8-ceb93c39a947",
+      "text": "Financial penalties push indigent offenders into cycles of debt and incarceration when they cannot pay, which disproportionately subjects them to severe punishment beyond the original offense.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:24.936235+00:00"
+    },
+    {
+      "id": "eef53ec1-05a2-4008-9ce8-7c82bddc1e0e",
+      "text": "Punitive corporate fines, such as the $2.3 billion fine against Pfizer in 2009 or the dissolution of Arthur Andersen after criminal charges, demonstrate that financial penalties can exceed mere operational costs and significantly alter corporate solvency and behavior.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "children_count": 0,
+      "references": [
+        "Pfizer",
+        "Arthur Andersen"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:24.936264+00:00"
+    },
+    {
+      "id": "a533f7f6-5be0-4070-a28e-aff281247d43",
+      "text": "Justice systems in Finland and Germany maintain retributive proportionality through income-based \"day fines,\" calculating the fine based on the offender's daily income, which ensures payment is equally punitive across economic classes.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "children_count": 0,
+      "references": [
+        "Finland's day-fine system",
+        "Germany's day-fine system"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:24.936277+00:00"
+    },
+    {
+      "id": "e2db8caf-3f5f-4c67-8974-9e2af670505e",
+      "text": "The justification for retributive law is moral necessity\u2014providing proportional harm for transgressions\u2014not the commercial stability implied by Lex Mercatoria. Many US states uphold capital punishment, an expensive sanction with minimal proven economic deterrence, purely based on the public's demand for ultimate moral desert.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "5f4b3848-9b2c-493b-ac3c-db68f6cab679",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:25.640713+00:00"
+    },
+    {
+      "id": "be153333-34d5-4865-94ab-de1e5e1611d5",
+      "text": "The true decline of private retribution was driven by nascent states systematically claiming the monopoly on violence and using state-sanctioned, often severe retributive penalties\u2014such as capital punishment\u2014to crush feuding families and deter private vengeance.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "974dba52-f9ac-4d71-944b-ad295bc268ad",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:26.088831+00:00"
+    },
+    {
+      "id": "1b0739c2-67b2-43ce-9f61-d162295798a5",
+      "text": "Retributive justice fails to serve the long-term goal of public safety because it prioritizes past actions over future behavior modification. Countries utilizing rehabilitation and restorative models, like Norway, achieve significantly lower recidivism rates than the retributive, incarceration-heavy system of the United States.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "82e97d34-c81a-4483-9dcf-680398ab4690",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:26.223660+00:00"
+    },
+    {
+      "id": "0ef44f63-f4c0-45e3-b963-932b18486808",
+      "text": "Retrospective accountability creates non-zero-sum value by providing deterrence, which prevents future resource-consuming harms. The Sarbanes-Oxley Act, enacted after corporate fraud accountability efforts, structurally reduced the risk of catastrophic market failures.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3098752e-4f39-4861-ac17-188035248aa3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:26.346626+00:00"
+    },
+    {
+      "id": "d13d0c3f-e50d-4104-b854-1cef8272f414",
+      "text": "The public investigations and mandated systemic reforms following retrospective accountability\u2014such as the FAA and DOT changes enacted after high-profile transportation accidents\u2014generate new safety protocols, which constitute non-zero-sum social value.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "3098752e-4f39-4861-ac17-188035248aa3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:26.346673+00:00"
+    },
+    {
+      "id": "3a1a1a10-1a95-4402-aa18-f17dec11d0ab",
+      "text": "Mandatory minimum sentencing laws in the US and elsewhere, driven by utilitarian goals like incapacitation, commonly mandate sentences that are grossly disproportionate to the offense committed. Prioritizing deterrence allows minor offenders to receive extreme punishments, such as decades for possession crimes, fundamentally undermining the retributive principle of just deserts.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "dd8dabe3-4342-4b5d-b19c-8a45b6184a3e",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.268517+00:00"
+    },
+    {
+      "id": "1c28d7d4-09e5-49e6-ab04-4851334c72b8",
+      "text": "The reported lower reoffending rates in restorative justice studies suffer from selection bias because participants are often pre-screened low-risk offenders who are more motivated to change than the general high-risk population receiving traditional retributive sentencing. The observed difference in outcomes is thus attributable to the characteristics of the participants, not necessarily the program's inherent superiority over the traditional model.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a5114b8d-b2c9-4e51-8913-2b43e9a7dc52",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:27.343903+00:00"
+    },
+    {
+      "id": "1036ee0a-594a-417e-bf9d-da7a8e4c7187",
+      "text": "The prevention of private vengeance is achieved simply by the state maintaining a secure monopoly on legitimate force and effective offender incapacitation, regardless of whether the punishment philosophy is retributive or deterrent. The state's functional control over the perpetrator, not the ceremonial satisfaction of a proportional punishment, is the mechanism that restricts vigilante justice.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f7ed036a-638a-45fa-85e9-3e3aa87ae8f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.087815+00:00"
+    },
+    {
+      "id": "8b012dfc-b413-48aa-9f48-04b4e992d335",
+      "text": "Numerous countries, such as Norway, prioritize rehabilitation and restorative justice over proportionate retribution, yet consistently maintain significantly lower crime and recidivism rates than highly retributive justice systems. This demonstrates that ceremonial retribution is not essential for achieving the utilitarian goal of long-term public safety.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "f7ed036a-638a-45fa-85e9-3e3aa87ae8f0",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.087846+00:00"
+    },
+    {
+      "id": "794eb0f8-5a0a-40c5-8dce-d25b2ea85250",
+      "text": "Punishing a high-profile figure only reinforces authority if the process is perceived as impartial; conversely, perceived political targeting, such as trials against opposition leaders in authoritarian regimes like Russia, severely damages public confidence in the rule of law.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "95ebacc3-0a09-4c02-8088-bee3f044567f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.193146+00:00"
+    },
+    {
+      "id": "caf80950-8e54-460b-999f-8711fe74f74d",
+      "text": "Broader societal order and general deterrence are functions of consistent law enforcement against common criminality, not the spectacle of high-profile convictions, which are too infrequent and often perceived as exceptions to sustain a general deterrent effect.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "95ebacc3-0a09-4c02-8088-bee3f044567f",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.193178+00:00"
+    },
+    {
+      "id": "ec6cdbd3-e5ca-4930-8f3a-98ec1ee2a83d",
+      "text": "The low recidivism rate in Nordic countries is inseparable from their robust welfare systems, which provide guaranteed housing, healthcare, and employment security upon release, minimizing the necessity of re-offending. The social safety net, not just the prison environment, is the primary driver of successful reintegration.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "24d90fed-e529-4c45-95d6-204e38f6c0ec",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.673385+00:00"
+    },
+    {
+      "id": "9560bdbf-9cb6-4456-9b2c-e67c8c252071",
+      "text": "The success of restorative methods depends on high pre-existing social trust and low income inequality. Transplanting a humanistic prison focus to societies with deep fragmentation, such as the United States, fails to yield comparable results because external markets offer few opportunities for ex-offenders.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "24d90fed-e529-4c45-95d6-204e38f6c0ec",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:31.673449+00:00"
+    },
+    {
+      "id": "81f4eac2-f7ab-4f2e-84fa-9de4a0beb952",
+      "text": "Violent offenses currently account for approximately 57% of the US state prison population, indicating that drug and property offenders do not constitute the majority driving total costs.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "08c5a1dd-df5a-40af-aa92-c9b5a01d0b25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.319752+00:00"
+    },
+    {
+      "id": "62f63693-119c-41eb-8e98-cb9c493a1553",
+      "text": "Fixed operating costs, particularly high-security staffing and infrastructure maintenance, are primarily driven by the long sentences and security needs of the violent offender majority, not the turnover of non-violent inmates.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "08c5a1dd-df5a-40af-aa92-c9b5a01d0b25",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:33.319783+00:00"
+    },
+    {
+      "id": "002357f6-e5bf-4005-9306-913cda2cc92f",
+      "text": "The American criminal justice system\u2019s extensive use of mandatory minimum sentences and \"three strikes\" laws for ordinary domestic crimes explicitly prioritizes retribution and incapacitation over primary goals of rehabilitation and deterrence.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "2a4c4146-0180-4187-a595-1f4acb061fc4",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:34.307040+00:00"
+    },
+    {
+      "id": "91628aa1-b492-4bc6-a326-bb0bacf2e8c6",
+      "text": "State correctional systems, such as those in California and New York, allocate substantial annual budgets to probation, re-entry programs, and specialized courts, demonstrating rehabilitation is a core function alongside incapacitation.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a74498c2-3e0d-48a8-a946-88a1374d27bc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:35.144696+00:00"
+    },
+    {
+      "id": "badbf3b5-203f-4b68-a20d-1316aebaf3b5",
+      "text": "Crimes against humanity are prosecuted by international bodies like the International Criminal Court (ICC) or federal tribunals, making a resource comparison with state-level police budgets for theft deterrence misleading.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "a74498c2-3e0d-48a8-a946-88a1374d27bc",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:35.144731+00:00"
+    },
+    {
+      "id": "d8acfd4f-ac36-4e38-acda-d9c4961993e7",
+      "text": "Stable regimes like Bashar al-Assad's in Syria continued large-scale atrocities after the Milo\u0161evi\u0107 verdict, showing that deterrence fails when powerful state actors believe they can prevent their capture.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "60bae3d8-8d63-45e2-8390-a3eaa0ca5996",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:35.700886+00:00"
+    },
+    {
+      "id": "36206389-fd03-4850-8891-3e12766ffd77",
+      "text": "The actual removal and incarceration of Ratko Mladi\u0107 and Slobodan Milo\u0161evi\u0107 depended on preceding regime change and explicit cooperation from new domestic governments, indicating that accountability is conditional on political weakness rather than a reliable deterrent.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "60bae3d8-8d63-45e2-8390-a3eaa0ca5996",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:35.700930+00:00"
+    },
+    {
+      "id": "29e41ac8-ff2b-42bd-a909-80b176f6ea1b",
+      "text": "Meta-analyses of Restorative Justice programs, including those in the UK and Australia, consistently show that victims who participate report significantly higher levels of satisfaction and feel greater accountability than those processed through the conventional court system.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "41a182e5-5ffb-4b12-98d5-c31deb1ee7e0",
+      "children_count": 0,
+      "references": [
+        "Meta-analyses of Restorative Justice programs"
+      ],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:35.925596+00:00"
+    },
+    {
+      "id": "feff50f6-3198-4fb5-a157-5b6e9a4a357d",
+      "text": "Formal apologies and acts of reparation, such as those issued by Germany for the Holocaust or the Catholic Church for residential schools, are explicit admissions that the past deeds were morally unjustified.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8e16887b-b58f-4fe6-8729-658c67e6c5f3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:36.966753+00:00"
+    },
+    {
+      "id": "2cf7820c-265f-4c39-94ef-74e1c51d886d",
+      "text": "The South African TRC granted amnesty only after full public disclosure of acts committed under the universally condemned apartheid regime, prioritizing truth recovery over validating the past actions.",
+      "type": "response",
+      "side": "pro",
+      "depth": 3,
+      "parent_id": "8e16887b-b58f-4fe6-8729-658c67e6c5f3",
+      "children_count": 0,
+      "references": [],
+      "source": "ai-generated",
+      "created_at": "2025-10-11T15:42:36.966799+00:00"
+    },
+    {
+      "id": "meta-pro",
+      "text": "Arguments For",
+      "type": "meta-pro",
+      "side": "pro",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:40.849764+00:00"
+    },
+    {
+      "id": "meta-con",
+      "text": "Arguments Against",
+      "type": "meta-con",
+      "side": "con",
+      "depth": -1,
+      "parent_id": null,
+      "children_count": 6,
+      "references": [],
+      "source": "system",
+      "created_at": "2025-10-11T15:40:40.849764+00:00"
+    }
+  ],
+  "links": [
+    {
+      "source": "7661e2e9-7e3f-4c89-ba07-169f5a4f5004",
+      "target": "884af265-bb53-479c-8346-5f23eb3ed7b3",
+      "type": "objection"
+    },
+    {
+      "source": "7661e2e9-7e3f-4c89-ba07-169f5a4f5004",
+      "target": "39d8aeac-a1ac-4a73-aa19-f6df891e0aa8",
+      "type": "objection"
+    },
+    {
+      "source": "036b2fc9-e977-4752-9a88-0e553f7b6677",
+      "target": "1046274a-08a1-4c2e-b7b4-b1a6dc28b3be",
+      "type": "objection"
+    },
+    {
+      "source": "036b2fc9-e977-4752-9a88-0e553f7b6677",
+      "target": "a67fbf58-19b7-4f7d-aa16-392fd8224f2f",
+      "type": "objection"
+    },
+    {
+      "source": "bd99ed04-85c9-48cb-9f28-3f3526cb73ad",
+      "target": "732c8b42-8f7f-43bd-b006-0b9117b30140",
+      "type": "objection"
+    },
+    {
+      "source": "bd99ed04-85c9-48cb-9f28-3f3526cb73ad",
+      "target": "b322def5-06b2-44d2-afd3-aa6b8d53d4c9",
+      "type": "objection"
+    },
+    {
+      "source": "6e531beb-17ac-40b9-b400-0aff29a6e657",
+      "target": "e0a3a5dd-dfd2-48aa-b107-29b74d1d51ee",
+      "type": "objection"
+    },
+    {
+      "source": "6e531beb-17ac-40b9-b400-0aff29a6e657",
+      "target": "a0b44dcb-ac81-49db-a48e-53b80d8e1cd9",
+      "type": "objection"
+    },
+    {
+      "source": "6998060e-191d-4376-bd44-6909ffcb7b95",
+      "target": "ddbeecff-6a94-44fd-aab2-0c5dc11f74a5",
+      "type": "objection"
+    },
+    {
+      "source": "6998060e-191d-4376-bd44-6909ffcb7b95",
+      "target": "dbc1720c-6377-4099-a973-7b87a27a39bd",
+      "type": "objection"
+    },
+    {
+      "source": "a67fbf58-19b7-4f7d-aa16-392fd8224f2f",
+      "target": "48eb3b8e-ebaa-4dfb-9e2a-d3653186467f",
+      "type": "response"
+    },
+    {
+      "source": "a67fbf58-19b7-4f7d-aa16-392fd8224f2f",
+      "target": "8442d281-2975-4062-8076-6fbf31cbc44e",
+      "type": "response"
+    },
+    {
+      "source": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "target": "8dc2130a-4939-4072-b1d9-dcfe9e9d9f66",
+      "type": "objection"
+    },
+    {
+      "source": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "target": "a8f2cbea-8ab4-4907-931e-40240e1ad606",
+      "type": "objection"
+    },
+    {
+      "source": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "target": "d94db9b3-f81f-481c-ac44-ad5aa1efb998",
+      "type": "objection"
+    },
+    {
+      "source": "ddbeecff-6a94-44fd-aab2-0c5dc11f74a5",
+      "target": "347654f5-d6f0-4dc7-aff3-6ab93093e321",
+      "type": "response"
+    },
+    {
+      "source": "ddbeecff-6a94-44fd-aab2-0c5dc11f74a5",
+      "target": "3c4099f5-094c-4a88-878f-35680915a6b3",
+      "type": "response"
+    },
+    {
+      "source": "dbc1720c-6377-4099-a973-7b87a27a39bd",
+      "target": "72054a86-f2f4-4bc3-bd84-106a6de011e8",
+      "type": "response"
+    },
+    {
+      "source": "dbc1720c-6377-4099-a973-7b87a27a39bd",
+      "target": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "type": "response"
+    },
+    {
+      "source": "884af265-bb53-479c-8346-5f23eb3ed7b3",
+      "target": "eff5431e-daa4-41fa-b366-b418fa43914a",
+      "type": "response"
+    },
+    {
+      "source": "884af265-bb53-479c-8346-5f23eb3ed7b3",
+      "target": "670ad113-1dcb-46c7-a682-4c2e01ed93a1",
+      "type": "response"
+    },
+    {
+      "source": "1046274a-08a1-4c2e-b7b4-b1a6dc28b3be",
+      "target": "b822b617-3295-4b4c-880a-6633f9474765",
+      "type": "response"
+    },
+    {
+      "source": "1046274a-08a1-4c2e-b7b4-b1a6dc28b3be",
+      "target": "bdc89959-f574-4057-8971-e755d4f1a43f",
+      "type": "response"
+    },
+    {
+      "source": "b322def5-06b2-44d2-afd3-aa6b8d53d4c9",
+      "target": "0a276c1f-8997-4730-9f17-14ebbacc5a68",
+      "type": "response"
+    },
+    {
+      "source": "b322def5-06b2-44d2-afd3-aa6b8d53d4c9",
+      "target": "5a64bdf2-ce2c-49b0-99ed-d7f006c03a96",
+      "type": "response"
+    },
+    {
+      "source": "8442d281-2975-4062-8076-6fbf31cbc44e",
+      "target": "a8c03ef7-90fb-4f30-85d9-e01d73926af9",
+      "type": "response"
+    },
+    {
+      "source": "eff5431e-daa4-41fa-b366-b418fa43914a",
+      "target": "61522418-e8e8-4cfa-88d2-a0f8d942ccd4",
+      "type": "response"
+    },
+    {
+      "source": "eff5431e-daa4-41fa-b366-b418fa43914a",
+      "target": "f1e95894-2eb5-4f4c-b6bd-c5054843b20b",
+      "type": "response"
+    },
+    {
+      "source": "670ad113-1dcb-46c7-a682-4c2e01ed93a1",
+      "target": "d73ca01d-995e-47ef-b3d7-5bbe20a905c9",
+      "type": "response"
+    },
+    {
+      "source": "670ad113-1dcb-46c7-a682-4c2e01ed93a1",
+      "target": "d84d3904-f385-458a-a147-82dcdb112a9b",
+      "type": "response"
+    },
+    {
+      "source": "347654f5-d6f0-4dc7-aff3-6ab93093e321",
+      "target": "99c62805-b800-4d7e-9c50-c968770444d4",
+      "type": "response"
+    },
+    {
+      "source": "347654f5-d6f0-4dc7-aff3-6ab93093e321",
+      "target": "083294a9-7c5a-4dd8-b608-78ac3bbd61ac",
+      "type": "response"
+    },
+    {
+      "source": "48eb3b8e-ebaa-4dfb-9e2a-d3653186467f",
+      "target": "0d994cd2-f25c-467b-9490-3994ba0e8d23",
+      "type": "response"
+    },
+    {
+      "source": "b822b617-3295-4b4c-880a-6633f9474765",
+      "target": "4a936b6a-8c82-4529-85cd-1a27c265e170",
+      "type": "response"
+    },
+    {
+      "source": "72054a86-f2f4-4bc3-bd84-106a6de011e8",
+      "target": "5d847aba-d342-4786-83b9-878d8b4e843c",
+      "type": "response"
+    },
+    {
+      "source": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "target": "3a9608d8-bcba-4c8f-a3a1-9c84d37fef1c",
+      "type": "response"
+    },
+    {
+      "source": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "target": "128bf59b-8d9f-4f2b-b3ef-3836b06b0ddf",
+      "type": "response"
+    },
+    {
+      "source": "8f587225-090b-4048-b93e-002f5f0644d4",
+      "target": "43fbb87b-ae7f-47a4-8265-b77c544565aa",
+      "type": "response"
+    },
+    {
+      "source": "0a276c1f-8997-4730-9f17-14ebbacc5a68",
+      "target": "f241f4d4-3627-4a93-9066-a582ce1764b0",
+      "type": "response"
+    },
+    {
+      "source": "a8f2cbea-8ab4-4907-931e-40240e1ad606",
+      "target": "70f08c04-7030-4f38-895a-4fc0f5cfd34d",
+      "type": "response"
+    },
+    {
+      "source": "a8f2cbea-8ab4-4907-931e-40240e1ad606",
+      "target": "b196ac2e-8fa8-4ab8-a62c-64c4b7ebb284",
+      "type": "response"
+    },
+    {
+      "source": "bdc89959-f574-4057-8971-e755d4f1a43f",
+      "target": "345d32f0-6cb6-42fa-a0cd-0ce52e810d79",
+      "type": "response"
+    },
+    {
+      "source": "3c4099f5-094c-4a88-878f-35680915a6b3",
+      "target": "f13f3920-a602-4744-a511-11edb2b792ce",
+      "type": "response"
+    },
+    {
+      "source": "8dc2130a-4939-4072-b1d9-dcfe9e9d9f66",
+      "target": "78d54b50-904c-4486-8c4a-f434ceac3755",
+      "type": "response"
+    },
+    {
+      "source": "8dc2130a-4939-4072-b1d9-dcfe9e9d9f66",
+      "target": "db51f911-7ab4-4027-acce-e8b861521d5e",
+      "type": "response"
+    },
+    {
+      "source": "5a64bdf2-ce2c-49b0-99ed-d7f006c03a96",
+      "target": "ee4f31b2-e7c7-497e-86a3-f03ac1b98960",
+      "type": "response"
+    },
+    {
+      "source": "5a64bdf2-ce2c-49b0-99ed-d7f006c03a96",
+      "target": "16463bbc-7b01-414e-aeff-f4800f8de052",
+      "type": "response"
+    },
+    {
+      "source": "78d54b50-904c-4486-8c4a-f434ceac3755",
+      "target": "e9985bf6-5f64-4a01-a098-372f613512f7",
+      "type": "response"
+    },
+    {
+      "source": "78d54b50-904c-4486-8c4a-f434ceac3755",
+      "target": "0bb14164-617f-469b-ba4b-c97c9d9c9086",
+      "type": "response"
+    },
+    {
+      "source": "b196ac2e-8fa8-4ab8-a62c-64c4b7ebb284",
+      "target": "80de1227-eec7-4c7d-88a8-a978acf5a2e7",
+      "type": "response"
+    },
+    {
+      "source": "b196ac2e-8fa8-4ab8-a62c-64c4b7ebb284",
+      "target": "10b21a92-1c80-4777-a047-e269029fd3ed",
+      "type": "response"
+    },
+    {
+      "source": "db51f911-7ab4-4027-acce-e8b861521d5e",
+      "target": "331f3279-60f3-40fd-bf12-cef824e719c3",
+      "type": "response"
+    },
+    {
+      "source": "db51f911-7ab4-4027-acce-e8b861521d5e",
+      "target": "0e4be58a-5a23-468a-8fc2-2603e417ec57",
+      "type": "response"
+    },
+    {
+      "source": "70f08c04-7030-4f38-895a-4fc0f5cfd34d",
+      "target": "931fb3b7-6115-487d-bae4-661b84948cae",
+      "type": "response"
+    },
+    {
+      "source": "70f08c04-7030-4f38-895a-4fc0f5cfd34d",
+      "target": "a1eaedff-6923-4a0b-b138-9226eb81cb9a",
+      "type": "response"
+    },
+    {
+      "source": "7524b4e9-ac2a-4357-aaa6-6183f67edebf",
+      "target": "1c086a96-8e1b-4086-a0e0-52ef340912ce",
+      "type": "objection"
+    },
+    {
+      "source": "7524b4e9-ac2a-4357-aaa6-6183f67edebf",
+      "target": "3483751f-c64c-42f0-9a57-028b1e7d174b",
+      "type": "objection"
+    },
+    {
+      "source": "db9b4b18-1fbd-4cd5-9102-870d43ebe622",
+      "target": "01a4bfe9-c280-4230-ae7b-fc2c426ecbbf",
+      "type": "objection"
+    },
+    {
+      "source": "db9b4b18-1fbd-4cd5-9102-870d43ebe622",
+      "target": "28208b01-bdc4-4633-aa37-5453da57f3ea",
+      "type": "objection"
+    },
+    {
+      "source": "a8d6451d-f2f6-40fa-949b-c4f4e60b4891",
+      "target": "29130682-59f2-4b04-8c96-2004c434557e",
+      "type": "objection"
+    },
+    {
+      "source": "a8d6451d-f2f6-40fa-949b-c4f4e60b4891",
+      "target": "a0f668c5-d7a9-49a4-9bc1-1f30faa1b15e",
+      "type": "objection"
+    },
+    {
+      "source": "85d3a46e-cb6b-443f-9773-7968c848903c",
+      "target": "a08a1a28-f063-4ec4-802e-58d5c512c79c",
+      "type": "objection"
+    },
+    {
+      "source": "85d3a46e-cb6b-443f-9773-7968c848903c",
+      "target": "d6d2ad64-3091-4eec-b385-469f141e8747",
+      "type": "objection"
+    },
+    {
+      "source": "a97af6c9-b6d1-430c-88b7-0ed3f18cee88",
+      "target": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "type": "objection"
+    },
+    {
+      "source": "a97af6c9-b6d1-430c-88b7-0ed3f18cee88",
+      "target": "cc7ef49c-1a56-440e-8ad9-2891962d5703",
+      "type": "objection"
+    },
+    {
+      "source": "b8e717bc-1733-4993-8faa-fce83bf2cd09",
+      "target": "8db5eede-3f90-4c6a-94db-77d762acb377",
+      "type": "objection"
+    },
+    {
+      "source": "b8e717bc-1733-4993-8faa-fce83bf2cd09",
+      "target": "579686a8-42f8-4524-9b8e-0bbc4ec3a311",
+      "type": "objection"
+    },
+    {
+      "source": "01a4bfe9-c280-4230-ae7b-fc2c426ecbbf",
+      "target": "010ae828-0754-4da2-92ca-e5eee15ffcdc",
+      "type": "response"
+    },
+    {
+      "source": "01a4bfe9-c280-4230-ae7b-fc2c426ecbbf",
+      "target": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "type": "response"
+    },
+    {
+      "source": "a08a1a28-f063-4ec4-802e-58d5c512c79c",
+      "target": "dd8dabe3-4342-4b5d-b19c-8a45b6184a3e",
+      "type": "response"
+    },
+    {
+      "source": "a08a1a28-f063-4ec4-802e-58d5c512c79c",
+      "target": "cc209a5c-df07-469f-addc-e75fd528db8e",
+      "type": "response"
+    },
+    {
+      "source": "8db5eede-3f90-4c6a-94db-77d762acb377",
+      "target": "c1759c07-393e-4b11-ab52-8a5468054d9d",
+      "type": "response"
+    },
+    {
+      "source": "8db5eede-3f90-4c6a-94db-77d762acb377",
+      "target": "24d90fed-e529-4c45-95d6-204e38f6c0ec",
+      "type": "response"
+    },
+    {
+      "source": "d6d2ad64-3091-4eec-b385-469f141e8747",
+      "target": "5f4b3848-9b2c-493b-ac3c-db68f6cab679",
+      "type": "response"
+    },
+    {
+      "source": "d6d2ad64-3091-4eec-b385-469f141e8747",
+      "target": "974dba52-f9ac-4d71-944b-ad295bc268ad",
+      "type": "response"
+    },
+    {
+      "source": "29130682-59f2-4b04-8c96-2004c434557e",
+      "target": "3098752e-4f39-4861-ac17-188035248aa3",
+      "type": "response"
+    },
+    {
+      "source": "29130682-59f2-4b04-8c96-2004c434557e",
+      "target": "82e97d34-c81a-4483-9dcf-680398ab4690",
+      "type": "response"
+    },
+    {
+      "source": "28208b01-bdc4-4633-aa37-5453da57f3ea",
+      "target": "a5114b8d-b2c9-4e51-8913-2b43e9a7dc52",
+      "type": "response"
+    },
+    {
+      "source": "28208b01-bdc4-4633-aa37-5453da57f3ea",
+      "target": "08c5a1dd-df5a-40af-aa92-c9b5a01d0b25",
+      "type": "response"
+    },
+    {
+      "source": "cc7ef49c-1a56-440e-8ad9-2891962d5703",
+      "target": "95ebacc3-0a09-4c02-8088-bee3f044567f",
+      "type": "response"
+    },
+    {
+      "source": "cc7ef49c-1a56-440e-8ad9-2891962d5703",
+      "target": "f7ed036a-638a-45fa-85e9-3e3aa87ae8f0",
+      "type": "response"
+    },
+    {
+      "source": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "target": "2a4c4146-0180-4187-a595-1f4acb061fc4",
+      "type": "response"
+    },
+    {
+      "source": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "target": "a74498c2-3e0d-48a8-a946-88a1374d27bc",
+      "type": "response"
+    },
+    {
+      "source": "5279a262-56ca-4204-99bd-13f5195e5ef6",
+      "target": "60bae3d8-8d63-45e2-8390-a3eaa0ca5996",
+      "type": "response"
+    },
+    {
+      "source": "a0f668c5-d7a9-49a4-9bc1-1f30faa1b15e",
+      "target": "8e16887b-b58f-4fe6-8729-658c67e6c5f3",
+      "type": "response"
+    },
+    {
+      "source": "a0f668c5-d7a9-49a4-9bc1-1f30faa1b15e",
+      "target": "41a182e5-5ffb-4b12-98d5-c31deb1ee7e0",
+      "type": "response"
+    },
+    {
+      "source": "cc209a5c-df07-469f-addc-e75fd528db8e",
+      "target": "21c83e7a-7202-400a-a1e3-4322f415e685",
+      "type": "response"
+    },
+    {
+      "source": "c1759c07-393e-4b11-ab52-8a5468054d9d",
+      "target": "95b79a37-83ae-4bd4-a693-8fd8843938ea",
+      "type": "response"
+    },
+    {
+      "source": "c1759c07-393e-4b11-ab52-8a5468054d9d",
+      "target": "66fabf61-fdee-4429-931a-53430f3ffadf",
+      "type": "response"
+    },
+    {
+      "source": "010ae828-0754-4da2-92ca-e5eee15ffcdc",
+      "target": "b65697a5-c594-4c7d-8527-9859c23b8cf9",
+      "type": "response"
+    },
+    {
+      "source": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "target": "38a7005f-d374-4d4d-a9d8-ceb93c39a947",
+      "type": "response"
+    },
+    {
+      "source": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "target": "eef53ec1-05a2-4008-9ce8-7c82bddc1e0e",
+      "type": "response"
+    },
+    {
+      "source": "ea6844d5-2eba-431c-8865-b3d6c1c33c48",
+      "target": "a533f7f6-5be0-4070-a28e-aff281247d43",
+      "type": "response"
+    },
+    {
+      "source": "5f4b3848-9b2c-493b-ac3c-db68f6cab679",
+      "target": "e2db8caf-3f5f-4c67-8974-9e2af670505e",
+      "type": "response"
+    },
+    {
+      "source": "974dba52-f9ac-4d71-944b-ad295bc268ad",
+      "target": "be153333-34d5-4865-94ab-de1e5e1611d5",
+      "type": "response"
+    },
+    {
+      "source": "82e97d34-c81a-4483-9dcf-680398ab4690",
+      "target": "1b0739c2-67b2-43ce-9f61-d162295798a5",
+      "type": "response"
+    },
+    {
+      "source": "3098752e-4f39-4861-ac17-188035248aa3",
+      "target": "0ef44f63-f4c0-45e3-b963-932b18486808",
+      "type": "response"
+    },
+    {
+      "source": "3098752e-4f39-4861-ac17-188035248aa3",
+      "target": "d13d0c3f-e50d-4104-b854-1cef8272f414",
+      "type": "response"
+    },
+    {
+      "source": "dd8dabe3-4342-4b5d-b19c-8a45b6184a3e",
+      "target": "3a1a1a10-1a95-4402-aa18-f17dec11d0ab",
+      "type": "response"
+    },
+    {
+      "source": "a5114b8d-b2c9-4e51-8913-2b43e9a7dc52",
+      "target": "1c28d7d4-09e5-49e6-ab04-4851334c72b8",
+      "type": "response"
+    },
+    {
+      "source": "f7ed036a-638a-45fa-85e9-3e3aa87ae8f0",
+      "target": "1036ee0a-594a-417e-bf9d-da7a8e4c7187",
+      "type": "response"
+    },
+    {
+      "source": "f7ed036a-638a-45fa-85e9-3e3aa87ae8f0",
+      "target": "8b012dfc-b413-48aa-9f48-04b4e992d335",
+      "type": "response"
+    },
+    {
+      "source": "95ebacc3-0a09-4c02-8088-bee3f044567f",
+      "target": "794eb0f8-5a0a-40c5-8dce-d25b2ea85250",
+      "type": "response"
+    },
+    {
+      "source": "95ebacc3-0a09-4c02-8088-bee3f044567f",
+      "target": "caf80950-8e54-460b-999f-8711fe74f74d",
+      "type": "response"
+    },
+    {
+      "source": "24d90fed-e529-4c45-95d6-204e38f6c0ec",
+      "target": "ec6cdbd3-e5ca-4930-8f3a-98ec1ee2a83d",
+      "type": "response"
+    },
+    {
+      "source": "24d90fed-e529-4c45-95d6-204e38f6c0ec",
+      "target": "9560bdbf-9cb6-4456-9b2c-e67c8c252071",
+      "type": "response"
+    },
+    {
+      "source": "08c5a1dd-df5a-40af-aa92-c9b5a01d0b25",
+      "target": "81f4eac2-f7ab-4f2e-84fa-9de4a0beb952",
+      "type": "response"
+    },
+    {
+      "source": "08c5a1dd-df5a-40af-aa92-c9b5a01d0b25",
+      "target": "62f63693-119c-41eb-8e98-cb9c493a1553",
+      "type": "response"
+    },
+    {
+      "source": "2a4c4146-0180-4187-a595-1f4acb061fc4",
+      "target": "002357f6-e5bf-4005-9306-913cda2cc92f",
+      "type": "response"
+    },
+    {
+      "source": "a74498c2-3e0d-48a8-a946-88a1374d27bc",
+      "target": "91628aa1-b492-4bc6-a326-bb0bacf2e8c6",
+      "type": "response"
+    },
+    {
+      "source": "a74498c2-3e0d-48a8-a946-88a1374d27bc",
+      "target": "badbf3b5-203f-4b68-a20d-1316aebaf3b5",
+      "type": "response"
+    },
+    {
+      "source": "60bae3d8-8d63-45e2-8390-a3eaa0ca5996",
+      "target": "d8acfd4f-ac36-4e38-acda-d9c4961993e7",
+      "type": "response"
+    },
+    {
+      "source": "60bae3d8-8d63-45e2-8390-a3eaa0ca5996",
+      "target": "36206389-fd03-4850-8891-3e12766ffd77",
+      "type": "response"
+    },
+    {
+      "source": "41a182e5-5ffb-4b12-98d5-c31deb1ee7e0",
+      "target": "29e41ac8-ff2b-42bd-a909-80b176f6ea1b",
+      "type": "response"
+    },
+    {
+      "source": "8e16887b-b58f-4fe6-8729-658c67e6c5f3",
+      "target": "feff50f6-3198-4fb5-a157-5b6e9a4a357d",
+      "type": "response"
+    },
+    {
+      "source": "8e16887b-b58f-4fe6-8729-658c67e6c5f3",
+      "target": "2cf7820c-265f-4c39-94ef-74e1c51d886d",
+      "type": "response"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6e531beb-17ac-40b9-b400-0aff29a6e657",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "036b2fc9-e977-4752-9a88-0e553f7b6677",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "bd99ed04-85c9-48cb-9f28-3f3526cb73ad",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "7661e2e9-7e3f-4c89-ba07-169f5a4f5004",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "6998060e-191d-4376-bd44-6909ffcb7b95",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-pro",
+      "target": "9ce17375-6ac8-491e-869e-1c23655446b5",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "b8e717bc-1733-4993-8faa-fce83bf2cd09",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a97af6c9-b6d1-430c-88b7-0ed3f18cee88",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "db9b4b18-1fbd-4cd5-9102-870d43ebe622",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "7524b4e9-ac2a-4357-aaa6-6183f67edebf",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "85d3a46e-cb6b-443f-9773-7968c848903c",
+      "type": "meta-link"
+    },
+    {
+      "source": "meta-con",
+      "target": "a8d6451d-f2f6-40fa-949b-c4f4e60b4891",
+      "type": "meta-link"
+    }
+  ]
+};
+
+        // Dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight - 70;
+
+        // ========== TEXT PROCESSING UTILITIES ==========
+
+        /**
+         * Extract first complete sentence(s) up to a character limit
+         */
+        function extractFirstSentences(text, maxChars) {
+            // Match sentences (ending with . ! ? or .)
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+
+            if (sentences.length === 0) {
+                return truncateAtWord(text, maxChars);
+            }
+
+            let result = '';
+            for (const sentence of sentences) {
+                if ((result + sentence).length <= maxChars) {
+                    result += sentence;
+                } else {
+                    break;
+                }
+            }
+
+            // If we got at least one sentence, return it
+            if (result.length > 0) {
+                return result.trim();
+            }
+
+            // Otherwise, truncate the first sentence at word boundary
+            return truncateAtWord(sentences[0], maxChars);
+        }
+
+        /**
+         * Truncate text at word boundary
+         */
+        function truncateAtWord(text, maxChars) {
+            if (text.length <= maxChars) {
+                return text;
+            }
+
+            // Find last space before maxChars
+            let truncated = text.substring(0, maxChars);
+            const lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastSpace > maxChars * 0.6) {
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            return truncated.trim() + '...';
+        }
+
+        /**
+         * Get display text for node based on depth
+         */
+        function getNodeDisplayText(d) {
+            // Meta nodes show full text
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return d.text;
+            }
+
+            // Character limits based on depth
+            const limits = {
+                0: 120,  // Root nodes - show more
+                1: 90,
+                2: 70,
+                3: 50,
+                4: 35,
+                5: 30
+            };
+
+            const maxChars = limits[Math.min(d.depth, 5)];
+            return extractFirstSentences(d.text, maxChars);
+        }
+
+        /**
+         * Get tooltip text (2-3 sentences)
+         */
+        function getTooltipText(d) {
+            const preview = extractFirstSentences(d.text, 300);
+            return `[${d.type.toUpperCase()}] ${preview}`;
+        }
+
+        /**
+         * Calculate node radius based on importance and text length
+         */
+        function getNodeRadius(d) {
+            // Meta nodes are MUCH larger to be prominent cluster centers
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return 120;
+            }
+
+            // Base radius by depth
+            const baseRadius = {
+                0: 45,  // Root nodes largest
+                1: 35,
+                2: 30,
+                3: 25,
+                4: 22,
+                5: 20
+            };
+
+            const base = baseRadius[Math.min(d.depth, 5)] || 20;
+
+            // Adjust slightly based on text length
+            const textFactor = Math.sqrt(d.text.length) * 0.3;
+
+            return base + textFactor;
+        }
+
+        /**
+         * Get foreignObject dimensions for text wrapping
+         */
+        function getForeignObjectSize(d) {
+            // Meta nodes get much larger text areas
+            if (d.type === 'meta-pro' || d.type === 'meta-con') {
+                return {
+                    width: 320,
+                    height: 120
+                };
+            }
+
+            const widths = {
+                0: 200,
+                1: 170,
+                2: 150,
+                3: 120,
+                4: 100,
+                5: 85
+            };
+
+            const heights = {
+                0: 70,
+                1: 60,
+                2: 55,
+                3: 50,
+                4: 45,
+                5: 40
+            };
+
+            return {
+                width: widths[Math.min(d.depth, 5)] || 85,
+                height: heights[Math.min(d.depth, 5)] || 40
+            };
+        }
+
+        // Create SVG
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Main group for zoom/pan
+        const g = svg.append("g");
+
+        // Define unified arrow markers with clean neutral styling
+        const defs = svg.append("defs");
+
+        // Unified neutral arrow for all link types
+        const arrowTypes = ['pro', 'con', 'objection', 'response', 'default', 'meta-link'];
+
+        arrowTypes.forEach(type => {
+            defs.append("marker")
+                .attr("id", `arrow-${type}`)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 10) // Position arrow tip at the edge
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-3L10,0L0,3")
+                .attr("fill", "#6c757d")
+                .attr("opacity", 0.5);
+        });
+
+        // Create force simulation with improved parameters to prevent overlap
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {
+                // Much longer links for better spacing
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                const sourceRadius = getNodeRadius(d.source);
+                const targetRadius = getNodeRadius(target);
+                // Significantly increased spacing between nodes
+                return Math.max(250, sourceRadius + targetRadius + 150 + (depth * 40));
+            }).strength(0.4)) // Reduced from 0.6 to make links more flexible
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Strong repulsion to prevent overlap
+                    const radius = getNodeRadius(d);
+                    return -1500 - (radius * 20); // Increased repulsion
+                })
+                .distanceMax(1000)) // Increased distance
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.01))
+            .force("x", d3.forceX(width / 2).strength(0.005))
+            // Gentler Y-force for softer layering
+            .force("y", d3.forceY(d => {
+                // Position nodes in horizontal layers based on depth with larger spacing
+                const layerHeight = 280;
+                const startY = height / 2 - 200;
+                return startY + (d.depth + 1) * layerHeight;
+            }).strength(0.25)) // Reduced from 0.6 for more flexibility
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeRadius(d) + 60) // Increased from 40
+                .strength(1.0)
+                .iterations(4))
+            .alphaDecay(0.015)
+            .velocityDecay(0.4);
+
+        // Find meta nodes
+        const metaProNode = graphData.nodes.find(n => n.type === 'meta-pro');
+        const metaConNode = graphData.nodes.find(n => n.type === 'meta-con');
+
+        // Add custom force to separate meta nodes horizontally and cluster children around them
+        if (metaProNode && metaConNode) {
+            simulation.force("cluster", function(alpha) {
+                const separation = 1400; // Distance between meta nodes
+
+                graphData.nodes.forEach(d => {
+                    if (d.type === 'meta-pro') {
+                        // Push meta-pro to the left
+                        d.vx -= (d.x - (width / 2 - separation / 2)) * 0.15 * alpha;
+                    } else if (d.type === 'meta-con') {
+                        // Push meta-con to the right
+                        d.vx += ((width / 2 + separation / 2) - d.x) * 0.15 * alpha;
+                    } else {
+                        // Gentle horizontal clustering only (no vertical pull)
+                        let targetX;
+
+                        if (d.side === 'pro') {
+                            // Pro nodes gently attracted to left cluster
+                            targetX = metaProNode.x || (width / 2 - separation / 2);
+                        } else {
+                            // Con nodes gently attracted to right cluster
+                            targetX = metaConNode.x || (width / 2 + separation / 2);
+                        }
+
+                        // Very gentle horizontal pull only (removed vertical)
+                        const dx = targetX - d.x;
+                        d.vx += dx * 0.01 * alpha; // Reduced from 0.04
+                    }
+                });
+            });
+        }
+
+        // Create links with arrows using curved paths
+        const link = g.append("g")
+            .selectAll("path")
+            .data(graphData.links)
+            .enter().append("path")
+            .attr("class", d => `link ${d.type}`)
+            .attr("stroke-width", d => {
+                const target = d.target;
+                const depth = typeof target === 'object' ? target.depth : 0;
+                return Math.max(1, 4 - depth);
+            })
+            .attr("marker-end", d => `url(#arrow-${d.type})`)
+            .attr("fill", "none");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", d => `node ${d.type} ${d.side} depth-${d.depth}`)
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes (invisible, only for physics)
+        node.append("circle")
+            .attr("r", d => getNodeRadius(d));
+
+        // Add multi-line labels using foreignObject for better text wrapping
+        node.each(function(d) {
+            const nodeGroup = d3.select(this);
+            const size = getForeignObjectSize(d);
+            const displayText = getNodeDisplayText(d);
+
+            // Create foreignObject for HTML text wrapping
+            const fo = nodeGroup.append("foreignObject")
+                .attr("x", -size.width / 2)
+                .attr("y", -size.height / 2)
+                .attr("width", size.width)
+                .attr("height", size.height)
+                .on("click", function(event) {
+                    event.stopPropagation();
+                    showNodeDetails(d);
+                })
+                .on("dblclick", function(event) {
+                    event.stopPropagation();
+                    toggleSubtree(d);
+                });
+
+            // Create HTML content with just text (no badges for cleaner look)
+            const div = fo.append("xhtml:div")
+                .attr("class", "node-label")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .attr("title", getTooltipText(d));
+
+            // Add text content only (badges removed for cleaner appearance)
+            div.append("xhtml:div")
+                .attr("class", "node-text-content")
+                .style("font-size", d.type === 'meta-pro' || d.type === 'meta-con' ? "17px" : (d.depth === 0 ? "14px" : (d.depth <= 2 ? "12px" : "11px")))
+                .style("font-weight", d.type === 'meta-pro' || d.type === 'meta-con' ? "700" : (d.depth === 0 ? "600" : "500"))
+                .text(displayText);
+        });
+
+        // Helper function to get text box edge point with small gap for arrow
+        function getBoxEdgePoint(node, fromX, fromY) {
+            const size = getForeignObjectSize(node);
+            const halfW = size.width / 2;
+            const halfH = size.height / 2;
+
+            // Calculate angle from source to target
+            const dx = node.x - fromX;
+            const dy = node.y - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            // Calculate intersection with rectangle
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Small gap for arrow (in pixels)
+            const gap = 8;
+
+            // Check which edge we hit first
+            let x, y;
+            if (Math.abs(cos) > Math.abs(sin) * (halfW / halfH)) {
+                // Hit left or right edge
+                x = node.x - Math.sign(cos) * (halfW + gap);
+                y = node.y - Math.tan(angle) * Math.sign(cos) * (halfW + gap);
+            } else {
+                // Hit top or bottom edge
+                y = node.y - Math.sign(sin) * (halfH + gap);
+                x = node.x - (y - node.y) / Math.tan(angle);
+            }
+
+            return { x, y };
+        }
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link.each(function(d) {
+                const source = d.source;
+                const target = d.target;
+
+                // Get edge points of text boxes
+                const sourcePoint = getBoxEdgePoint(source, target.x, target.y);
+                const targetPoint = getBoxEdgePoint(target, source.x, source.y);
+
+                // Create straight path
+                const pathData = `M ${sourcePoint.x},${sourcePoint.y} L ${targetPoint.x},${targetPoint.y}`;
+
+                d3.select(this).attr("d", pathData);
+            });
+
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Search functionality
+        document.getElementById("search").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+
+            node.classed("highlighted", false);
+
+            if (query) {
+                node.classed("highlighted", d =>
+                    d.text.toLowerCase().includes(query)
+                );
+            }
+        });
+
+        // ========== SIDEBAR UTILITIES ==========
+
+        /**
+         * Get path from root to node (for breadcrumb)
+         */
+        function getNodePath(nodeId) {
+            const path = [];
+            let current = graphData.nodes.find(n => n.id === nodeId);
+
+            while (current) {
+                path.unshift(current);
+                if (current.parent_id) {
+                    current = graphData.nodes.find(n => n.id === current.parent_id);
+                } else {
+                    break;
+                }
+            }
+
+            return path;
+        }
+
+        /**
+         * Get all children of a node
+         */
+        function getChildren(nodeId) {
+            return graphData.nodes.filter(n => n.parent_id === nodeId);
+        }
+
+        /**
+         * Count all descendants recursively
+         */
+        function countDescendants(nodeId) {
+            const children = getChildren(nodeId);
+            let count = children.length;
+
+            children.forEach(child => {
+                count += countDescendants(child.id);
+            });
+
+            return count;
+        }
+
+        /**
+         * Focus camera on a specific node
+         */
+        function focusOnNode(nodeId) {
+            const nodeData = graphData.nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+
+            const scale = 1.5;
+            const translateX = width / 2 - scale * nodeData.x;
+            const translateY = height / 2 - scale * nodeData.y;
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Show node details in sidebar
+        function showNodeDetails(d) {
+            node.classed("selected", false);
+            d3.select(event.target.parentNode).classed("selected", true);
+
+            const sidebar = document.getElementById("sidebar");
+            const sidebarHeader = document.getElementById("sidebar-header");
+            const sidebarBody = document.getElementById("sidebar-body");
+
+            // Build breadcrumb
+            const path = getNodePath(d.id);
+            let breadcrumbHtml = '<div class="breadcrumb">';
+            path.forEach((node, index) => {
+                if (index > 0) {
+                    breadcrumbHtml += '<span class="breadcrumb-separator">›</span>';
+                }
+                const truncated = truncateAtWord(node.text, 30);
+                breadcrumbHtml += `<span class="breadcrumb-item" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${node.id}'))">${truncated}</span>`;
+            });
+            breadcrumbHtml += '</div>';
+
+            // Header with breadcrumb
+            sidebarHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span class="node-badge-large ${d.type}">${d.type}</span>
+                    <span class="node-badge-large ${d.side}">${d.side}</span>
+                </div>
+                <h2>Argument Details</h2>
+                ${breadcrumbHtml}
+            `;
+
+            // Get children and descendants
+            const children = getChildren(d.id);
+            const descendantCount = countDescendants(d.id);
+
+            // Build body content
+            let bodyHtml = `
+                <!-- Main Argument Section -->
+                <div class="section">
+                    <div class="section-title">📝 Argument</div>
+                    <div class="node-text">${d.text}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="focusOnNode('${d.id}')">
+                        🎯 Focus
+                    </button>
+                    <button class="action-btn" onclick="copyToClipboard(\`${d.text.replace(/`/g, '\\`')}\`)">
+                        📋 Copy
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value">${d.depth}</div>
+                        <div class="stat-box-label">Depth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${children.length}</div>
+                        <div class="stat-box-label">Children</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value">${descendantCount}</div>
+                        <div class="stat-box-label">Descendants</div>
+                    </div>
+                </div>
+
+                <!-- Metadata Grid -->
+                <div class="section">
+                    <div class="section-title">ℹ️ Metadata</div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">${d.source}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">${new Date(d.created_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add children section
+            if (children.length > 0) {
+                // Determine label based on node type
+                let childrenLabel;
+                if (d.type === 'meta-pro') {
+                    childrenLabel = `${children.length} Supporting ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else if (d.type === 'meta-con') {
+                    childrenLabel = `${children.length} Opposing ${children.length === 1 ? 'Argument' : 'Arguments'}`;
+                } else {
+                    childrenLabel = `${children.length} ${children.length === 1 ? 'Response' : 'Responses'}`;
+                }
+
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🌳 ${childrenLabel}</div>
+                `;
+
+                children.forEach(child => {
+                    const preview = truncateAtWord(child.text, 150);
+                    bodyHtml += `
+                        <div class="child-node ${child.type}" onclick="showNodeDetails(graphData.nodes.find(n => n.id === '${child.id}'))">
+                            <div class="child-node-header">
+                                <span class="child-node-badge ${child.type}" style="
+                                    background: ${child.type === 'pro' ? '#d5f0e8' : child.type === 'con' ? '#f7e0e0' : child.type === 'objection' ? '#ffecd9' : '#e3eef8'};
+                                    color: ${child.type === 'pro' ? '#2d9e7e' : child.type === 'con' ? '#c74848' : child.type === 'objection' ? '#d97a30' : '#4a7fb8'};
+                                ">${child.type}</span>
+                                <span style="font-size: 0.75em; color: #72777d;">${child.children_count} ${child.children_count === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="child-node-text">${preview}</div>
+                        </div>
+                    `;
+                });
+
+                bodyHtml += '</div>';
+            } else {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div style="font-size: 2em; margin-bottom: 10px;">💭</div>
+                            <div>No responses yet</div>
+                            <div style="font-size: 0.85em; margin-top: 5px;">This is a leaf node in the argument tree</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add references section
+            if (d.references && d.references.length > 0) {
+                bodyHtml += `
+                    <div class="section">
+                        <div class="section-title">🔗 References</div>
+                        <ul class="references-list">
+                `;
+
+                d.references.forEach(ref => {
+                    bodyHtml += `<li><a href="${ref}" target="_blank">${ref}</a></li>`;
+                });
+
+                bodyHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            sidebarBody.innerHTML = bodyHtml;
+            sidebar.classList.add("open");
+        }
+
+        function closeSidebar() {
+            document.getElementById("sidebar").classList.remove("open");
+            node.classed("selected", false);
+        }
+
+        // Click outside to close sidebar
+        svg.on("click", () => {
+            closeSidebar();
+        });
+
+        // Button handlers - Reset and fit view
+        function resetAndFit() {
+            // Clear search and highlights
+            document.getElementById("search").value = "";
+            node.classed("highlighted", false);
+            closeSidebar();
+
+            // Fit graph to view with animation
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.85;
+            const translateX = fullWidth / 2 - scale * (bounds.x + bounds.width / 2);
+            const translateY = fullHeight / 2 - scale * (bounds.y + bounds.height / 2);
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translateX, translateY).scale(scale)
+            );
+        }
+
+        function toggleSubtree(d) {
+            // TODO: Implement toggle subtree
+            console.log("Toggle subtree not yet implemented for", d.id);
+        }
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - 70;
+            svg.attr("width", newWidth).attr("height", newHeight);
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>

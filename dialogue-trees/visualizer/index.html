@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Visualizer - Graph Index</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #202122;
+            line-height: 1.6;
+        }
+
+        header {
+            background: white;
+            border-bottom: 2px solid #a2a9b1;
+            padding: 30px 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        header h1 {
+            font-size: 2em;
+            font-weight: 400;
+            color: #202122;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #72777d;
+            font-size: 1.1em;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #0645ad;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px 40px;
+            border-bottom: 1px solid #eaecf0;
+        }
+
+        .search-box {
+            width: 100%;
+            max-width: 600px;
+            padding: 12px 16px;
+            font-size: 1em;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .search-box:focus {
+            border-color: #0645ad;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 0.9em;
+            color: #72777d;
+        }
+
+        .filter-group select {
+            padding: 6px 10px;
+            border: 1px solid #a2a9b1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            background: white;
+            cursor: pointer;
+        }
+
+        main {
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #a2a9b1;
+            border-radius: 4px;
+            padding: 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            border-color: #0645ad;
+        }
+
+        .card-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #202122;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .card-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .card-stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-stat-label {
+            font-size: 0.75em;
+            color: #72777d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-stat-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #202122;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #eaecf0;
+            font-size: 0.85em;
+            color: #72777d;
+        }
+
+        .pro-con {
+            display: flex;
+            gap: 15px;
+        }
+
+        .pro-count {
+            color: #00af89;
+            font-weight: 600;
+        }
+
+        .con-count {
+            color: #dd5555;
+            font-weight: 600;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #72777d;
+        }
+
+        .no-results h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #72777d;
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: #0645ad;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🌳 Tree Visualizer</h1>
+        <p>Interactive graph visualizations of dialogue trees</p>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-label">Total Debates</span>
+                <span class="stat-value">50</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Total Nodes</span>
+                <span class="stat-value">5181</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Avg Depth</span>
+                <span class="stat-value">2.9</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="controls">
+        <input type="text" id="search" class="search-box" placeholder="Search debates by topic...">
+        <div class="filters">
+            <div class="filter-group">
+                <label for="sort">Sort by:</label>
+                <select id="sort">
+                    <option value="name">Name (A-Z)</option>
+                    <option value="nodes">Most Nodes</option>
+                    <option value="depth">Max Depth</option>
+                    <option value="date">Recently Modified</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <div class="grid" id="grid">
+            
+            <a href="free-will-is-an-illusion.html" class="card" data-name="free will is an illusion" data-nodes="84" data-depth="2" data-date="2025-10-11T15:44:54.509858+00:00">
+                <div class="card-title">Free will is an illusion</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">84</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v5</span>
+                </div>
+            </a>
+            
+            <a href="the-mind-is-identical-to-the-brain.html" class="card" data-name="the mind is identical to the brain" data-nodes="133" data-depth="3" data-date="2025-10-11T15:43:13.777259+00:00">
+                <div class="card-title">The mind is identical to the brain</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">133</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="censorship-can-be-morally-justified.html" class="card" data-name="censorship can be morally justified" data-nodes="132" data-depth="3" data-date="2025-10-11T15:43:02.041903+00:00">
+                <div class="card-title">Censorship can be morally justified</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">132</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="war-can-be-morally-justified.html" class="card" data-name="war can be morally justified" data-nodes="145" data-depth="3" data-date="2025-10-11T15:42:58.333436+00:00">
+                <div class="card-title">War can be morally justified</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">145</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="objective-moral-truths-exist.html" class="card" data-name="objective moral truths exist" data-nodes="130" data-depth="3" data-date="2025-10-11T15:42:51.876426+00:00">
+                <div class="card-title">Objective moral truths exist</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">130</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="economic-inequality-is-inherently-unjust.html" class="card" data-name="economic inequality is inherently unjust" data-nodes="115" data-depth="3" data-date="2025-10-11T15:42:45.493006+00:00">
+                <div class="card-title">Economic inequality is inherently unjust</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">115</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="retributive-punishment-is-justified.html" class="card" data-name="retributive punishment is justified" data-nodes="128" data-depth="3" data-date="2025-10-11T15:42:36.966805+00:00">
+                <div class="card-title">Retributive punishment is justified</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">128</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="moral-relativism-is-correct.html" class="card" data-name="moral relativism is correct" data-nodes="129" data-depth="3" data-date="2025-10-11T15:40:14.414513+00:00">
+                <div class="card-title">Moral relativism is correct</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">129</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="euthanasia-should-be-legal.html" class="card" data-name="euthanasia should be legal" data-nodes="110" data-depth="3" data-date="2025-10-11T15:37:02.776381+00:00">
+                <div class="card-title">Euthanasia should be legal</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">110</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">5 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="animals-have-moral-rights.html" class="card" data-name="animals have moral rights" data-nodes="123" data-depth="3" data-date="2025-10-11T15:34:23.074585+00:00">
+                <div class="card-title">Animals have moral rights</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">123</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">5 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="abortion-is-morally-permissible.html" class="card" data-name="abortion is morally permissible" data-nodes="118" data-depth="3" data-date="2025-10-11T15:31:23.145301+00:00">
+                <div class="card-title">Abortion is morally permissible</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">118</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">5 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="idealism-is-the-best-metaphysical-theory.html" class="card" data-name="idealism is the best metaphysical theory" data-nodes="129" data-depth="3" data-date="2025-10-11T15:15:40.507629+00:00">
+                <div class="card-title">Idealism is the best metaphysical theory</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">129</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="physicalism-is-the-best-metaphysical-theory.html" class="card" data-name="physicalism is the best metaphysical theory" data-nodes="141" data-depth="3" data-date="2025-10-11T14:52:44.601252+00:00">
+                <div class="card-title">Physicalism is the best metaphysical theory</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">141</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">7 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="climate-change-mitigation-should-prioritize-adaptation-over-prevention.html" class="card" data-name="climate change mitigation should prioritize adaptation over prevention" data-nodes="43" data-depth="3" data-date="2025-10-11T14:42:34.715910+00:00">
+                <div class="card-title">Climate change mitigation should prioritize adaptation over prevention</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">43</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">5 pro</span>
+                        <span>•</span>
+                        <span class="con-count">5 con</span>
+                    </div>
+                    <span>v5</span>
+                </div>
+            </a>
+            
+            <a href="artificial-intelligence-poses-an-existential-risk-to-humanity.html" class="card" data-name="artificial intelligence poses an existential risk to humanity" data-nodes="206" data-depth="2" data-date="2025-10-11T14:11:31.219366+00:00">
+                <div class="card-title">Artificial intelligence poses an existential risk to humanity</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">206</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">23 pro</span>
+                        <span>•</span>
+                        <span class="con-count">12 con</span>
+                    </div>
+                    <span>v7</span>
+                </div>
+            </a>
+            
+            <a href="vaccines-are-safe.html" class="card" data-name="vaccines are safe" data-nodes="54" data-depth="2" data-date="2025-10-11T13:48:33.094437+00:00">
+                <div class="card-title">Vaccines are safe</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">54</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="quantum-mechanics-proves-consciousness-is-fundamental.html" class="card" data-name="quantum mechanics proves consciousness is fundamental" data-nodes="60" data-depth="2" data-date="2025-10-11T13:47:04.667653+00:00">
+                <div class="card-title">Quantum mechanics proves consciousness is fundamental</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">60</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">5 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="pascals-wager-is-a-sound-argument-for-believing-in-god.html" class="card" data-name="pascal's wager is a sound argument for believing in god" data-nodes="60" data-depth="2" data-date="2025-10-11T13:45:12.395432+00:00">
+                <div class="card-title">Pascal's Wager is a sound argument for believing in God</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">60</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">3 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="god-exists.html" class="card" data-name="god exists" data-nodes="69" data-depth="2" data-date="2025-10-11T13:43:16.694304+00:00">
+                <div class="card-title">God exists</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">69</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">5 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="globalization-benefits-humanity.html" class="card" data-name="globalization benefits humanity" data-nodes="76" data-depth="2" data-date="2025-10-11T13:41:19.769889+00:00">
+                <div class="card-title">Globalization benefits humanity</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">76</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="cats-are-better-than-dogs.html" class="card" data-name="cats are better than dogs" data-nodes="67" data-depth="2" data-date="2025-10-11T13:39:37.062389+00:00">
+                <div class="card-title">Cats are better than dogs</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">67</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="universal-basic-income-reduces-poverty.html" class="card" data-name="universal basic income reduces poverty" data-nodes="84" data-depth="2" data-date="2025-10-11T13:37:43.905961+00:00">
+                <div class="card-title">Universal basic income reduces poverty</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">84</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="eating-honey-is-ethically-acceptable.html" class="card" data-name="eating honey is ethically acceptable" data-nodes="112" data-depth="3" data-date="2025-10-11T11:56:16.052452+00:00">
+                <div class="card-title">Eating honey is ethically acceptable</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">112</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v2</span>
+                </div>
+            </a>
+            
+            <a href="capitalism-is-better-than-socialism.html" class="card" data-name="capitalism is better than socialism" data-nodes="306" data-depth="4" data-date="2025-10-11T03:13:18.146001+00:00">
+                <div class="card-title">Capitalism is better than socialism</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">306</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v5</span>
+                </div>
+            </a>
+            
+            <a href="artificial-general-intelligence-will-be-achieved-by-2030.html" class="card" data-name="artificial general intelligence will be achieved by 2030" data-nodes="220" data-depth="4" data-date="2025-10-11T02:42:38.923416+00:00">
+                <div class="card-title">Artificial general intelligence will be achieved by 2030</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">220</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v5</span>
+                </div>
+            </a>
+            
+            <a href="privacy-is-more-important-than-national-security.html" class="card" data-name="privacy is more important than national security" data-nodes="120" data-depth="4" data-date="2025-10-11T02:33:33.505091+00:00">
+                <div class="card-title">Privacy is more important than national security</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">120</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="consciousness-can-be-fully-explained-by-neuroscience.html" class="card" data-name="consciousness can be fully explained by neuroscience" data-nodes="73" data-depth="4" data-date="2025-10-11T02:23:37.045257+00:00">
+                <div class="card-title">Consciousness can be fully explained by neuroscience</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">73</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v5</span>
+                </div>
+            </a>
+            
+            <a href="electric-cars-are-better-than-gasoline-cars.html" class="card" data-name="electric cars are better than gasoline cars" data-nodes="257" data-depth="4" data-date="2025-10-11T02:22:09.370296+00:00">
+                <div class="card-title">Electric cars are better than gasoline cars</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">257</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="social-media-does-more-harm-than-good.html" class="card" data-name="social media does more harm than good" data-nodes="95" data-depth="4" data-date="2025-10-11T02:15:21.745097+00:00">
+                <div class="card-title">Social media does more harm than good</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">95</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="taxation-is-morally-equivalent-to-theft.html" class="card" data-name="taxation is morally equivalent to theft" data-nodes="80" data-depth="4" data-date="2025-10-11T02:09:11.546450+00:00">
+                <div class="card-title">Taxation is morally equivalent to theft</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">80</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="democracy-is-the-best-form-of-government.html" class="card" data-name="democracy is the best form of government" data-nodes="135" data-depth="4" data-date="2025-10-11T02:04:47.826427+00:00">
+                <div class="card-title">Democracy is the best form of government</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">135</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">4</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v6</span>
+                </div>
+            </a>
+            
+            <a href="artificial-general-intelligence-should-be-developed.html" class="card" data-name="artificial general intelligence should be developed" data-nodes="100" data-depth="2" data-date="2025-10-11T01:42:32.153227">
+                <div class="card-title">Artificial general intelligence should be developed</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">100</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="remote-work-is-better-than-office-work.html" class="card" data-name="remote work is better than office work" data-nodes="56" data-depth="2" data-date="2025-10-11T01:08:51.318007">
+                <div class="card-title">Remote work is better than office work</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">56</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="philosophy-should-be-a-mandatory-subject-in-schools.html" class="card" data-name="philosophy should be a mandatory subject in schools" data-nodes="51" data-depth="3" data-date="2025-10-11T00:23:02.728048">
+                <div class="card-title">Philosophy should be a mandatory subject in schools</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">51</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="meat-consumption-should-be-banned.html" class="card" data-name="meat consumption should be banned" data-nodes="44" data-depth="3" data-date="2025-10-11T00:21:27.565391">
+                <div class="card-title">Meat consumption should be banned</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">44</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="humans-should-colonize-mars.html" class="card" data-name="humans should colonize mars" data-nodes="50" data-depth="3" data-date="2025-10-11T00:15:55.617776">
+                <div class="card-title">Humans should colonize Mars</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">50</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="abortion-after-the-third-trimester-is-immoral.html" class="card" data-name="abortion after the third trimester is immoral" data-nodes="32" data-depth="3" data-date="2025-10-11T00:11:20.296707">
+                <div class="card-title">Abortion after the third trimester is immoral</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">32</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="artificial-intelligence-will-replace-most-human-jobs.html" class="card" data-name="artificial intelligence will replace most human jobs" data-nodes="157" data-depth="3" data-date="2025-10-11T00:08:27.141098+00:00">
+                <div class="card-title">Artificial intelligence will replace most human jobs</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">157</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="private-space-exploration-benefits-humanity.html" class="card" data-name="private space exploration benefits humanity" data-nodes="145" data-depth="3" data-date="2025-10-11T00:07:51.761080+00:00">
+                <div class="card-title">Private space exploration benefits humanity</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">145</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">5 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="cryptocurrency-should-be-regulated-like-traditional-currencies.html" class="card" data-name="cryptocurrency should be regulated like traditional currencies" data-nodes="126" data-depth="3" data-date="2025-10-11T00:03:17.615001+00:00">
+                <div class="card-title">Cryptocurrency should be regulated like traditional currencies</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">126</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="universal-basic-income-would-reduce-poverty.html" class="card" data-name="universal basic income would reduce poverty" data-nodes="158" data-depth="3" data-date="2025-10-11T00:01:06.650755+00:00">
+                <div class="card-title">Universal basic income would reduce poverty</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">158</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="nuclear-energy-is-necessary-for-combating-climate-change.html" class="card" data-name="nuclear energy is necessary for combating climate change" data-nodes="141" data-depth="3" data-date="2025-10-10T23:59:08.030891+00:00">
+                <div class="card-title">Nuclear energy is necessary for combating climate change</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">141</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">6 pro</span>
+                        <span>•</span>
+                        <span class="con-count">6 con</span>
+                    </div>
+                    <span>v5</span>
+                </div>
+            </a>
+            
+            <a href="college-education-should-be-free-for-all-citizens.html" class="card" data-name="college education should be free for all citizens" data-nodes="62" data-depth="3" data-date="2025-10-10T22:59:00.590953">
+                <div class="card-title">College education should be free for all citizens</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">62</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="nuclear-energy-is-the-best-solution-to-climate-change.html" class="card" data-name="nuclear energy is the best solution to climate change" data-nodes="42" data-depth="3" data-date="2025-10-10T22:57:08.470871">
+                <div class="card-title">Nuclear energy is the best solution to climate change</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">42</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="social-media-companies-should-be-held-liable-for-user-generated-content.html" class="card" data-name="social media companies should be held liable for user-generated content" data-nodes="46" data-depth="3" data-date="2025-10-10T22:55:49.493354">
+                <div class="card-title">Social media companies should be held liable for user-generated content</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">46</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="the-death-penalty-is-morally-justified.html" class="card" data-name="the death penalty is morally justified" data-nodes="33" data-depth="3" data-date="2025-10-10T22:54:15.077762">
+                <div class="card-title">The death penalty is morally justified</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">33</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="universal-basic-income-is-economically-viable.html" class="card" data-name="universal basic income is economically viable" data-nodes="75" data-depth="3" data-date="2025-10-10T22:37:31.683996">
+                <div class="card-title">Universal basic income is economically viable</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">75</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+            <a href="voting-should-be-mandatory-in-democratic-countries.html" class="card" data-name="voting should be mandatory in democratic countries" data-nodes="42" data-depth="3" data-date="2025-10-10T22:34:24.260457">
+                <div class="card-title">Voting should be mandatory in democratic countries</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">42</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">3</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="space-exploration-should-be-privatized-rather-than-government-funded.html" class="card" data-name="space exploration should be privatized rather than government-funded" data-nodes="47" data-depth="2" data-date="2025-10-10T22:05:13.089248">
+                <div class="card-title">Space exploration should be privatized rather than government-funded</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">47</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v3</span>
+                </div>
+            </a>
+            
+            <a href="gene-editing-for-human-enhancement-should-be-permitted.html" class="card" data-name="gene editing for human enhancement should be permitted" data-nodes="40" data-depth="2" data-date="2025-10-10T22:03:59.039677">
+                <div class="card-title">Gene editing for human enhancement should be permitted</div>
+                <div class="card-meta">
+                    <div class="card-stat">
+                        <span class="card-stat-label">Total Nodes</span>
+                        <span class="card-stat-value">40</span>
+                    </div>
+                    <div class="card-stat">
+                        <span class="card-stat-label">Max Depth</span>
+                        <span class="card-stat-value">2</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="pro-con">
+                        <span class="pro-count">4 pro</span>
+                        <span>•</span>
+                        <span class="con-count">4 con</span>
+                    </div>
+                    <span>v4</span>
+                </div>
+            </a>
+            
+        </div>
+        <div class="no-results" id="no-results" style="display: none;">
+            <h2>No results found</h2>
+            <p>Try a different search term</p>
+        </div>
+    </main>
+
+    <footer>
+        <p>Generated by <a href="https://github.com/yourusername/tree-visualizer">Tree Visualizer</a></p>
+    </footer>
+
+    <script>
+        const cards = document.querySelectorAll('.card');
+        const searchInput = document.getElementById('search');
+        const sortSelect = document.getElementById('sort');
+        const grid = document.getElementById('grid');
+        const noResults = document.getElementById('no-results');
+
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const name = card.dataset.name;
+                if (name.includes(query)) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+            grid.style.display = visibleCount === 0 ? 'none' : 'grid';
+        });
+
+        // Sort functionality
+        sortSelect.addEventListener('change', (e) => {
+            const sortBy = e.target.value;
+            const cardsArray = Array.from(cards);
+
+            cardsArray.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.dataset.name.localeCompare(b.dataset.name);
+                    case 'nodes':
+                        return parseInt(b.dataset.nodes) - parseInt(a.dataset.nodes);
+                    case 'depth':
+                        return parseInt(b.dataset.depth) - parseInt(a.dataset.depth);
+                    case 'date':
+                        return b.dataset.date.localeCompare(a.dataset.date);
+                    default:
+                        return 0;
+                }
+            });
+
+            cardsArray.forEach(card => grid.appendChild(card));
+        });
+    </script>
+</body>
+</html>
