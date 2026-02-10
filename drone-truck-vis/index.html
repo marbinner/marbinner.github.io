@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck &amp; Drones Solution Editor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Upload Screen (shown when no instance loaded) -->
+    <div class="upload-screen" id="upload-screen">
+        <div class="upload-card">
+            <h1>Truck &amp; Drones Solution Editor</h1>
+            <p class="upload-subtitle">Upload a problem instance to get started</p>
+
+            <div class="drop-zone" id="drop-zone">
+                <div class="drop-zone-icon">&#128229;</div>
+                <div class="drop-zone-text">Drag &amp; drop a problem file here</div>
+                <div class="drop-zone-hint">or</div>
+                <label class="btn btn-primary upload-file-btn">
+                    Choose File
+                    <input type="file" id="instance-file-input" accept=".txt" style="display:none">
+                </label>
+            </div>
+
+            <div class="upload-divider"><span>or paste instance text</span></div>
+
+            <textarea class="instance-paste-area" id="instance-paste-area"
+                      placeholder="Paste problem instance text here..."></textarea>
+
+            <div class="upload-name-row">
+                <input type="text" id="instance-name-input" class="solution-name-input"
+                       placeholder="Instance name (optional)">
+                <button class="btn btn-primary" id="btn-load-instance">Load Instance</button>
+            </div>
+
+            <div id="upload-error" class="upload-error" style="display:none"></div>
+
+            <!-- Existing instances -->
+            <div id="existing-instances-section" style="display:none">
+                <div class="upload-divider"><span>or load saved instance</span></div>
+                <div class="existing-instances-list" id="existing-instances-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Editor (hidden until instance loaded) -->
+    <div class="container" id="editor-container" style="display: none;">
+        <!-- Canvas Panel -->
+        <div class="canvas-panel" id="canvas-panel">
+            <div class="canvas-header">
+                <h1>Solution Editor</h1>
+                <div class="subtitle">
+                    Click edge to delete &bull; Left-drag to add truck edge &bull; Right-drag to add drone edge
+                </div>
+            </div>
+            <div id="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" id="btn-zoom-in">+</button>
+                    <span class="zoom-level" id="zoom-level">100%</span>
+                    <button class="zoom-btn" id="btn-zoom-out">&minus;</button>
+                    <button class="zoom-btn" id="btn-zoom-reset">&#x27F2;</button>
+                </div>
+                <div class="edge-tooltip" id="edge-tooltip" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Resize Handle -->
+        <div class="resize-handle" id="resize-handle"></div>
+
+        <!-- Control Panel -->
+        <div class="control-panel" id="control-panel">
+            <!-- Stats Section -->
+            <div class="panel-section">
+                <h2>Score</h2>
+                <div class="stats-grid">
+                    <div class="stat-box highlight">
+                        <div class="stat-label">Objective</div>
+                        <div class="stat-value" id="objective-value">&mdash;</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Feasible</div>
+                        <div class="stat-value" id="feasibility-value">&mdash;</div>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <div class="mini-stat">
+                        <span class="mini-label">Truck</span>
+                        <span class="mini-value" id="truck-count">&mdash;</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="mini-label">Drone</span>
+                        <span class="mini-value" id="drone-count">&mdash;</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="mini-label">Unassigned</span>
+                        <span class="mini-value" id="unassigned-count">&mdash;</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="mini-label">Flight</span>
+                        <span class="mini-value" id="flight-usage">&mdash;</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drone Selection -->
+            <div class="panel-section">
+                <h2>Active Drone</h2>
+                <div class="drone-selector">
+                    <button class="drone-btn active" id="btn-drone-0" data-drone="0">
+                        <span class="drone-indicator drone0"></span>
+                        Drone 0
+                    </button>
+                    <button class="drone-btn" id="btn-drone-1" data-drone="1">
+                        <span class="drone-indicator drone1"></span>
+                        Drone 1
+                    </button>
+                </div>
+                <div class="drone-stats">
+                    <span id="drone0-flights">D0: 0 flights</span>
+                    <span id="drone1-flights">D1: 0 flights</span>
+                </div>
+            </div>
+
+            <!-- Instance Management -->
+            <div class="panel-section">
+                <h2>Problem Instance</h2>
+                <div id="instance-selector-row">
+                    <select id="instance-selector" class="panel-select"></select>
+                    <button class="btn btn-secondary btn-small" id="btn-add-instance" title="Add new instance">+</button>
+                    <button class="btn btn-secondary btn-small btn-danger-text" id="btn-delete-instance" title="Delete current instance">&times;</button>
+                </div>
+                <!-- Inline add instance area -->
+                <div id="add-instance-area" class="upload-modal" style="display:none">
+                    <div class="drop-zone drop-zone-small" id="inline-drop-zone">
+                        <div class="drop-zone-text-small">Drop file or</div>
+                        <label class="btn btn-primary btn-small">
+                            Choose
+                            <input type="file" id="inline-instance-file" accept=".txt" style="display:none">
+                        </label>
+                    </div>
+                    <textarea class="instance-paste-area instance-paste-area-small" id="inline-paste-area"
+                              placeholder="Paste instance text..."></textarea>
+                    <div class="upload-name-row">
+                        <input type="text" id="inline-instance-name" class="solution-name-input"
+                               placeholder="Name...">
+                        <button class="btn btn-primary btn-small" id="btn-inline-load">Load</button>
+                        <button class="btn btn-secondary btn-small" id="btn-inline-cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solutions Library -->
+            <div class="panel-section">
+                <h2>Solutions Library</h2>
+                <div class="solution-save-row">
+                    <input type="text" id="solution-name" placeholder="Solution name..." class="solution-name-input">
+                    <button class="btn btn-primary btn-small" id="btn-save-solution">Save</button>
+                </div>
+                <div class="solutions-list" id="solutions-list">
+                    <div class="solutions-empty">No saved solutions</div>
+                </div>
+            </div>
+
+            <!-- Compare Mode -->
+            <div class="panel-section">
+                <h2>Compare</h2>
+                <label class="toggle-option">
+                    <input type="checkbox" id="toggle-compare-mode">
+                    <span>Compare mode (C)</span>
+                </label>
+                <div id="compare-controls" style="display: none; margin-top: 8px;">
+                    <select id="compare-solution-select" class="panel-select" style="width: 100%; margin-bottom: 8px;">
+                        <option value="">-- select --</option>
+                    </select>
+                    <div class="stats-row">
+                        <div class="mini-stat">
+                            <span class="mini-label">Edit Dist</span>
+                            <span class="mini-value" id="compare-edit-dist">&mdash;</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-label">Jaccard</span>
+                            <span class="mini-value" id="compare-jaccard">&mdash;</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-label">Composite</span>
+                            <span class="mini-value" id="compare-composite">&mdash;</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Animation -->
+            <div class="panel-section">
+                <h2>Animation</h2>
+                <div class="button-row">
+                    <button class="btn btn-primary" id="btn-anim-toggle">Play</button>
+                    <select id="anim-speed" class="panel-select" style="width: auto;">
+                        <option value="0.25">0.25x</option>
+                        <option value="0.5">0.5x</option>
+                        <option value="1" selected>1x</option>
+                        <option value="2">2x</option>
+                        <option value="5">5x</option>
+                        <option value="10">10x</option>
+                    </select>
+                </div>
+                <input type="range" id="anim-scrubber" min="0" max="1000" value="0" step="1"
+                       style="width: 100%; margin: 8px 0;">
+                <div id="anim-time-display"
+                     style="font-size: 0.8em; color: #8b949e; text-align: center;">
+                    0 / 0
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="panel-section">
+                <h2>History</h2>
+                <div class="button-row">
+                    <button class="btn btn-secondary" id="btn-undo" disabled>&#x21B6; Undo</button>
+                    <button class="btn btn-secondary" id="btn-redo" disabled>&#x21B7; Redo</button>
+                </div>
+                <div class="history-info" id="history-info">&mdash;</div>
+            </div>
+
+            <!-- Load/Save -->
+            <div class="panel-section">
+                <h2>Import / Export</h2>
+                <textarea class="solution-input" id="solution-input" placeholder="Paste solution string..."></textarea>
+                <div class="button-row">
+                    <button class="btn btn-primary" id="btn-load">Load</button>
+                    <button class="btn btn-success" id="btn-copy">Copy</button>
+                    <label class="btn btn-secondary" id="btn-import-file-label" title="Load solution from .txt file">
+                        File
+                        <input type="file" id="solution-file-input" accept=".txt" style="display:none">
+                    </label>
+                </div>
+                <div class="button-row">
+                    <button class="btn btn-secondary" id="btn-clear">Clear All</button>
+                    <button class="btn btn-secondary" id="btn-reset" title="Reset to the last loaded solution">Reset (Truck Only)</button>
+                </div>
+            </div>
+
+            <!-- Display Options -->
+            <div class="panel-section">
+                <h2>Display Options</h2>
+                <div class="toggle-options">
+                    <label class="toggle-option">
+                        <input type="checkbox" id="toggle-arrival-times">
+                        <span>Show arrival times</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="checkbox" id="toggle-edge-times">
+                        <span>Show edge travel times</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="checkbox" id="toggle-wait-indicators" checked>
+                        <span>Show wait indicators</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="checkbox" id="toggle-constraint-colors" checked>
+                        <span>Constraint color coding</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="checkbox" id="toggle-heatmap">
+                        <span>Consensus heatmap</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="panel-section">
+                <h2>Legend</h2>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color depot"></div>
+                        <span>Depot</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color truck"></div>
+                        <span>Truck route</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color drone0"></div>
+                        <span>Drone 0</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color drone1"></div>
+                        <span>Drone 1</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color unassigned"></div>
+                        <span>Unassigned</span>
+                    </div>
+                </div>
+                <div class="legend-indicators">
+                    <div class="legend-item">
+                        <div class="legend-indicator truck-wait"></div>
+                        <span>Truck waits</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-indicator drone-hover"></div>
+                        <span>Drone hovers</span>
+                    </div>
+                </div>
+                <div class="legend-indicators">
+                    <div class="legend-item">
+                        <div class="legend-indicator" style="background: rgba(63,185,80,0.5);"></div>
+                        <span>Shared edge</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-indicator" style="background: rgba(248,81,73,0.6); border: 2px dashed #f85149;"></div>
+                        <span>Diff edge</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="panel-section">
+                <h2>How to Edit</h2>
+                <div class="instructions">
+                    <p><strong>Left-drag:</strong> Truck edge (blue)</p>
+                    <p><strong>Right-drag:</strong> Drone edge (D0=green, D1=purple)</p>
+                    <p><strong>Click edge:</strong> Remove it</p>
+                    <p><strong>Drone flights:</strong> Need 2 edges (departure + landing)</p>
+                    <p><strong>1/Q, 2/W:</strong> Select Drone 0/1</p>
+                    <p><strong>Tab/D:</strong> Toggle drone</p>
+                    <p><strong>C:</strong> Toggle compare mode</p>
+                    <p><strong>Zoom:</strong> Scroll wheel</p>
+                    <p><strong>Pan:</strong> Middle-click drag</p>
+                    <p><strong>Space:</strong> Play/pause animation</p>
+                    <p><strong>Paste:</strong> Auto-loads valid solutions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="solver.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

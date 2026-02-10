@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>marbinner</title>
+  <base target="_blank">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+      color: #222;
+      line-height: 1.6;
+    }
+    h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 1rem; }
+    p.about { color: #555; margin-bottom: 2rem; }
+    h2 { font-size: 0.85rem; font-weight: 400; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+    ul { list-style: none; }
+    li { margin-bottom: 1rem; }
+    li a { color: #222; text-decoration: none; border-bottom: 1px solid #ccc; font-weight: 500; }
+    li a:hover { border-bottom-color: #222; }
+    li p { color: #666; font-size: 0.9rem; margin-top: 0.15rem; }
+    .links { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 2rem; }
+    .links a { color: #222; text-decoration: none; border-bottom: 1px solid #ccc; font-weight: 500; width: fit-content; display: flex; align-items: center; gap: 0.4rem; }
+    .links a:hover { border-bottom-color: #222; }
+    .links svg { width: 16px; height: 16px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+  <h1>Marius Binner's home page</h1>
+  <p class="about">I'm doing a PhD in machine learning. Trying to figure out how neural networks work. I enjoy philosophy, math, programming, and weird ideas.</p>
+  <div class="links">
+    <a href="https://x.com/marbinner"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>twitter.com/marbinner</a>
+    <a href="https://substack.com/@mariusbinner"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.539 8.242H1.46V5.406h21.08zM1.46 10.812V24l9.56-5.26L20.58 24V10.812zm0-7.994h21.08V0H1.46z"/></svg>substack.com/@mariusbinner</a>
+  </div>
+  <h2>Random Projects</h2>
+  <ul>
+    <li>
+      <a href="idle-typer">Idle Typer</a>
+      <p>Degenerate Twitter/X themed version of Cookie Clicker where you type tweets instead of click. An exercise in addictive game mechanics, also known as juicing.</p>
+    </li>
+    <li>
+      <a href="dialogue-trees/">Dialogue Trees</a>
+      <p>Automatically generated interactive visualizations of argument trees on arbitrary debate topics. An exercise in agentic pipelines.</p>
+    </li>
+  </ul>
+</body>
+</html>
