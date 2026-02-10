@@ -354,7 +354,7 @@ body {
    ======================================================================== */
 
 .control-panel {
-    width: 320px;
+    width: 380px;
     min-width: 280px;
     max-width: 600px;
     display: flex;
