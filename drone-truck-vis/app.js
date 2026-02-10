@@ -115,6 +115,7 @@ const COLORS = {
 
 const INSTANCES_STORAGE_KEY = 'potatosolver_standalone_instances';
 const SOLUTIONS_STORAGE_KEY = 'potatosolver_standalone_solutions';
+const WORKING_SOLUTION_KEY = 'potatosolver_standalone_working';
 
 // ============================================================================
 // Init
@@ -362,6 +363,18 @@ function switchInstance(name) {
     // Reset view
     calcView(true);
     resetToTruckOnly();
+
+    // Restore working solution if one exists for this instance
+    try {
+        const raw = localStorage.getItem(WORKING_SOLUTION_KEY);
+        if (raw) {
+            const saved = JSON.parse(raw);
+            if (saved.instanceName === name && saved.solution_str) {
+                loadSolution(saved.solution_str);
+            }
+        }
+    } catch (e) { /* ignore */ }
+
     render();
 }
 
@@ -598,6 +611,18 @@ function _doValidate() {
     renderSolutionsList();
     render();
     if (state.compareMode) fetchCompareData();
+    persistWorkingSolution();
+}
+
+function persistWorkingSolution() {
+    if (!state.currentInstanceName) return;
+    try {
+        const str = buildSolutionString();
+        localStorage.setItem(WORKING_SOLUTION_KEY, JSON.stringify({
+            instanceName: state.currentInstanceName,
+            solution_str: str,
+        }));
+    } catch (e) { /* ignore quota errors */ }
 }
 
 function updateStats() {
@@ -2106,7 +2131,7 @@ function buildAnimationData() {
     for (const entry of timeline) {
         const node = entry.node;
         if (node >= state.coords.length) continue;
-        const [x, y] = toScreen(...state.coords[node]);
+        const [x, y] = state.coords[node];
         state.animTruckKeyframes.push({
             arriveTime: entry.truck_arrival,
             departTime: entry.truck_departure,
@@ -2128,9 +2153,9 @@ function buildAnimationData() {
             const launchTime = customerTime - info.outbound_time;
             const landTime = launchTime + info.total_flight_time;
 
-            const launchCoords = toScreen(...state.coords[info.launch_node]);
-            const custCoords = toScreen(...state.coords[cust]);
-            const landCoords = toScreen(...state.coords[info.land_node]);
+            const launchCoords = state.coords[info.launch_node];
+            const custCoords = state.coords[cust];
+            const landCoords = state.coords[info.land_node];
 
             state.animDroneFlights[droneId].push({
                 launchTime, customerTime, landTime,
@@ -2152,43 +2177,51 @@ function buildAnimationData() {
 
 function getTruckPos(t) {
     const kfs = state.animTruckKeyframes;
-    if (kfs.length === 0) return { x: 0, y: 0 };
-    if (t <= kfs[0].arriveTime) return { x: kfs[0].x, y: kfs[0].y };
+    if (kfs.length === 0) { const [sx, sy] = toScreen(0, 0); return { x: sx, y: sy }; }
 
-    for (let i = 0; i < kfs.length; i++) {
-        const kf = kfs[i];
-        if (t >= kf.arriveTime && t <= kf.departTime) return { x: kf.x, y: kf.y };
-        if (i < kfs.length - 1 && t > kf.departTime && t < kfs[i + 1].arriveTime) {
-            const progress = (t - kf.departTime) / (kfs[i + 1].arriveTime - kf.departTime);
-            return {
-                x: kf.x + (kfs[i + 1].x - kf.x) * progress,
-                y: kf.y + (kfs[i + 1].y - kf.y) * progress,
-            };
+    let wx, wy;
+    if (t <= kfs[0].arriveTime) {
+        wx = kfs[0].x; wy = kfs[0].y;
+    } else {
+        let found = false;
+        for (let i = 0; i < kfs.length; i++) {
+            const kf = kfs[i];
+            if (t >= kf.arriveTime && t <= kf.departTime) {
+                wx = kf.x; wy = kf.y; found = true; break;
+            }
+            if (i < kfs.length - 1 && t > kf.departTime && t < kfs[i + 1].arriveTime) {
+                const progress = (t - kf.departTime) / (kfs[i + 1].arriveTime - kf.departTime);
+                wx = kf.x + (kfs[i + 1].x - kf.x) * progress;
+                wy = kf.y + (kfs[i + 1].y - kf.y) * progress;
+                found = true; break;
+            }
         }
+        if (!found) { wx = kfs[kfs.length - 1].x; wy = kfs[kfs.length - 1].y; }
     }
-    return { x: kfs[kfs.length - 1].x, y: kfs[kfs.length - 1].y };
+    const [sx, sy] = toScreen(wx, wy);
+    return { x: sx, y: sy };
 }
 
 function getDronePos(droneId, t) {
     const flights = state.animDroneFlights[droneId];
     for (const fl of flights) {
         if (t >= fl.launchTime && t <= fl.landTime) {
+            let wx, wy, leg;
             if (t <= fl.customerTime) {
                 const dur = fl.customerTime - fl.launchTime;
                 const progress = dur > 0 ? (t - fl.launchTime) / dur : 1;
-                return {
-                    x: fl.launchX + (fl.custX - fl.launchX) * progress,
-                    y: fl.launchY + (fl.custY - fl.launchY) * progress,
-                    inFlight: true, flight: fl, leg: 'outbound',
-                };
+                wx = fl.launchX + (fl.custX - fl.launchX) * progress;
+                wy = fl.launchY + (fl.custY - fl.launchY) * progress;
+                leg = 'outbound';
+            } else {
+                const dur = fl.landTime - fl.customerTime;
+                const progress = dur > 0 ? (t - fl.customerTime) / dur : 1;
+                wx = fl.custX + (fl.landX - fl.custX) * progress;
+                wy = fl.custY + (fl.landY - fl.custY) * progress;
+                leg = 'return';
             }
-            const dur = fl.landTime - fl.customerTime;
-            const progress = dur > 0 ? (t - fl.customerTime) / dur : 1;
-            return {
-                x: fl.custX + (fl.landX - fl.custX) * progress,
-                y: fl.custY + (fl.landY - fl.custY) * progress,
-                inFlight: true, flight: fl, leg: 'return',
-            };
+            const [sx, sy] = toScreen(wx, wy);
+            return { x: sx, y: sy, inFlight: true, flight: fl, leg };
         }
     }
     const tp = getTruckPos(t);
@@ -2260,9 +2293,11 @@ function drawAnimationOverlay() {
             ctx.setLineDash([]);
             ctx.beginPath();
             if (dp.leg === 'outbound') {
-                ctx.moveTo(fl.launchX, fl.launchY);
+                const [lx, ly] = toScreen(fl.launchX, fl.launchY);
+                ctx.moveTo(lx, ly);
             } else {
-                ctx.moveTo(fl.custX, fl.custY);
+                const [cx, cy] = toScreen(fl.custX, fl.custY);
+                ctx.moveTo(cx, cy);
             }
             ctx.lineTo(dp.x, dp.y);
             ctx.stroke();
