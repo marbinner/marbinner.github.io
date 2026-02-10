@@ -127,7 +127,11 @@ function init() {
     ctx = canvas.getContext('2d');
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    let _resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(resizeCanvas, 50);
+    });
     setupEvents();
 
     // Load instances from localStorage
@@ -883,6 +887,12 @@ function distToSeg(px, py, x1, y1, x2, y2) {
     if (len2 === 0) return Math.hypot(px - x1, py - y1);
     const t = Math.max(0, Math.min(1, ((px - x1)*dx + (py - y1)*dy) / len2));
     return Math.hypot(px - (x1 + t*dx), py - (y1 + t*dy));
+}
+
+function edgesEqual(a, b) {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    return a.type === b.type && a.from === b.from && a.to === b.to && a.customer === b.customer;
 }
 
 function findEdgeAt(sx, sy) {
@@ -1753,7 +1763,7 @@ function onMouseMove(e) {
             needsRender = true;
         }
 
-        if (JSON.stringify(edge) !== JSON.stringify(state.hoveredEdge)) {
+        if (!edgesEqual(edge, state.hoveredEdge)) {
             state.hoveredEdge = edge;
             needsRender = true;
             if (edge) showEdgeTooltip(edge, e.clientX, e.clientY);
@@ -2115,7 +2125,7 @@ function renderSolutionsList() {
 }
 
 function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // ============================================================================

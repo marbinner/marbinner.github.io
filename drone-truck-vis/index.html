@@ -55,7 +55,7 @@
                 </div>
             </div>
             <div id="canvas-container">
-                <canvas id="mainCanvas"></canvas>
+                <canvas id="mainCanvas" aria-label="Solution visualization canvas"></canvas>
                 <div class="zoom-controls">
                     <button class="zoom-btn" id="btn-zoom-in">+</button>
                     <span class="zoom-level" id="zoom-level">100%</span>
@@ -170,8 +170,8 @@
                     <input type="checkbox" id="toggle-compare-mode">
                     <span>Compare mode (C)</span>
                 </label>
-                <div id="compare-controls" style="display: none; margin-top: 8px;">
-                    <select id="compare-solution-select" class="panel-select" style="width: 100%; margin-bottom: 8px;">
+                <div id="compare-controls" style="display: none;">
+                    <select id="compare-solution-select" class="panel-select">
                         <option value="">-- select --</option>
                     </select>
                     <div class="stats-row">
@@ -196,7 +196,7 @@
                 <h2>Animation</h2>
                 <div class="button-row">
                     <button class="btn btn-primary" id="btn-anim-toggle">Play</button>
-                    <select id="anim-speed" class="panel-select" style="width: auto;">
+                    <select id="anim-speed" class="panel-select">
                         <option value="0.25">0.25x</option>
                         <option value="0.5">0.5x</option>
                         <option value="1" selected>1x</option>
@@ -206,9 +206,8 @@
                     </select>
                 </div>
                 <input type="range" id="anim-scrubber" min="0" max="1000" value="0" step="1"
-                       style="width: 100%; margin: 8px 0;">
-                <div id="anim-time-display"
-                     style="font-size: 0.8em; color: #8b949e; text-align: center;">
+                       aria-label="Animation timeline scrubber">
+                <div id="anim-time-display">
                     0 / 0
                 </div>
             </div>
@@ -305,11 +304,11 @@
                 </div>
                 <div class="legend-indicators">
                     <div class="legend-item">
-                        <div class="legend-indicator" style="background: rgba(63,185,80,0.5);"></div>
+                        <div class="legend-indicator shared-edge"></div>
                         <span>Shared edge</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-indicator" style="background: rgba(248,81,73,0.6); border: 2px dashed #f85149;"></div>
+                        <div class="legend-indicator diff-edge"></div>
                         <span>Diff edge</span>
                     </div>
                 </div>
