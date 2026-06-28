@@ -78,6 +78,7 @@ const state = {
     animLastWall: null,
     animTruckKeyframes: [],
     animDroneFlights: [[], []],
+    animDeliveryEvents: [],
 
     // Instance management
     instances: {},            // keyed by name, stores raw text
@@ -2182,6 +2183,19 @@ function buildAnimationData() {
     for (let d = 0; d < 2; d++) {
         state.animDroneFlights[d].sort((a, b) => a.launchTime - b.launchTime);
     }
+
+    // Precompute sorted delivery times for the HUD chart
+    state.animDeliveryEvents = [];
+    if (state.customerArrivals) {
+        for (let i = 1; i <= state.nCustomers; i++) {
+            const info = state.customerArrivals[i];
+            if (info && info.arrival_time != null) {
+                state.animDeliveryEvents.push(info.arrival_time);
+            }
+        }
+        state.animDeliveryEvents.sort((a, b) => a - b);
+    }
+
     return true;
 }
 
@@ -2346,31 +2360,145 @@ function drawAnimationOverlay() {
         ctx.fillText(d.toString(), dp.x, dp.y);
     }
 
-    const hudX = 12, hudY = canvasHeight - 50, hudW = 200, hudH = 40;
-    ctx.fillStyle = 'rgba(22, 27, 34, 0.9)';
+    // --- Enhanced Animation HUD ---
+    const pad = 10;
+    const hudW = 260, hudH = 120;
+    const hudX = 12, hudY = canvasHeight - hudH - 12;
+
+    // Background
+    ctx.fillStyle = 'rgba(22, 27, 34, 0.92)';
     ctx.strokeStyle = '#30363d';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(hudX, hudY, hudW, hudH, 6);
+    ctx.roundRect(hudX, hudY, hudW, hudH, 8);
     ctx.fill();
     ctx.stroke();
 
-    const barX = hudX + 8, barY = hudY + 26, barW = hudW - 16, barH = 6;
+    let hy = hudY + pad;
+
+    // Row 1: Objective value counter
+    const obj = state.lastValidation && state.lastValidation.objective != null
+        ? state.lastValidation.objective : state.animMaxTime;
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('OBJECTIVE', hudX + pad, hy);
+    ctx.fillStyle = '#58a6ff';
+    ctx.font = 'bold 15px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText(Math.round(t).toString(), hudX + pad + 68, hy - 1);
+    ctx.fillStyle = '#484f58';
+    ctx.font = '11px system-ui';
+    ctx.fillText(`/ ${Math.round(obj)}`, hudX + pad + 68 + ctx.measureText(Math.round(t).toString()).width + 4, hy + 2);
+    // Speed badge
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${state.animSpeed}x`, hudX + hudW - pad, hy);
+    hy += 20;
+
+    // Row 2: Customers delivered
+    const events = state.animDeliveryEvents || [];
+    let served = 0;
+    for (let i = 0; i < events.length; i++) {
+        if (events[i] <= t) served++; else break;
+    }
+    const total = state.nCustomers;
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText('DELIVERED', hudX + pad, hy);
+    ctx.fillStyle = served === total ? '#3fb950' : '#c9d1d9';
+    ctx.font = 'bold 13px system-ui';
+    ctx.fillText(`${served} / ${total}`, hudX + pad + 68, hy - 1);
+    hy += 18;
+
+    // Mini delivery chart (step function)
+    const chartX = hudX + pad, chartY = hy;
+    const chartW = hudW - pad * 2, chartH = 36;
+
+    ctx.fillStyle = 'rgba(22, 27, 34, 0.6)';
+    ctx.beginPath();
+    ctx.roundRect(chartX, chartY, chartW, chartH, 3);
+    ctx.fill();
+
+    if (events.length > 0 && state.animMaxTime > 0) {
+        const maxT = state.animMaxTime;
+        const toX = (v) => chartX + (v / maxT) * chartW;
+        const toY = (c) => chartY + chartH - 2 - (c / total) * (chartH - 4);
+
+        // Filled area under the step curve up to current time
+        ctx.beginPath();
+        ctx.moveTo(chartX, toY(0));
+        let count = 0;
+        for (const at of events) {
+            if (at > t) break;
+            ctx.lineTo(toX(at), toY(count));
+            count++;
+            ctx.lineTo(toX(at), toY(count));
+        }
+        ctx.lineTo(toX(t), toY(count));
+        ctx.lineTo(toX(t), toY(0));
+        ctx.lineTo(chartX, toY(0));
+        ctx.fillStyle = 'rgba(63, 185, 80, 0.12)';
+        ctx.fill();
+
+        // Step line
+        ctx.beginPath();
+        ctx.moveTo(chartX, toY(0));
+        count = 0;
+        for (const at of events) {
+            if (at > t) break;
+            ctx.lineTo(toX(at), toY(count));
+            count++;
+            ctx.lineTo(toX(at), toY(count));
+        }
+        ctx.lineTo(toX(t), toY(count));
+        ctx.strokeStyle = '#3fb950';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Ghost: future deliveries (dimmed)
+        if (count < events.length) {
+            ctx.beginPath();
+            ctx.moveTo(toX(t), toY(count));
+            let fc = count;
+            for (let i = count; i < events.length; i++) {
+                ctx.lineTo(toX(events[i]), toY(fc));
+                fc++;
+                ctx.lineTo(toX(events[i]), toY(fc));
+            }
+            ctx.lineTo(toX(maxT), toY(fc));
+            ctx.strokeStyle = 'rgba(63, 185, 80, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Current time marker
+        ctx.beginPath();
+        ctx.moveTo(toX(t), chartY + 1);
+        ctx.lineTo(toX(t), chartY + chartH - 1);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    hy = chartY + chartH + 6;
+
+    // Progress bar
+    const barX = hudX + pad, barW = chartW, barH = 4;
     const progress = state.animMaxTime > 0 ? t / state.animMaxTime : 0;
     ctx.fillStyle = '#21262d';
     ctx.beginPath();
-    ctx.roundRect(barX, barY, barW, barH, 3);
+    ctx.roundRect(barX, hy, barW, barH, 2);
     ctx.fill();
     ctx.fillStyle = '#58a6ff';
     ctx.beginPath();
-    ctx.roundRect(barX, barY, barW * progress, barH, 3);
+    ctx.roundRect(barX, hy, barW * progress, barH, 2);
     ctx.fill();
-
-    ctx.fillStyle = '#c9d1d9';
-    ctx.font = '11px system-ui';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`t = ${t.toFixed(1)} / ${state.animMaxTime.toFixed(1)}  (${state.animSpeed}x)`, hudX + 8, hudY + 6);
 }
 
 function updateAnimTimeDisplay() {
