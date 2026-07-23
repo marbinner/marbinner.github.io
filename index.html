@@ -28,9 +28,10 @@
     .links a:hover { border-bottom-color: #222; }
     .links svg { width: 16px; height: 16px; flex-shrink: 0; }
     .video {
+      display: block;
       width: 100%;
       aspect-ratio: 16 / 9;
-      margin-bottom: 2rem;
+      margin-top: 0.75rem;
       border: 0;
       border-radius: 6px;
     }
@@ -39,14 +40,6 @@
 <body>
   <h1>Marius Binner's home page</h1>
   <p class="about">I'm doing a PhD in machine learning. Trying to figure out how neural networks work. I enjoy philosophy, math, programming, and weird ideas.</p>
-  <iframe
-    class="video"
-    src="https://www.youtube-nocookie.com/embed/CxnjKftdoOg"
-    title="YouTube video player"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    referrerpolicy="strict-origin-when-cross-origin"
-    allowfullscreen>
-  </iframe>
   <!--
   <div class="links">
     <a href="https://x.com/marbinner"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>twitter.com/marbinner</a>
@@ -55,6 +48,18 @@
   -->
   <h2>Random Projects</h2>
   <ul>
+    <li>
+      <a href="https://www.youtube.com/watch?v=CxnjKftdoOg">I Asked AI to Write Its Own Theme Song…</a>
+      <p>An AI-written theme song.</p>
+      <iframe
+        class="video"
+        src="https://www.youtube-nocookie.com/embed/CxnjKftdoOg"
+        title="I Asked AI to Write Its Own Theme Song…"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+      </iframe>
+    </li>
     <li>
       <a href="activation-galaxy/">Activation Galaxy</a>
       <p>Interactive visualizations of sparse autoencoder features across neural network layers, with generated feature images and natural examples.</p>
